@@ -47,6 +47,10 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
@@ -59,6 +63,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.play.services.basement)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -66,4 +72,31 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    //camerax
+    implementation("androidx.camera:camera-core:1.2.2")
+    implementation("androidx.camera:camera-camera2:1.2.2")
+    implementation("androidx.camera:camera-lifecycle:1.2.2")
+    implementation("androidx.camera:camera-video:1.2.2")
+
+    implementation("androidx.camera:camera-view:1.2.2")
+    implementation("androidx.camera:camera-extensions:1.2.2")
+
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+
+
+
+
+    // Kotlin lang
+    implementation("androidx.core:core-ktx:1.2.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.2.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.4")
+
+    // App compat and UI things
+    implementation("androidx.appcompat:appcompat:1.1.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.2.0")
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+    implementation("androidx.constraintlayout:constraintlayout:1.1.3")
 }
