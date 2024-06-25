@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
@@ -20,6 +21,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Size
+import android.view.Display
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -34,17 +37,14 @@ private const val PERMISSIONS_REQUEST_CODE = 10
 class MainActivity : Activity() {
 
     private lateinit var binding: MainBinding
-    private lateinit var cameraService: CameraService
-    private lateinit var mBackgroundThread: HandlerThread
-    private lateinit var mBackgroundHandler: Handler
 
+    private val mBackgroundThread: HandlerThread= HandlerThread("CameraThread").apply { start() }
+    private val mBackgroundHandler: Handler=Handler(mBackgroundThread.looper)
+    private lateinit var cameraService: CameraService
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mBackgroundThread = HandlerThread("CameraBackground")
-        mBackgroundThread.start()
-        mBackgroundHandler = Handler(mBackgroundThread.looper)
+
         cameraService= CameraService(
-            this,
             getSystemService(CAMERA_SERVICE) as CameraManager,
             mBackgroundHandler
         )
@@ -61,13 +61,21 @@ class MainActivity : Activity() {
     private val listenerButtonCamera1 = View.OnClickListener {
 
     }
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun openCamera(surfaceTexture: SurfaceTexture){
         surfaceTexture.setDefaultBufferSize(32, 24)
         val surface = Surface(surfaceTexture)
         cameraService.openCamera(surface)
     }
+   /* fun getPreviewOutputSize(
+        display: Display,
+        characteristics: CameraCharacteristics,
+    ): Size {
+
+    }*/
 
     private val textureListener = object : TextureView.SurfaceTextureListener {
+        @RequiresApi(Build.VERSION_CODES.S)
         override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
 
             openCamera(surfaceTexture)
@@ -142,12 +150,10 @@ class MainActivity : Activity() {
 }
 
 class CameraService(
-    private val context: Context,
     private val mCameraManager: CameraManager,
 
     private val mBackgroundHandler: Handler
 ) {
-
     private val mCameraCallback: CameraDevice.StateCallback =
         object : CameraDevice.StateCallback() {
 
@@ -165,22 +171,61 @@ class CameraService(
             }
         }
     private var surface:Surface?=null
+    @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MissingPermission")
     fun openCamera(surface: Surface) {
         this.surface=surface
         val myCameras = mCameraManager.cameraIdList
+
         val characteristics= mutableListOf<CameraCharacteristics>()
         for (cameraId in myCameras){
             characteristics.add(
                 mCameraManager.getCameraCharacteristics(cameraId)
             )
         }
-        val isoRange = characteristics[1].get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-        val minIso=isoRange?.lower
+
+        ///////////////////////
+
+
+
+        //////////////////////
+        val res=characteristics[0].get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+
+        val isoRange = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val analogIsoRange = characteristics[0].get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY)
+        val rawIsoBoostRange = characteristics[0].get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE)
+
+        val exposure=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val aperture=characteristics[0].get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
+        val focalLength=characteristics[0].get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+        val minFocus=characteristics[0].get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val hyperFocalFocus=characteristics[0].get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+        ///////////////
+        val SENSOR_INFO_ACTIVE_ARRAY_SIZE=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+       // val SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
+
+
+       val SENSOR_INFO_PIXEL_ARRAY_SIZE=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+       // val SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
+        val SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)
+      //  val SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
+
+
+//////////////////////////
         val supportFull=isHardwareLevelSupported(characteristics[0],CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
         val support3=isHardwareLevelSupported(characteristics[0],CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3)
         val supportLimited=isHardwareLevelSupported(characteristics[0],CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED)
+        ///////////////////////////
+      /*  val capabilities = characteristics[0].get(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)!!
+        val outputFormats = characteristics[0].get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!.outputFormats
+        if (capabilities.contains(
+                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT) &&
+            outputFormats.contains(ImageFormat.DEPTH_JPEG)) {
 
+               val t=true
+        }*/
         mCameraManager.openCamera(
             myCameras[0],
             mCameraCallback,
@@ -209,15 +254,14 @@ class CameraService(
         }
         return false // Should never reach here
     }
-
-
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun configureSession(device: CameraDevice, targets: List<Surface>){
         val captureBuilder =
-            device.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+            device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+           // device.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
        captureBuilder.addTarget(surface!!)
-        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-        captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
+    //    captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+    //    captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
         val configs = mutableListOf<OutputConfiguration>()
         val streamUseCase = CameraMetadata
             .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
@@ -252,7 +296,6 @@ class CameraService(
 
         device.createCaptureSession(config)
     }
-
     @RequiresApi(Build.VERSION_CODES.P)
     private fun createCameraPreviewSession(mCameraDevice: CameraDevice) {
 
