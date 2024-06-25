@@ -9,9 +9,11 @@ import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.os.Build
@@ -25,9 +27,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.yes.flashcamera.databinding.MainBinding
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import java.util.concurrent.Executor
+import kotlinx.coroutines.asExecutor
 
 
 private const val PERMISSIONS_REQUEST_CODE = 10
@@ -169,23 +169,55 @@ class CameraService(
     fun openCamera(surface: Surface) {
         this.surface=surface
         val myCameras = mCameraManager.cameraIdList
+        val characteristics= mutableListOf<CameraCharacteristics>()
+        for (cameraId in myCameras){
+            characteristics.add(
+                mCameraManager.getCameraCharacteristics(cameraId)
+            )
+        }
+        val isoRange = characteristics[1].get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val minIso=isoRange?.lower
+        val supportFull=isHardwareLevelSupported(characteristics[0],CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+        val support3=isHardwareLevelSupported(characteristics[0],CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3)
+        val supportLimited=isHardwareLevelSupported(characteristics[0],CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED)
+
         mCameraManager.openCamera(
             myCameras[0],
             mCameraCallback,
             mBackgroundHandler
         )
     }
-
-    inner class ThreadPerTaskExecutor : Executor {
-        override fun execute(r: Runnable?) {
-            Thread(r).start()
+    fun isHardwareLevelSupported(c: CameraCharacteristics, requiredLevel: Int): Boolean {
+        val sortedHwLevels = intArrayOf(
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL,
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
+        )
+        val deviceLevel = c.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+        if (requiredLevel == deviceLevel) {
+            return true
         }
+
+        for (sortedlevel in sortedHwLevels) {
+            if (sortedlevel == requiredLevel) {
+                return true
+            } else if (sortedlevel == deviceLevel) {
+                return false
+            }
+        }
+        return false // Should never reach here
     }
+
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun configureSession(device: CameraDevice, targets: List<Surface>){
         val captureBuilder =
-            device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            device.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
        captureBuilder.addTarget(surface!!)
+        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+        captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
         val configs = mutableListOf<OutputConfiguration>()
         val streamUseCase = CameraMetadata
             .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
@@ -195,11 +227,11 @@ class CameraService(
          //   config.streamUseCase = streamUseCase.toLong()
             configs.add(config)
         }
-        val executor=ThreadPerTaskExecutor()
+
         val config=SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
-            executor,
+            Dispatchers.IO.asExecutor(),
             object :CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
