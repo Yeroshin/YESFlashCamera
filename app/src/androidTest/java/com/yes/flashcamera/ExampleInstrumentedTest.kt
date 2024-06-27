@@ -2,6 +2,7 @@ package com.yes.flashcamera
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.yes.flashcamera.presentation.ui.ImageComparator
 
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,5 +21,18 @@ class ExampleInstrumentedTest {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertEquals("com.yes.flashcamera", appContext.packageName)
+    }
+
+
+    @Test
+    fun assertImagesDifferent() {
+        // Context of the app under test.
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals("com.yes.flashcamera", appContext.packageName)
+        ////////////////////
+        val comparator= ImageComparator(appContext)
+        comparator.getImages()
+        ////////////////////
+
     }
 }
