@@ -1,58 +1,70 @@
 package com.yes.flashcamera.presentation.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
-import android.os.Build
-import androidx.annotation.RequiresApi
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
+import android.graphics.Rect
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.blue
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.green
 import androidx.core.graphics.red
 import com.yes.flashcamera.R
+import java.lang.Long.max
 import java.nio.ByteBuffer
+import kotlin.math.min
+
 
 class ImageComparator(private val context: Context) {
     fun getImages(){
         val test1=ResourcesCompat.getDrawable(context.resources, R.drawable.test1,null)
         val test2=ResourcesCompat.getDrawable(context.resources, R.drawable.test2,null)
         val test5=ResourcesCompat.getDrawable(context.resources, R.drawable.test5,null)
-        val bitmap5=test5!!.toBitmap()
-        val width=bitmap5.width
-        val height=bitmap5.height
+        val bitmap1=test1!!.toBitmap()
+        val bitmap2=test2!!.toBitmap()
+        val test1Value=getImageValue(
+            bitmap1
+        )
+        val test2Value=getImageValue(
+            bitmap2
+        )
+        val dif=compareValues(test1Value,test2Value)
 
+    }
+    private fun compareValues(firstValue:Long,secondValue:Long):Int{
+        val a = max(firstValue, secondValue).toFloat()
+        val b = min(firstValue, secondValue).toFloat()
+        return (((a-b)/b)*100).toInt()
+    }
+    private fun getImageValue(bitmap:Bitmap):Long{
+        val width=bitmap.width
+        val height=bitmap.height
         val imageSize = width*height*4
-        val pixelsBuffer = ByteBuffer.allocateDirect(imageSize)
-        bitmap5.copyPixelsToBuffer(pixelsBuffer)
-        val pixelArray=pixelsBuffer.array()
-
-        val pixel = bitmap5.getPixel(1,0)
-
-
-        val redValue = Color.red(pixel)
-        val greenValue = Color.green(pixel)
-        val blueValue = Color.blue(pixel)
 
         val pixels= IntArray(imageSize)
-        bitmap5.getPixels(pixels,0,width,0,0,width,height)
+        val grayscaleBitmap=toGrayscale(bitmap)
+        grayscaleBitmap.getPixels(pixels,0,width,0,0,width,height)
 
-        val color=Color.red(pixels[0])
-        val red1=pixels[0].red
-        val green1=pixels[0].green
-        val blue1=pixels[0].blue
+        var imageValue:Long=0
+        for (i in pixels){
+            imageValue+=i.green
+        }
+        return imageValue
+    }
+    private fun toGrayscale(bmpOriginal: Bitmap): Bitmap {
 
-        val red2=pixels[1].red
-        val green2=pixels[1].green
-        val blue2=pixels[1].blue
-
-        val red3=pixels[2].red
-        val green3=pixels[2].green
-        val blue3=pixels[2].blue
-
-        val red4=pixels[3].red
-        val green4=pixels[3].green
-        val blue4=pixels[3].blue
-
-
+        val bmpGrayscale = Bitmap.createBitmap(bmpOriginal.width, bmpOriginal.height, Bitmap.Config.RGB_565)
+        val c = Canvas(bmpGrayscale)
+        val paint = Paint()
+        val cm = ColorMatrix()
+        cm.setSaturation(0F)
+        val f = ColorMatrixColorFilter(cm)
+        paint.setColorFilter(f)
+        c.drawBitmap(bmpOriginal, null, Rect(0,0,bmpOriginal.width, bmpOriginal.height), paint)
+        return bmpGrayscale
     }
 }

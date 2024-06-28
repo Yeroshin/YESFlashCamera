@@ -280,7 +280,7 @@ class CameraService(
 
     }
 
-    var cameraDevice: CameraDevice? = null
+    private var cameraDevice: CameraDevice? = null
     private fun setCamera(camera: CameraDevice) {
         this.cameraDevice = camera
     }
@@ -306,6 +306,41 @@ class CameraService(
     private var surface: Surface? = null
     private var surfaceTexture: SurfaceTexture? = null
 
+    data class DualCamera(val logicalId: String, val physicalId1: String, val physicalId2: String)
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    fun findDualCameras(manager: CameraManager, facing: Int? = null): Array<DualCamera> {
+        val dualCameras = ArrayList<DualCamera>()
+
+        // Iterate over all the available camera characteristics
+        manager.cameraIdList.map {
+            Pair(manager.getCameraCharacteristics(it), it)
+        }.filter {
+            // Filter by cameras facing the requested direction
+            facing == null || it.first.get(CameraCharacteristics.LENS_FACING) == facing
+        }.filter {
+            // Filter by logical cameras
+            it.first.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)!!.contains(
+                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA
+            )
+        }.forEach {
+            // All possible pairs from the list of physical cameras are valid results
+            // NOTE: There could be N physical cameras as part of a logical camera grouping
+            val physicalCameras = it.first.physicalCameraIds.toTypedArray()
+            for (idx1 in 0 until physicalCameras.size) {
+                for (idx2 in (idx1 + 1) until physicalCameras.size) {
+                    dualCameras.add(
+                        DualCamera(
+                            it.second, physicalCameras[idx1], physicalCameras[idx2]
+                        )
+                    )
+                }
+            }
+        }
+
+        return dualCameras.toTypedArray()
+    }
+
     @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MissingPermission")
     fun openCamera(surfaceTexture: SurfaceTexture) {
@@ -320,9 +355,10 @@ class CameraService(
                 mCameraManager.getCameraCharacteristics(cameraId)
             )
         }
-
+        val phys=mCameraManager.getCameraCharacteristics("0").physicalCameraIds
+        val phys2=mCameraManager.getCameraCharacteristics("1").physicalCameraIds
         ///////////////////////
-
+        findDualCameras(mCameraManager, CameraCharacteristics.LENS_FACING_FRONT)
 
         //////////////////////
         val zoom = characteristics[0].get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
@@ -376,16 +412,19 @@ class CameraService(
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED
         )
         ///////////////////////////
-        /*  val capabilities = characteristics[0].get(
-              CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)!!
-          val outputFormats = characteristics[0].get(
-              CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!.outputFormats
-          if (capabilities.contains(
-                  CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT) &&
-              outputFormats.contains(ImageFormat.DEPTH_JPEG)) {
+        val capabilities = characteristics[0].get(
+            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
+        )!!
+        val outputFormats = characteristics[0].get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
+        )!!.outputFormats
+        if (capabilities.contains(
+                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT
+            )
+        ) {
 
-                 val t=true
-          }*/
+            val t = true
+        }
         mCameraManager.openCamera(
             myCameras[0],
             mCameraCallback,
@@ -393,7 +432,7 @@ class CameraService(
         )
     }
 
-    fun isHardwareLevelSupported(c: CameraCharacteristics, requiredLevel: Int): Boolean {
+    private fun isHardwareLevelSupported(c: CameraCharacteristics, requiredLevel: Int): Boolean {
         val sortedHwLevels = intArrayOf(
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL,
@@ -406,10 +445,10 @@ class CameraService(
             return true
         }
 
-        for (sortedlevel in sortedHwLevels) {
-            if (sortedlevel == requiredLevel) {
+        for (sortedLevel in sortedHwLevels) {
+            if (sortedLevel == requiredLevel) {
                 return true
-            } else if (sortedlevel == deviceLevel) {
+            } else if (sortedLevel == deviceLevel) {
                 return false
             }
         }
@@ -458,7 +497,7 @@ class CameraService(
         val captureBuilder =
             //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
-     //   captureBuilder.addTarget(surface2!!)
+        //   captureBuilder.addTarget(surface2!!)
         captureBuilder.addTarget(surface!!)
         captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
         iso?.let {
@@ -467,7 +506,7 @@ class CameraService(
         exposure?.let {
             captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
         }
-     //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
 
         val configs = mutableListOf<OutputConfiguration>()
         val streamUseCase = CameraMetadata
