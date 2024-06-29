@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.asExecutor
 import java.nio.ByteBuffer
+import kotlin.concurrent.thread
 
 
 private const val PERMISSIONS_REQUEST_CODE = 10
@@ -128,10 +129,12 @@ class MainActivity : Activity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun openCamera(surfaceTexture: SurfaceTexture) {
-
-
-        cameraService.openCamera(surfaceTexture)
+    private fun openCamera() {
+        surfaceTexture?.let { st->
+            surfaceTexture2?.let {
+                cameraService.openCamera(st,it)
+            }
+        }
     }
 
     private fun getDisplaySize(): Pair<Int, Int> {
@@ -179,7 +182,14 @@ class MainActivity : Activity() {
             .reversed()
         return validSizes.first { it.height <= maxSize.first && it.width <= maxSize.second }
     }
-
+    private var surfaceTexture: SurfaceTexture? = null
+    private var surfaceTexture2: SurfaceTexture? = null
+    fun setTexture1(surfaceTexture: SurfaceTexture){
+        this.surfaceTexture = surfaceTexture
+    }
+    fun setTexture2(surfaceTexture: SurfaceTexture){
+        this.surfaceTexture2 = surfaceTexture
+    }
     private val textureListener = object : TextureView.SurfaceTextureListener {
         @RequiresApi(Build.VERSION_CODES.S)
         override fun onSurfaceTextureAvailable(
@@ -188,7 +198,33 @@ class MainActivity : Activity() {
             height: Int
         ) {
             surfaceTexture.setDefaultBufferSize(width, height)
-            openCamera(surfaceTexture)
+            setTexture1(surfaceTexture)
+            openCamera()
+        }
+
+        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+
+        }
+
+        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+            return false
+        }
+
+        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+
+        }
+
+    }
+    private val texture2Listener = object : TextureView.SurfaceTextureListener {
+        @RequiresApi(Build.VERSION_CODES.S)
+        override fun onSurfaceTextureAvailable(
+            surfaceTexture: SurfaceTexture,
+            width: Int,
+            height: Int
+        ) {
+            surfaceTexture.setDefaultBufferSize(width, height)
+            setTexture2(surfaceTexture)
+            openCamera()
         }
 
         override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
@@ -207,6 +243,7 @@ class MainActivity : Activity() {
 
     private fun setUpView() {
         binding.textureView.surfaceTextureListener = textureListener
+        binding.textureView2.surfaceTextureListener = texture2Listener
         binding.camera1.setOnClickListener(listenerButtonCamera1)
         binding.iso.setOnSeekBarChangeListener(listenerIsoSeekBar)
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)
@@ -305,6 +342,7 @@ class CameraService(
         }
     private var surface: Surface? = null
     private var surfaceTexture: SurfaceTexture? = null
+    private var surfaceTexture2: SurfaceTexture? = null
 
     data class DualCamera(val logicalId: String, val physicalId1: String, val physicalId2: String)
 
@@ -341,12 +379,14 @@ class CameraService(
         return dualCameras.toTypedArray()
     }
 
+
+
     @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MissingPermission")
-    fun openCamera(surfaceTexture: SurfaceTexture) {
+    fun openCamera(surfaceTexture:SurfaceTexture,surfaceTexture2:SurfaceTexture) {
         this.surfaceTexture = surfaceTexture
-        val surface = Surface(surfaceTexture)
-        this.surface = surface
+        this.surfaceTexture2 = surfaceTexture2
+
         val myCameras = mCameraManager.cameraIdList
 
         val characteristics = mutableListOf<CameraCharacteristics>()
@@ -490,25 +530,44 @@ class CameraService(
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun createCaptureSession() {
+        val configs = mutableListOf<OutputConfiguration>()
+        val surface = Surface(surfaceTexture)
+        val surface2 = Surface(surfaceTexture2)
+        //this.surface = surface
         mImageReader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
         mImageReader!!.setOnImageAvailableListener(mOnImageAvailableListener, null)
-        val surface2 = mImageReader?.surface
+       // val surface2 = mImageReader?.surface
         ////////////////////////////////
+        val captureBuilder2 =
+            //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+           // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+
+        captureBuilder2.addTarget(surface2)
+        captureBuilder2.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        captureBuilder2.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+        captureBuilder2.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        val conf2 = OutputConfiguration(surface2)
+        configs.add(conf2)
+        /////////////////////////////////
         val captureBuilder =
             //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         //   captureBuilder.addTarget(surface2!!)
-        captureBuilder.addTarget(surface!!)
+        captureBuilder.addTarget(surface)
         captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+        captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
         iso?.let {
             captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, it)
+            captureBuilder2.set(CaptureRequest.SENSOR_SENSITIVITY, it)
         }
         exposure?.let {
             captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
+            captureBuilder2.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
         }
         //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
 
-        val configs = mutableListOf<OutputConfiguration>()
+
         val streamUseCase = CameraMetadata
             .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
 
@@ -534,6 +593,13 @@ class CameraService(
                             null,
                             mBackgroundHandler
                         )
+                        while (true){
+                            Thread.sleep(100)
+                            session.capture(captureBuilder2.build(), null, mBackgroundHandler)
+                        }
+
+
+
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
                     }
