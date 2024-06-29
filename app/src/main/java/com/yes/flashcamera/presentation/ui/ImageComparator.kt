@@ -19,8 +19,8 @@ import java.nio.ByteBuffer
 import kotlin.math.min
 
 
-class ImageComparator(private val context: Context) {
-    fun getImages(){
+class ImageComparator() {
+    fun getImages(context: Context){
         val test1=ResourcesCompat.getDrawable(context.resources, R.drawable.test1,null)
         val test2=ResourcesCompat.getDrawable(context.resources, R.drawable.test2,null)
         val test5=ResourcesCompat.getDrawable(context.resources, R.drawable.test5,null)
@@ -35,12 +35,21 @@ class ImageComparator(private val context: Context) {
         val dif=compareValues(test1Value,test2Value)
 
     }
-    private fun compareValues(firstValue:Long,secondValue:Long):Int{
+    fun compareImageValues(firstBitmap:Bitmap,secondBitmap:Bitmap):Int{
+        val firstBitmapValue=getImageValue(
+            firstBitmap
+        )
+        val secondBitmapValue=getImageValue(
+            secondBitmap
+        )
+        return compareValues(firstBitmapValue,secondBitmapValue)
+    }
+    fun compareValues(firstValue:Long,secondValue:Long):Int{
         val a = max(firstValue, secondValue).toFloat()
         val b = min(firstValue, secondValue).toFloat()
         return (((a-b)/b)*100).toInt()
     }
-    private fun getImageValue(bitmap:Bitmap):Long{
+    fun getImageValue(bitmap:Bitmap):Long{
         val width=bitmap.width
         val height=bitmap.height
         val imageSize = width*height*4

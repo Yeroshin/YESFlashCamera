@@ -4,8 +4,10 @@ package com.yes.flashcamera.presentation.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.ImageFormat
 import android.graphics.Point
@@ -22,6 +24,7 @@ import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Range
@@ -33,12 +36,18 @@ import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContentProviderCompat.requireContext
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.asExecutor
+import java.io.File
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.concurrent.thread
 
 
@@ -57,6 +66,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         cameraService = CameraService(
+            this,
             getSystemService(CAMERA_SERVICE) as CameraManager,
             mBackgroundHandler
         ) { state ->
@@ -296,12 +306,13 @@ class MainActivity : Activity() {
 }
 
 class CameraService(
+    private val context: Context,
     private val mCameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
     private val onGetState: (state: CameraUI) -> Unit,
 ) {
-    private var iso: Int? = null
-    private var exposure: Long? = null
+    private var iso: Int? = 290
+    private var exposure: Long? = 138181824
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setIso(value: Int) {
@@ -466,7 +477,7 @@ class CameraService(
             val t = true
         }
         mCameraManager.openCamera(
-            myCameras[0],
+            myCameras[1],
             mCameraCallback,
             mBackgroundHandler
         )
@@ -497,12 +508,37 @@ class CameraService(
 
 
     private var mImageReader: ImageReader? = null
+    private fun getContext(): Context {
+        return context
+    }
+    var averagImageValue:Long=0
     private val mOnImageAvailableListener =
         ImageReader.OnImageAvailableListener { reader ->
             mBackgroundHandler.post(
                 Runnable {
                     val image = reader.acquireNextImage()
                     if (image != null) {
+                        /////////////////////////
+                        val buffer = image.planes[0].buffer
+                        val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
+
+
+                            val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US)
+                            val output= File(Environment.getExternalStorageDirectory().toString(), "/DCIM/IMG_${sdf.format(Date())}.jpg")
+                           val bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.size)
+                          //  FileOutputStream(output).use { it.write(bytes) }
+                        val imageComparator=ImageComparator()
+                        val imageValue=imageComparator.getImageValue(bitmap)
+                        if (averagImageValue!=0L){
+                            val dif=imageComparator.compareValues(averagImageValue,imageValue)
+                            if (dif>20){//28
+                                println("got  it!")
+                            }
+                            averagImageValue=(averagImageValue+imageValue)/2
+                        }else{
+                            averagImageValue=imageValue
+                        }
+                        //////////////////////////
                         /* val width = image.width;
                          val height = image.height
                          val planes = image.planes
@@ -534,9 +570,12 @@ class CameraService(
         val surface = Surface(surfaceTexture)
         val surface2 = Surface(surfaceTexture2)
         //this.surface = surface
+        /////////////////////////////////
         mImageReader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
         mImageReader!!.setOnImageAvailableListener(mOnImageAvailableListener, null)
-       // val surface2 = mImageReader?.surface
+        val surface3 = mImageReader?.surface
+        val conf3 = OutputConfiguration(surface3!!)
+        configs.add(conf3)
         ////////////////////////////////
         val captureBuilder2 =
             //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -555,6 +594,7 @@ class CameraService(
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         //   captureBuilder.addTarget(surface2!!)
         captureBuilder.addTarget(surface)
+        captureBuilder.addTarget(surface3)
         captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
         iso?.let {
@@ -593,10 +633,10 @@ class CameraService(
                             null,
                             mBackgroundHandler
                         )
-                        while (true){
+                      /*  while (true){
                             Thread.sleep(100)
                             session.capture(captureBuilder2.build(), null, mBackgroundHandler)
-                        }
+                        }*/
 
 
 
