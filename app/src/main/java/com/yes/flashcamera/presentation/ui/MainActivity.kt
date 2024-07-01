@@ -259,6 +259,7 @@ class MainActivity : Activity() {
     private var dX: Float = 0f
     private var dY: Float = 0f
 
+    @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun setUpView() {
         binding.textureView.surfaceTextureListener = textureListener
@@ -266,6 +267,8 @@ class MainActivity : Activity() {
       //  binding.camera1.setOnClickListener(listenerButtonCamera1)
         binding.iso.setOnSeekBarChangeListener(listenerIsoSeekBar)
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)
+        var xP=0
+        var yP=0
         binding.textureView2.setOnTouchListener { view, event ->
 
             when (event.action) {
@@ -290,8 +293,11 @@ class MainActivity : Activity() {
                         .y(clampedY)
                         .setDuration(0)
                         .start()
-                    val xP = ((newX * 100) / maxX).toInt()
-                    val yP = ((newY * 100) / maxY).toInt()
+                    xP = ((newX * 100) / maxX).toInt()
+                    yP = ((newY * 100) / maxY).toInt()
+
+                }
+                MotionEvent.ACTION_UP->{
                     cameraService.setMagnifierPosition(xP, yP)
                 }
 
@@ -609,7 +615,7 @@ class CameraService(
                 }
             )
         }
-    val zoomRatio = 10F
+    val zoomRatio = 0F
     var positionX = 0
     var positionY = 0
     val surfaceWidth = 1920
@@ -619,10 +625,33 @@ class CameraService(
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setMagnifierPosition(positionX: Int, positionY: Int) {
-        Thread.sleep(100)
-        this.positionX = (((positionX * surfaceWidth) / 100) - magnifierWidth).toInt()
-        this.positionY = (((positionY * surfaceHeight) / 100) - magnifierHeight).toInt()
-        createCaptureSession()
+      //  Thread.sleep(100)
+        this.positionX = (((positionX * surfaceWidth) / 100) ).toInt()
+        this.positionY = (((positionY * surfaceHeight) / 100) ).toInt()
+        updateSession()
+
+    }
+    var magnifierCaptureBuilder:CaptureRequest.Builder?=null
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun updateSession(){
+        val surface2 = Surface(surfaceTexture2)
+        magnifierCaptureBuilder=
+
+            //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+
+        magnifierCaptureBuilder?.addTarget(surface2)
+        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 4f)
+        magnifierCaptureBuilder?.set(
+            CaptureRequest.SCALER_CROP_REGION,
+            Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
+        )
+      /*  magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+        magnifierCaptureBuilder?.set(
+            CaptureRequest.CONTROL_AF_MODE,
+            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+        )*/
 
     }
 
@@ -640,26 +669,26 @@ class CameraService(
         val surface3 = mImageReader?.surface
         val conf3 = OutputConfiguration(surface3!!)
         configs.add(conf3)
-        ////////////////////////////////
-        val captureBuilder2 =
+        ////////////////////////////////magnifier
+        magnifierCaptureBuilder =
             //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
 
-        captureBuilder2.addTarget(surface2)
-        captureBuilder2.set(CaptureRequest.CONTROL_ZOOM_RATIO, zoomRatio)
-        captureBuilder2.set(
+        magnifierCaptureBuilder?.addTarget(surface2)
+        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, zoomRatio)
+        magnifierCaptureBuilder?.set(
             CaptureRequest.SCALER_CROP_REGION,
             Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
         )
-        captureBuilder2.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-        captureBuilder2.set(
+        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+        magnifierCaptureBuilder?.set(
             CaptureRequest.CONTROL_AF_MODE,
             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
         )
         val conf2 = OutputConfiguration(surface2)
         configs.add(conf2)
-        /////////////////////////////////
+        /////////////////////////////////preview
         val captureBuilder =
             //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
@@ -673,11 +702,11 @@ class CameraService(
         )
         iso?.let {
             captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, it)
-            captureBuilder2.set(CaptureRequest.SENSOR_SENSITIVITY, it)
+            magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, it)
         }
         exposure?.let {
             captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
-            captureBuilder2.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
+            magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
         }
         //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
 
@@ -690,7 +719,7 @@ class CameraService(
              //   config.streamUseCase = streamUseCase.toLong()
              configs.add(config)
          }*/
-        val conf1 = OutputConfiguration(surface!!)
+        val conf1 = OutputConfiguration(surface)
         configs.add(conf1)
         /*  val conf2 = OutputConfiguration(surface2)
           configs.add(conf2)*/
@@ -711,8 +740,11 @@ class CameraService(
                 request: CaptureRequest,
                 result: TotalCaptureResult
             ) {
-                Thread.sleep(500)
-                session.capture(captureBuilder2.build(), this, mBackgroundHandler)
+                Thread.sleep(60)
+                magnifierCaptureBuilder?.let {
+                    session.capture(it.build(), this, mBackgroundHandler)
+                }
+
 
             }
         }
@@ -723,13 +755,17 @@ class CameraService(
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
+                       // session.stopRepeating()
                         session.setRepeatingRequest(
                             captureBuilder.build(),
-                            null,
+                            cameraCaptureSessionCaptureCallback,
                             mBackgroundHandler
                         )
+                      /*  while (true){
+                            Thread.sleep(100)
+                            session.capture(captureBuilder2.build(), null, mBackgroundHandler)
+                        }*/
 
-                        session.capture(captureBuilder2.build(), cameraCaptureSessionCaptureCallback, mBackgroundHandler)
 
 
 
