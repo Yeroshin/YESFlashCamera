@@ -4,14 +4,13 @@ package com.yes.flashcamera.presentation.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
+import android.content.res.Resources
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.ImageFormat
 import android.graphics.Point
-import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
@@ -24,6 +23,35 @@ import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
+import android.opengl.GLES10.GL_COLOR_BUFFER_BIT
+import android.opengl.GLES10.GL_FLOAT
+import android.opengl.GLES10.GL_TRIANGLES
+import android.opengl.GLES10.glClear
+import android.opengl.GLES10.glClearColor
+import android.opengl.GLES10.glDrawArrays
+import android.opengl.GLES10.glViewport
+import android.opengl.GLES20.GL_COMPILE_STATUS
+import android.opengl.GLES20.GL_FRAGMENT_SHADER
+import android.opengl.GLES20.GL_LINK_STATUS
+import android.opengl.GLES20.GL_VERTEX_SHADER
+import android.opengl.GLES20.glAttachShader
+import android.opengl.GLES20.glCompileShader
+import android.opengl.GLES20.glCreateProgram
+import android.opengl.GLES20.glCreateShader
+import android.opengl.GLES20.glDeleteProgram
+import android.opengl.GLES20.glDeleteShader
+import android.opengl.GLES20.glEnableVertexAttribArray
+import android.opengl.GLES20.glGetAttribLocation
+import android.opengl.GLES20.glGetProgramiv
+import android.opengl.GLES20.glGetShaderiv
+import android.opengl.GLES20.glGetUniformLocation
+import android.opengl.GLES20.glLinkProgram
+import android.opengl.GLES20.glShaderSource
+import android.opengl.GLES20.glUniform4f
+import android.opengl.GLES20.glUseProgram
+import android.opengl.GLES20.glVertexAttribPointer
+import android.opengl.GLSurfaceView
+import android.opengl.GLSurfaceView.Renderer
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -39,19 +67,26 @@ import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.content.ContentProviderCompat.requireContext
+import com.yes.flashcamera.R
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
+import com.yes.flashcamera.presentation.ui.MainActivity.ShaderUtils.createProgram
+import com.yes.flashcamera.presentation.ui.MainActivity.ShaderUtils.createShader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.asExecutor
+import java.io.BufferedReader
 import java.io.File
-import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStreamReader
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.concurrent.thread
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.opengles.GL10
 
 
 private const val PERMISSIONS_REQUEST_CODE = 10
@@ -68,7 +103,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        cameraService = CameraService(
+     /*   cameraService = CameraService(
             this,
             getSystemService(CAMERA_SERVICE) as CameraManager,
             mBackgroundHandler
@@ -81,6 +116,133 @@ class MainActivity : Activity() {
 
         checkPermission {
 
+        }*/
+        gles()
+    }
+    private var glSurfaceView: GLSurfaceView? = null
+    private var rendererSet = false
+    private fun gles(){
+        glSurfaceView = GLSurfaceView(this)
+        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val configurationInfo = activityManager.deviceConfigurationInfo
+        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
+        if (supportsEs2) {
+            glSurfaceView?.setRenderer(OpenGLRenderer(this))
+            rendererSet = true
+        } else {
+            Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
+                .show()
+            return
+        }
+
+        setContentView(glSurfaceView)
+    }
+    class OpenGLRenderer(private val context: Context) : Renderer {
+        private var programId = 0
+        private var vertexData: FloatBuffer? = null
+        private var uColorLocation = 0
+        private var aPositionLocation = 0
+
+        init {
+            prepareData()
+        }
+
+        override fun onSurfaceCreated(arg0: GL10, arg1: EGLConfig) {
+            glClearColor(0f, 0f, 0f, 1f)
+            val vertexShaderId = createShader(context, GL_VERTEX_SHADER, R.raw.vertex_shader)
+            val fragmentShaderId = createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment_shader)
+            programId = createProgram(vertexShaderId, fragmentShaderId)
+            glUseProgram(programId)
+            bindData()
+        }
+
+        override fun onSurfaceChanged(arg0: GL10, width: Int, height: Int) {
+            glViewport(0, 0, width, height)
+        }
+
+        private fun prepareData() {
+            val vertices = floatArrayOf(-0.5f, -0.2f, 0.0f, 0.2f, 0.5f, -0.2f)
+            vertexData = ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder())
+                .asFloatBuffer()
+            vertexData?.put(vertices)
+        }
+
+        private fun bindData() {
+            uColorLocation = glGetUniformLocation(programId, "u_Color")
+            glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f)
+            aPositionLocation = glGetAttribLocation(programId, "a_Position")
+            vertexData!!.position(0)
+            glVertexAttribPointer(aPositionLocation, 2, GL_FLOAT, false, 0, vertexData)
+            glEnableVertexAttribArray(aPositionLocation)
+        }
+
+        override fun onDrawFrame(arg0: GL10) {
+            glClear(GL_COLOR_BUFFER_BIT)
+            glDrawArrays(GL_TRIANGLES, 0, 3)
+        }
+    }
+    object FileUtils {
+        fun readTextFromRaw(context: Context, resourceId: Int): String {
+            val stringBuilder = StringBuilder()
+            try {
+                var bufferedReader: BufferedReader? = null
+                try {
+                    val inputStream = context.resources.openRawResource(resourceId)
+                    bufferedReader = BufferedReader(InputStreamReader(inputStream))
+                    var line: String?
+                    while ((bufferedReader.readLine().also { line = it }) != null) {
+                        stringBuilder.append(line)
+                        stringBuilder.append("\r\n")
+                    }
+                } finally {
+                    bufferedReader?.close()
+                }
+            } catch (ioex: IOException) {
+                ioex.printStackTrace()
+            } catch (nfex: Resources.NotFoundException) {
+                nfex.printStackTrace()
+            }
+            return stringBuilder.toString()
+        }
+    }
+    object ShaderUtils {
+        fun createProgram(vertexShaderId: Int, fragmentShaderId: Int): Int {
+            val programId = glCreateProgram()
+            if (programId == 0) {
+                return 0
+            }
+            glAttachShader(programId, vertexShaderId)
+            glAttachShader(programId, fragmentShaderId)
+            glLinkProgram(programId)
+            val linkStatus = IntArray(1)
+            glGetProgramiv(programId, GL_LINK_STATUS, linkStatus, 0)
+            if (linkStatus[0] == 0) {
+                glDeleteProgram(programId)
+                return 0
+            }
+            return programId
+        }
+
+        fun createShader(context: Context?, type: Int, shaderRawId: Int): Int {
+            val shaderText = FileUtils.readTextFromRaw(context!!, shaderRawId)
+            return createShader(type, shaderText)
+        }
+
+        private fun createShader(type: Int, shaderText: String?): Int {
+            val err = glewInit()
+            val shaderId = glCreateShader(type)
+            if (shaderId == 0) {
+                return 0
+            }
+            glShaderSource(shaderId, shaderText)
+            glCompileShader(shaderId)
+            val compileStatus = IntArray(1)
+            glGetShaderiv(shaderId, GL_COMPILE_STATUS, compileStatus, 0)
+            if (compileStatus[0] == 0) {
+                glDeleteShader(shaderId)
+                return 0
+            }
+            return shaderId
         }
     }
 
@@ -264,11 +426,11 @@ class MainActivity : Activity() {
     private fun setUpView() {
         binding.textureView.surfaceTextureListener = textureListener
         binding.textureView2.surfaceTextureListener = texture2Listener
-      //  binding.camera1.setOnClickListener(listenerButtonCamera1)
+        //  binding.camera1.setOnClickListener(listenerButtonCamera1)
         binding.iso.setOnSeekBarChangeListener(listenerIsoSeekBar)
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)
-        var xP=0
-        var yP=0
+        var xP = 0
+        var yP = 0
         binding.textureView2.setOnTouchListener { view, event ->
 
             when (event.action) {
@@ -297,7 +459,8 @@ class MainActivity : Activity() {
                     yP = ((newY * 100) / maxY).toInt()
 
                 }
-                MotionEvent.ACTION_UP->{
+
+                MotionEvent.ACTION_UP -> {
                     cameraService.setMagnifierPosition(xP, yP)
                 }
 
@@ -366,14 +529,19 @@ class CameraService(
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setIso(value: Int) {
         iso = value
-        createCaptureSession()
+      //  createCaptureSession()
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, value)
+        magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, value)
 
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setExposure(value: Int) {
         exposure = value.toLong()
-        createCaptureSession()
+      //  createCaptureSession()
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, value.toLong())
+        magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, value.toLong())
+
 
     }
 
@@ -460,6 +628,11 @@ class CameraService(
         findDualCameras(mCameraManager, CameraCharacteristics.LENS_FACING_FRONT)
 
         //////////////////////
+        val maxZoom =
+            characteristics[0].get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM)
+        val activeRect = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        val digitalZoom =
+            characteristics[0].get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM)
         val zoom = characteristics[0].get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
         val res = characteristics[0].get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
 
@@ -615,43 +788,50 @@ class CameraService(
                 }
             )
         }
-    val zoomRatio = 0F
-    var positionX = 0
-    var positionY = 0
+    val zoomRatio = 4F
+    var positionX = 1
+    var positionY = 1
     val surfaceWidth = 1920
     val surfaceHeight = 1080
-    val magnifierWidth = surfaceWidth / zoomRatio
+    val magnifierWidth = surfaceWidth / zoomRatio//1024
     val magnifierHeight = surfaceHeight / zoomRatio
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setMagnifierPosition(positionX: Int, positionY: Int) {
-      //  Thread.sleep(100)
-        this.positionX = (((positionX * surfaceWidth) / 100) ).toInt()
-        this.positionY = (((positionY * surfaceHeight) / 100) ).toInt()
+        //  Thread.sleep(100)
+        this.positionX = (((positionX * surfaceWidth) / 100)).toInt()//4096
+        this.positionY = (((positionY * surfaceHeight) / 100)).toInt()//3072
         updateSession()
 
     }
-    var magnifierCaptureBuilder:CaptureRequest.Builder?=null
+
+    var magnifierCaptureBuilder: CaptureRequest.Builder? = null
+    var previewCaptureBuilder: CaptureRequest.Builder? = null
+
     @RequiresApi(Build.VERSION_CODES.R)
-    fun updateSession(){
-        val surface2 = Surface(surfaceTexture2)
-        magnifierCaptureBuilder=
+    fun updateSession() {
+        /* val surface2 = Surface(surfaceTexture2)
 
-            //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+         magnifierCaptureBuilder=
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
-        // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+         //    cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 
-        magnifierCaptureBuilder?.addTarget(surface2)
-        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 4f)
-        magnifierCaptureBuilder?.set(
-            CaptureRequest.SCALER_CROP_REGION,
-            Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
-        )
-      /*  magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-        magnifierCaptureBuilder?.set(
-            CaptureRequest.CONTROL_AF_MODE,
-            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-        )*/
+         // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+
+         magnifierCaptureBuilder?.addTarget(surface2)*/
+        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 4.0F)
+        /*  magnifierCaptureBuilder?.set(
+              CaptureRequest.SCALER_CROP_REGION,
+              Rect(0, 0, 768, 1024)
+          )*/
+
+
+        /*   magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+           magnifierCaptureBuilder?.set(
+               CaptureRequest.CONTROL_AF_MODE,
+               CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+           )*/
+
 
     }
 
@@ -671,17 +851,24 @@ class CameraService(
         configs.add(conf3)
         ////////////////////////////////magnifier
         magnifierCaptureBuilder =
-            //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
 
         magnifierCaptureBuilder?.addTarget(surface2)
-        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, zoomRatio)
+        /*  magnifierCaptureBuilder?.set(
+                  CaptureRequest.SCALER_CROP_REGION,
+                  Rect(0, 0, 480, 640)
+              */
+        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 1.0F)
+        /*  magnifierCaptureBuilder?.set(
+              CaptureRequest.SCALER_CROP_REGION,
+              Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
+          )*/
         magnifierCaptureBuilder?.set(
-            CaptureRequest.SCALER_CROP_REGION,
-            Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
+            CaptureRequest.CONTROL_AE_MODE,
+            CameraMetadata.CONTROL_AE_MODE_OFF
         )
-        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
         magnifierCaptureBuilder?.set(
             CaptureRequest.CONTROL_AF_MODE,
             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
@@ -689,25 +876,21 @@ class CameraService(
         val conf2 = OutputConfiguration(surface2)
         configs.add(conf2)
         /////////////////////////////////preview
-        val captureBuilder =
-            //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        previewCaptureBuilder =
+                //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         //   captureBuilder.addTarget(surface2!!)
-        captureBuilder.addTarget(surface)
-        captureBuilder.addTarget(surface3)
-        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-        captureBuilder.set(
+        previewCaptureBuilder?.addTarget(surface)
+        previewCaptureBuilder?.addTarget(surface3)
+        previewCaptureBuilder?.set(
+            CaptureRequest.CONTROL_AE_MODE,
+            CameraMetadata.CONTROL_AE_MODE_OFF
+        )
+        previewCaptureBuilder?.set(
             CaptureRequest.CONTROL_AF_MODE,
             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
         )
-        iso?.let {
-            captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, it)
-            magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, it)
-        }
-        exposure?.let {
-            captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
-            magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
-        }
+
         //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
 
 
@@ -755,18 +938,19 @@ class CameraService(
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
-                       // session.stopRepeating()
-                        session.setRepeatingRequest(
-                            captureBuilder.build(),
-                            cameraCaptureSessionCaptureCallback,
-                            mBackgroundHandler
-                        )
-                      /*  while (true){
-                            Thread.sleep(100)
-                            session.capture(captureBuilder2.build(), null, mBackgroundHandler)
-                        }*/
+                        // session.stopRepeating()
+                        previewCaptureBuilder?.let {
+                            session.setRepeatingRequest(
+                                it.build(),
+                                cameraCaptureSessionCaptureCallback,
+                                mBackgroundHandler
+                            )
+                        }
 
-
+                        /*  while (true){
+                              Thread.sleep(100)
+                              session.capture(captureBuilder2.build(), null, mBackgroundHandler)
+                          }*/
 
 
                     } catch (e: CameraAccessException) {
