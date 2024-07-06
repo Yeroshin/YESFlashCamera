@@ -30,6 +30,8 @@ import android.opengl.GLES10.glClear
 import android.opengl.GLES10.glClearColor
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES10.glViewport
+import android.opengl.GLES11Ext
+import android.opengl.GLES20
 import android.opengl.GLES20.GL_COMPILE_STATUS
 import android.opengl.GLES20.GL_FRAGMENT_SHADER
 import android.opengl.GLES20.GL_LINK_STATUS
@@ -70,8 +72,7 @@ import androidx.annotation.RequiresApi
 import com.yes.flashcamera.R
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
-import com.yes.flashcamera.presentation.ui.MainActivity.ShaderUtils.createProgram
-import com.yes.flashcamera.presentation.ui.MainActivity.ShaderUtils.createShader
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.asExecutor
@@ -103,7 +104,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-     /*   cameraService = CameraService(
+        cameraService = CameraService(
             this,
             getSystemService(CAMERA_SERVICE) as CameraManager,
             mBackgroundHandler
@@ -116,18 +117,33 @@ class MainActivity : Activity() {
 
         checkPermission {
 
-        }*/
+        }
         gles()
     }
+
     private var glSurfaceView: GLSurfaceView? = null
     private var rendererSet = false
-    private fun gles(){
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun gles() {
+
         glSurfaceView = GLSurfaceView(this)
         val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
         val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
         if (supportsEs2) {
-            glSurfaceView?.setRenderer(OpenGLRenderer(this))
+
+            glSurfaceView?.setEGLContextClientVersion(2)
+            glSurfaceView?.setRenderer(
+                OpenGLRenderer(
+                    this,
+                    { surfaceTexture ->
+                        setGLTexture(surfaceTexture)
+                        openCamera()
+                    },
+                    glSurfaceView!!
+                )
+            )
             rendererSet = true
         } else {
             Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
@@ -137,50 +153,8 @@ class MainActivity : Activity() {
 
         setContentView(glSurfaceView)
     }
-    class OpenGLRenderer(private val context: Context) : Renderer {
-        private var programId = 0
-        private var vertexData: FloatBuffer? = null
-        private var uColorLocation = 0
-        private var aPositionLocation = 0
 
-        init {
-            prepareData()
-        }
 
-        override fun onSurfaceCreated(arg0: GL10, arg1: EGLConfig) {
-            glClearColor(0f, 0f, 0f, 1f)
-            val vertexShaderId = createShader(context, GL_VERTEX_SHADER, R.raw.vertex_shader)
-            val fragmentShaderId = createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment_shader)
-            programId = createProgram(vertexShaderId, fragmentShaderId)
-            glUseProgram(programId)
-            bindData()
-        }
-
-        override fun onSurfaceChanged(arg0: GL10, width: Int, height: Int) {
-            glViewport(0, 0, width, height)
-        }
-
-        private fun prepareData() {
-            val vertices = floatArrayOf(-0.5f, -0.2f, 0.0f, 0.2f, 0.5f, -0.2f)
-            vertexData = ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder())
-                .asFloatBuffer()
-            vertexData?.put(vertices)
-        }
-
-        private fun bindData() {
-            uColorLocation = glGetUniformLocation(programId, "u_Color")
-            glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f)
-            aPositionLocation = glGetAttribLocation(programId, "a_Position")
-            vertexData!!.position(0)
-            glVertexAttribPointer(aPositionLocation, 2, GL_FLOAT, false, 0, vertexData)
-            glEnableVertexAttribArray(aPositionLocation)
-        }
-
-        override fun onDrawFrame(arg0: GL10) {
-            glClear(GL_COLOR_BUFFER_BIT)
-            glDrawArrays(GL_TRIANGLES, 0, 3)
-        }
-    }
     object FileUtils {
         fun readTextFromRaw(context: Context, resourceId: Int): String {
             val stringBuilder = StringBuilder()
@@ -205,46 +179,7 @@ class MainActivity : Activity() {
             return stringBuilder.toString()
         }
     }
-    object ShaderUtils {
-        fun createProgram(vertexShaderId: Int, fragmentShaderId: Int): Int {
-            val programId = glCreateProgram()
-            if (programId == 0) {
-                return 0
-            }
-            glAttachShader(programId, vertexShaderId)
-            glAttachShader(programId, fragmentShaderId)
-            glLinkProgram(programId)
-            val linkStatus = IntArray(1)
-            glGetProgramiv(programId, GL_LINK_STATUS, linkStatus, 0)
-            if (linkStatus[0] == 0) {
-                glDeleteProgram(programId)
-                return 0
-            }
-            return programId
-        }
 
-        fun createShader(context: Context?, type: Int, shaderRawId: Int): Int {
-            val shaderText = FileUtils.readTextFromRaw(context!!, shaderRawId)
-            return createShader(type, shaderText)
-        }
-
-        private fun createShader(type: Int, shaderText: String?): Int {
-            val err = glewInit()
-            val shaderId = glCreateShader(type)
-            if (shaderId == 0) {
-                return 0
-            }
-            glShaderSource(shaderId, shaderText)
-            glCompileShader(shaderId)
-            val compileStatus = IntArray(1)
-            glGetShaderiv(shaderId, GL_COMPILE_STATUS, compileStatus, 0)
-            if (compileStatus[0] == 0) {
-                glDeleteShader(shaderId)
-                return 0
-            }
-            return shaderId
-        }
-    }
 
     data class CameraUI(
         val iso: Range<Int>? = null,
@@ -305,11 +240,15 @@ class MainActivity : Activity() {
 
     @RequiresApi(Build.VERSION_CODES.S)
     private fun openCamera() {
-        surfaceTexture?.let { st ->
-            surfaceTexture2?.let {
-                cameraService.openCamera(st, it)
-            }
+        glTexture?.let {
+            cameraService.openCamera(it)
         }
+
+        /* surfaceTexture?.let { st ->
+             surfaceTexture2?.let {
+                 cameraService.openCamera(st, it)
+             }
+         }*/
     }
 
     private fun getDisplaySize(): Pair<Int, Int> {
@@ -360,6 +299,11 @@ class MainActivity : Activity() {
 
     private var surfaceTexture: SurfaceTexture? = null
     private var surfaceTexture2: SurfaceTexture? = null
+    private var glTexture: SurfaceTexture? = null
+    private fun setGLTexture(glTexture: SurfaceTexture) {
+        this.glTexture = glTexture
+    }
+
     fun setTexture1(surfaceTexture: SurfaceTexture) {
         this.surfaceTexture = surfaceTexture
     }
@@ -529,7 +473,7 @@ class CameraService(
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setIso(value: Int) {
         iso = value
-      //  createCaptureSession()
+        //  createCaptureSession()
         previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, value)
         magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, value)
 
@@ -538,7 +482,7 @@ class CameraService(
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun setExposure(value: Int) {
         exposure = value.toLong()
-      //  createCaptureSession()
+        //  createCaptureSession()
         previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, value.toLong())
         magnifierCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, value.toLong())
 
@@ -571,6 +515,7 @@ class CameraService(
     private var surface: Surface? = null
     private var surfaceTexture: SurfaceTexture? = null
     private var surfaceTexture2: SurfaceTexture? = null
+    private var glSurfaceTexture: SurfaceTexture? = null
 
     data class DualCamera(val logicalId: String, val physicalId1: String, val physicalId2: String)
 
@@ -607,12 +552,10 @@ class CameraService(
         return dualCameras.toTypedArray()
     }
 
-
     @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MissingPermission")
-    fun openCamera(surfaceTexture: SurfaceTexture, surfaceTexture2: SurfaceTexture) {
-        this.surfaceTexture = surfaceTexture
-        this.surfaceTexture2 = surfaceTexture2
+    fun openCamera(glSurfaceTexture: SurfaceTexture) {
+        this.glSurfaceTexture = glSurfaceTexture
 
         val myCameras = mCameraManager.cameraIdList
 
@@ -622,87 +565,116 @@ class CameraService(
                 mCameraManager.getCameraCharacteristics(cameraId)
             )
         }
-        val phys = mCameraManager.getCameraCharacteristics("0").physicalCameraIds
-        val phys2 = mCameraManager.getCameraCharacteristics("1").physicalCameraIds
-        ///////////////////////
-        findDualCameras(mCameraManager, CameraCharacteristics.LENS_FACING_FRONT)
-
-        //////////////////////
-        val maxZoom =
-            characteristics[0].get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM)
-        val activeRect = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
-        val digitalZoom =
-            characteristics[0].get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM)
-        val zoom = characteristics[0].get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
-        val res = characteristics[0].get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-
         val isoRange = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-        val analogIsoRange =
-            characteristics[0].get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY)
-        val rawIsoBoostRange =
-            characteristics[0].get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE)
-
         val exposure = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
-        val aperture = characteristics[0].get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
-        val focalLength =
-            characteristics[0].get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
-        val minFocus =
-            characteristics[0].get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
-        val hyperFocalFocus =
-            characteristics[0].get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         onGetState(
             CameraUI(
                 iso = isoRange,
                 exposure = exposure
             )
         )
-        ///////////////
-        val SENSOR_INFO_ACTIVE_ARRAY_SIZE =
-            characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
-        // val SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
 
-
-        val SENSOR_INFO_PIXEL_ARRAY_SIZE =
-            characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
-        // val SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
-        val SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE =
-            characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)
-        //  val SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
-
-
-//////////////////////////
-        val supportFull = isHardwareLevelSupported(
-            characteristics[0],
-            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
-        )
-        val support3 = isHardwareLevelSupported(
-            characteristics[0],
-            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
-        )
-        val supportLimited = isHardwareLevelSupported(
-            characteristics[0],
-            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED
-        )
-        ///////////////////////////
-        val capabilities = characteristics[0].get(
-            CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
-        )!!
-        val outputFormats = characteristics[0].get(
-            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
-        )!!.outputFormats
-        if (capabilities.contains(
-                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT
-            )
-        ) {
-
-            val t = true
-        }
         mCameraManager.openCamera(
             myCameras[0],
             mCameraCallback,
             mBackgroundHandler
         )
     }
+    /* @RequiresApi(Build.VERSION_CODES.S)
+     @SuppressLint("MissingPermission")
+     fun openCamera(surfaceTexture: SurfaceTexture, surfaceTexture2: SurfaceTexture) {
+         this.surfaceTexture = surfaceTexture
+         this.surfaceTexture2 = surfaceTexture2
+
+         val myCameras = mCameraManager.cameraIdList
+
+         val characteristics = mutableListOf<CameraCharacteristics>()
+         for (cameraId in myCameras) {
+             characteristics.add(
+                 mCameraManager.getCameraCharacteristics(cameraId)
+             )
+         }
+         val phys = mCameraManager.getCameraCharacteristics("0").physicalCameraIds
+         val phys2 = mCameraManager.getCameraCharacteristics("1").physicalCameraIds
+         ///////////////////////
+         findDualCameras(mCameraManager, CameraCharacteristics.LENS_FACING_FRONT)
+
+         //////////////////////
+         val maxZoom =
+             characteristics[0].get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM)
+         val activeRect = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+         val digitalZoom =
+             characteristics[0].get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM)
+         val zoom = characteristics[0].get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
+         val res = characteristics[0].get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+
+         val isoRange = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+         val analogIsoRange =
+             characteristics[0].get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY)
+         val rawIsoBoostRange =
+             characteristics[0].get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE)
+
+         val exposure = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+         val aperture = characteristics[0].get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
+         val focalLength =
+             characteristics[0].get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+         val minFocus =
+             characteristics[0].get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+         val hyperFocalFocus =
+             characteristics[0].get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+         onGetState(
+             CameraUI(
+                 iso = isoRange,
+                 exposure = exposure
+             )
+         )
+         ///////////////
+         val SENSOR_INFO_ACTIVE_ARRAY_SIZE =
+             characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+         // val SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
+
+
+         val SENSOR_INFO_PIXEL_ARRAY_SIZE =
+             characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+         // val SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
+         val SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE =
+             characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)
+         //  val SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION=characteristics[0].get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)//not supported
+
+
+ //////////////////////////
+         val supportFull = isHardwareLevelSupported(
+             characteristics[0],
+             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
+         )
+         val support3 = isHardwareLevelSupported(
+             characteristics[0],
+             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
+         )
+         val supportLimited = isHardwareLevelSupported(
+             characteristics[0],
+             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED
+         )
+         ///////////////////////////
+         val capabilities = characteristics[0].get(
+             CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
+         )!!
+         val outputFormats = characteristics[0].get(
+             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
+         )!!.outputFormats
+         if (capabilities.contains(
+                 CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_DEPTH_OUTPUT
+             )
+         ) {
+
+             val t = true
+         }
+         mCameraManager.openCamera(
+             myCameras[0],
+             mCameraCallback,
+             mBackgroundHandler
+         )
+     }*/
 
     private fun isHardwareLevelSupported(c: CameraCharacteristics, requiredLevel: Int): Boolean {
         val sortedHwLevels = intArrayOf(
@@ -840,48 +812,15 @@ class CameraService(
 
 
         val configs = mutableListOf<OutputConfiguration>()
-        val surface = Surface(surfaceTexture)
-        val surface2 = Surface(surfaceTexture2)
-        //this.surface = surface
-        /////////////////////////////////
-        mImageReader = ImageReader.newInstance(surfaceWidth, surfaceHeight, ImageFormat.JPEG, 1)
-        mImageReader!!.setOnImageAvailableListener(mOnImageAvailableListener, null)
-        val surface3 = mImageReader?.surface
-        val conf3 = OutputConfiguration(surface3!!)
-        configs.add(conf3)
-        ////////////////////////////////magnifier
-        magnifierCaptureBuilder =
-                //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
-        // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+        glSurfaceTexture?.setDefaultBufferSize(1280, 720)
+        val surface = Surface(glSurfaceTexture)
 
-        magnifierCaptureBuilder?.addTarget(surface2)
-        /*  magnifierCaptureBuilder?.set(
-                  CaptureRequest.SCALER_CROP_REGION,
-                  Rect(0, 0, 480, 640)
-              */
-        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 1.0F)
-        /*  magnifierCaptureBuilder?.set(
-              CaptureRequest.SCALER_CROP_REGION,
-              Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
-          )*/
-        magnifierCaptureBuilder?.set(
-            CaptureRequest.CONTROL_AE_MODE,
-            CameraMetadata.CONTROL_AE_MODE_OFF
-        )
-        magnifierCaptureBuilder?.set(
-            CaptureRequest.CONTROL_AF_MODE,
-            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-        )
-        val conf2 = OutputConfiguration(surface2)
-        configs.add(conf2)
         /////////////////////////////////preview
         previewCaptureBuilder =
                 //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         //   captureBuilder.addTarget(surface2!!)
         previewCaptureBuilder?.addTarget(surface)
-        previewCaptureBuilder?.addTarget(surface3)
         previewCaptureBuilder?.set(
             CaptureRequest.CONTROL_AE_MODE,
             CameraMetadata.CONTROL_AE_MODE_OFF
@@ -902,8 +841,8 @@ class CameraService(
              //   config.streamUseCase = streamUseCase.toLong()
              configs.add(config)
          }*/
-        val conf1 = OutputConfiguration(surface)
-        configs.add(conf1)
+        val conf = OutputConfiguration(surface)
+        configs.add(conf)
         /*  val conf2 = OutputConfiguration(surface2)
           configs.add(conf2)*/
         val cameraCaptureSessionCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
@@ -942,7 +881,7 @@ class CameraService(
                         previewCaptureBuilder?.let {
                             session.setRepeatingRequest(
                                 it.build(),
-                                cameraCaptureSessionCaptureCallback,
+                                null,// cameraCaptureSessionCaptureCallback,
                                 mBackgroundHandler
                             )
                         }
@@ -965,6 +904,137 @@ class CameraService(
 
         cameraDevice!!.createCaptureSession(config)
     }
+
+    /* @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+     fun createCaptureSession() {
+
+
+         val configs = mutableListOf<OutputConfiguration>()
+         val surface = Surface(surfaceTexture)
+         val surface2 = Surface(surfaceTexture2)
+         //this.surface = surface
+         /////////////////////////////////
+         mImageReader = ImageReader.newInstance(surfaceWidth, surfaceHeight, ImageFormat.JPEG, 1)
+         mImageReader!!.setOnImageAvailableListener(mOnImageAvailableListener, null)
+         val surface3 = mImageReader?.surface
+         val conf3 = OutputConfiguration(surface3!!)
+         configs.add(conf3)
+         ////////////////////////////////magnifier
+         magnifierCaptureBuilder =
+                 //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+         // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+
+         magnifierCaptureBuilder?.addTarget(surface2)
+         /*  magnifierCaptureBuilder?.set(
+                   CaptureRequest.SCALER_CROP_REGION,
+                   Rect(0, 0, 480, 640)
+               */
+         magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 1.0F)
+         /*  magnifierCaptureBuilder?.set(
+               CaptureRequest.SCALER_CROP_REGION,
+               Rect(positionX, positionY, magnifierWidth.toInt(), magnifierHeight.toInt())
+           )*/
+         magnifierCaptureBuilder?.set(
+             CaptureRequest.CONTROL_AE_MODE,
+             CameraMetadata.CONTROL_AE_MODE_OFF
+         )
+         magnifierCaptureBuilder?.set(
+             CaptureRequest.CONTROL_AF_MODE,
+             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+         )
+         val conf2 = OutputConfiguration(surface2)
+         configs.add(conf2)
+         /////////////////////////////////preview
+         previewCaptureBuilder =
+                 //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+             cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+         //   captureBuilder.addTarget(surface2!!)
+         previewCaptureBuilder?.addTarget(surface)
+         previewCaptureBuilder?.addTarget(surface3)
+         previewCaptureBuilder?.set(
+             CaptureRequest.CONTROL_AE_MODE,
+             CameraMetadata.CONTROL_AE_MODE_OFF
+         )
+         previewCaptureBuilder?.set(
+             CaptureRequest.CONTROL_AF_MODE,
+             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+         )
+
+         //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+
+
+         val streamUseCase = CameraMetadata
+             .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
+
+         /* targets.forEach {
+              val config = OutputConfiguration(it)
+              //   config.streamUseCase = streamUseCase.toLong()
+              configs.add(config)
+          }*/
+         val conf1 = OutputConfiguration(surface)
+         configs.add(conf1)
+         /*  val conf2 = OutputConfiguration(surface2)
+           configs.add(conf2)*/
+         val cameraCaptureSessionCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
+
+             override fun onCaptureStarted(
+                 session: CameraCaptureSession,
+                 request: CaptureRequest,
+                 timestamp: Long,
+                 frameNumber: Long
+             ) {
+                 super.onCaptureStarted(session, request, timestamp, frameNumber)
+
+             }
+
+             override fun onCaptureCompleted(
+                 session: CameraCaptureSession,
+                 request: CaptureRequest,
+                 result: TotalCaptureResult
+             ) {
+                 Thread.sleep(60)
+                 magnifierCaptureBuilder?.let {
+                     session.capture(it.build(), this, mBackgroundHandler)
+                 }
+
+
+             }
+         }
+         val config = SessionConfiguration(
+             SessionConfiguration.SESSION_REGULAR,
+             configs,
+             Dispatchers.IO.asExecutor(),
+             object : CameraCaptureSession.StateCallback() {
+                 override fun onConfigured(session: CameraCaptureSession) {
+                     try {
+                         // session.stopRepeating()
+                         previewCaptureBuilder?.let {
+                             session.setRepeatingRequest(
+                                 it.build(),
+                                 cameraCaptureSessionCaptureCallback,
+                                 mBackgroundHandler
+                             )
+                         }
+
+                         /*  while (true){
+                               Thread.sleep(100)
+                               session.capture(captureBuilder2.build(), null, mBackgroundHandler)
+                           }*/
+
+
+                     } catch (e: CameraAccessException) {
+                         e.printStackTrace()
+                     }
+                 }
+
+                 override fun onConfigureFailed(session: CameraCaptureSession) {}
+             }
+
+         )
+
+         cameraDevice!!.createCaptureSession(config)
+     }*/
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun configureSession(device: CameraDevice, targets: List<Surface>) {
