@@ -56,6 +56,7 @@ class OpenGLRenderer(
 
     private var surfaceTexture:SurfaceTexture?=null
     private val transformMatrix = FloatArray(16)
+    private var surfaceTextureId:Int?=null
 
     init {
         prepareData()
@@ -77,6 +78,14 @@ class OpenGLRenderer(
     }
 
     private fun prepareData() {
+       /* val vertices = floatArrayOf(
+            1f, 1f,
+            -1f, 1f,
+            -1f, -1f,
+            1f, 1f,
+            -1f, -1f,
+            1f, -1f
+        )*/
         val vertices = floatArrayOf(-0.5f, -0.2f, 0.0f, 0.2f, 0.5f, -0.2f)
         vertexData = ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder())
             .asFloatBuffer()
@@ -102,8 +111,8 @@ class OpenGLRenderer(
     }
     private fun createSurfaceTexture() {
 
-        val surfaceTextureId = createOESTextureObject()
-        surfaceTexture = SurfaceTexture(surfaceTextureId)
+        surfaceTextureId = createOESTextureObject()
+        surfaceTexture = SurfaceTexture(surfaceTextureId!!)
         callback(surfaceTexture!!)
 
 
