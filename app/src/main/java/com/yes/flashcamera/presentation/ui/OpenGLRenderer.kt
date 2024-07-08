@@ -212,7 +212,7 @@ class OpenGLRenderer(
 
         //当camera有数据返回时，刷新
        surfaceTexture?.setOnFrameAvailableListener{
-           glSurfaceView.requestRender()
+         //  glSurfaceView.requestRender()
        }
     }
     private fun createOESTextureObject(): Int {

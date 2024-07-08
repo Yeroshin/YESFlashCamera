@@ -135,14 +135,12 @@ class MainActivity : Activity() {
 
             glSurfaceView?.setEGLContextClientVersion(2)
             glSurfaceView?.setRenderer(
-                OpenGLRenderer(
-                    this,
-                    { surfaceTexture ->
-                        setGLTexture(surfaceTexture)
-                        openCamera()
-                    },
-                    glSurfaceView!!
-                )
+                YESRenderer(
+                    this
+                ) { surfaceTexture ->
+                    setGLTexture(surfaceTexture)
+                    openCamera()
+                }
             )
             rendererSet = true
         } else {
@@ -814,8 +812,8 @@ class CameraService(
 
 
         val configs = mutableListOf<OutputConfiguration>()
-        glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
-       // glSurfaceTexture?.setDefaultBufferSize(1280, 720)//3072x4096
+      //  glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
+        glSurfaceTexture?.setDefaultBufferSize(1280, 720)//3072x4096
         val surface = Surface(glSurfaceTexture)
 
         /////////////////////////////////preview
