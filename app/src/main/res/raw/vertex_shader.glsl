@@ -1,5 +1,8 @@
-attribute vec4 a_Position;
-
+attribute vec4 avVertex;
+attribute vec4 avVertexCoordinate;
+uniform mat4 umTransformMatrix;
+varying vec2 vvTextureCoordinate;
 void main() {
-    gl_Position = a_Position;
+    vvTextureCoordinate= (umTransformMatrix * avVertexCoordinate).xy;
+    gl_Position = avVertex;
 }

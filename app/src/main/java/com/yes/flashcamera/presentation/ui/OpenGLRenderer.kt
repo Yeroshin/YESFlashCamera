@@ -37,6 +37,7 @@ import com.yes.flashcamera.R
 import com.yes.flashcamera.presentation.ui.MainActivity.FileUtils
 import com.yes.flashcamera.presentation.ui.OpenGLRenderer.ShaderUtils.createProgram
 import com.yes.flashcamera.presentation.ui.OpenGLRenderer.ShaderUtils.createShader
+import com.yes.flashcamera.presentation.ui.Utils.readShaderFromResource
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -58,24 +59,88 @@ class OpenGLRenderer(
     private val transformMatrix = FloatArray(16)
     private var surfaceTextureId:Int?=null
 
+    private var programHandle = 0
+    private var vertexHandle = 0
+    private var fragmentHandle = 0
+    private var vertexBuffer:FloatBuffer?=null
+    private var vertexOrederBuffer: FloatBuffer?=null
+
+    private var vertexPositionHandle = 0
+    private var vertexMatrixHandle = 0
+    private var texureOESHandle = 0
+    private var vertexCoordinateHandle = 0
+
+    val vertex_coords: FloatArray = floatArrayOf(
+        1f, 1f,
+        -1f, 1f,
+        -1f, -1f,
+        1f, 1f,
+        -1f, -1f,
+        1f, -1f
+    )
+
+    val vertex_coords_order: FloatArray = floatArrayOf(
+        1f, 1f,
+        0f, 1f,
+        0f, 0f,
+        1f, 1f,
+        0f, 0f,
+        1f, 0f
+    )
+
     init {
         prepareData()
     }
 
     override fun onSurfaceCreated(arg0: GL10, arg1: EGLConfig) {
         createSurfaceTexture()
-          glClearColor(0f, 0f, 0f, 1f)
+         /* glClearColor(0f, 0f, 0f, 1f)
           val vertexShaderId = createShader(context, GL_VERTEX_SHADER, R.raw.vertex_shader)
           val fragmentShaderId = createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment_shader)
           programId = createProgram(vertexShaderId, fragmentShaderId)
           glUseProgram(programId)
-          bindData()
+          bindData()*/
+
+        vertexBuffer = ByteBuffer.allocateDirect(vertex_coords.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        (vertexBuffer as FloatBuffer).put(vertex_coords).position(0);
+
+        vertexOrederBuffer = ByteBuffer.allocateDirect(vertex_coords_order.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .put(vertex_coords_order)
+        (vertexOrederBuffer as FloatBuffer).position(0)
+
+    //    programHandle = glCreateProgram()
+
+      //  vertexHandle = glCreateShader(GL_VERTEX_SHADER)
+
+        vertexHandle= createShader(context, GL_VERTEX_SHADER, R.raw.vertex_shader)
+
+     //   val vertexShader = readShaderFromResource(context, com.yes.flashcamera.R.raw.vertex_shader)
+    /*    glShaderSource(vertexHandle, vertexShader)
+        glCompileShader(vertexHandle)
+        glAttachShader(programHandle, vertexHandle)*/
+
+     //   fragmentHandle = glCreateShader(GL_FRAGMENT_SHADER)
+
+        fragmentHandle = createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment_shader)
+        programHandle = createProgram(vertexHandle,fragmentHandle)
+      //  val fragmentShader = readShaderFromResource(context, com.yes.flashcamera.R.raw.fragment_shader)
+      /*  glShaderSource(fragmentHandle, fragmentShader)
+        glCompileShader(fragmentHandle)
+        glAttachShader(programHandle, fragmentHandle)*/
+
+     //   glLinkProgram(programHandle)
 
     }
 
     override fun onSurfaceChanged(arg0: GL10, width: Int, height: Int) {
         glViewport(0, 0, width, height)
     }
+
+
 
     private fun prepareData() {
        /* val vertices = floatArrayOf(
@@ -86,10 +151,12 @@ class OpenGLRenderer(
             -1f, -1f,
             1f, -1f
         )*/
-        val vertices = floatArrayOf(-0.5f, -0.2f, 0.0f, 0.2f, 0.5f, -0.2f)
+      /*  val vertices = floatArrayOf(-0.5f, -0.2f, 0.0f, 0.2f, 0.5f, -0.2f)
         vertexData = ByteBuffer.allocateDirect(vertices.size * 4).order(ByteOrder.nativeOrder())
             .asFloatBuffer()
-        vertexData?.put(vertices)
+        vertexData?.put(vertices)*/
+
+
     }
 
     private fun bindData() {
@@ -106,8 +173,35 @@ class OpenGLRenderer(
             surfaceTexture?.updateTexImage();
             surfaceTexture?.getTransformMatrix(transformMatrix);
 
+        glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
-        glDrawArrays(GL_TRIANGLES, 0, 3)
+      //  glDrawArrays(GL_TRIANGLES, 0, 3)
+
+        glUseProgram(programHandle);
+
+        vertexPositionHandle = glGetAttribLocation(programHandle, "avVertex");
+        vertexCoordinateHandle = glGetAttribLocation(programHandle, "avVertexCoordinate");
+
+
+        vertexMatrixHandle = glGetUniformLocation(programHandle, "umTransformMatrix");
+        texureOESHandle = glGetUniformLocation(programHandle, "usTextureOes");
+
+
+        glVertexAttribPointer(vertexPositionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
+        glVertexAttribPointer(vertexCoordinateHandle, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, surfaceTextureId!!)
+        GLES20.glUniform1i(texureOESHandle, 0);
+
+        GLES20.glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0);
+
+        glEnableVertexAttribArray(vertexPositionHandle);
+        glEnableVertexAttribArray(vertexCoordinateHandle)
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6)
+
+        GLES20.glDisableVertexAttribArray(vertexPositionHandle);
+        GLES20.glDisableVertexAttribArray(vertexCoordinateHandle);
     }
     private fun createSurfaceTexture() {
 

@@ -565,6 +565,8 @@ class CameraService(
                 mCameraManager.getCameraCharacteristics(cameraId)
             )
         }
+        val res = characteristics[0].get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+
         val isoRange = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
         val exposure = characteristics[0].get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         onGetState(
@@ -812,7 +814,8 @@ class CameraService(
 
 
         val configs = mutableListOf<OutputConfiguration>()
-        glSurfaceTexture?.setDefaultBufferSize(1280, 720)
+        glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
+       // glSurfaceTexture?.setDefaultBufferSize(1280, 720)//3072x4096
         val surface = Surface(glSurfaceTexture)
 
         /////////////////////////////////preview
