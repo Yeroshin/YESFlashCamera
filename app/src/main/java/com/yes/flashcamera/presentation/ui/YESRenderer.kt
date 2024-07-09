@@ -63,34 +63,7 @@ class YESRenderer(
         bindMatrix()
     }
 
-    private fun prepareData() {
-        val vertices = floatArrayOf(
-            //coordinates for sky
-            -2f, 4f, 0f, 0f, 0f,
-            -2f, 0f, 0f, 0f, 1f,
-            2f, 4f, 0f, 1f, 0f,
-            2f, 0f, 0f, 1f, 1f,  //coordinates for sea
 
-            -2f, 0f, 0f, 0.5f, 0f,
-            -2f, -1f, 2f, 0.5f, 0.5f,
-            2f, 0f, 0f, 1f, 0f,
-            2f, -1f, 2f, 1f, 0.5f,  //coordinates for dolphin
-
-            -1f, 1f, 0.5f, 0f, 0.5f,
-            -1f, -1f, 0.5f, 0f, 1f,
-            1f, 1f, 0.5f, 0.5f, 0.5f,
-            1f, -1f, 0.5f, 0.5f, 1f,
-        )
-
-        vertexData = ByteBuffer
-            .allocateDirect(vertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-        vertexData?.put(vertices)
-
-        createSurfaceTexture()
-
-    }
 
     private fun createAndUseProgram() {
         val vertexShaderId = createShader(context, GLES20.GL_VERTEX_SHADER, R.raw.vertex)
@@ -107,7 +80,52 @@ class YESRenderer(
             uTextureUnitLocation = GLES20.glGetUniformLocation(programId, "u_TextureUnit")
             uMatrixLocation = GLES20.glGetUniformLocation(programId, "u_Matrix")
         }
+    private fun prepareData() {
+       /* val vertices = floatArrayOf(
+            //coordinates for sky
+            -2f, 4f, 0f, 0f, 0f,
+            -2f, 0f, 0f, 0f, 1f,
+            2f, 4f, 0f, 1f, 0f,
+            2f, 0f, 0f, 1f, 1f,  //coordinates for sea
 
+            -2f, 0f, 0f, 0.5f, 0f,
+            -2f, -1f, 2f, 0.5f, 0.5f,
+            2f, 0f, 0f, 1f, 0f,
+            2f, -1f, 2f, 1f, 0.5f,  //coordinates for dolphin
+
+            -1f, 1f, 0.5f, 0f, 0.5f,
+            -1f, -1f, 0.5f, 0f, 1f,
+            1f, 1f, 0.5f, 0.5f, 0.5f,
+            1f, -1f, 0.5f, 0.5f, 1f,
+        )*/
+        val vertices = floatArrayOf(
+
+               0f,     0f,  0.5f, 0.5f,
+            -0.5f,  -0.5f,    0f,   1f,
+             0.5f,  -0.5f,    1f,   1f,
+
+             0.5f,   0.5f,    1f,   0f,
+            -0.5f,   0.5f,    0f,   0f,
+            -0.5f,  -0.5f,    0f,   1f,
+        )
+
+        vertexData = ByteBuffer
+            .allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        vertexData?.put(vertices)
+
+        createSurfaceTexture()
+
+    }
+    companion object {
+        private const val POSITION_COUNT = 2
+        private const val TEXTURE_COUNT = 2
+        private val STRIDE: Int = (POSITION_COUNT
+                + TEXTURE_COUNT) * 4
+
+        private const val TIME = 10000L
+    }
     private fun bindData() {
         // координаты вершин
         vertexData!!.position(0)
@@ -125,7 +143,7 @@ class YESRenderer(
             false, STRIDE, vertexData
         )
         GLES20.glEnableVertexAttribArray(aTextureLocation)
-
+        GLES20.glUniform1i(texture, 0);
 
         // помещаем текстуру в target 2D юнита 0
 //        glActiveTexture(GL_TEXTURE0);
@@ -143,6 +161,29 @@ class YESRenderer(
 
         // юнит текстуры
         //glUniform1i(uTextureUnitLocation, 0);
+    }
+    override fun onDrawFrame(arg0: GL10) {
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+        surfaceTexture?.updateTexImage();
+        //    surfaceTexture?.getTransformMatrix(transformMatrix);
+        //сбрасываем model матрицу
+        Matrix.setIdentityM(mModelMatrix, 0)
+        bindMatrix()
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture)
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, 6)
+
+        /*  GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture1)
+          GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 4, 4)
+
+
+          GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture2)
+          Matrix.setIdentityM(mModelMatrix, 0)
+          setModelMatrix()
+          bindMatrix()
+
+
+          GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 8, 4)*/
     }
 
     private fun createProjectionMatrix(width: Int, height: Int) {
@@ -197,38 +238,11 @@ class YESRenderer(
         )
     }
 
-
     private fun bindMatrix() {
         Matrix.multiplyMM(mMatrix, 0, mViewMatrix, 0, mModelMatrix, 0)
         Matrix.multiplyMM(mMatrix, 0, mProjectionMatrix, 0, mMatrix, 0)
         GLES20.glUniformMatrix4fv(uMatrixLocation, 1, false, mMatrix, 0)
     }
-
-    override fun onDrawFrame(arg0: GL10) {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-        surfaceTexture?.updateTexImage();
-    //    surfaceTexture?.getTransformMatrix(transformMatrix);
-        //сбрасываем model матрицу
-        Matrix.setIdentityM(mModelMatrix, 0)
-        bindMatrix()
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture)
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 6)
-
-      /*  GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture1)
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 4, 4)
-
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture2)
-        Matrix.setIdentityM(mModelMatrix, 0)
-        setModelMatrix()
-        bindMatrix()
-
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 8, 4)*/
-    }
-
-
     private fun setModelMatrix() {
         Matrix.translateM(mModelMatrix, 0, 0f, -0.5f, 0f)
 
@@ -240,16 +254,6 @@ class YESRenderer(
         Matrix.rotateM(mModelMatrix, 0, angle, 0f, 0f, 1f)
         Matrix.translateM(mModelMatrix, 0, -0.8f, 0f, 0f)
     }
-
-    companion object {
-        private const val POSITION_COUNT = 3
-        private const val TEXTURE_COUNT = 2
-        private val STRIDE: Int = (POSITION_COUNT
-                + TEXTURE_COUNT) * 4
-
-        private const val TIME = 10000L
-    }
-
     ////////////////////
     private fun createSurfaceTexture() {
 
