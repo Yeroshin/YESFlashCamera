@@ -48,7 +48,6 @@ import javax.microedition.khronos.opengles.GL10
 class OpenGLRenderer(
     private val context: Context,
     private val callback: (surfaceTexture:SurfaceTexture) -> Unit,
-    private val glSurfaceView : GLSurfaceView
 ) : Renderer {
     private var programId = 0
     private var vertexData: FloatBuffer? = null

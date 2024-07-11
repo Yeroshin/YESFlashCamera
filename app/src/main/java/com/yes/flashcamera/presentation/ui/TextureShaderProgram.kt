@@ -1,0 +1,51 @@
+package com.yes.flashcamera.presentation.ui
+
+
+import android.content.Context
+import android.opengl.GLES20.GL_TEXTURE0
+import android.opengl.GLES20.GL_TEXTURE_2D
+import android.opengl.GLES20.glActiveTexture
+import android.opengl.GLES20.glBindTexture
+import android.opengl.GLES20.glGetAttribLocation
+import android.opengl.GLES20.glGetUniformLocation
+import android.opengl.GLES20.glUniform1i
+import android.opengl.GLES20.glUniformMatrix4fv
+import com.yes.flashcamera.R
+
+
+class TextureShaderProgram(context: Context) : ShaderProgram(
+    context, R.raw.vertex, R.raw.fragment
+) {
+
+
+    private val U_TEXTURE_UNIT: String = "u_TextureUnit"
+    private  val A_TEXTURE_COORDINATES: String = "a_TextureCoordinates"
+
+
+    private val uMatrixLocation = glGetUniformLocation(program, U_MATRIX)
+    private val uTextureUnitLocation =
+        glGetUniformLocation(program, U_TEXTURE_UNIT)
+
+    // Attribute locations
+
+
+    // Retrieve attribute locations for the shader program.
+    val positionAttributeLocation: Int = glGetAttribLocation(program, A_POSITION)
+    val textureCoordinatesAttributeLocation: Int =
+        glGetAttribLocation(program, A_TEXTURE_COORDINATES)
+
+    fun setUniforms(matrix: FloatArray?, textureId: Int) {
+        // Pass the matrix into the shader program.
+        glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
+
+        // Set the active texture unit to texture unit 0.
+        glActiveTexture(GL_TEXTURE0)
+
+        // Bind the texture to this unit.
+        glBindTexture(GL_TEXTURE_2D, textureId)
+
+        // Tell the texture uniform sampler to use this texture in the shader by
+        // telling it to read from texture unit 0.
+        glUniform1i(uTextureUnitLocation, 0)
+    }
+}

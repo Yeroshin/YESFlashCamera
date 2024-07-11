@@ -3,8 +3,19 @@ package com.yes.flashcamera.presentation.ui
 
 import android.content.Context
 import android.graphics.SurfaceTexture
+import android.opengl.GLES10.GL_COLOR_BUFFER_BIT
+import android.opengl.GLES10.glClear
+import android.opengl.GLES10.glClearColor
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import android.opengl.GLES20.GL_FRAGMENT_SHADER
+import android.opengl.GLES20.GL_VERTEX_SHADER
+import android.opengl.GLES20.glEnableVertexAttribArray
+import android.opengl.GLES20.glGetAttribLocation
+import android.opengl.GLES20.glGetUniformLocation
+import android.opengl.GLES20.glUseProgram
+import android.opengl.GLES20.glVertexAttribPointer
+import android.opengl.GLES20.glViewport
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.SystemClock
@@ -45,20 +56,20 @@ class YESRenderer(
     private var texture2 = 0
 
     override fun onSurfaceCreated(arg0: GL10, arg1: EGLConfig) {
-        GLES20.glClearColor(0f, 0f, 0f, 1f)
-        GLES20.glEnable(GLES20.GL_DEPTH_TEST)
+       // GLES20.glClearColor(0f, 0f, 0f, 1f)
+      //  GLES20.glEnable(GLES20.GL_DEPTH_TEST)
 
 
 
         createAndUseProgram()
         locations
         prepareData()
-        bindData()
+     //   bindData()
         createViewMatrix()
     }
 
     override fun onSurfaceChanged(arg0: GL10, width: Int, height: Int) {
-        GLES20.glViewport(0, 0, width, height)
+        glViewport(0, 0, width, height)
         createProjectionMatrix(width, height)
         bindMatrix()
     }
@@ -67,19 +78,58 @@ class YESRenderer(
 
     private fun createAndUseProgram() {
         val vertexShaderId = createShader(context, GLES20.GL_VERTEX_SHADER, R.raw.vertex)
-        val fragmentShaderId =
-            createShader(context, GLES20.GL_FRAGMENT_SHADER, R.raw.fragment)
-        programId = createProgram(vertexShaderId, fragmentShaderId)
-        GLES20.glUseProgram(programId)
+        val fragmentShaderId = createShader(context, GLES20.GL_FRAGMENT_SHADER, R.raw.fragment)
+
+
+        /////////////////
+        val vertexHandle= createShader(context, GL_VERTEX_SHADER, R.raw.vertex_shader)
+        val fragmentHandle = createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment_shader)
+        programId = createProgram(vertexHandle,fragmentHandle)
+        /////////////////
+
+      //  programId = createProgram(vertexShaderId, fragmentShaderId)
+        glUseProgram(programId)
     }
 
+    private var vertexPositionHandle = 0
+    private var vertexMatrixHandle = 0
+    private var texureOESHandle = 0
+    private var vertexCoordinateHandle = 0
+  /*  private val locations: Unit
+        get() {
+            aPositionLocation = glGetAttribLocation(programId, "a_Position")
+            aTextureLocation = glGetAttribLocation(programId, "a_Texture")
+            uTextureUnitLocation = glGetUniformLocation(programId, "u_TextureUnit")
+            uMatrixLocation = glGetUniformLocation(programId, "u_Matrix")
+        }*/
     private val locations: Unit
         get() {
-            aPositionLocation = GLES20.glGetAttribLocation(programId, "a_Position")
-            aTextureLocation = GLES20.glGetAttribLocation(programId, "a_Texture")
-            uTextureUnitLocation = GLES20.glGetUniformLocation(programId, "u_TextureUnit")
-            uMatrixLocation = GLES20.glGetUniformLocation(programId, "u_Matrix")
+            vertexPositionHandle = glGetAttribLocation(programId, "avVertex");
+            vertexCoordinateHandle = glGetAttribLocation(programId, "avVertexCoordinate");
+            vertexMatrixHandle = glGetUniformLocation(programId, "umTransformMatrix");
+            texureOESHandle = glGetUniformLocation(programId, "usTextureOes");
         }
+
+
+    val vertex_coords: FloatArray = floatArrayOf(
+        1f, 1f,
+        -1f, 1f,
+        -1f, -1f,
+        1f, 1f,
+        -1f, -1f,
+        1f, -1f
+    )
+
+    val vertex_coords_order: FloatArray = floatArrayOf(
+        1f, 1f,
+        0f, 1f,
+        0f, 0f,
+        1f, 1f,
+        0f, 0f,
+        1f, 0f
+    )
+    private var vertexBuffer:FloatBuffer?=null
+    private var vertexOrederBuffer: FloatBuffer?=null
     private fun prepareData() {
        /* val vertices = floatArrayOf(
             //coordinates for sky
@@ -109,11 +159,25 @@ class YESRenderer(
             -0.5f,  -0.5f,    0f,   1f,
         )
 
-        vertexData = ByteBuffer
+       /* vertexData = ByteBuffer
             .allocateDirect(vertices.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
-        vertexData?.put(vertices)
+        vertexData?.put(vertices)*/
+
+        //////////////////
+
+        vertexBuffer = ByteBuffer.allocateDirect(vertex_coords.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        (vertexBuffer as FloatBuffer).put(vertex_coords).position(0);
+
+        vertexOrederBuffer = ByteBuffer.allocateDirect(vertex_coords_order.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .put(vertex_coords_order)
+        (vertexOrederBuffer as FloatBuffer).position(0)
+        ////////////////////
 
         createSurfaceTexture()
 
@@ -129,40 +193,25 @@ class YESRenderer(
     private fun bindData() {
         // координаты вершин
         vertexData!!.position(0)
-        GLES20.glVertexAttribPointer(
+        glVertexAttribPointer(
             aPositionLocation, POSITION_COUNT, GLES20.GL_FLOAT,
             false, STRIDE, vertexData
         )
-        GLES20.glEnableVertexAttribArray(aPositionLocation)
+        glEnableVertexAttribArray(aPositionLocation)
 
 
         // координаты текстур
         vertexData!!.position(POSITION_COUNT)
-        GLES20.glVertexAttribPointer(
+        glVertexAttribPointer(
             aTextureLocation, TEXTURE_COUNT, GLES20.GL_FLOAT,
             false, STRIDE, vertexData
         )
-        GLES20.glEnableVertexAttribArray(aTextureLocation)
+        glEnableVertexAttribArray(aTextureLocation)
         GLES20.glUniform1i(texture, 0);
 
-        // помещаем текстуру в target 2D юнита 0
-//        glActiveTexture(GL_TEXTURE0);
-//        glBindTexture(GL_TEXTURE_2D, texture);
 
-
-        // помещаем текстуру1 в target 2D юнита 0
-//        glActiveTexture(GL_TEXTURE0);
-//        glBindTexture(GL_TEXTURE_2D, texture1);
-
-        // помещаем текстуру2 в target 2D юнита 0
-
-        //glActiveTexture(GL_TEXTURE0);
-        //glBindTexture(GL_TEXTURE_2D, texture2);
-
-        // юнит текстуры
-        //glUniform1i(uTextureUnitLocation, 0);
     }
-    override fun onDrawFrame(arg0: GL10) {
+  /*  override fun onDrawFrame(arg0: GL10) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         surfaceTexture?.updateTexImage();
         //    surfaceTexture?.getTransformMatrix(transformMatrix);
@@ -170,9 +219,12 @@ class YESRenderer(
         Matrix.setIdentityM(mModelMatrix, 0)
         bindMatrix()
 
+        glEnableVertexAttribArray(aPositionLocation);
+        glEnableVertexAttribArray(aTextureLocation)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, 6)
-
+        GLES20.glDisableVertexAttribArray(aPositionLocation);
+        GLES20.glDisableVertexAttribArray(aTextureLocation);
         /*  GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture1)
           GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 4, 4)
 
@@ -184,7 +236,34 @@ class YESRenderer(
 
 
           GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 8, 4)*/
-    }
+    }*/
+  private val transformMatrix = FloatArray(16)
+  override fun onDrawFrame(arg0: GL10) {
+      surfaceTexture?.updateTexImage();
+      surfaceTexture?.getTransformMatrix(transformMatrix);
+
+      glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
+      glClear(GL_COLOR_BUFFER_BIT)
+      //  glDrawArrays(GL_TRIANGLES, 0, 3)
+
+
+      glVertexAttribPointer(vertexPositionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
+      glVertexAttribPointer(vertexCoordinateHandle, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
+
+    //  GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+    //  GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, surfaceTextureId!!)
+   //   GLES20.glUniform1i(texureOESHandle, 0);
+
+      GLES20.glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0);
+
+      glEnableVertexAttribArray(vertexPositionHandle);
+      glEnableVertexAttribArray(vertexCoordinateHandle)
+      GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6)
+
+      GLES20.glDisableVertexAttribArray(vertexPositionHandle);
+      GLES20.glDisableVertexAttribArray(vertexCoordinateHandle);
+
+  }
 
     private fun createProjectionMatrix(width: Int, height: Int) {
         var ratio = 1f

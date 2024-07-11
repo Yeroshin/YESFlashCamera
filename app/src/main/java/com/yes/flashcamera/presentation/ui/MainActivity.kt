@@ -135,13 +135,18 @@ class MainActivity : Activity() {
 
             glSurfaceView?.setEGLContextClientVersion(2)
             glSurfaceView?.setRenderer(
-                YESRenderer(
+                MyRenderer(
                     this
                 ) { surfaceTexture ->
                     setGLTexture(surfaceTexture)
                     openCamera()
                 }
             )
+           /* glSurfaceView?.setRenderer(
+                AirHockeyRenderer(
+                    this
+                )
+            )*/
             rendererSet = true
         } else {
             Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
