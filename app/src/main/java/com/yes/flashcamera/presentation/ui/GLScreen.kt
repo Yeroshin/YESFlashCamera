@@ -22,12 +22,12 @@ class GLScreen {
 
     private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
         // Triangle Fan
-           0f,  0f,   1f, 1f,
-          -1f, 0f,   0f, 1f,
-          -1f, 1f,   0f, 0f,
-           -1f,  1f,   0f, 0f,
-          0f, 1f,   1f, 0f,
-           0f, 0f,   1f, 1f
+           0f,  0f,   1f, 0f,
+          -1f, 0f,   0f, 0f,
+          -1f, 1f,   0f, 1f,
+           -1f,  1f,   0f, 1f,
+          0f, 1f,   1f, 1f,
+           0f, 0f,   1f, 0f
     )
     private val floatBuffer: FloatBuffer = ByteBuffer
         .allocateDirect(VERTEX_DATA.size * BYTES_PER_FLOAT)
