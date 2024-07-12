@@ -66,8 +66,12 @@ var colorProgram:ColorShaderProgram?=null
      //   colorProgram=ColorShaderProgram(context)
 
       //  createSurfaceTexture()
-    //  textureProgram=TextureShaderProgram(context)
-    //  textureProgram?.useProgram()
+      textureProgram=TextureShaderProgram(context)
+
+      glUseProgram(textureProgram!!.build())
+    /*  textureProgram?.useProgram(
+          i
+      )*/
 
      // glScreen.bindData(textureProgram!!)
       createAndUseProgram()
@@ -135,14 +139,14 @@ var colorProgram:ColorShaderProgram?=null
         }*/
     private var programId = 0
     private fun createAndUseProgram() {
-          val vertexHandle = createShader(context, GLES20.GL_VERTEX_SHADER, R.raw.vertex)
-        val fragmentHandle= createShader(context, GLES20.GL_FRAGMENT_SHADER, R.raw.fragment)
+          val vertexHandle = ShaderProgram.ShaderHelper.createShader(context, GL_VERTEX_SHADER, R.raw.vertex)
+        val fragmentHandle= ShaderProgram.ShaderHelper.createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment)
 
 
         /////////////////
 //val vertexHandle= createShader(context, GL_VERTEX_SHADER, R.raw.vertex_shader)
    //     val fragmentHandle = createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment_shader)
-        programId = createProgram(vertexHandle,fragmentHandle)
+        programId = ShaderProgram.ShaderHelper.buildProgram(vertexHandle,fragmentHandle)
         /////////////////
 
         //  programId = createProgram(vertexShaderId, fragmentShaderId)
