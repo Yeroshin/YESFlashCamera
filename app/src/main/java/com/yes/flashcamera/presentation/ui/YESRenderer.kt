@@ -176,7 +176,10 @@ class YESRenderer(
             .put(vertex_coords_order)
         (vertexOrederBuffer as FloatBuffer).position(0)
         ////////////////////
-
+        glVertexAttribPointer(vertexPositionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
+        glVertexAttribPointer(vertexCoordinateHandle, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
+        glEnableVertexAttribArray(vertexPositionHandle);
+        glEnableVertexAttribArray(vertexCoordinateHandle)
         createSurfaceTexture()
 
     }
@@ -245,8 +248,6 @@ class YESRenderer(
       //  glDrawArrays(GL_TRIANGLES, 0, 3)
 
 
-      glVertexAttribPointer(vertexPositionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
-      glVertexAttribPointer(vertexCoordinateHandle, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
 
     //  GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
     //  GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, surfaceTextureId!!)
@@ -254,8 +255,7 @@ class YESRenderer(
 
       glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0);
 
-      glEnableVertexAttribArray(vertexPositionHandle);
-      glEnableVertexAttribArray(vertexCoordinateHandle)
+
       glDrawArrays(GL_TRIANGLES, 0, 6)
 
      /* GLES20.glDisableVertexAttribArray(vertexPositionHandle);

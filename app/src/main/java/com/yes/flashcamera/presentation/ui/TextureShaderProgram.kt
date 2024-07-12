@@ -33,7 +33,7 @@ class TextureShaderProgram(context: Context) : ShaderProgram(
         glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
 
         // Set the active texture unit to texture unit 0.
-    //    glActiveTexture(GL_TEXTURE0)
+      //  glActiveTexture(GL_TEXTURE0)
 
         // Bind the texture to this unit.
         glBindTexture(GL_TEXTURE_2D, textureId)

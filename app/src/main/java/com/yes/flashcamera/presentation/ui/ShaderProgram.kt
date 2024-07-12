@@ -26,9 +26,8 @@ abstract class ShaderProgram protected constructor(
 ) {
 
 
-
-    protected val U_MATRIX: String = "u_Matrix"
     protected  val A_POSITION: String = "a_Position"
+    protected val U_MATRIX: String = "u_Matrix"
     protected  val A_COLOR: String = "a_Color"
 
 

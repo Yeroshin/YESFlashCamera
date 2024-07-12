@@ -69,6 +69,7 @@ import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.camera.core.processing.OpenGlRenderer
 import com.yes.flashcamera.R
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
@@ -142,7 +143,7 @@ class MainActivity : Activity() {
                     openCamera()
                 }
             )
-           /* glSurfaceView?.setRenderer(
+          /*  glSurfaceView?.setRenderer(
                 YESRenderer(
                     this
                 ) { surfaceTexture ->
@@ -257,7 +258,7 @@ class MainActivity : Activity() {
 
         /* surfaceTexture?.let { st ->
              surfaceTexture2?.let {
-                 cameraService.openCamera(st, it)
+                 cameraService.openCamera(st)
              }
          }*/
     }
@@ -826,23 +827,23 @@ class CameraService(
 
         val configs = mutableListOf<OutputConfiguration>()
       //  glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
-        glSurfaceTexture?.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)
+        glSurfaceTexture?.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
         val surface = Surface(glSurfaceTexture)
 
         /////////////////////////////////preview
         previewCaptureBuilder =
-                //   device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+            cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+           // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         //   captureBuilder.addTarget(surface2!!)
         previewCaptureBuilder?.addTarget(surface)
-        previewCaptureBuilder?.set(
+       /* previewCaptureBuilder?.set(
             CaptureRequest.CONTROL_AE_MODE,
             CameraMetadata.CONTROL_AE_MODE_OFF
         )
         previewCaptureBuilder?.set(
             CaptureRequest.CONTROL_AF_MODE,
             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-        )
+        */
 
         //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
 
