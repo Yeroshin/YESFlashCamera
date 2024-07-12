@@ -826,7 +826,7 @@ class CameraService(
 
         val configs = mutableListOf<OutputConfiguration>()
       //  glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
-        glSurfaceTexture?.setDefaultBufferSize(1280, 720)//3072x4096
+        glSurfaceTexture?.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)
         val surface = Surface(glSurfaceTexture)
 
         /////////////////////////////////preview

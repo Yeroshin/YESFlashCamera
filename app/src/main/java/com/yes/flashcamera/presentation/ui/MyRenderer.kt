@@ -42,18 +42,17 @@ class MyRenderer (
     private val modelMatrix = FloatArray(16)
 
 var textureProgram:TextureShaderProgram?=null
+var colorProgram:ColorShaderProgram?=null
   //  private lateinit var colorProgram:ColorShaderProgram
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
      //   textureProgram = TextureShaderProgram(context)
-        val colorProgram=ColorShaderProgram(context)
-        colorProgram.useProgram()
-        colorProgram.setUniforms(projectionMatrix)
-        mallet.bindData(colorProgram)
+        colorProgram=ColorShaderProgram(context)
+
         createSurfaceTexture()
       textureProgram=TextureShaderProgram(context)
-      textureProgram?.useProgram()
-      glScreen.bindData(textureProgram!!)
+
+
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -79,14 +78,16 @@ var textureProgram:TextureShaderProgram?=null
         glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
 
-        /////////////////
-
         ////////////////
-        mallet.draw()
+        textureProgram?.useProgram()
+        glScreen.bindData(textureProgram!!)
         textureProgram?.setUniforms(transformMatrix,texture)
-
         glScreen.draw()
 
+        colorProgram?.useProgram()
+        colorProgram?.setUniforms(projectionMatrix)
+        mallet.bindData(colorProgram!!)
+        mallet.draw()
 
 
     }

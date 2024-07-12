@@ -22,12 +22,12 @@ class GLScreen {
 
     private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
         // Triangle Fan
-           1f,  1f,   1f, 1f,
-          -1f, -1f,   0f, 1f,
-          -1f, -1f,   0f, 0f,
-           1f,  1f,   1f, 1f,
-          -1f, -1f,   0f, 0f,
-           1f, -1f,   1f, 0f
+           0f,  0f,   1f, 1f,
+          -1f, 0f,   0f, 1f,
+          -1f, 1f,   0f, 0f,
+           -1f,  1f,   0f, 0f,
+          0f, 1f,   1f, 0f,
+           0f, 0f,   1f, 1f
     )
     private val floatBuffer: FloatBuffer = ByteBuffer
         .allocateDirect(VERTEX_DATA.size * BYTES_PER_FLOAT)
@@ -35,18 +35,47 @@ class GLScreen {
         .asFloatBuffer()
         .put(VERTEX_DATA)
 
+    fun bindData(textureProgram: TextureShaderProgram) {
+        // floatBuffer.position(0)
+        setVertexAttribPointer(
+            0,
+            textureProgram.positionAttributeLocation,
+            POSITION_COMPONENT_COUNT,
+            STRIDE
+        )
+
+        setVertexAttribPointer(
+            POSITION_COMPONENT_COUNT,
+            textureProgram.textureCoordinatesAttributeLocation,
+            TEXTURE_COORDINATES_COMPONENT_COUNT,
+            STRIDE
+        )
+        /* vertexBuffer = ByteBuffer.allocateDirect(vertex_coords.size * 4)
+             .order(ByteOrder.nativeOrder())
+             .asFloatBuffer()
+         (vertexBuffer as FloatBuffer).put(vertex_coords).position(0);
+
+         vertexOrederBuffer = ByteBuffer.allocateDirect(vertex_coords_order.size * 4)
+             .order(ByteOrder.nativeOrder())
+             .asFloatBuffer()
+             .put(vertex_coords_order)
+         (vertexOrederBuffer as FloatBuffer).position(0)
+         glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
+         glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
+ */
+    }
     private fun setVertexAttribPointer(
         dataOffset: Int, attributeLocation: Int,
         componentCount: Int, stride: Int
     ) {
-      //  floatBuffer.position(dataOffset)
+        floatBuffer.position(dataOffset)
         glVertexAttribPointer(
             attributeLocation, componentCount, GL_FLOAT,
-            false, 8, floatBuffer
+            false, stride, floatBuffer
         )
         glEnableVertexAttribArray(attributeLocation)
 
-//floatBuffer.position(0)
+        //floatBuffer.position(0)
     }
     val vertex_coords: FloatArray = floatArrayOf(
         1f, 1f,
@@ -67,35 +96,7 @@ class GLScreen {
     )
     private var vertexBuffer:FloatBuffer?=null
     private var vertexOrederBuffer: FloatBuffer?=null
-    fun bindData(textureProgram: TextureShaderProgram) {
-       /* floatBuffer.position(0)
-        setVertexAttribPointer(
-            0,
-            textureProgram.positionAttributeLocation,
-            POSITION_COMPONENT_COUNT,
-            STRIDE
-        )
 
-        setVertexAttribPointer(
-            POSITION_COMPONENT_COUNT,
-            textureProgram.textureCoordinatesAttributeLocation,
-            TEXTURE_COORDINATES_COMPONENT_COUNT,
-            STRIDE
-        )*/
-        vertexBuffer = ByteBuffer.allocateDirect(vertex_coords.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-        (vertexBuffer as FloatBuffer).put(vertex_coords).position(0);
-
-        vertexOrederBuffer = ByteBuffer.allocateDirect(vertex_coords_order.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .put(vertex_coords_order)
-        (vertexOrederBuffer as FloatBuffer).position(0)
-        glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
-        glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
-
-    }
 
     fun draw() {
 
