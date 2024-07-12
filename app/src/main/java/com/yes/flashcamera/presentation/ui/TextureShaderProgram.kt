@@ -43,16 +43,7 @@ class TextureShaderProgram(val context: Context)  {
 
 */
 var program=0
-    fun build():Int{
-        return  ShaderHelper.buildProgram(
-            createShader(
-                context, GL_VERTEX_SHADER, R.raw.vertex
-            ),
-            createShader(
-                context, GL_FRAGMENT_SHADER, R.raw.fragment
-            )
-        )
-    }
+
 
     fun useProgram(program:Int) {
 
@@ -74,6 +65,16 @@ var program=0
       //  glUniform1i(uTextureUnitLocation, 0)
     }
     object ShaderHelper {
+        fun build(context: Context):Int{
+            return  buildProgram(
+                createShader(
+                    context, GL_VERTEX_SHADER, R.raw.vertex
+                ),
+                createShader(
+                    context, GL_FRAGMENT_SHADER, R.raw.fragment
+                )
+            )
+        }
         fun buildProgram(vertexShaderId: Int, fragmentShaderId: Int): Int {
             val programId = glCreateProgram()
             if (programId == 0) {

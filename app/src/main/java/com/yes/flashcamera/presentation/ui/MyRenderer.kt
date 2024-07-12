@@ -60,21 +60,25 @@ class MyRenderer (
 var textureProgram:TextureShaderProgram?=null
 var colorProgram:ColorShaderProgram?=null
   //  private lateinit var colorProgram:ColorShaderProgram
+    var tmp=0
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
       //  glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
      //   textureProgram = TextureShaderProgram(context)
      //   colorProgram=ColorShaderProgram(context)
 
       //  createSurfaceTexture()
-      textureProgram=TextureShaderProgram(context)
+    //  textureProgram=TextureShaderProgram(context)
+      val vertexHandle = TextureShaderProgram.ShaderHelper.createShader(context, GL_VERTEX_SHADER, R.raw.vertex)
+      val fragmentHandle= TextureShaderProgram.ShaderHelper.createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment)
 
-      glUseProgram(textureProgram!!.build())
+        programId=TextureShaderProgram.ShaderHelper.buildProgram(vertexHandle,fragmentHandle)
+      glUseProgram(programId)
     /*  textureProgram?.useProgram(
           i
       )*/
 
      // glScreen.bindData(textureProgram!!)
-      createAndUseProgram()
+    //  createAndUseProgram()
       locations
       prepareData()
 
