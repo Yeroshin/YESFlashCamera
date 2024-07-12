@@ -1,20 +1,16 @@
 package com.yes.flashcamera.presentation.ui
 
 
-import android.R.attr
+
 import android.content.Context
-import android.graphics.SurfaceTexture
 import android.opengl.GLES20.glClearColor
-import android.opengl.GLES11Ext
-import android.opengl.GLES20
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glViewport
 import android.opengl.GLSurfaceView
-
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.tan
+
 
 
 
@@ -80,7 +76,7 @@ class AirHockeyRenderer(
     private val mallet by lazy {
         Mallet()
     }
-    override fun onSurfaceCreated(gl: GL10?, config: javax.microedition.khronos.egl.EGLConfig?) {
+    override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
 
       /*  val vertexShaderSource: String = TextResourceReader

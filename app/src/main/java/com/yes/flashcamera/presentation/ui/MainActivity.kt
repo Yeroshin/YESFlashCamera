@@ -143,6 +143,14 @@ class MainActivity : Activity() {
                 }
             )
            /* glSurfaceView?.setRenderer(
+                YESRenderer(
+                    this
+                ) { surfaceTexture ->
+                    setGLTexture(surfaceTexture)
+                    openCamera()
+                }
+            )*/
+           /* glSurfaceView?.setRenderer(
                 AirHockeyRenderer(
                     this
                 )

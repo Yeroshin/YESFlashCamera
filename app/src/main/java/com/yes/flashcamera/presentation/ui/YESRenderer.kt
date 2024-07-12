@@ -9,10 +9,13 @@ import android.opengl.GLES10.glClearColor
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLES20.GL_FRAGMENT_SHADER
+import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.GL_VERTEX_SHADER
+import android.opengl.GLES20.glDrawArrays
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
+import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES20.glUseProgram
 import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLES20.glViewport
@@ -58,20 +61,17 @@ class YESRenderer(
     override fun onSurfaceCreated(arg0: GL10, arg1: EGLConfig) {
        // GLES20.glClearColor(0f, 0f, 0f, 1f)
       //  GLES20.glEnable(GLES20.GL_DEPTH_TEST)
-
-
-
         createAndUseProgram()
         locations
         prepareData()
      //   bindData()
-        createViewMatrix()
+     //   createViewMatrix()
     }
 
     override fun onSurfaceChanged(arg0: GL10, width: Int, height: Int) {
         glViewport(0, 0, width, height)
-        createProjectionMatrix(width, height)
-        bindMatrix()
+      /*  createProjectionMatrix(width, height)
+        bindMatrix()*/
     }
 
 
@@ -109,8 +109,6 @@ class YESRenderer(
             vertexMatrixHandle = glGetUniformLocation(programId, "umTransformMatrix");
             texureOESHandle = glGetUniformLocation(programId, "usTextureOes");
         }
-
-
     val vertex_coords: FloatArray = floatArrayOf(
         1f, 1f,
         -1f, 1f,
@@ -254,14 +252,14 @@ class YESRenderer(
     //  GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, surfaceTextureId!!)
    //   GLES20.glUniform1i(texureOESHandle, 0);
 
-      GLES20.glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0);
+      glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0);
 
       glEnableVertexAttribArray(vertexPositionHandle);
       glEnableVertexAttribArray(vertexCoordinateHandle)
-      GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6)
+      glDrawArrays(GL_TRIANGLES, 0, 6)
 
-      GLES20.glDisableVertexAttribArray(vertexPositionHandle);
-      GLES20.glDisableVertexAttribArray(vertexCoordinateHandle);
+     /* GLES20.glDisableVertexAttribArray(vertexPositionHandle);
+      GLES20.glDisableVertexAttribArray(vertexCoordinateHandle);*/
 
   }
 
@@ -320,7 +318,7 @@ class YESRenderer(
     private fun bindMatrix() {
         Matrix.multiplyMM(mMatrix, 0, mViewMatrix, 0, mModelMatrix, 0)
         Matrix.multiplyMM(mMatrix, 0, mProjectionMatrix, 0, mMatrix, 0)
-        GLES20.glUniformMatrix4fv(uMatrixLocation, 1, false, mMatrix, 0)
+        glUniformMatrix4fv(uMatrixLocation, 1, false, mMatrix, 0)
     }
     private fun setModelMatrix() {
         Matrix.translateM(mModelMatrix, 0, 0f, -0.5f, 0f)
