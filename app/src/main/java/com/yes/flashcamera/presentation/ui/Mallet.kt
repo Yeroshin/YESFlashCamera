@@ -38,7 +38,7 @@ class Mallet {
         )
         glEnableVertexAttribArray(attributeLocation)
 
-        floatBuffer.position(0)
+      //  floatBuffer.position(0)
     }
 
     fun bindData(colorProgram: ColorShaderProgram) {

@@ -12,6 +12,7 @@ class ColorShaderProgram(context: Context) : ShaderProgram(
     context, R.raw.simple_vertex,
     R.raw.simple_fragment
 ) {
+    protected  val A_COLOR: String = "a_Color"
     // Uniform locations
     // Retrieve uniform locations for the shader program.
     private val uMatrixLocation = glGetUniformLocation(program, U_MATRIX)

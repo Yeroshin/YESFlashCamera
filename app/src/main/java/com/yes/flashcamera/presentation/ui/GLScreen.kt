@@ -46,7 +46,7 @@ class GLScreen {
 
     fun bindData(textureProgram: TextureShaderProgram) {
         // floatBuffer.position(0)
-      /*  setVertexAttribPointer(
+       setVertexAttribPointer(
             0,
             textureProgram.positionAttributeLocation,
             POSITION_COMPONENT_COUNT,
@@ -58,8 +58,8 @@ class GLScreen {
             textureProgram.textureCoordinatesAttributeLocation,
             TEXTURE_COORDINATES_COMPONENT_COUNT,
             STRIDE
-        )*/
-         vertexBuffer = ByteBuffer.allocateDirect(vertex_coords.size * 4)
+        )
+     /*    vertexBuffer = ByteBuffer.allocateDirect(vertex_coords.size * 4)
              .order(ByteOrder.nativeOrder())
              .asFloatBuffer()
          (vertexBuffer as FloatBuffer).put(vertex_coords).position(0);
@@ -69,10 +69,10 @@ class GLScreen {
              .asFloatBuffer()
              .put(vertex_coords_order)
          (vertexOrederBuffer as FloatBuffer).position(0)
-         glVertexAttribPointer(0, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer);
-         glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 8, vertexOrederBuffer);
-        glEnableVertexAttribArray(0)
-        glEnableVertexAttribArray(0)
+         glVertexAttribPointer(textureProgram.positionAttributeLocation, 2, GL_FLOAT, false, 8, vertexBuffer);
+         glVertexAttribPointer(textureProgram.textureCoordinatesAttributeLocation, 2, GL_FLOAT, false, 8, vertexOrederBuffer);
+        glEnableVertexAttribArray(textureProgram.positionAttributeLocation)
+        glEnableVertexAttribArray(textureProgram.textureCoordinatesAttributeLocation)*/
     }
     private fun setVertexAttribPointer(
         dataOffset: Int, attributeLocation: Int,

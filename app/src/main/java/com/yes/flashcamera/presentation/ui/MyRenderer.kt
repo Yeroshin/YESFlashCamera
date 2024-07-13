@@ -67,20 +67,28 @@ var colorProgram:ColorShaderProgram?=null
      //   colorProgram=ColorShaderProgram(context)
 
       //  createSurfaceTexture()
-    //  textureProgram=TextureShaderProgram(context)
-      val vertexHandle = TextureShaderProgram.ShaderHelper.createShader(context, GL_VERTEX_SHADER, R.raw.vertex)
+        createSurfaceTexture()
+      textureProgram=TextureShaderProgram(context)
+
+
+        colorProgram=ColorShaderProgram(context)
+
+
+
+
+    /*  val vertexHandle = TextureShaderProgram.ShaderHelper.createShader(context, GL_VERTEX_SHADER, R.raw.vertex)
       val fragmentHandle= TextureShaderProgram.ShaderHelper.createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment)
 
         programId=TextureShaderProgram.ShaderHelper.buildProgram(vertexHandle,fragmentHandle)
-      glUseProgram(programId)
+      glUseProgram(programId)*/
     /*  textureProgram?.useProgram(
           i
       )*/
 
      // glScreen.bindData(textureProgram!!)
     //  createAndUseProgram()
-      locations
-      prepareData()
+    //  locations
+    //  prepareData()
 
     }
 
@@ -184,9 +192,18 @@ var colorProgram:ColorShaderProgram?=null
         ////////////////
 
       //  textureProgram?.setUniforms(transformMatrix,texture)
-       glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0)
-        glDrawArrays(GL_TRIANGLES, 0, 6)
-      //  glScreen.draw()
+      // glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0)
+     //   glDrawArrays(GL_TRIANGLES, 0, 6)
+
+        glScreen.bindData(textureProgram!!)
+        textureProgram?.useProgram()
+        textureProgram?.setUniforms(transformMatrix,texture)
+        glScreen.draw()
+
+        mallet.bindData(colorProgram!!)
+        colorProgram?.useProgram()
+        colorProgram?.setUniforms(projectionMatrix)
+        mallet.draw()
 
 ////////////////
       /*  colorProgram?.useProgram()

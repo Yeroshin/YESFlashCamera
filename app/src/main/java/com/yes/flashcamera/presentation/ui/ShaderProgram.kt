@@ -21,35 +21,27 @@ import com.yes.flashcamera.presentation.ui.ShaderProgram.ShaderHelper.createShad
 
 
 abstract class ShaderProgram protected constructor(
-    val context: Context, val vertexShaderResourceId: Int,
-    val fragmentShaderResourceId: Int
+    context: Context, vertexShaderResourceId: Int,
+    fragmentShaderResourceId: Int
 ) {
 
 
     protected  val A_POSITION: String = "a_Position"
     protected val U_MATRIX: String = "u_Matrix"
-    protected  val A_COLOR: String = "a_Color"
 
 
-   /* protected var program: Int = ShaderHelper.buildProgram(
+
+
+    protected val program: Int = ShaderHelper.buildProgram(
         createShader(
             context, GL_VERTEX_SHADER, vertexShaderResourceId
         ),
         createShader(
             context, GL_FRAGMENT_SHADER, fragmentShaderResourceId
         )
-    */
+    )
 
     fun useProgram() {
-         val program= ShaderHelper.buildProgram(
-            createShader(
-                context, GL_VERTEX_SHADER, vertexShaderResourceId
-            ),
-            createShader(
-                context, GL_FRAGMENT_SHADER, fragmentShaderResourceId
-            )
-        )
-        // Set the current OpenGL shader program to this program.
         glUseProgram(program)
     }
 
