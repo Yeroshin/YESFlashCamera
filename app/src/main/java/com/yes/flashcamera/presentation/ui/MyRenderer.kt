@@ -41,11 +41,7 @@ class MyRenderer (
     private val context: Context,
     private val callback: (surfaceTexture: SurfaceTexture) -> Unit
 ) : GLSurfaceView.Renderer {
-    private val mProjectionMatrix = FloatArray(16)
-    private val mViewMatrix = FloatArray(16)
-    private val mMatrix = FloatArray(16)
-    private val mModelMatrix = FloatArray(16)
-    private var uMatrixLocation = 0
+
 
     private var surfaceTexture:SurfaceTexture?=null
     private val glScreen by lazy {
@@ -55,18 +51,14 @@ class MyRenderer (
         Mallet()
     }
     private val projectionMatrix = FloatArray(16)
-    private val modelMatrix = FloatArray(16)
+
 
 var textureProgram:TextureShaderProgram?=null
 var colorProgram:ColorShaderProgram?=null
-  //  private lateinit var colorProgram:ColorShaderProgram
-    var tmp=0
-    override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-      //  glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
-     //   textureProgram = TextureShaderProgram(context)
-     //   colorProgram=ColorShaderProgram(context)
 
-      //  createSurfaceTexture()
+
+    override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+
         createSurfaceTexture()
       textureProgram=TextureShaderProgram(context)
 
@@ -74,21 +66,6 @@ var colorProgram:ColorShaderProgram?=null
         colorProgram=ColorShaderProgram(context)
 
 
-
-
-    /*  val vertexHandle = TextureShaderProgram.ShaderHelper.createShader(context, GL_VERTEX_SHADER, R.raw.vertex)
-      val fragmentHandle= TextureShaderProgram.ShaderHelper.createShader(context, GL_FRAGMENT_SHADER, R.raw.fragment)
-
-        programId=TextureShaderProgram.ShaderHelper.buildProgram(vertexHandle,fragmentHandle)
-      glUseProgram(programId)*/
-    /*  textureProgram?.useProgram(
-          i
-      )*/
-
-     // glScreen.bindData(textureProgram!!)
-    //  createAndUseProgram()
-    //  locations
-    //  prepareData()
 
     }
 
@@ -189,12 +166,6 @@ var colorProgram:ColorShaderProgram?=null
         glClear(GL_COLOR_BUFFER_BIT)
 
 
-        ////////////////
-
-      //  textureProgram?.setUniforms(transformMatrix,texture)
-      // glUniformMatrix4fv(vertexMatrixHandle, 1, false, transformMatrix, 0)
-     //   glDrawArrays(GL_TRIANGLES, 0, 6)
-
         glScreen.bindData(textureProgram!!)
         textureProgram?.useProgram()
         textureProgram?.setUniforms(transformMatrix,texture)
@@ -205,97 +176,9 @@ var colorProgram:ColorShaderProgram?=null
         colorProgram?.setUniforms(projectionMatrix)
         mallet.draw()
 
-////////////////
-      /*  colorProgram?.useProgram()
-        colorProgram?.setUniforms(projectionMatrix)
-        mallet.bindData(colorProgram!!)
-        mallet.draw()*/
-
-       // glFlush()
 
     }
-    private fun createViewMatrix() {
-        // точка полоения камеры
-        val eyeX = 0f
-        val eyeY = 0f
-        val eyeZ = 7f
 
-        // точка направления камеры
-        val centerX = 0f
-        val centerY = 0f
-        val centerZ = 0f
-
-        // up-вектор
-        val upX = -3f
-        val upY = 0f
-        val upZ = 0f
-
-        Matrix.setLookAtM(
-            mViewMatrix,
-            0,
-            eyeX,
-            eyeY,
-            eyeZ,
-            centerX,
-            centerY,
-            centerZ,
-            upX,
-            upY,
-            upZ
-        )
-    }
-    private fun bindMatrix() {
-        multiplyMM(mMatrix, 0, mViewMatrix, 0, mModelMatrix, 0)
-        multiplyMM(mMatrix, 0, mProjectionMatrix, 0, mMatrix, 0)
-        glUniformMatrix4fv(uMatrixLocation, 1, false, mMatrix, 0)
-    }
-    private fun createProjectionMatrix(width: Int, height: Int) {
-        var ratio = 1f
-        var left = -0.5f
-        var right = 0.5f
-        var bottom = -0.5f
-        var top = 0.5f
-        val near = 2f
-        val far = 12f
-        if (width > height) {
-            ratio = width.toFloat() / height
-            left *= ratio
-            right *= ratio
-        } else {
-            ratio = height.toFloat() / width
-            bottom *= ratio
-            top *= ratio
-        }
-
-        Matrix.frustumM(mProjectionMatrix, 0, left, right, bottom, top, near, far)
-    }
-    private fun perspectiveM(
-        m: FloatArray, yFovInDegrees: Float, aspect: Float,
-        n: Float, f: Float
-    ) {
-        val angleInRadians = (yFovInDegrees * Math.PI / 180.0).toFloat()
-        val a = (1.0 / tan(angleInRadians / 2.0)).toFloat()
-
-        m[0] = a / aspect
-        m[1] = 0f
-        m[2] = 0f
-        m[3] = 0f
-
-        m[4] = 0f
-        m[5] = a
-        m[6] = 0f
-        m[7] = 0f
-
-        m[8] = 0f
-        m[9] = 0f
-        m[10] = -((f + n) / (f - n))
-        m[11] = -1f
-
-        m[12] = 0f
-        m[13] = 0f
-        m[14] = -((2f * f * n) / (f - n))
-        m[15] = 0f
-    }
 
 
     private var texture = 0
