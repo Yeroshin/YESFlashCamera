@@ -36,10 +36,10 @@ class TextureShaderProgram(context: Context) : ShaderProgram(
         glActiveTexture(GL_TEXTURE0)
 
         // Bind the texture to this unit.
-        glBindTexture(GL_TEXTURE_2D, textureId)
+     //   glBindTexture(GL_TEXTURE_2D, textureId)
 //
         // Tell the texture uniform sampler to use this texture in the shader by
         // telling it to read from texture unit 0.
-        glUniform1i(uTextureUnitLocation, 0)
+      //  glUniform1i(uTextureUnitLocation, 0)
     }
 }

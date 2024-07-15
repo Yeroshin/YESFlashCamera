@@ -20,17 +20,7 @@ class GLScreen {
     private val STRIDE: Int = (POSITION_COMPONENT_COUNT
             + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
 
-  /*  private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-        // Triangle Fan
-           0f,  0f,   1f, 0f,
-          -1f,  0f,   0f, 0f,
-          -1f,  1f,   0f, 1f,
-          -1f,  1f,   0f, 1f,
-           0f,  1f,   1f, 1f,
-           0f,  0f,   1f, 0f
-    )*/
     private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-        // Triangle Fan
         1f,  -1f,   1f, 0f,
         -1f,  -1f,   0f, 0f,
         -1f,  1f,   0f, 1f,
@@ -73,11 +63,6 @@ class GLScreen {
 
 
     }
-
-    private var vertexBuffer:FloatBuffer?=null
-    private var vertexOrederBuffer: FloatBuffer?=null
-
-
     fun draw() {
 
         glDrawArrays(GL_TRIANGLES, 0, 6)

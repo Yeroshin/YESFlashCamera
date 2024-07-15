@@ -4,7 +4,7 @@ uniform samplerExternalOES usTextureOes;
 varying vec2 vvTextureCoordinate;
 
 void main() {
-    vec2 scaledTextureCoordinate = vvTextureCoordinate * 0.5;
+    vec2 scaledTextureCoordinate = vvTextureCoordinate * 1;
 
         if (scaledTextureCoordinate.x < 0.5 && scaledTextureCoordinate.y < 0.5) {
             vec4 vCameraColor = texture2D(usTextureOes, scaledTextureCoordinate);
