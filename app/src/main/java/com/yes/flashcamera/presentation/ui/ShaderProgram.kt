@@ -24,13 +24,8 @@ abstract class ShaderProgram protected constructor(
     context: Context, vertexShaderResourceId: Int,
     fragmentShaderResourceId: Int
 ) {
-
-
     protected  val A_POSITION: String = "a_Position"
     protected val U_MATRIX: String = "u_Matrix"
-
-
-
 
     protected val program: Int = ShaderHelper.buildProgram(
         createShader(
