@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.BitmapFactory
-import android.graphics.ImageFormat
 import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
@@ -23,37 +22,7 @@ import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
-import android.opengl.GLES10.GL_COLOR_BUFFER_BIT
-import android.opengl.GLES10.GL_FLOAT
-import android.opengl.GLES10.GL_TRIANGLES
-import android.opengl.GLES10.glClear
-import android.opengl.GLES10.glClearColor
-import android.opengl.GLES10.glDrawArrays
-import android.opengl.GLES10.glViewport
-import android.opengl.GLES11Ext
-import android.opengl.GLES20
-import android.opengl.GLES20.GL_COMPILE_STATUS
-import android.opengl.GLES20.GL_FRAGMENT_SHADER
-import android.opengl.GLES20.GL_LINK_STATUS
-import android.opengl.GLES20.GL_VERTEX_SHADER
-import android.opengl.GLES20.glAttachShader
-import android.opengl.GLES20.glCompileShader
-import android.opengl.GLES20.glCreateProgram
-import android.opengl.GLES20.glCreateShader
-import android.opengl.GLES20.glDeleteProgram
-import android.opengl.GLES20.glDeleteShader
-import android.opengl.GLES20.glEnableVertexAttribArray
-import android.opengl.GLES20.glGetAttribLocation
-import android.opengl.GLES20.glGetProgramiv
-import android.opengl.GLES20.glGetShaderiv
-import android.opengl.GLES20.glGetUniformLocation
-import android.opengl.GLES20.glLinkProgram
-import android.opengl.GLES20.glShaderSource
-import android.opengl.GLES20.glUniform4f
-import android.opengl.GLES20.glUseProgram
-import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLSurfaceView
-import android.opengl.GLSurfaceView.Renderer
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -69,11 +38,8 @@ import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.camera.core.processing.OpenGlRenderer
-import com.yes.flashcamera.R
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.asExecutor
@@ -81,14 +47,9 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
 
 
 private const val PERMISSIONS_REQUEST_CODE = 10
@@ -125,6 +86,13 @@ class MainActivity : Activity() {
     private var glSurfaceView: GLSurfaceView? = null
     private var rendererSet = false
 
+    private val renderer=MyRenderer(
+        this
+    ) { surfaceTexture ->
+        setGLTexture(surfaceTexture)
+        openCamera()
+    }
+
     @RequiresApi(Build.VERSION_CODES.S)
     private fun gles() {
 
@@ -136,12 +104,7 @@ class MainActivity : Activity() {
 
             glSurfaceView?.setEGLContextClientVersion(2)
             glSurfaceView?.setRenderer(
-                MyRenderer(
-                    this
-                ) { surfaceTexture ->
-                    setGLTexture(surfaceTexture)
-                    openCamera()
-                }
+               renderer
             )
           /*  glSurfaceView?.setRenderer(
                 YESRenderer(
@@ -423,6 +386,35 @@ class MainActivity : Activity() {
                 else -> return@setOnTouchListener false
             }
             true
+        }
+        glSurfaceView!!.setOnTouchListener { v, event ->
+            if (event != null) {
+                // Convert touch coordinates into normalized device
+                // coordinates, keeping in mind that Android's Y
+                // coordinates are inverted.
+                val normalizedX =
+                    (event.x / v.width.toFloat()) * 2 - 1
+                val normalizedY =
+                    -((event.y / v.height.toFloat()) * 2 - 1)
+
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    glSurfaceView!!.queueEvent {
+                        renderer.handleTouchPress(
+                            normalizedX, normalizedY
+                        )
+                    }
+                } else if (event.action == MotionEvent.ACTION_MOVE) {
+                    glSurfaceView!!.queueEvent {
+                        renderer.handleTouchDrag(
+                            normalizedX, normalizedY
+                        )
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
         }
 
     }
