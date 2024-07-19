@@ -9,7 +9,10 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class Mallet {
+class Mallet(
+    val radius:Float, val  height:Float, val numPointsAroundMallet:Int
+) {
+
     private val BYTES_PER_FLOAT: Int = 4
 
     private val POSITION_COMPONENT_COUNT = 2
@@ -57,7 +60,7 @@ class Mallet {
     }
 
     fun draw() {
-        glDrawArrays(GL_POINTS, 0, 2)
+        glDrawArrays(GL_POINTS, 0, 1)
     }
 
 

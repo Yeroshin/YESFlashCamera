@@ -74,7 +74,7 @@ class AirHockeyRenderer(
         vertexData.put(tableVerticesWithTriangles)
     }*/
     private val mallet by lazy {
-        Mallet()
+        Mallet(10f,3f,10)
     }
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)

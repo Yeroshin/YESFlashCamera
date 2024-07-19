@@ -125,7 +125,35 @@ class MainActivity : Activity() {
                 .show()
             return
         }
+        glSurfaceView!!.setOnTouchListener { v, event ->
+            if (event != null) {
+                // Convert touch coordinates into normalized device
+                // coordinates, keeping in mind that Android's Y
+                // coordinates are inverted.
+                val normalizedX =
+                    (event.x / v.width.toFloat()) * 2 - 1
+                val normalizedY =
+                    -((event.y / v.height.toFloat()) * 2 - 1)
 
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    glSurfaceView!!.queueEvent {
+                        renderer.handleTouchPress(
+                            normalizedX, normalizedY
+                        )
+                    }
+                } else if (event.action == MotionEvent.ACTION_MOVE) {
+                    glSurfaceView!!.queueEvent {
+                        renderer.handleTouchDrag(
+                            normalizedX, normalizedY
+                        )
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
+        }
         setContentView(glSurfaceView)
     }
 
@@ -387,35 +415,7 @@ class MainActivity : Activity() {
             }
             true
         }
-        glSurfaceView!!.setOnTouchListener { v, event ->
-            if (event != null) {
-                // Convert touch coordinates into normalized device
-                // coordinates, keeping in mind that Android's Y
-                // coordinates are inverted.
-                val normalizedX =
-                    (event.x / v.width.toFloat()) * 2 - 1
-                val normalizedY =
-                    -((event.y / v.height.toFloat()) * 2 - 1)
 
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    glSurfaceView!!.queueEvent {
-                        renderer.handleTouchPress(
-                            normalizedX, normalizedY
-                        )
-                    }
-                } else if (event.action == MotionEvent.ACTION_MOVE) {
-                    glSurfaceView!!.queueEvent {
-                        renderer.handleTouchDrag(
-                            normalizedX, normalizedY
-                        )
-                    }
-                }
-
-                true
-            } else {
-                false
-            }
-        }
 
     }
 

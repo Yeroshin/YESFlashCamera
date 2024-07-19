@@ -45,8 +45,16 @@ class MyRenderer(
         GLScreen()
     }
     private val mallet by lazy {
-        Mallet()
+        Mallet(0.08f, 0.15f, 32)
     }
+    private var blueMalletPosition: Geometry.Point? = null
+    private var previousBlueMalletPosition: Geometry.Point? = null
+    private val leftBound = -0.5f
+    private val rightBound = 0.5f
+    private val farBound = -0.8f
+    private val nearBound = 0.8f
+    private val puckPosition: Geometry.Point? = null
+    private var puckVector: Geometry.Vector? = null
     private fun divideByW(vector: FloatArray) {
         vector[0] /= vector[3]
         vector[1] /= vector[3]
@@ -94,40 +102,36 @@ class MyRenderer(
     }
     private var malletPressed = false
     fun handleTouchPress(normalizedX: Float, normalizedY: Float) {
-        val ray: Geometry.Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
+        val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
 
         // Now test if this ray intersects with the mallet by creating a
         // bounding sphere that wraps the mallet.
-      /*  val malletBoundingSphere: Geometry.Sphere = Geometry.Sphere(
+        val malletBoundingSphere: Geometry.Sphere = Geometry.Sphere(
             Geometry.Point(
-                blueMalletPosition.x,
-                blueMalletPosition.y,
-                blueMalletPosition.z
+                blueMalletPosition!!.x,
+                blueMalletPosition!!.y,
+                blueMalletPosition!!.z
             ),
             mallet.height / 2f
-        )*/
+        )
 
         // If the ray intersects (if the user touched a part of the screen that
         // intersects the mallet's bounding sphere), then set malletPressed =
         // true.
-       // malletPressed = Geometry.intersects(malletBoundingSphere, ray)
+        malletPressed = Geometry.intersects(malletBoundingSphere, ray)
     }
     fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
         if (malletPressed) {
             val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
             // Define a plane representing our air hockey table.
-            val plane = Geometry.Plane(Geometry.Point(0f, 0f, 0f), Geometry.Vector<Any?>(0, 1, 0))
+            val plane = Geometry.Plane(Geometry.Point(0f, 0f, 0f), Geometry.Vector(0f, 1f, 0f))
             // Find out where the touched point intersects the plane
             // representing our table. We'll move the mallet along this plane.
             val touchedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
 
             // Clamp to bounds
-        /*    previousBlueMalletPosition = blueMalletPosition
+            previousBlueMalletPosition = blueMalletPosition
 
-            /*
-            blueMalletPosition =
-                new Point(touchedPoint.x, mallet.height / 2f, touchedPoint.z);
-            */
             // Clamp to bounds
             blueMalletPosition = Geometry.Point(
                 clamp(
@@ -145,8 +149,7 @@ class MyRenderer(
 
 
             // Now test if mallet has struck the puck.
-            val distance: Float =
-                Geometry.vectorBetween(blueMalletPosition, puckPosition).length()
+           /* val distance: Float = vectorBetween(blueMalletPosition!!, puckPosition!!).length()
 
             if (distance < (puck.radius + mallet.radius)) {
                 // The mallet has struck the puck. Now send the puck flying
@@ -170,6 +173,8 @@ class MyRenderer(
         createSurfaceTexture()
         textureProgram = TextureShaderProgram(context)
         colorProgram = ColorShaderProgram(context)
+
+        blueMalletPosition = Geometry.Point(0f, mallet.height / 2f, 0.4f)
     }
 
 
@@ -178,7 +183,7 @@ class MyRenderer(
 
         perspectiveM(
             projectionMatrix,0, 45f,
-            attr.width.toFloat() / attr.height.toFloat(), 1f, 10f
+            width.toFloat() / height.toFloat(), 1f, 10f
         )
 
         setLookAtM(viewMatrix, 0, 0f, 0f, 5.2f, 0f, 0f, 0f, 0f, 1f, 0f)
@@ -212,7 +217,8 @@ class MyRenderer(
         glScreen.bindData(textureProgram!!)
         glScreen.draw()
 
-        positionObjectInScene(0f, 0f, 1f)
+        positionObjectInScene(blueMalletPosition!!.x, blueMalletPosition!!.y,
+            blueMalletPosition!!.z)
         mallet.bindData(colorProgram!!)
         colorProgram?.useProgram()
         colorProgram?.setUniforms(modelViewProjectionMatrix)
