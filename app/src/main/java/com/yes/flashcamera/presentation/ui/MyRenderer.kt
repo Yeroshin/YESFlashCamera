@@ -18,6 +18,7 @@ import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.multiplyMV
 import android.opengl.Matrix.perspectiveM
 import android.opengl.Matrix.rotateM
+import android.opengl.Matrix.scaleM
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
@@ -46,16 +47,18 @@ class MyRenderer(
         GLScreen()
     }
     private val mallet by lazy {
-        Mallet(0.3f, 0.3f, 32)
+        Mallet(0.2f, 0.3f, 32)
+    }
+    private val magnifier by lazy {
+        Magnifier(0.01f, 0.3f, 32)
     }
     private var blueMalletPosition: Geometry.Point? = null
     private var previousBlueMalletPosition: Geometry.Point? = null
-    private val leftBound = -0.5f
-    private val rightBound = 0.5f
-    private val farBound = -0.8f
-    private val nearBound = 0.8f
-    private val puckPosition: Geometry.Point? = null
-    private var puckVector: Geometry.Vector? = null
+    private val leftBound = -1f
+    private val rightBound = 1f
+    private val farBound = -1f
+    private val nearBound = 1f
+
     private fun divideByW(vector: FloatArray) {
         vector[0] /= vector[3]
         vector[1] /= vector[3]
@@ -113,7 +116,7 @@ class MyRenderer(
                 blueMalletPosition!!.y,
                 blueMalletPosition!!.z
             ),
-            mallet.radius
+            mallet.height
         )
 
         // If the ray intersects (if the user touched a part of the screen that
@@ -133,25 +136,26 @@ class MyRenderer(
             // Clamp to bounds
             previousBlueMalletPosition = blueMalletPosition
 
-
+/*
             blueMalletPosition =
-                Geometry.Point(normalizedX, normalizedY, 0f);
-
+                Geometry.Point(touchedPoint.x, touchedPoint.z,mallet.height / 2f, );
+*/
 
             // Clamp to bounds
-           /* blueMalletPosition = Geometry.Point(
+            blueMalletPosition = Geometry.Point(
                 clamp(
                     touchedPoint.x,
                     leftBound + mallet.radius,
                     rightBound - mallet.radius
                 ),
-                mallet.radius,
                 clamp(
                     touchedPoint.z,
-                    0f + mallet.radius,
+                    farBound + mallet.radius,
                     nearBound - mallet.radius
-                )
-            )*/
+                ),
+               0f// mallet.radius,
+
+            )
 
 
             // Now test if mallet has struck the puck.
@@ -172,6 +176,7 @@ class MyRenderer(
 
     private var textureProgram: TextureShaderProgram? = null
     private var colorProgram: ColorShaderProgram? = null
+    private var scaledTextureProgram: ScaledTextureProgram? = null
 
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
@@ -179,8 +184,9 @@ class MyRenderer(
         createSurfaceTexture()
         textureProgram = TextureShaderProgram(context)
         colorProgram = ColorShaderProgram(context)
+        scaledTextureProgram=ScaledTextureProgram(context)
 
-        blueMalletPosition = Geometry.Point(0f, 0f, 0.0f)
+        blueMalletPosition = Geometry.Point(0f, mallet.height / 2f, 0.4f)
     }
 
 
@@ -189,23 +195,14 @@ class MyRenderer(
 
         perspectiveM(
             projectionMatrix,0, 45f,
-            width.toFloat() / height.toFloat(), 1f, 10f
+            width.toFloat() / height.toFloat(), 1f, 20f
         )
 
-        setLookAtM(viewMatrix, 0, 0f, 0f, 5.2f, 0f, 0f, 0f, 0f, 1f, 0f)
+        setLookAtM(viewMatrix, 0, 0f, -5.2f, 3.2f, 0f, 0f, 0f, 0f, 1f, 0f)
 
     }
 
-    private fun positionTableInScene() {
-        // The table is defined in terms of X & Y coordinates, so we rotate it
-        // 90 degrees to lie flat on the XZ plane.
-        setIdentityM(modelMatrix, 0)
-        rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
-        multiplyMM(
-            modelViewProjectionMatrix, 0, viewProjectionMatrix,
-            0, modelMatrix, 0
-        )
-    }
+
 
     private val transformMatrix = FloatArray(16)
     override fun onDrawFrame(gl: GL10?) {
@@ -225,26 +222,44 @@ class MyRenderer(
 
         glScreen.draw()
 
-        positionObjectInScene(
-            blueMalletPosition!!.x,
-            blueMalletPosition!!.y,
-            blueMalletPosition!!.z
-        )
+
       /*  positionObjectInScene(
             1f,
             2f,
            0f
         )*/
-        mallet.bindData(colorProgram!!)
+       /* mallet.bindData(colorProgram!!)
         colorProgram?.useProgram()
         colorProgram?.setUniforms(modelViewProjectionMatrix)
-        mallet.draw()
+        mallet.draw()*/
+        positionObjectInScene(
+            blueMalletPosition!!.x,
+            blueMalletPosition!!.y,
+            0f
+        )
+        magnifier.bindData(scaledTextureProgram!!)
+        scaledTextureProgram?.useProgram()
+        scaledTextureProgram?.setUniforms(modelViewProjectionMatrix, texture)
+        magnifier.draw()
 
 
     }
+    private fun positionTableInScene() {
+        // The table is defined in terms of X & Y coordinates, so we rotate it
+        // 90 degrees to lie flat on the XZ plane.
+        setIdentityM(modelMatrix, 0)
+        rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+        multiplyMM(
+            modelViewProjectionMatrix, 0, viewProjectionMatrix,
+            0, modelMatrix, 0
+        )
+    }
     private fun positionObjectInScene(x: Float, y: Float, z: Float) {
         setIdentityM(modelMatrix, 0)
+
         translateM(modelMatrix, 0, x, y, z)
+        rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+        scaleM(modelMatrix,0,0.2f,0.2f,0.0f)
         multiplyMM(
             modelViewProjectionMatrix, 0, viewProjectionMatrix,
             0, modelMatrix, 0

@@ -136,17 +136,17 @@ class MainActivity : Activity() {
                     -((event.y / v.height.toFloat()) * 2 - 1)
 
                 if (event.action == MotionEvent.ACTION_DOWN) {
-                    glSurfaceView!!.queueEvent {
+                //    glSurfaceView!!.queueEvent {
                         renderer.handleTouchPress(
                             normalizedX, normalizedY
                         )
-                    }
+                 //   }
                 } else if (event.action == MotionEvent.ACTION_MOVE) {
-                    glSurfaceView!!.queueEvent {
+                 //   glSurfaceView!!.queueEvent {
                         renderer.handleTouchDrag(
                             normalizedX, normalizedY
                         )
-                    }
+                 //   }
                 }
 
                 true
