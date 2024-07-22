@@ -141,7 +141,6 @@ class MyRenderer(
                 Geometry.Point(touchedPoint.x, touchedPoint.z,mallet.height / 2f, );
 */
 
-            // Clamp to bounds
             blueMalletPosition = Geometry.Point(
                 clamp(
                     touchedPoint.x,
@@ -154,21 +153,15 @@ class MyRenderer(
                     nearBound - mallet.radius
                 ),
                0f// mallet.radius,
-
             )
-
-
-            // Now test if mallet has struck the puck.
-           /* val distance: Float = vectorBetween(blueMalletPosition!!, puckPosition!!).length()
-
-            if (distance < (puck.radius + mallet.radius)) {
-                // The mallet has struck the puck. Now send the puck flying
-                // based on the mallet velocity.
-                puckVector = Geometry.vectorBetween(
-                    previousBlueMalletPosition, blueMalletPosition
-                )
-            }*/
         }
+        val tmp=mapVertexToTextureCoords(1f, 1f)
+    }
+    private fun mapVertexToTextureCoords(vertexX: Float, vertexY: Float): Pair<Float, Float>{
+        val textureX = (vertexX + 1.0f) / 2.0f
+        val textureY = 1.0f - (vertexY + 1.0f) / 2.0f
+
+        return Pair(textureX, textureY)
     }
 
 
@@ -188,8 +181,6 @@ class MyRenderer(
 
         blueMalletPosition = Geometry.Point(0f, mallet.height / 2f, 0.4f)
     }
-
-
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         glViewport(0, 0, width, height)
 
@@ -232,17 +223,33 @@ class MyRenderer(
         colorProgram?.useProgram()
         colorProgram?.setUniforms(modelViewProjectionMatrix)
         mallet.draw()*/
+        ///////////////////////////////////////////
+        val width=0.5
+        val height=0.5
+        val positionX= blueMalletPosition!!.x
+        val positionY= blueMalletPosition!!.y
+        val position=mapVertexToTextureCoords(
+            blueMalletPosition!!.x,
+            blueMalletPosition!!.y
+        )
+        val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            position.first, position.second,
+            (position.first+width).toFloat(), (position.second),
+            (position.first+width).toFloat(), (position.second+height).toFloat(),
+            (position.first+width).toFloat(), (position.second+height).toFloat(),
+            (position.first), (position.second+height).toFloat(),
+            position.first, position.second
+        )
         positionObjectInScene(
             blueMalletPosition!!.x,
             blueMalletPosition!!.y,
             0f
         )
+        magnifier.updateBuffer(textureData,0,textureData.size)
         magnifier.bindData(scaledTextureProgram!!)
         scaledTextureProgram?.useProgram()
         scaledTextureProgram?.setUniforms(modelViewProjectionMatrix, texture)
         magnifier.draw()
-
-
     }
     private fun positionTableInScene() {
         // The table is defined in terms of X & Y coordinates, so we rotate it
