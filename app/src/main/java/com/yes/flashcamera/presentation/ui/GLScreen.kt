@@ -20,14 +20,22 @@ class GLScreen {
     private val STRIDE: Int = (POSITION_COMPONENT_COUNT
             + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
 
-    private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-        -1f,  1f,   0f, 0f,
-        1f,  1f,   1f, 0f,
-        1f,  -1f,   1f, 1f,
-        1f,  -1f,   1f, 1f,
-        -1f,  -1f,   0f, 1f,
-        -1f,  1f,   0f, 0f
-    )
+   /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
+        -1f,  1f,   0f, 1f,
+        1f,  1f,   1f, 1f,
+        1f,  -1f,   1f, 0f,
+        1f,  -1f,   1f, 0f,
+        -1f,  -1f,   0f, 0f,
+        -1f,  1f,   0f, 1f
+    )*/
+   private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
+       -1.0f, -1.0f, 0.0f, 1.0f,
+       1.0f, -1.0f, 1.0f, 1.0f,
+       -1.0f,  1.0f, 0.0f, 0.0f,
+       -1.0f,  1.0f, 0.0f, 0.0f,
+       1.0f, -1.0f, 1.0f, 1.0f,
+       1.0f,  1.0f, 1.0f, 0.0f
+   )
     private val floatBuffer: FloatBuffer = ByteBuffer
         .allocateDirect(VERTEX_DATA.size * BYTES_PER_FLOAT)
         .order(ByteOrder.nativeOrder())

@@ -128,7 +128,7 @@ class MyRenderer(
         if (malletPressed) {
             val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
             // Define a plane representing our air hockey table.
-            val plane = Geometry.Plane(Geometry.Point(0f, 0f, 0f), Geometry.Vector(0f, 1f, 0f))
+            val plane = Geometry.Plane(Geometry.Point(0f, 0f, 0f), Geometry.Vector(0f, 0f, 1f))
             // Find out where the touched point intersects the plane
             // representing our table. We'll move the mallet along this plane.
             val touchedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
@@ -189,7 +189,7 @@ class MyRenderer(
             width.toFloat() / height.toFloat(), 1f, 20f
         )
 
-        setLookAtM(viewMatrix, 0, 0f, -5.2f, 3.2f, 0f, 0f, 0f, 0f, 1f, 0f)
+        setLookAtM(viewMatrix, 0, 3.5f, 0.0f, 5.2f, 0f, 0f, 0f, -1f, 0f, 0f)
 
     }
 
@@ -255,7 +255,7 @@ class MyRenderer(
         // The table is defined in terms of X & Y coordinates, so we rotate it
         // 90 degrees to lie flat on the XZ plane.
         setIdentityM(modelMatrix, 0)
-        rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+      //  rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
         multiplyMM(
             modelViewProjectionMatrix, 0, viewProjectionMatrix,
             0, modelMatrix, 0
@@ -265,7 +265,7 @@ class MyRenderer(
         setIdentityM(modelMatrix, 0)
 
         translateM(modelMatrix, 0, x, y, z)
-        rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+       // rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
         scaleM(modelMatrix,0,0.2f,0.2f,0.0f)
         multiplyMM(
             modelViewProjectionMatrix, 0, viewProjectionMatrix,
