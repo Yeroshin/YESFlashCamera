@@ -1,7 +1,6 @@
 package com.yes.flashcamera.presentation.ui
 
 
-import android.R.attr
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
@@ -17,8 +16,6 @@ import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.multiplyMV
 import android.opengl.Matrix.perspectiveM
-import android.opengl.Matrix.rotateM
-import android.opengl.Matrix.scaleM
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
@@ -125,6 +122,7 @@ class MyRenderer(
         malletPressed = Geometry.intersects(malletBoundingSphere, ray)
     }
     fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
+
         if (malletPressed) {
             val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
             // Define a plane representing our air hockey table.
@@ -140,22 +138,35 @@ class MyRenderer(
             blueMalletPosition =
                 Geometry.Point(touchedPoint.x, touchedPoint.z,mallet.height / 2f, );
 */
-
+            val magnifierWidth=0.5f
+            val magnification=2.0f
             blueMalletPosition = Geometry.Point(
                 clamp(
                     touchedPoint.x,
-                    leftBound + mallet.radius,
-                    rightBound - mallet.radius
+                    leftBound + magnifierWidth,
+                    rightBound - magnifierWidth
                 ),
                 clamp(
                     touchedPoint.y,
-                    farBound + mallet.radius,
-                    nearBound - mallet.radius
+                    farBound + magnifierWidth,
+                    nearBound - magnifierWidth
                 ),
                0f// mallet.radius,
             )
+           // val magnification=0.03125f
+            val magnifierValue=1/((1/magnifierWidth)*magnification*2)
+            val position=mapVertexToTextureCoords(
+                blueMalletPosition!!.x,
+                blueMalletPosition!!.y
+            )
+            magnifier.updateTextureBuffer(position,magnifierValue)
+            magnifier.updateVertexBuffer(
+                magnifierWidth
+            )
         }
-        val tmp=mapVertexToTextureCoords(1f, 1f)
+
+
+
     }
     private fun mapVertexToTextureCoords(vertexX: Float, vertexY: Float): Pair<Float, Float>{
         val textureX = (vertexX + 1.0f) / 2.0f
@@ -224,46 +235,6 @@ class MyRenderer(
         colorProgram?.setUniforms(modelViewProjectionMatrix)
         mallet.draw()*/
         ///////////////////////////////////////////
-        val pos1=mapVertexToTextureCoords(-1f,1f)
-        val pos2=mapVertexToTextureCoords(1f,1f)
-        val pos3=mapVertexToTextureCoords(1f,-1f)
-        val pos4=mapVertexToTextureCoords(-1f,-1f)
-
-
-        val width=0.125
-        val height=0.125
-
-        val position=mapVertexToTextureCoords(
-            blueMalletPosition!!.x,
-            blueMalletPosition!!.y
-        )
-        val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            (position.first-width).toFloat(), (position.second-width).toFloat(),
-            (position.first+width).toFloat(), (position.second-width).toFloat(),
-            (position.first+width).toFloat(), (position.second+height).toFloat(),
-            (position.first+width).toFloat(), (position.second+height).toFloat(),
-            (position.first-width).toFloat(), (position.second+height).toFloat(),
-            (position.first-width).toFloat(), (position.second-width).toFloat(),
-            )
-      /*   val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            (position.first).toFloat(), (position.second).toFloat(),
-            (position.first+width).toFloat(), (position.second).toFloat(),
-            (position.first+width).toFloat(), (position.second+width).toFloat(),
-            (position.first+width).toFloat(), (position.second+width).toFloat(),
-            (position.first).toFloat(), (position.second+width).toFloat(),
-            (position.first).toFloat(), (position.second).toFloat(),
-            )*/
-      /*  val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            0f, 0f,
-            1f, 0f,
-            1f, 1f,
-            1f, 1f,
-            0f, 1f,
-            0f, 0f
-        )*/
-
-        magnifier.updateBuffer(textureData,0,textureData.size)
-
         positionObjectInScene(
             blueMalletPosition!!.x,
             blueMalletPosition!!.y,

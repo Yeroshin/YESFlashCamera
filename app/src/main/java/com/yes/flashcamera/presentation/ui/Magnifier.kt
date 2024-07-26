@@ -13,6 +13,7 @@ class Magnifier(
     val radius:Float, val  height:Float, val numPointsAroundMallet:Int
 ) {
     private val BYTES_PER_FLOAT: Int = 4
+    private val vertexDataSize:Int=12
 
     private val POSITION_COMPONENT_COUNT = 2
     private val TEXTURE_COORDINATES_COMPONENT_COUNT = 2
@@ -20,29 +21,22 @@ class Magnifier(
             + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
 
    /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-        -1f,  1f,   0f, 0f,
-        1f,  1f,   1f, 0f,
-        1f,  -1f,   1f, 1f,
-        1f,  -1f,   1f, 1f,
-        -1f,  -1f,   0f, 1f,
-        -1f,  1f,   0f, 0f
+       -0.5f,   0.5f,
+        0.5f,   0.5f,
+        0.5f,  -0.5f,
+        0.5f,  -0.5f,
+       -0.5f,  -0.5f,
+       -0.5f,   0.5f,
     )*/
     private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-       -0.5f,   0.5f,   0f, 0f,
-        0.5f,   0.5f,   1f, 0f,
-        0.5f,  -0.5f,   1f, 1f,
-        0.5f,  -0.5f,   1f, 1f,
-       -0.5f,  -0.5f,   0f, 1f,
-       -0.5f,   0.5f,   0f, 0f
+        -1.0f,   1.0f,
+        1.0f,   1.0f,
+        0.5f,  -0.5f,
+        0.5f,  -0.5f,
+        -0.5f,  -0.5f,
+        -0.5f,   0.5f,
     )
- /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-      -0.5f,   0.5f,   0f, 0f,
-      0.5f,   0.5f,   1f, 0f,
-      0.5f,  -0.5f,   1f, 1f,
-      0.5f,  -0.5f,   1f, 1f,
-      -0.5f,  -0.5f,   0f, 1f,
-      -0.5f,   0.5f,   0f, 0f
-  )*/
+
     private val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
         0f, 0f,
         1f, 0f,
@@ -52,31 +46,52 @@ class Magnifier(
         0f, 0f
     )
 
-    private val floatBuffer: FloatBuffer = ByteBuffer
-        .allocateDirect(VERTEX_DATA.size * BYTES_PER_FLOAT)
+    private val vertexBuffer: FloatBuffer = ByteBuffer
+        .allocateDirect(vertexDataSize * BYTES_PER_FLOAT)
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer()
         .put(VERTEX_DATA)
     private val textureBuffer: FloatBuffer = ByteBuffer
-        .allocateDirect(VERTEX_DATA.size * BYTES_PER_FLOAT)
+        .allocateDirect(vertexDataSize * BYTES_PER_FLOAT)
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer()
         .put(textureData)
+    fun updateVertexBuffer( width:Float) {
+        val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            0.0f-width, 0.0f+width,
+            0.0f+width, 0.0f+width,
+            0.0f+width, 0.0f-width,
+            0.0f+width, 0.0f-width,
+            0.0f-width, 0.0f-width,
+            0.0f-width, 0.0f+width
+        )
+        vertexBuffer.position(0)
+        vertexBuffer.put(vertexData, 0, vertexDataSize)
+        vertexBuffer.position(0)
+    }
 
-    fun updateBuffer(vertexData: FloatArray?, start: Int, count: Int) {
-        textureBuffer.position(start)
-        textureBuffer.put(vertexData, start, count)
+    fun updateTextureBuffer(position:Pair<Float,Float>, width:Float) {
+        val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            position.first-width, position.second-width,
+            position.first+width, position.second-width,
+            position.first+width, position.second+width,
+            position.first+width, position.second+width,
+            position.first-width, position.second+width,
+            position.first-width, position.second-width
+        )
+        textureBuffer.position(0)
+        textureBuffer.put(textureData, 0, vertexDataSize)
         textureBuffer.position(0)
     }
     fun bindData(textureProgram: ScaledTextureProgram) {
-        floatBuffer.position(0)
+        vertexBuffer.position(0)
         glVertexAttribPointer(
             textureProgram.positionAttributeLocation,
             2,
             GL_FLOAT,
             false,
-            STRIDE,
-            floatBuffer
+            8,
+            vertexBuffer
         )
         glEnableVertexAttribArray(
             textureProgram.positionAttributeLocation
@@ -116,10 +131,10 @@ class Magnifier(
         dataOffset: Int, attributeLocation: Int,
         componentCount: Int, stride: Int
     ) {
-        floatBuffer.position(dataOffset)
+        vertexBuffer.position(dataOffset)
         glVertexAttribPointer(
             attributeLocation, componentCount, GL_FLOAT,
-            false, stride, floatBuffer
+            false, stride, vertexBuffer
         )
         glEnableVertexAttribArray(attributeLocation)
 
