@@ -158,7 +158,7 @@ class MyRenderer(
         val tmp=mapVertexToTextureCoords(1f, 1f)
     }
     private fun mapVertexToTextureCoords(vertexX: Float, vertexY: Float): Pair<Float, Float>{
-        val textureX = 1.0f -(vertexX + 1.0f) / 2.0f
+        val textureX = (vertexX + 1.0f) / 2.0f
         val textureY = 1.0f - (vertexY + 1.0f) / 2.0f
 
         return Pair(textureX, textureY)
@@ -224,22 +224,28 @@ class MyRenderer(
         colorProgram?.setUniforms(modelViewProjectionMatrix)
         mallet.draw()*/
         ///////////////////////////////////////////
-        val width=0.25
-        val height=0.25
+        val pos1=mapVertexToTextureCoords(-1f,1f)
+        val pos2=mapVertexToTextureCoords(1f,1f)
+        val pos3=mapVertexToTextureCoords(1f,-1f)
+        val pos4=mapVertexToTextureCoords(-1f,-1f)
+
+
+        val width=0.125
+        val height=0.125
 
         val position=mapVertexToTextureCoords(
             blueMalletPosition!!.x,
             blueMalletPosition!!.y
         )
         val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            (position.first-width).toFloat(), (position.second+width).toFloat(),
-            (position.first+width).toFloat(), (position.second+width).toFloat(),
-            (position.first-width).toFloat(), (position.second-height).toFloat(),
-            (position.first-width).toFloat(), (position.second-height).toFloat(),
-            (position.first+width).toFloat(), (position.second+height).toFloat(),
+            (position.first-width).toFloat(), (position.second-width).toFloat(),
             (position.first+width).toFloat(), (position.second-width).toFloat(),
+            (position.first+width).toFloat(), (position.second+height).toFloat(),
+            (position.first+width).toFloat(), (position.second+height).toFloat(),
+            (position.first-width).toFloat(), (position.second+height).toFloat(),
+            (position.first-width).toFloat(), (position.second-width).toFloat(),
             )
-       /*  val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
+      /*   val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
             (position.first).toFloat(), (position.second).toFloat(),
             (position.first+width).toFloat(), (position.second).toFloat(),
             (position.first+width).toFloat(), (position.second+width).toFloat(),

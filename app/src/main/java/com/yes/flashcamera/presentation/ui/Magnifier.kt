@@ -19,7 +19,7 @@ class Magnifier(
     private val STRIDE: Int = (POSITION_COMPONENT_COUNT
             + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
 
-  /*  private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
+   /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
         -1f,  1f,   0f, 0f,
         1f,  1f,   1f, 0f,
         1f,  -1f,   1f, 1f,
@@ -28,12 +28,12 @@ class Magnifier(
         -1f,  1f,   0f, 0f
     )*/
     private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-       -0.5f,   -0.5f,   0f, 0f,
-        0.5f,   -0.5f,   1f, 0f,
-        -0.5f,  0.5f,   1f, 1f,
-        -0.5f,  0.5f,   1f, 1f,
-       0.5f,  -0.5f,   0f, 1f,
-       0.5f,   0.5f,   0f, 0f
+       -0.5f,   0.5f,   0f, 0f,
+        0.5f,   0.5f,   1f, 0f,
+        0.5f,  -0.5f,   1f, 1f,
+        0.5f,  -0.5f,   1f, 1f,
+       -0.5f,  -0.5f,   0f, 1f,
+       -0.5f,   0.5f,   0f, 0f
     )
  /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
       -0.5f,   0.5f,   0f, 0f,
