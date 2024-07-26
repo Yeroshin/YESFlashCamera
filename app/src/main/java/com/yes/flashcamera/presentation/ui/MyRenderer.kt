@@ -2,13 +2,17 @@ package com.yes.flashcamera.presentation.ui
 
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
+import android.opengl.ETC1.getHeight
+import android.opengl.ETC1.getWidth
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glClearColor
 import android.opengl.GLES20.glGenTextures
+import android.opengl.GLES20.glReadPixels
 import android.opengl.GLES20.glTexParameterf
 import android.opengl.GLES20.glViewport
 import android.opengl.GLSurfaceView
@@ -19,9 +23,12 @@ import android.opengl.Matrix.perspectiveM
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
+import android.view.Surface
+import android.view.WindowManager
 import androidx.core.math.MathUtils.clamp
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
+import java.nio.ByteBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -61,6 +68,7 @@ class MyRenderer(
         vector[1] /= vector[3]
         vector[2] /= vector[3]
     }
+
     private fun convertNormalized2DPointToRay(
         normalizedX: Float, normalizedY: Float
     ): Ray {
@@ -101,6 +109,7 @@ class MyRenderer(
             vectorBetween(nearPointRay, farPointRay)
         )
     }
+
     private var malletPressed = false
     fun handleTouchPress(normalizedX: Float, normalizedY: Float) {
         val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
@@ -121,6 +130,7 @@ class MyRenderer(
         // true.
         malletPressed = Geometry.intersects(malletBoundingSphere, ray)
     }
+
     fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
 
         if (malletPressed) {
@@ -134,12 +144,12 @@ class MyRenderer(
             // Clamp to bounds
             previousBlueMalletPosition = blueMalletPosition
 
-/*
-            blueMalletPosition =
-                Geometry.Point(touchedPoint.x, touchedPoint.z,mallet.height / 2f, );
-*/
-            val magnifierWidth=0.5f
-            val magnification=2.0f
+            /*
+                        blueMalletPosition =
+                            Geometry.Point(touchedPoint.x, touchedPoint.z,mallet.height / 2f, );
+            */
+            val magnifierWidth = 0.25f
+            val magnification = 2.0f
             blueMalletPosition = Geometry.Point(
                 clamp(
                     touchedPoint.x,
@@ -151,31 +161,29 @@ class MyRenderer(
                     farBound + magnifierWidth,
                     nearBound - magnifierWidth
                 ),
-               0f// mallet.radius,
+                0f// mallet.radius,
             )
-           // val magnification=0.03125f
-            val magnifierValue=1/((1/magnifierWidth)*magnification*2)
-            val position=mapVertexToTextureCoords(
+            // val magnification=0.03125f
+            val magnifierValue = 1 / ((1 / magnifierWidth) * magnification * 2)
+            val position = mapVertexToTextureCoords(
                 blueMalletPosition!!.x,
                 blueMalletPosition!!.y
             )
-            magnifier.updateTextureBuffer(position,magnifierValue)
+            magnifier.updateTextureBuffer(position, magnifierValue)
             magnifier.updateVertexBuffer(
                 magnifierWidth
             )
         }
 
 
-
     }
-    private fun mapVertexToTextureCoords(vertexX: Float, vertexY: Float): Pair<Float, Float>{
+
+    private fun mapVertexToTextureCoords(vertexX: Float, vertexY: Float): Pair<Float, Float> {
         val textureX = (vertexX + 1.0f) / 2.0f
         val textureY = 1.0f - (vertexY + 1.0f) / 2.0f
 
         return Pair(textureX, textureY)
     }
-
-
 
 
     private var textureProgram: TextureShaderProgram? = null
@@ -188,33 +196,84 @@ class MyRenderer(
         createSurfaceTexture()
         textureProgram = TextureShaderProgram(context)
         colorProgram = ColorShaderProgram(context)
-        scaledTextureProgram=ScaledTextureProgram(context)
+        scaledTextureProgram = ScaledTextureProgram(context)
 
         blueMalletPosition = Geometry.Point(0f, 0f, 0f)
     }
+
+    var width = 0
+    var height = 0
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         glViewport(0, 0, width, height)
-
-        perspectiveM(
-            projectionMatrix,0, 45f,
-            width.toFloat() / height.toFloat(), 1f, 20f
+        this.width = width
+        this.height = height
+        val tmp=maxOf(
+            width.toFloat() * 2,
+            height.toFloat() * 2
         )
+        perspectiveM(
+            projectionMatrix,
+            0,
+            45f,
+            width.toFloat() / height.toFloat(),
+            1f,
+            maxOf(
+                width.toFloat() * 4,
+                height.toFloat() * 4
+            )
+        )
+        val windowManager:WindowManager =  context
+                .getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        setLookAtM(viewMatrix, 0, 0f, 0.0f, 5.2f, 0f, 0f, 0f, -1f, 0f, 0f)
+        val tmp1=when (windowManager.defaultDisplay.rotation) {
+            Surface.ROTATION_0 -> "Не поворачивали"
+            Surface.ROTATION_90 -> "Повернули на 90 градусов по часовой стрелке"
+            Surface.ROTATION_180 -> "Повернули на 180 градусов"
+            Surface.ROTATION_270 -> "Повернули на 90 градусов против часовой стрелки"
+            else -> "Не понятно"
+        }
 
+        setLookAtM(
+            viewMatrix,
+            0,
+            0f,
+            0.0f,
+            maxOf(
+                width.toFloat() * 3,
+                height.toFloat() * 3
+            ),
+            0f,
+            0f,
+            0f,
+            0f,
+            -1f, 0f
+        )
+        glScreen.updateVertexBuffer(
+            width.toFloat(), height.toFloat()
+        )
     }
 
 
-
-    private val transformMatrix = FloatArray(16)
+    // private val transformMatrix = FloatArray(16)
     override fun onDrawFrame(gl: GL10?) {
         surfaceTexture?.updateTexImage()
-        surfaceTexture?.getTransformMatrix(transformMatrix)
+        //   surfaceTexture?.getTransformMatrix(transformMatrix)
+        /////////////////////
+        /*   val buffer =
+               ByteBuffer.allocateDirect(width * height * 4) // 4 байта на пиксель (ARGB)
+           glReadPixels(0, 0, width, height, GL10.GL_RGBA, GL10.GL_UNSIGNED_BYTE, buffer)
+           buffer.rewind()
+
+           val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+           bitmap.copyPixelsFromBuffer(buffer)*/
+        /////////////////////
         glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
 
-        multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0,
-            viewMatrix, 0)
+        multiplyMM(
+            viewProjectionMatrix, 0, projectionMatrix, 0,
+            viewMatrix, 0
+        )
         invertM(invertedViewProjectionMatrix, 0, viewProjectionMatrix, 0)
 
         positionTableInScene()
@@ -225,15 +284,15 @@ class MyRenderer(
         glScreen.draw()
 
 
-      /*  positionObjectInScene(
-            1f,
-            2f,
-           0f
-        )*/
-       /* mallet.bindData(colorProgram!!)
-        colorProgram?.useProgram()
-        colorProgram?.setUniforms(modelViewProjectionMatrix)
-        mallet.draw()*/
+        /*  positionObjectInScene(
+              1f,
+              2f,
+             0f
+          )*/
+        /* mallet.bindData(colorProgram!!)
+         colorProgram?.useProgram()
+         colorProgram?.setUniforms(modelViewProjectionMatrix)
+         mallet.draw()*/
         ///////////////////////////////////////////
         positionObjectInScene(
             blueMalletPosition!!.x,
@@ -245,20 +304,22 @@ class MyRenderer(
         scaledTextureProgram?.setUniforms(modelViewProjectionMatrix, texture)
         magnifier.draw()
     }
+
     private fun positionTableInScene() {
         setIdentityM(modelMatrix, 0)
-      //  rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+        //  rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
         multiplyMM(
             modelViewProjectionMatrix, 0, viewProjectionMatrix,
             0, modelMatrix, 0
         )
     }
+
     private fun positionObjectInScene(x: Float, y: Float, z: Float) {
         setIdentityM(modelMatrix, 0)
 
         translateM(modelMatrix, 0, x, y, z)
-       // rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
-     //   scaleM(modelMatrix,0,0.2f,0.2f,0.0f)
+        // rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+        //   scaleM(modelMatrix,0,0.2f,0.2f,0.0f)
         multiplyMM(
             modelViewProjectionMatrix, 0, viewProjectionMatrix,
             0, modelMatrix, 0
@@ -300,46 +361,46 @@ class MyRenderer(
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
         return tex[0]
         //////////////////
-      /*  val textureObjectIds = IntArray(1)
-        glGenTextures(1, textureObjectIds, 0)
-        val options = BitmapFactory.Options()
-        options.inScaled = false
+        /*  val textureObjectIds = IntArray(1)
+          glGenTextures(1, textureObjectIds, 0)
+          val options = BitmapFactory.Options()
+          options.inScaled = false
 
 
-        // Read in the resource
-        val bitmap = BitmapFactory.decodeResource(
-            context.resources, R.drawable.test1, options
-        )
-        glBindTexture(GL_TEXTURE_2D, textureObjectIds[0]);
+          // Read in the resource
+          val bitmap = BitmapFactory.decodeResource(
+              context.resources, R.drawable.test1, options
+          )
+          glBindTexture(GL_TEXTURE_2D, textureObjectIds[0]);
 
-        // Set filtering: a default must be set, or the texture will be
-        // black.
-        glTexParameteri(GL_TEXTURE_2D,
-            GL_TEXTURE_MIN_FILTER,
-            GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,
-            GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // Load the bitmap into the bound texture.
-        texImage2D(GL_TEXTURE_2D, 0, bitmap, 0);
+          // Set filtering: a default must be set, or the texture will be
+          // black.
+          glTexParameteri(GL_TEXTURE_2D,
+              GL_TEXTURE_MIN_FILTER,
+              GL_LINEAR_MIPMAP_LINEAR);
+          glTexParameteri(GL_TEXTURE_2D,
+              GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+          // Load the bitmap into the bound texture.
+          texImage2D(GL_TEXTURE_2D, 0, bitmap, 0);
 
-        // Note: Following code may cause an error to be reported in the
-        // ADB log as follows: E/IMGSRV(20095): :0: HardwareMipGen:
-        // Failed to generate texture mipmap levels (error=3)
-        // No OpenGL error will be encountered (glGetError() will return
-        // 0). If this happens, just squash the source image to be
-        // square. It will look the same because of texture coordinates,
-        // and mipmap generation will work.
+          // Note: Following code may cause an error to be reported in the
+          // ADB log as follows: E/IMGSRV(20095): :0: HardwareMipGen:
+          // Failed to generate texture mipmap levels (error=3)
+          // No OpenGL error will be encountered (glGetError() will return
+          // 0). If this happens, just squash the source image to be
+          // square. It will look the same because of texture coordinates,
+          // and mipmap generation will work.
 
-        glGenerateMipmap(GL_TEXTURE_2D);
+          glGenerateMipmap(GL_TEXTURE_2D);
 
-        // Recycle the bitmap, since its data has been loaded into
-        // OpenGL.
-      //  bitmap.recycle();
+          // Recycle the bitmap, since its data has been loaded into
+          // OpenGL.
+        //  bitmap.recycle();
 
-        // Unbind from the texture.
-        glBindTexture(GL_TEXTURE_2D, 0);
+          // Unbind from the texture.
+          glBindTexture(GL_TEXTURE_2D, 0);
 
-        return textureObjectIds[0];*/
+          return textureObjectIds[0];*/
     }
 
 }
