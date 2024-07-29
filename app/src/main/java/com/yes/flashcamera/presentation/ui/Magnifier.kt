@@ -57,6 +57,14 @@ class Magnifier(
         .asFloatBuffer()
         .put(textureData)
     fun updateVertexBuffer( width:Float) {
+       /* val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            0.0f-width, 0.0f+width,
+            0.0f+width, 0.0f+width,
+            0.0f+width, 0.0f-width,
+            0.0f+width, 0.0f-width,
+            0.0f-width, 0.0f-width,
+            0.0f-width, 0.0f+width
+        )*/
         val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
             0.0f-width, 0.0f+width,
             0.0f+width, 0.0f+width,

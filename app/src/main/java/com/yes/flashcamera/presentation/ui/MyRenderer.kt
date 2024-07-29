@@ -2,17 +2,13 @@ package com.yes.flashcamera.presentation.ui
 
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
-import android.opengl.ETC1.getHeight
-import android.opengl.ETC1.getWidth
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glClearColor
 import android.opengl.GLES20.glGenTextures
-import android.opengl.GLES20.glReadPixels
 import android.opengl.GLES20.glTexParameterf
 import android.opengl.GLES20.glViewport
 import android.opengl.GLSurfaceView
@@ -20,6 +16,7 @@ import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.multiplyMV
 import android.opengl.Matrix.perspectiveM
+import android.opengl.Matrix.rotateM
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
@@ -28,7 +25,6 @@ import android.view.WindowManager
 import androidx.core.math.MathUtils.clamp
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
-import java.nio.ByteBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -50,11 +46,11 @@ class MyRenderer(
     private val glScreen by lazy {
         GLScreen()
     }
-    private val mallet by lazy {
+  /*  private val mallet by lazy {
         Mallet(0.5f, 0.3f, 32)
-    }
+    }*/
     private val magnifier by lazy {
-        Magnifier(0.5f, 0.3f, 32)
+        Magnifier(0.5f, 270.3f, 32)
     }
     private var blueMalletPosition: Geometry.Point? = null
     private var previousBlueMalletPosition: Geometry.Point? = null
@@ -122,7 +118,7 @@ class MyRenderer(
                 blueMalletPosition!!.y,
                 blueMalletPosition!!.z
             ),
-            mallet.height
+            magnifier.height
         )
 
         // If the ray intersects (if the user touched a part of the screen that
@@ -136,7 +132,10 @@ class MyRenderer(
         if (malletPressed) {
             val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
             // Define a plane representing our air hockey table.
-            val plane = Geometry.Plane(Geometry.Point(0f, 0f, 0f), Geometry.Vector(0f, 0f, 1f))
+            val plane = Geometry.Plane(
+                Geometry.Point(0f, 0f, 0f),
+                Geometry.Vector(0f, 0f, 1f)
+            )
             // Find out where the touched point intersects the plane
             // representing our table. We'll move the mallet along this plane.
             val touchedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
@@ -144,13 +143,14 @@ class MyRenderer(
             // Clamp to bounds
             previousBlueMalletPosition = blueMalletPosition
 
-            /*
+
                         blueMalletPosition =
-                            Geometry.Point(touchedPoint.x, touchedPoint.z,mallet.height / 2f, );
-            */
+                            Geometry.Point(touchedPoint.x, touchedPoint.y,0f );
+
             val magnifierWidth = 0.25f
+
             val magnification = 2.0f
-            blueMalletPosition = Geometry.Point(
+         /*   blueMalletPosition = Geometry.Point(
                 clamp(
                     touchedPoint.x,
                     leftBound + magnifierWidth,
@@ -162,17 +162,18 @@ class MyRenderer(
                     nearBound - magnifierWidth
                 ),
                 0f// mallet.radius,
-            )
+            )*/
             // val magnification=0.03125f
             val magnifierValue = 1 / ((1 / magnifierWidth) * magnification * 2)
             val position = mapVertexToTextureCoords(
-                blueMalletPosition!!.x,
-                blueMalletPosition!!.y
+                blueMalletPosition!!.x/1000,
+                blueMalletPosition!!.y/1000
             )
-            magnifier.updateTextureBuffer(position, magnifierValue)
+
             magnifier.updateVertexBuffer(
-                magnifierWidth
+                600f
             )
+            magnifier.updateTextureBuffer(position, 0.08f)
         }
 
 
@@ -207,50 +208,83 @@ class MyRenderer(
         glViewport(0, 0, width, height)
         this.width = width
         this.height = height
-        val tmp=maxOf(
+        val tmp = maxOf(
             width.toFloat() * 2,
             height.toFloat() * 2
         )
+        val windowManager: WindowManager = context
+            .getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+        var rotationX=0f
+        var rotationY=0f
+        when (windowManager.defaultDisplay.rotation) {
+            Surface.ROTATION_0 -> {
+                rotationX=-1f
+                rotationY=0f
+            }
+            Surface.ROTATION_90 -> {
+                rotationX=0f
+                rotationY=1f
+            }
+            Surface.ROTATION_180 -> {
+                rotationX=1f
+                rotationY=0f
+            }
+            Surface.ROTATION_270 -> {
+                rotationX=0f
+                rotationY=-1f
+            }
+            else -> "Не понятно"
+        }
+
         perspectiveM(
             projectionMatrix,
             0,
             45f,
-            width.toFloat() / height.toFloat(),
+            width.toFloat()/height.toFloat() ,
             1f,
-            maxOf(
-                width.toFloat() * 4,
-                height.toFloat() * 4
-            )
+              maxOf(
+                  width.toFloat() * 4,
+                  height.toFloat() * 4
+              )
+           // width.toFloat() * 4
         )
-        val windowManager:WindowManager =  context
-                .getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        val tmp1=when (windowManager.defaultDisplay.rotation) {
-            Surface.ROTATION_0 -> "Не поворачивали"
-            Surface.ROTATION_90 -> "Повернули на 90 градусов по часовой стрелке"
-            Surface.ROTATION_180 -> "Повернули на 180 градусов"
-            Surface.ROTATION_270 -> "Повернули на 90 градусов против часовой стрелки"
-            else -> "Не понятно"
-        }
 
         setLookAtM(
             viewMatrix,
             0,
             0f,
             0.0f,
-            maxOf(
-                width.toFloat() * 3,
-                height.toFloat() * 3
-            ),
+             /* maxOf(
+                  width.toFloat() * 3,
+                  height.toFloat() * 3
+              ),*/
+            height.toFloat() * 3,
             0f,
             0f,
             0f,
-            0f,
-            -1f, 0f
+            rotationX,
+            rotationY,
+            0f
         )
-        glScreen.updateVertexBuffer(
+      /*  glScreen.updateVertexBuffer(
             width.toFloat(), height.toFloat()
+        )*/
+        glScreen.updateVertexBuffer(
+            maxOf(
+                width.toFloat() ,
+                height.toFloat()
+            ),
+            minOf(
+                width.toFloat() ,
+                height.toFloat()
+            )
         )
+        magnifier.updateVertexBuffer(
+            600f
+        )
+        magnifier.updateTextureBuffer(Pair(0f,0f), 0.5f)
     }
 
 
@@ -276,7 +310,7 @@ class MyRenderer(
         )
         invertM(invertedViewProjectionMatrix, 0, viewProjectionMatrix, 0)
 
-        positionTableInScene()
+        positionScreenInScene()
         glScreen.bindData(textureProgram!!)
         textureProgram?.useProgram()
         textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
@@ -305,9 +339,9 @@ class MyRenderer(
         magnifier.draw()
     }
 
-    private fun positionTableInScene() {
+    private fun positionScreenInScene() {
         setIdentityM(modelMatrix, 0)
-        //  rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+        //  rotateM(modelMatrix, 0, -45f, 1f, 0f, 0f)
         multiplyMM(
             modelViewProjectionMatrix, 0, viewProjectionMatrix,
             0, modelMatrix, 0

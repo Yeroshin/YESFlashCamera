@@ -76,7 +76,7 @@ class GLScreen {
 
     fun bindData(textureProgram: TextureShaderProgram) {
 
-        vertexBuffer.position(0)
+       vertexBuffer.position(0)
         glVertexAttribPointer(
             textureProgram.positionAttributeLocation,
             2,
@@ -101,6 +101,13 @@ class GLScreen {
         glEnableVertexAttribArray(
             textureProgram.textureCoordinatesAttributeLocation
         )
+        //////////////////////////////
+        /*  glEnableVertexAttribArray(
+            textureProgram.positionAttributeLocation
+        )*/
+       /* glEnableVertexAttribArray(
+            textureProgram.textureCoordinatesAttributeLocation
+        )*/
     }
     private fun setVertexAttribPointer(
         dataOffset: Int, attributeLocation: Int,
