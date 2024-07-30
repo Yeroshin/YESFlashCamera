@@ -62,12 +62,12 @@ class GLScreen {
         .put(textureData)
     fun updateVertexBuffer( width:Float,height:Float) {
         val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            0.0f-width, 0.0f+height,
-            0.0f+width, 0.0f+height,
-            0.0f+width, 0.0f-height,
-            0.0f+width, 0.0f-height,
-            0.0f-width, 0.0f-height,
-            0.0f-width, 0.0f+height
+            0.0f-width/2, 0.0f+height/2,
+            0.0f+width/2, 0.0f+height/2,
+            0.0f+width/2, 0.0f-height/2,
+            0.0f+width/2, 0.0f-height/2,
+            0.0f-width/2, 0.0f-height/2,
+            0.0f-width/2, 0.0f+height/2
         )
         vertexBuffer.position(0)
         vertexBuffer.put(vertexData, 0, vertexDataSize)

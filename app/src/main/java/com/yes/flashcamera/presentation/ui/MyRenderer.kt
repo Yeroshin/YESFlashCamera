@@ -41,14 +41,15 @@ class MyRenderer(
     private val invertedViewProjectionMatrix = FloatArray(16)
     private val modelViewProjectionMatrix = FloatArray(16)
 
+    private var textureProgram: TextureShaderProgram? = null
+    private var colorProgram: ColorShaderProgram? = null
+    private var scaledTextureProgram: ScaledTextureProgram? = null
+
 
     private var surfaceTexture: SurfaceTexture? = null
     private val glScreen by lazy {
         GLScreen()
     }
-  /*  private val mallet by lazy {
-        Mallet(0.5f, 0.3f, 32)
-    }*/
     private val magnifier by lazy {
         Magnifier(0.5f, 270.3f, 32)
     }
@@ -143,37 +144,39 @@ class MyRenderer(
             // Clamp to bounds
             previousBlueMalletPosition = blueMalletPosition
 
-
-                        blueMalletPosition =
-                            Geometry.Point(touchedPoint.x, touchedPoint.y,0f );
-
-            val magnifierWidth = 0.25f
+/*
+            blueMalletPosition =
+                Geometry.Point(touchedPoint.x, touchedPoint.y, 0f);
+*/
+            val magnifierWidth = (width/2 ).toFloat()
 
             val magnification = 2.0f
-         /*   blueMalletPosition = Geometry.Point(
-                clamp(
-                    touchedPoint.x,
-                    leftBound + magnifierWidth,
-                    rightBound - magnifierWidth
-                ),
-                clamp(
-                    touchedPoint.y,
-                    farBound + magnifierWidth,
-                    nearBound - magnifierWidth
-                ),
-                0f// mallet.radius,
-            )*/
+               blueMalletPosition = Geometry.Point(
+                   clamp(
+                       touchedPoint.x,
+                       -height/2 + magnifierWidth/2,
+                       height/2 - magnifierWidth/2
+                   ),
+                   clamp(
+                       touchedPoint.y,
+                       -width/2 + magnifierWidth/2,
+                       width/2 - magnifierWidth/2
+                   ),
+                   0f// mallet.radius,
+               )
             // val magnification=0.03125f
-            val magnifierValue = 1 / ((1 / magnifierWidth) * magnification * 2)
+            val magnifierValueX = (1 / (width / magnifierWidth)) / (2*magnification)
+            val magnifierValueY = (1 / (height / magnifierWidth)) / (2*magnification)
+            //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
             val position = mapVertexToTextureCoords(
-                blueMalletPosition!!.x/1000,
-                blueMalletPosition!!.y/1000
+                blueMalletPosition!!.x / (height / 2),
+                blueMalletPosition!!.y / (width / 2)
             )
 
             magnifier.updateVertexBuffer(
-                600f
+                magnifierWidth
             )
-            magnifier.updateTextureBuffer(position, 0.08f)
+            magnifier.updateTextureBuffer(position, magnifierValueY, magnifierValueX)
         }
 
 
@@ -185,11 +188,6 @@ class MyRenderer(
 
         return Pair(textureX, textureY)
     }
-
-
-    private var textureProgram: TextureShaderProgram? = null
-    private var colorProgram: ColorShaderProgram? = null
-    private var scaledTextureProgram: ScaledTextureProgram? = null
 
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
@@ -215,25 +213,29 @@ class MyRenderer(
         val windowManager: WindowManager = context
             .getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        var rotationX=0f
-        var rotationY=0f
+        var rotationX = 0f
+        var rotationY = 0f
         when (windowManager.defaultDisplay.rotation) {
             Surface.ROTATION_0 -> {
-                rotationX=-1f
-                rotationY=0f
+                rotationX = -1f
+                rotationY = 0f
             }
+
             Surface.ROTATION_90 -> {
-                rotationX=0f
-                rotationY=1f
+                rotationX = 0f
+                rotationY = 1f
             }
+
             Surface.ROTATION_180 -> {
-                rotationX=1f
-                rotationY=0f
+                rotationX = 1f
+                rotationY = 0f
             }
+
             Surface.ROTATION_270 -> {
-                rotationX=0f
-                rotationY=-1f
+                rotationX = 0f
+                rotationY = -1f
             }
+
             else -> "Не понятно"
         }
 
@@ -241,13 +243,13 @@ class MyRenderer(
             projectionMatrix,
             0,
             45f,
-            width.toFloat()/height.toFloat() ,
+            width.toFloat() / height.toFloat(),
             1f,
-              maxOf(
-                  width.toFloat() * 4,
-                  height.toFloat() * 4
-              )
-           // width.toFloat() * 4
+            maxOf(
+                width.toFloat() * 4,
+                height.toFloat() * 4
+            )
+            // width.toFloat() * 4
         )
 
 
@@ -256,11 +258,11 @@ class MyRenderer(
             0,
             0f,
             0.0f,
-             /* maxOf(
-                  width.toFloat() * 3,
-                  height.toFloat() * 3
-              ),*/
-            height.toFloat() * 3,
+            /* maxOf(
+                 width.toFloat() * 3,
+                 height.toFloat() * 3
+             ),*/
+            height.toFloat()+1000 ,
             0f,
             0f,
             0f,
@@ -268,23 +270,23 @@ class MyRenderer(
             rotationY,
             0f
         )
-      /*  glScreen.updateVertexBuffer(
-            width.toFloat(), height.toFloat()
-        )*/
+        /*  glScreen.updateVertexBuffer(
+              width.toFloat(), height.toFloat()
+          )*/
         glScreen.updateVertexBuffer(
             maxOf(
-                width.toFloat() ,
+                width.toFloat(),
                 height.toFloat()
             ),
             minOf(
-                width.toFloat() ,
+                width.toFloat(),
                 height.toFloat()
             )
         )
         magnifier.updateVertexBuffer(
             600f
         )
-        magnifier.updateTextureBuffer(Pair(0f,0f), 0.5f)
+        magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
     }
 
 
