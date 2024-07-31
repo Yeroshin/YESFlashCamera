@@ -27,6 +27,7 @@ import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.sqrt
 
 
 class MyRenderer(
@@ -59,6 +60,11 @@ class MyRenderer(
     private val rightBound = 1f
     private val farBound = -1f
     private val nearBound = 1f
+
+    fun setDefaultBufferSize(){
+        surfaceTexture?.setDefaultBufferSize(160, 120)//(3072x4096)//(1280, 720)//(1920,1080)
+
+    }
 
     private fun divideByW(vector: FloatArray) {
         vector[0] /= vector[3]
@@ -144,14 +150,18 @@ class MyRenderer(
             // Clamp to bounds
             previousBlueMalletPosition = blueMalletPosition
 
-/*
+
             blueMalletPosition =
                 Geometry.Point(touchedPoint.x, touchedPoint.y, 0f);
-*/
-            val magnifierWidth = (width/2 ).toFloat()
+            val magnifierWidth =if(rotationPortrait){
+                (width/2 ).toFloat()
+            } else {
+                (height/2 ).toFloat()
+            }
+            // val magnifierWidth = (height/2 ).toFloat()
 
             val magnification = 2.0f
-               blueMalletPosition = Geometry.Point(
+            /*   blueMalletPosition = Geometry.Point(
                    clamp(
                        touchedPoint.x,
                        -height/2 + magnifierWidth/2,
@@ -163,20 +173,35 @@ class MyRenderer(
                        width/2 - magnifierWidth/2
                    ),
                    0f// mallet.radius,
-               )
+               )*/
             // val magnification=0.03125f
             val magnifierValueX = (1 / (width / magnifierWidth)) / (2*magnification)
             val magnifierValueY = (1 / (height / magnifierWidth)) / (2*magnification)
             //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
-            val position = mapVertexToTextureCoords(
+            val position =if (rotationPortrait){
+                mapVertexToTextureCoords(
+                    blueMalletPosition!!.x / (height / 2),
+                    blueMalletPosition!!.y / (width / 2)
+                )
+            }else{
+                mapVertexToTextureCoords(
+                    blueMalletPosition!!.x / (width / 2),
+                    blueMalletPosition!!.y / (height / 2)
+                )
+            }
+          /*  val position = mapVertexToTextureCoords(
                 blueMalletPosition!!.x / (height / 2),
                 blueMalletPosition!!.y / (width / 2)
-            )
+            )*/
 
             magnifier.updateVertexBuffer(
                 magnifierWidth
             )
-            magnifier.updateTextureBuffer(position, magnifierValueY, magnifierValueX)
+            if(rotationPortrait){
+                magnifier.updateTextureBuffer(position, magnifierValueY, magnifierValueX)
+            }else{
+                magnifier.updateTextureBuffer(position, magnifierValueX, magnifierValueY)
+            }
         }
 
 
@@ -202,6 +227,7 @@ class MyRenderer(
 
     var width = 0
     var height = 0
+    var rotationPortrait=false
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         glViewport(0, 0, width, height)
         this.width = width
@@ -215,25 +241,34 @@ class MyRenderer(
 
         var rotationX = 0f
         var rotationY = 0f
+        var length=0f
         when (windowManager.defaultDisplay.rotation) {
             Surface.ROTATION_0 -> {
                 rotationX = -1f
                 rotationY = 0f
+                length=sqrt(width.toFloat() * width + height * height)*1.09f
+                rotationPortrait=true
             }
 
             Surface.ROTATION_90 -> {
                 rotationX = 0f
                 rotationY = 1f
+                length=sqrt(width.toFloat() * width + height * height)*0.44f
+                rotationPortrait=false
             }
 
             Surface.ROTATION_180 -> {
                 rotationX = 1f
                 rotationY = 0f
+                length=sqrt(width.toFloat() * width + height * height)*1.09f
+                rotationPortrait=true
             }
 
             Surface.ROTATION_270 -> {
                 rotationX = 0f
                 rotationY = -1f
+                length=sqrt(width.toFloat() * width + height * height)*0.44f
+                rotationPortrait=false
             }
 
             else -> "Не понятно"
@@ -258,11 +293,14 @@ class MyRenderer(
             0,
             0f,
             0.0f,
-            /* maxOf(
+           /*  maxOf(
                  width.toFloat() * 3,
                  height.toFloat() * 3
              ),*/
-            height.toFloat()+1000 ,
+           // sqrt(width.toFloat() * width + height * height)*1.09f,
+           // sqrt(width.toFloat() * width + height * height)*0.44f,
+            length,
+            //height.toFloat()+1000 ,
             0f,
             0f,
             0f,
@@ -271,7 +309,7 @@ class MyRenderer(
             0f
         )
         /*  glScreen.updateVertexBuffer(
-              width.toFloat(), height.toFloat()
+              height.toFloat(), width.toFloat(),
           )*/
         glScreen.updateVertexBuffer(
             maxOf(
