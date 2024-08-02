@@ -15,19 +15,13 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.multiplyMV
-import android.opengl.Matrix.perspectiveM
-import android.opengl.Matrix.rotateM
+import android.opengl.Matrix.orthoM
 import android.opengl.Matrix.setIdentityM
-import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
-import android.view.Surface
-import android.view.WindowManager
-import androidx.core.math.MathUtils.clamp
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.sqrt
 
 
 class MyRenderer(
@@ -228,7 +222,7 @@ class MyRenderer(
     var width = 0
     var height = 0
     var rotationPortrait=false
-    override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+  /*  override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         glViewport(0, 0, width, height)
         this.width = width
         this.height = height
@@ -246,7 +240,7 @@ class MyRenderer(
             Surface.ROTATION_0 -> {
                 rotationX = -1f
                 rotationY = 0f
-                length=sqrt(width.toFloat() * width + height * height)*1.09f
+                length=sqrt(width.toFloat() * width.toFloat() + height.toFloat() * height.toFloat())*1.09f
                 rotationPortrait=true
             }
 
@@ -325,8 +319,45 @@ class MyRenderer(
             600f
         )
         magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
-    }
+    }*/
+  public override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
+      // Set the OpenGL viewport to fill the entire surface.
+      glViewport(0, 0, width, height)
 
+      val aspectRatio =
+          if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+
+      if (width > height) {
+          // Landscape
+          orthoM(projectionMatrix, 0, -aspectRatio, aspectRatio, -1f, 1f, -1f, 1f)
+      } else {
+          // Portrait or square
+          orthoM(projectionMatrix, 0, -1f, 1f, -aspectRatio, aspectRatio, -1f, 1f)
+      }
+      val tmp=normalizeValue(width.toFloat(), -1f, 1f)
+     /* glScreen.updateVertexBuffer(
+          maxOf(
+              normalizeValue(width.toFloat(), -1f, 1f),
+                      normalizeValue(height.toFloat(), -1f, 1f)
+             // width.toFloat(),
+            //  height.toFloat()
+          ),
+          minOf(
+              normalizeValue(width.toFloat(), -1f, 1f),
+                      normalizeValue(height.toFloat(), -1f, 1f)
+            //  width.toFloat(),
+            //  height.toFloat()
+          )
+      )*/
+      glScreen.updateVertexBuffer(
+          1.0f*4,
+          0.6f*4,
+
+      )
+  }
+    fun normalizeValue(x: Float, minValue: Float, maxValue: Float):Float {
+        return (x - minValue) / (maxValue - minValue)
+    }
 
     // private val transformMatrix = FloatArray(16)
     override fun onDrawFrame(gl: GL10?) {
@@ -353,7 +384,8 @@ class MyRenderer(
         positionScreenInScene()
         glScreen.bindData(textureProgram!!)
         textureProgram?.useProgram()
-        textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
+        textureProgram?.setUniforms(projectionMatrix, texture)
+       // textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
 
         glScreen.draw()
 
