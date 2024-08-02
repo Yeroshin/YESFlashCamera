@@ -1,7 +1,6 @@
 package com.yes.flashcamera.data.repository
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
@@ -9,14 +8,11 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.os.Build
 import android.os.Handler
-import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.yes.flashcamera.domain.model.Camera
@@ -27,26 +23,21 @@ import java.util.Collections
 
 
 class CameraRepository(
-    private val context: Context,
     private val cameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
+
 ) {
-    private fun openCamera(facing: Int):String?{
-        cameraManager.cameraIdList.forEach {
-            val characteristics = cameraManager.getCameraCharacteristics(it)
-            if (characteristics.get(CameraCharacteristics.LENS_FACING) == facing) {
-                return it
-            }
-        }
-        return null
-    }
+
     private var cameraDevice: CameraDevice? = null
     private val mCameraCallback: CameraDevice.StateCallback =
         object : CameraDevice.StateCallback() {
 
             @RequiresApi(Build.VERSION_CODES.TIRAMISU)
             override fun onOpened(camera: CameraDevice) {
-                setCamera(camera)
+                cameraDevice=camera
+                onCameraOpened?.let {
+                    it()
+                }
             }
 
             override fun onDisconnected(camera: CameraDevice) {
@@ -55,34 +46,43 @@ class CameraRepository(
 
             override fun onError(camera: CameraDevice, error: Int) {}
         }
-    private fun setCamera(camera: CameraDevice) {
-        this.cameraDevice = camera
+
+    private fun getCameraByFacing(facing: Int):String?{
+        cameraManager.cameraIdList.forEach {
+            val characteristics = cameraManager.getCameraCharacteristics(it)
+            if (characteristics.get(CameraCharacteristics.LENS_FACING) == facing) {
+                return it
+            }
+        }
+        return null
     }
+    fun getBackCameraId():String?{
+        return getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)
+    }
+    private var onCameraOpened:(()->Unit)?=null
     @SuppressLint("MissingPermission")
-    fun getFrontCamera(): Camera? {
-        openCamera(CameraCharacteristics.LENS_FACING_FRONT)?.let {
+    fun openCamera(id:String,onCameraOpened:()->Unit) {
+        this.onCameraOpened = onCameraOpened
             cameraManager.openCamera(
-                it,
+                id,
                 mCameraCallback,
                 mBackgroundHandler
             )
-
-            val characteristics =cameraManager.getCameraCharacteristics(it)
-            characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
-                Arrays.sort(
-                    map.getOutputSizes(ImageFormat.JPEG),
-                    Collections.reverseOrder { lhs, rhs -> // Cast to ensure the multiplications won't overflow
-                        java.lang.Long.signum((lhs.width.toLong() * lhs.height.toLong()) - (rhs.width.toLong() * rhs.height.toLong() ))
-                    })
-            }
-
-
-            return Camera(
-                iso=characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE),
-                exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
-            )
+    }
+    fun getCameraCharacteristics(id:String): Camera{
+        val characteristics =cameraManager.getCameraCharacteristics(id)
+        characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
+            Arrays.sort(
+                map.getOutputSizes(ImageFormat.JPEG),
+                Collections.reverseOrder { lhs, rhs -> // Cast to ensure the multiplications won't overflow
+                    java.lang.Long.signum((lhs.width.toLong() * lhs.height.toLong()) - (rhs.width.toLong() * rhs.height.toLong() ))
+                })
         }
-        return null
+
+        return Camera(
+            iso=characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE),
+            exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        )
     }
     var previewCaptureBuilder: CaptureRequest.Builder? = null
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)

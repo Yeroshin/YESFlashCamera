@@ -32,12 +32,12 @@ import android.util.Range
 import android.util.Size
 import android.view.MotionEvent
 import android.view.Surface
-import android.view.TextureView
 import android.view.View
 import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import com.yes.flashcamera.data.repository.CameraRepository
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
 import kotlinx.coroutines.Dispatchers
@@ -60,72 +60,79 @@ class MainActivity : Activity() {
 
     private val mBackgroundThread: HandlerThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
-    private lateinit var cameraService: CameraService
+   // private lateinit var cameraService: CameraService
+    private val cameraRepository by lazy {
+        CameraRepository(
+            getSystemService(CAMERA_SERVICE) as CameraManager,
+            mBackgroundHandler
+        )
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        cameraService = CameraService(
+       /* cameraService = CameraService(
             this,
             getSystemService(CAMERA_SERVICE) as CameraManager,
             mBackgroundHandler
         ) { state ->
             render(state)
-        }
+        }*/
+
+
         binding = MainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+
         setUpView()
 
         checkPermission {
 
         }
         gles()
+        setContentView(binding.root)
     }
 
-    private var glSurfaceView: GLSurfaceView? = null
+
     private var rendererSet = false
 
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private val renderer=MyRenderer(
         this
     ) { surfaceTexture ->
-        setGLTexture(surfaceTexture)
-        openCamera()
+        cameraRepository.getBackCameraId()?.let {
+            cameraRepository.openCamera(
+                it
+            ) {
+                cameraRepository.createCaptureSession(surfaceTexture)
+            }
+        }
+
+
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
+
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun gles() {
 
-        glSurfaceView = GLSurfaceView(this)
+       // glSurfaceView = GLSurfaceView(this)
         val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
         val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
         if (supportsEs2) {
 
-            glSurfaceView?.setEGLContextClientVersion(2)
-            glSurfaceView?.setRenderer(
+            binding.glSurfaceView.setEGLContextClientVersion(2)
+            binding.glSurfaceView.setRenderer(
                renderer
             )
-          /*  glSurfaceView?.setRenderer(
-                YESRenderer(
-                    this
-                ) { surfaceTexture ->
-                    setGLTexture(surfaceTexture)
-                    openCamera()
-                }
-            )*/
-           /* glSurfaceView?.setRenderer(
-                AirHockeyRenderer(
-                    this
-                )
-            )*/
             rendererSet = true
         } else {
             Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
                 .show()
             return
         }
-        glSurfaceView!!.setOnTouchListener { v, event ->
+        binding.glSurfaceView.setOnTouchListener { v, event ->
             if (event != null) {
                 // Convert touch coordinates into normalized device
                 // coordinates, keeping in mind that Android's Y
@@ -154,7 +161,7 @@ class MainActivity : Activity() {
                 false
             }
         }
-        setContentView(glSurfaceView)
+
     }
 
 
@@ -208,7 +215,7 @@ class MainActivity : Activity() {
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
             if (fromUser) {
-                cameraService.setIso(progress)
+                //cameraService.setIso(progress)
             }
 
         }
@@ -226,7 +233,7 @@ class MainActivity : Activity() {
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
             if (fromUser) {
-                cameraService.setExposure(progress)
+              //  cameraService.setExposure(progress)
             }
 
         }
@@ -241,18 +248,7 @@ class MainActivity : Activity() {
 
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun openCamera() {
-        glTexture?.let {
-            cameraService.openCamera(it)
-        }
 
-        /* surfaceTexture?.let { st ->
-             surfaceTexture2?.let {
-                 cameraService.openCamera(st)
-             }
-         }*/
-    }
 
     private fun getDisplaySize(): Pair<Int, Int> {
 
@@ -302,20 +298,20 @@ class MainActivity : Activity() {
 
     private var surfaceTexture: SurfaceTexture? = null
     private var surfaceTexture2: SurfaceTexture? = null
-    private var glTexture: SurfaceTexture? = null
+   /* private var glTexture: SurfaceTexture? = null
     private fun setGLTexture(glTexture: SurfaceTexture) {
         this.glTexture = glTexture
-    }
+    }*/
 
-    fun setTexture1(surfaceTexture: SurfaceTexture) {
+  /*  fun setTexture1(surfaceTexture: SurfaceTexture) {
         this.surfaceTexture = surfaceTexture
     }
 
     fun setTexture2(surfaceTexture: SurfaceTexture) {
         this.surfaceTexture2 = surfaceTexture
-    }
+    }*/
 
-    private val textureListener = object : TextureView.SurfaceTextureListener {
+  /*  private val textureListener = object : TextureView.SurfaceTextureListener {
         @RequiresApi(Build.VERSION_CODES.S)
         override fun onSurfaceTextureAvailable(
             surfaceTexture: SurfaceTexture,
@@ -339,82 +335,19 @@ class MainActivity : Activity() {
 
         }
 
-    }
-    private val texture2Listener = object : TextureView.SurfaceTextureListener {
-        @RequiresApi(Build.VERSION_CODES.S)
-        override fun onSurfaceTextureAvailable(
-            surfaceTexture: SurfaceTexture,
-            width: Int,
-            height: Int
-        ) {
-            surfaceTexture.setDefaultBufferSize(width, height)
-            setTexture2(surfaceTexture)
-            openCamera()
-        }
+    }*/
 
-        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-
-        }
-
-        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-            return false
-        }
-
-        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-
-        }
-
-    }
-    private var dX: Float = 0f
-    private var dY: Float = 0f
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun setUpView() {
-        binding.textureView.surfaceTextureListener = textureListener
-        binding.textureView2.surfaceTextureListener = texture2Listener
+       // binding.textureView.surfaceTextureListener = textureListener
+
         //  binding.camera1.setOnClickListener(listenerButtonCamera1)
         binding.iso.setOnSeekBarChangeListener(listenerIsoSeekBar)
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)
-        var xP = 0
-        var yP = 0
-        binding.textureView2.setOnTouchListener { view, event ->
 
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    dX = view.x - event.rawX
-                    dY = view.y - event.rawY
-                }
 
-                MotionEvent.ACTION_MOVE -> {
-                    val newX = event.rawX + dX
-                    val newY = event.rawY + dY
-
-                    // Ограничиваем перемещение внутри границ FrameLayout
-                    val maxX = binding.frameLayout.width - view.width
-                    val maxY = binding.frameLayout.height - view.height
-
-                    val clampedX = newX.coerceIn(0f, maxX.toFloat())
-                    val clampedY = newY.coerceIn(0f, maxY.toFloat())
-
-                    view.animate()
-                        .x(clampedX)
-                        .y(clampedY)
-                        .setDuration(0)
-                        .start()
-                    xP = ((newX * 100) / maxX).toInt()
-                    yP = ((newY * 100) / maxY).toInt()
-
-                }
-
-                MotionEvent.ACTION_UP -> {
-                    cameraService.setMagnifierPosition(xP, yP)
-                }
-
-                else -> return@setOnTouchListener false
-            }
-            true
-        }
 
 
     }
@@ -465,7 +398,7 @@ class MainActivity : Activity() {
 
 }
 
-class CameraService(
+/*class CameraService(
     private val context: Context,
     private val mCameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
@@ -494,11 +427,11 @@ class CameraService(
     }
 
     private var cameraDevice: CameraDevice? = null
-    private fun setCamera(camera: CameraDevice) {
+   /* private fun setCamera(camera: CameraDevice) {
         this.cameraDevice = camera
-    }
+    }*/
 
-    private val mCameraCallback: CameraDevice.StateCallback =
+   /* private val mCameraCallback: CameraDevice.StateCallback =
         object : CameraDevice.StateCallback() {
 
             @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -515,10 +448,8 @@ class CameraService(
 
             override fun onError(camera: CameraDevice, error: Int) {
             }
-        }
+        }*/
     private var surface: Surface? = null
-    private var surfaceTexture: SurfaceTexture? = null
-    private var surfaceTexture2: SurfaceTexture? = null
     private var glSurfaceTexture: SurfaceTexture? = null
 
     data class DualCamera(val logicalId: String, val physicalId1: String, val physicalId2: String)
@@ -556,7 +487,7 @@ class CameraService(
         return dualCameras.toTypedArray()
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
+  /*  @RequiresApi(Build.VERSION_CODES.S)
     @SuppressLint("MissingPermission")
     fun openCamera(glSurfaceTexture: SurfaceTexture) {
         this.glSurfaceTexture = glSurfaceTexture
@@ -585,7 +516,7 @@ class CameraService(
             mCameraCallback,
             mBackgroundHandler
         )
-    }
+    }*/
     /* @RequiresApi(Build.VERSION_CODES.S)
      @SuppressLint("MissingPermission")
      fun openCamera(surfaceTexture: SurfaceTexture, surfaceTexture2: SurfaceTexture) {
@@ -712,106 +643,20 @@ class CameraService(
     }
 
     var averagImageValue: Long = 0
-    private val mOnImageAvailableListener =
-        ImageReader.OnImageAvailableListener { reader ->
-            mBackgroundHandler.post(
-                Runnable {
-                    val image = reader.acquireNextImage()
-                    if (image != null) {
-                        /////////////////////////
-                        val buffer = image.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
 
-
-                        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US)
-                        val output = File(
-                            Environment.getExternalStorageDirectory().toString(),
-                            "/DCIM/IMG_${sdf.format(Date())}.jpg"
-                        )
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        //  FileOutputStream(output).use { it.write(bytes) }
-                        val imageComparator = ImageComparator()
-                        val imageValue = imageComparator.getImageValue(bitmap)
-                        if (averagImageValue != 0L) {
-                            val dif = imageComparator.compareValues(averagImageValue, imageValue)
-                            if (dif > 20) {//28
-                                println("got  it!")
-                            }
-                            averagImageValue = (averagImageValue + imageValue) / 2
-                        } else {
-                            averagImageValue = imageValue
-                        }
-                        //////////////////////////
-                        /* val width = image.width;
-                         val height = image.height
-                         val planes = image.planes
-                         val buffer = planes[0].buffer
-                         val pixelStride = planes[0].pixelStride
-                         val rowStride = planes[0].rowStride
-                      //   val rowPadding = rowStride - pixelStride * width
-
-                         val bitmap = Bitmap.createBitmap(
-                             1920 ,
-                             1080,
-                             Bitmap.Config.ARGB_8888
-                         )
-                         bitmap.copyPixelsFromBuffer(buffer)
-                         val canvas=reader.surface.lockCanvas(null)
-                         canvas.drawBitmap(bitmap,0f,0f,null)
-                         reader.surface.unlockCanvasAndPost(canvas)*/
-
-                    }
-                    image.close()
-
-                }
-            )
-        }
     val zoomRatio = 4F
     var positionX = 1
     var positionY = 1
     val surfaceWidth = 1920
     val surfaceHeight = 1080
-    val magnifierWidth = surfaceWidth / zoomRatio//1024
-    val magnifierHeight = surfaceHeight / zoomRatio
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun setMagnifierPosition(positionX: Int, positionY: Int) {
-        //  Thread.sleep(100)
-        this.positionX = (((positionX * surfaceWidth) / 100)).toInt()//4096
-        this.positionY = (((positionY * surfaceHeight) / 100)).toInt()//3072
-        updateSession()
 
-    }
+
 
     var magnifierCaptureBuilder: CaptureRequest.Builder? = null
     var previewCaptureBuilder: CaptureRequest.Builder? = null
 
-    @RequiresApi(Build.VERSION_CODES.R)
-    fun updateSession() {
-        /* val surface2 = Surface(surfaceTexture2)
 
-         magnifierCaptureBuilder=
-            cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
-         //    cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-
-         // cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-
-         magnifierCaptureBuilder?.addTarget(surface2)*/
-        magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 4.0F)
-        /*  magnifierCaptureBuilder?.set(
-              CaptureRequest.SCALER_CROP_REGION,
-              Rect(0, 0, 768, 1024)
-          )*/
-
-
-        /*   magnifierCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-           magnifierCaptureBuilder?.set(
-               CaptureRequest.CONTROL_AF_MODE,
-               CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-           )*/
-
-
-    }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun createCaptureSession() {
@@ -1115,4 +960,4 @@ class CameraService(
         )
     }
 
-}
+}*/
