@@ -78,14 +78,14 @@ class Magnifier(
         vertexBuffer.position(0)
     }
 
-    fun updateTextureBuffer(position:Pair<Float,Float>, magnificationX:Float,magnificationY:Float) {
+    fun updateTextureBuffer(position:Pair<Float,Float>, width:Float, height:Float) {
         val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            position.first-magnificationX, position.second-magnificationY,
-            position.first+magnificationX, position.second-magnificationY,
-            position.first+magnificationX, position.second+magnificationY,
-            position.first+magnificationX, position.second+magnificationY,
-            position.first-magnificationX, position.second+magnificationY,
-            position.first-magnificationX, position.second-magnificationY
+            position.first-width/2, position.second-height/2,
+            position.first+width/2, position.second-height/2,
+            position.first+width/2, position.second+height/2,
+            position.first+width/2, position.second+height/2,
+            position.first-width/2, position.second+height/2,
+            position.first-width/2, position.second-height/2
         )
         textureBuffer.position(0)
         textureBuffer.put(textureData, 0, vertexDataSize)

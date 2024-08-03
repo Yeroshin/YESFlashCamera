@@ -17,7 +17,10 @@ import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.multiplyMV
 import android.opengl.Matrix.orthoM
 import android.opengl.Matrix.setIdentityM
+import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
+import android.view.Surface
+import android.view.WindowManager
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
 import javax.microedition.khronos.egl.EGLConfig
@@ -55,7 +58,7 @@ class MyRenderer(
     private val farBound = -1f
     private val nearBound = 1f
 
-    fun setDefaultBufferSize(){
+    fun setDefaultBufferSize() {
         surfaceTexture?.setDefaultBufferSize(160, 120)//(3072x4096)//(1280, 720)//(1920,1080)
 
     }
@@ -119,7 +122,7 @@ class MyRenderer(
                 blueMalletPosition!!.y,
                 blueMalletPosition!!.z
             ),
-            magnifier.height
+            0.5f
         )
 
         // If the ray intersects (if the user touched a part of the screen that
@@ -147,14 +150,24 @@ class MyRenderer(
 
             blueMalletPosition =
                 Geometry.Point(touchedPoint.x, touchedPoint.y, 0f);
-            val magnifierWidth =if(rotationPortrait){
-                (width/2 ).toFloat()
+           /* val magnifierWidth = if (rotationPortrait) {
+                (width / 2).toFloat()
             } else {
-                (height/2 ).toFloat()
-            }
-            // val magnifierWidth = (height/2 ).toFloat()
-
+                (height / 2).toFloat()
+            }*/
             val magnification = 2.0f
+            val magnifierSizeW =0.5f
+            ///////////////////////////
+            val ratio =
+                if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+            val wid=ratio
+            val he=2f
+
+            val magnifierVertexWidth= maxOf(wid,he)*magnifierSizeW
+            val magnifierVertexHeight= minOf(wid,he)*magnifierSizeW
+            val magnifierTextureWidth=magnifierVertexWidth*(wid/magnifierVertexWidth)
+            val magnifierTextureHeight=magnifierVertexHeight*(he/magnifierVertexHeight)
+            // val magnifierWidth = (height/2 ).toFloat()
             /*   blueMalletPosition = Geometry.Point(
                    clamp(
                        touchedPoint.x,
@@ -169,32 +182,28 @@ class MyRenderer(
                    0f// mallet.radius,
                )*/
             // val magnification=0.03125f
-            val magnifierValueX = (1 / (width / magnifierWidth)) / (2*magnification)
-            val magnifierValueY = (1 / (height / magnifierWidth)) / (2*magnification)
+            val magnifierValueX = (1 / (width / magnifierSizeW)) / (2 * magnification)
+            val magnifierValueY = (1 / (height / magnifierSizeW)) / (2 * magnification)
             //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
-            val position =if (rotationPortrait){
+            val position = if (rotationPortrait) {
                 mapVertexToTextureCoords(
-                    blueMalletPosition!!.x / (height / 2),
-                    blueMalletPosition!!.y / (width / 2)
+                    blueMalletPosition!!.x ,
+                    blueMalletPosition!!.y
                 )
-            }else{
+            } else {
                 mapVertexToTextureCoords(
-                    blueMalletPosition!!.x / (width / 2),
-                    blueMalletPosition!!.y / (height / 2)
+                    blueMalletPosition!!.x ,
+                    blueMalletPosition!!.y
                 )
             }
-          /*  val position = mapVertexToTextureCoords(
-                blueMalletPosition!!.x / (height / 2),
-                blueMalletPosition!!.y / (width / 2)
-            )*/
 
             magnifier.updateVertexBuffer(
-                magnifierWidth
+                magnifierVertexWidth
             )
-            if(rotationPortrait){
-                magnifier.updateTextureBuffer(position, magnifierValueY, magnifierValueX)
-            }else{
-                magnifier.updateTextureBuffer(position, magnifierValueX, magnifierValueY)
+            if (rotationPortrait) {
+               // magnifier.updateTextureBuffer(position, magnifierValueY, magnifierValueX)
+            } else {
+                magnifier.updateTextureBuffer(position,  magnifierTextureWidth,magnifierTextureHeight)
             }
         }
 
@@ -221,143 +230,200 @@ class MyRenderer(
 
     var width = 0
     var height = 0
-    var rotationPortrait=false
-  /*  override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-        glViewport(0, 0, width, height)
-        this.width = width
-        this.height = height
-        val tmp = maxOf(
-            width.toFloat() * 2,
-            height.toFloat() * 2
-        )
-        val windowManager: WindowManager = context
-            .getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    var rotationPortrait = false
 
+    /*  override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+          glViewport(0, 0, width, height)
+          this.width = width
+          this.height = height
+          val tmp = maxOf(
+              width.toFloat() * 2,
+              height.toFloat() * 2
+          )
+          val windowManager: WindowManager = context
+              .getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+          var rotationX = 0f
+          var rotationY = 0f
+          var length=0f
+          when (windowManager.defaultDisplay.rotation) {
+              Surface.ROTATION_0 -> {
+                  rotationX = -1f
+                  rotationY = 0f
+                  length=sqrt(width.toFloat() * width.toFloat() + height.toFloat() * height.toFloat())*1.09f
+                  rotationPortrait=true
+              }
+
+              Surface.ROTATION_90 -> {
+                  rotationX = 0f
+                  rotationY = 1f
+                  length=sqrt(width.toFloat() * width + height * height)*0.44f
+                  rotationPortrait=false
+              }
+
+              Surface.ROTATION_180 -> {
+                  rotationX = 1f
+                  rotationY = 0f
+                  length=sqrt(width.toFloat() * width + height * height)*1.09f
+                  rotationPortrait=true
+              }
+
+              Surface.ROTATION_270 -> {
+                  rotationX = 0f
+                  rotationY = -1f
+                  length=sqrt(width.toFloat() * width + height * height)*0.44f
+                  rotationPortrait=false
+              }
+
+              else -> "Не понятно"
+          }
+
+          perspectiveM(
+              projectionMatrix,
+              0,
+              45f,
+              width.toFloat() / height.toFloat(),
+              1f,
+              maxOf(
+                  width.toFloat() * 4,
+                  height.toFloat() * 4
+              )
+              // width.toFloat() * 4
+          )
+
+
+          setLookAtM(
+              viewMatrix,
+              0,
+              0f,
+              0.0f,
+             /*  maxOf(
+                   width.toFloat() * 3,
+                   height.toFloat() * 3
+               ),*/
+             // sqrt(width.toFloat() * width + height * height)*1.09f,
+             // sqrt(width.toFloat() * width + height * height)*0.44f,
+              length,
+              //height.toFloat()+1000 ,
+              0f,
+              0f,
+              0f,
+              rotationX,
+              rotationY,
+              0f
+          )
+          /*  glScreen.updateVertexBuffer(
+                height.toFloat(), width.toFloat(),
+            )*/
+          glScreen.updateVertexBuffer(
+              maxOf(
+                  width.toFloat(),
+                  height.toFloat()
+              ),
+              minOf(
+                  width.toFloat(),
+                  height.toFloat()
+              )
+          )
+          magnifier.updateVertexBuffer(
+              600f
+          )
+          magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
+      }*/
+    override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
+        ///////////tmp
+        this.width=width
+        this.height=height
+        //////////////
+        // Set the OpenGL viewport to fill the entire surface.
+       /* glViewport(0, 0, width, height)
+
+        val aspectRatio =
+            if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+
+        if (width > height) {
+            // Landscape
+            orthoM(projectionMatrix, 0, -aspectRatio, aspectRatio, -1f, 1f, -1f, 1f)
+        } else {
+            // Portrait or square
+            orthoM(projectionMatrix, 0, -1f, 1f, -aspectRatio, aspectRatio, -1f, 1f)
+        }*/
+
+        /* glScreen.updateVertexBuffer(
+             maxOf(
+                 normalizeValue(width.toFloat(), -1f, 1f),
+                         normalizeValue(height.toFloat(), -1f, 1f)
+                // width.toFloat(),
+               //  height.toFloat()
+             ),
+             minOf(
+                 normalizeValue(width.toFloat(), -1f, 1f),
+                         normalizeValue(height.toFloat(), -1f, 1f)
+               //  width.toFloat(),
+               //  height.toFloat()
+             )
+         )*/
         var rotationX = 0f
         var rotationY = 0f
-        var length=0f
+        val windowManager: WindowManager = context
+            .getSystemService(Context.WINDOW_SERVICE) as WindowManager
         when (windowManager.defaultDisplay.rotation) {
             Surface.ROTATION_0 -> {
                 rotationX = -1f
                 rotationY = 0f
-                length=sqrt(width.toFloat() * width.toFloat() + height.toFloat() * height.toFloat())*1.09f
                 rotationPortrait=true
             }
 
             Surface.ROTATION_90 -> {
                 rotationX = 0f
                 rotationY = 1f
-                length=sqrt(width.toFloat() * width + height * height)*0.44f
                 rotationPortrait=false
             }
 
             Surface.ROTATION_180 -> {
                 rotationX = 1f
                 rotationY = 0f
-                length=sqrt(width.toFloat() * width + height * height)*1.09f
                 rotationPortrait=true
             }
 
             Surface.ROTATION_270 -> {
                 rotationX = 0f
                 rotationY = -1f
-                length=sqrt(width.toFloat() * width + height * height)*0.44f
                 rotationPortrait=false
             }
 
             else -> "Не понятно"
         }
+        val ratio =
+            if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
 
-        perspectiveM(
-            projectionMatrix,
-            0,
-            45f,
-            width.toFloat() / height.toFloat(),
-            1f,
-            maxOf(
-                width.toFloat() * 4,
-                height.toFloat() * 4
-            )
-            // width.toFloat() * 4
-        )
+       // val ratio: Float = width.toFloat() / height.toFloat()
 
-
-        setLookAtM(
-            viewMatrix,
-            0,
-            0f,
-            0.0f,
-           /*  maxOf(
-                 width.toFloat() * 3,
-                 height.toFloat() * 3
-             ),*/
-           // sqrt(width.toFloat() * width + height * height)*1.09f,
-           // sqrt(width.toFloat() * width + height * height)*0.44f,
-            length,
-            //height.toFloat()+1000 ,
-            0f,
-            0f,
-            0f,
-            rotationX,
-            rotationY,
-            0f
-        )
-        /*  glScreen.updateVertexBuffer(
-              height.toFloat(), width.toFloat(),
-          )*/
+        ////////////////////////////////
+        glViewport(0, 0, width, height)
+        setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
         glScreen.updateVertexBuffer(
-            maxOf(
-                width.toFloat(),
-                height.toFloat()
-            ),
-            minOf(
-                width.toFloat(),
-                height.toFloat()
-            )
+            ratio*2-0.05f,
+            2f-0.05f,
         )
         magnifier.updateVertexBuffer(
-            600f
+            1f
         )
         magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
-    }*/
-  public override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
-      // Set the OpenGL viewport to fill the entire surface.
-      glViewport(0, 0, width, height)
+        if (width > height) {
+            // Landscape
 
-      val aspectRatio =
-          if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+            orthoM(projectionMatrix, 0, -ratio, ratio, -1f, 1f, -1f, 1f)
+        } else {
+            // Portrait or square
+            orthoM(projectionMatrix, 0, -1f, 1f, -ratio, ratio, -1f, 1f)
+        }
 
-      if (width > height) {
-          // Landscape
-          orthoM(projectionMatrix, 0, -aspectRatio, aspectRatio, -1f, 1f, -1f, 1f)
-      } else {
-          // Portrait or square
-          orthoM(projectionMatrix, 0, -1f, 1f, -aspectRatio, aspectRatio, -1f, 1f)
-      }
-      val tmp=normalizeValue(width.toFloat(), -1f, 1f)
-     /* glScreen.updateVertexBuffer(
-          maxOf(
-              normalizeValue(width.toFloat(), -1f, 1f),
-                      normalizeValue(height.toFloat(), -1f, 1f)
-             // width.toFloat(),
-            //  height.toFloat()
-          ),
-          minOf(
-              normalizeValue(width.toFloat(), -1f, 1f),
-                      normalizeValue(height.toFloat(), -1f, 1f)
-            //  width.toFloat(),
-            //  height.toFloat()
-          )
-      )*/
-      glScreen.updateVertexBuffer(
-          1.0f*4,
-          0.6f*4,
 
-      )
-  }
-    fun normalizeValue(x: Float, minValue: Float, maxValue: Float):Float {
-        return (x - minValue) / (maxValue - minValue)
+        // create a projection matrix from device screen geometry
+       // frustumM(projectionMatrix, 0,  -1f, 1f, -ratio, ratio,1f, 2f)
     }
+
 
     // private val transformMatrix = FloatArray(16)
     override fun onDrawFrame(gl: GL10?) {
@@ -382,14 +448,12 @@ class MyRenderer(
         invertM(invertedViewProjectionMatrix, 0, viewProjectionMatrix, 0)
 
         positionScreenInScene()
+      //  multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
         glScreen.bindData(textureProgram!!)
         textureProgram?.useProgram()
-        textureProgram?.setUniforms(projectionMatrix, texture)
-       // textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
-
+        textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
+        // textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
         glScreen.draw()
-
-
         /*  positionObjectInScene(
               1f,
               2f,
