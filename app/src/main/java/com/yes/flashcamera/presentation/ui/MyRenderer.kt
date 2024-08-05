@@ -25,6 +25,8 @@ import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 
 class MyRenderer(
@@ -155,18 +157,26 @@ class MyRenderer(
             } else {
                 (height / 2).toFloat()
             }*/
-            val magnification = 2.0f
+            val magnification = 1.0f
             val magnifierSizeW =0.5f
             ///////////////////////////
             val ratio =
                 if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
-            val wid=ratio
             val he=2f
+            val wid=ratio*he
 
-            val magnifierVertexWidth= maxOf(wid,he)*magnifierSizeW
-            val magnifierVertexHeight= minOf(wid,he)*magnifierSizeW
-            val magnifierTextureWidth=magnifierVertexWidth*(wid/magnifierVertexWidth)
-            val magnifierTextureHeight=magnifierVertexHeight*(he/magnifierVertexHeight)
+
+
+
+            val magnifierVertexWidth= wid*magnifierSizeW
+            val magnifierVertexHeight = he*magnifierSizeW
+
+            val texture=mapVertexToTextureCoords(magnifierVertexHeight/2,magnifierVertexWidth/2)
+            val tmp=texture.first
+            val tmp2=texture.second
+
+            val magnifierTextureWidth= abs(texture.first)
+            val magnifierTextureHeight= abs(texture.second)
             // val magnifierWidth = (height/2 ).toFloat()
             /*   blueMalletPosition = Geometry.Point(
                    clamp(
@@ -182,28 +192,30 @@ class MyRenderer(
                    0f// mallet.radius,
                )*/
             // val magnification=0.03125f
-            val magnifierValueX = (1 / (width / magnifierSizeW)) / (2 * magnification)
-            val magnifierValueY = (1 / (height / magnifierSizeW)) / (2 * magnification)
+
             //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
-            val position = if (rotationPortrait) {
-                mapVertexToTextureCoords(
+            val position = mapVertexToTextureCoords(
                     blueMalletPosition!!.x ,
                     blueMalletPosition!!.y
                 )
-            } else {
-                mapVertexToTextureCoords(
-                    blueMalletPosition!!.x ,
-                    blueMalletPosition!!.y
-                )
-            }
 
             magnifier.updateVertexBuffer(
-                magnifierVertexWidth
+                magnifierVertexWidth,
+                magnifierVertexHeight
             )
             if (rotationPortrait) {
-               // magnifier.updateTextureBuffer(position, magnifierValueY, magnifierValueX)
+                magnifier.updateTextureBuffer(
+                    position,
+                    magnifierTextureWidth,
+                    magnifierTextureHeight,
+                )
             } else {
-                magnifier.updateTextureBuffer(position,  magnifierTextureWidth,magnifierTextureHeight)
+                magnifier.updateTextureBuffer(
+                    position,
+                    magnifierTextureWidth,
+                    magnifierTextureHeight,
+
+                )
             }
         }
 
@@ -403,10 +415,11 @@ class MyRenderer(
         glViewport(0, 0, width, height)
         setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
         glScreen.updateVertexBuffer(
-            ratio*2-0.05f,
-            2f-0.05f,
+            ratio*2,
+            2f,
         )
         magnifier.updateVertexBuffer(
+            1f,
             1f
         )
         magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
