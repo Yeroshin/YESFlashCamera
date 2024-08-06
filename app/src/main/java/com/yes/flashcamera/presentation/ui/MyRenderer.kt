@@ -21,6 +21,7 @@ import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
 import android.view.Surface
 import android.view.WindowManager
+import androidx.core.math.MathUtils.clamp
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
 import javax.microedition.khronos.egl.EGLConfig
@@ -150,8 +151,7 @@ class MyRenderer(
             previousBlueMalletPosition = blueMalletPosition
 
 
-            blueMalletPosition =
-                Geometry.Point(touchedPoint.x, touchedPoint.y, 0f);
+           // blueMalletPosition = Geometry.Point(touchedPoint.x, touchedPoint.y, 0f);
            /* val magnifierWidth = if (rotationPortrait) {
                 (width / 2).toFloat()
             } else {
@@ -159,7 +159,7 @@ class MyRenderer(
             }*/
             val magnification = 2.0f
             val magnifierSizeW =0.5f
-            val magnifierSizeH =0.8f
+            val magnifierSizeH =0.5f
             ///////////////////////////
             val ratio =
                 if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
@@ -182,19 +182,19 @@ class MyRenderer(
             val magnifierTextureHeight= 1f/(magnification/magnifierSizeH) // 0.0625f
 
             // val magnifierWidth = (height/2 ).toFloat()
-            /*   blueMalletPosition = Geometry.Point(
+               blueMalletPosition = Geometry.Point(
                    clamp(
                        touchedPoint.x,
-                       -height/2 + magnifierWidth/2,
-                       height/2 - magnifierWidth/2
+                       -1*ratio + magnifierVertexWidth/2,
+                       1 *ratio- magnifierVertexWidth/2
                    ),
                    clamp(
                        touchedPoint.y,
-                       -width/2 + magnifierWidth/2,
-                       width/2 - magnifierWidth/2
+                       -1 + magnifierVertexHeight/2,
+                       1 -magnifierVertexHeight/2
                    ),
                    0f// mallet.radius,
-               )*/
+               )
             // val magnification=0.03125f
 
             //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
