@@ -168,15 +168,15 @@ class MyRenderer(
 
 
 
-            val magnifierVertexWidth= wid*magnifierSizeW
-            val magnifierVertexHeight = he*magnifierSizeW
+            val magnifierVertexWidth=1.0f// wid*magnifierSizeW
+            val magnifierVertexHeight =1.0f// he*magnifierSizeW
 
             val texture=mapVertexToTextureCoords(magnifierVertexHeight/2,magnifierVertexWidth/2)
             val tmp=texture.first
             val tmp2=texture.second
 
-            val magnifierTextureWidth= abs(texture.first)
-            val magnifierTextureHeight= abs(texture.second)
+            val magnifierTextureWidth= 0.125f
+            val magnifierTextureHeight= 0.125f*ratio
             // val magnifierWidth = (height/2 ).toFloat()
             /*   blueMalletPosition = Geometry.Point(
                    clamp(
@@ -195,7 +195,7 @@ class MyRenderer(
 
             //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
             val position = mapVertexToTextureCoords(
-                    blueMalletPosition!!.x ,
+                    blueMalletPosition!!.x /ratio,
                     blueMalletPosition!!.y
                 )
 
