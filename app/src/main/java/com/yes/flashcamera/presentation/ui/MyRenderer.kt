@@ -157,26 +157,30 @@ class MyRenderer(
             } else {
                 (height / 2).toFloat()
             }*/
-            val magnification = 1.0f
+            val magnification = 2.0f
             val magnifierSizeW =0.5f
+            val magnifierSizeH =0.8f
             ///////////////////////////
             val ratio =
                 if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
             val he=2f
             val wid=ratio*he
 
+            val ratioMagnifier = if (magnifierSizeW > magnifierSizeH) magnifierSizeW / magnifierSizeH
+            else magnifierSizeH / magnifierSizeW
+
+          /*  val he=2f
+            val wid=ratio*he*/
 
 
 
-            val magnifierVertexWidth=1.0f// wid*magnifierSizeW
-            val magnifierVertexHeight =1.0f// he*magnifierSizeW
+            val magnifierVertexWidth= minOf(wid, he)*magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
+            val magnifierVertexHeight =minOf(wid, he)*magnifierSizeH//1.0f// he*magnifierSizeW
 
-            val texture=mapVertexToTextureCoords(magnifierVertexHeight/2,magnifierVertexWidth/2)
-            val tmp=texture.first
-            val tmp2=texture.second
 
-            val magnifierTextureWidth= 0.125f
-            val magnifierTextureHeight= 0.125f*ratio
+            val magnifierTextureWidth= 1f/(magnification/magnifierSizeW)/ratioMagnifier // 0.0625fratio
+            val magnifierTextureHeight= 1f/(magnification/magnifierSizeH) // 0.0625f
+
             // val magnifierWidth = (height/2 ).toFloat()
             /*   blueMalletPosition = Geometry.Point(
                    clamp(
@@ -203,20 +207,13 @@ class MyRenderer(
                 magnifierVertexWidth,
                 magnifierVertexHeight
             )
-            if (rotationPortrait) {
-                magnifier.updateTextureBuffer(
-                    position,
-                    magnifierTextureWidth,
-                    magnifierTextureHeight,
-                )
-            } else {
-                magnifier.updateTextureBuffer(
-                    position,
-                    magnifierTextureWidth,
-                    magnifierTextureHeight,
 
+                magnifier.updateTextureBuffer(
+                    position,
+                    magnifierTextureWidth,
+                    magnifierTextureHeight,
                 )
-            }
+
         }
 
 
