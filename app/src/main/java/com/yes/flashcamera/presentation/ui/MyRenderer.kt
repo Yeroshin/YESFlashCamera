@@ -157,13 +157,16 @@ class MyRenderer(
             } else {
                 (height / 2).toFloat()
             }*/
+            ////////////////////////////
+            val ratio =
+                if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+
+            /////////////////////////////
             val magnification = 2.0f
             val magnifierSizeW =0.5f
             val magnifierSizeH =0.5f
             ///////////////////////////
-            val ratio =
-                if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
-            val he=2f
+             val he=2f
             val wid=ratio*he
 
             val ratioMagnifier = if (magnifierSizeW > magnifierSizeH) magnifierSizeW / magnifierSizeH
@@ -174,12 +177,12 @@ class MyRenderer(
 
 
 
-            val magnifierVertexWidth= minOf(wid, he)*magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
+            val magnifierVertexWidth= maxOf(wid, he)*magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
             val magnifierVertexHeight =minOf(wid, he)*magnifierSizeH//1.0f// he*magnifierSizeW
 
 
-            val magnifierTextureWidth= 1f/(magnification/magnifierSizeW)/ratioMagnifier // 0.0625fratio
-            val magnifierTextureHeight= 1f/(magnification/magnifierSizeH) // 0.0625f
+            val magnifierTextureWidth= 1f*(magnifierSizeW/magnification) // 0.0625fratio
+            val magnifierTextureHeight= 1f*(magnifierSizeH/magnification) // 0.0625f
 
             // val magnifierWidth = (height/2 ).toFloat()
                blueMalletPosition = Geometry.Point(
