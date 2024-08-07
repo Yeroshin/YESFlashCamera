@@ -33,6 +33,7 @@ import android.util.Size
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
@@ -103,7 +104,8 @@ class MainActivity : Activity() {
         cameraRepository.getBackCameraId()?.let {
             cameraRepository.openCamera(
                 it
-            ) {
+            ) {camera->
+                val cam=camera
                 cameraRepository.createCaptureSession(surfaceTexture)
             }
         }
@@ -121,18 +123,54 @@ class MainActivity : Activity() {
         val configurationInfo = activityManager.deviceConfigurationInfo
         val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
         if (supportsEs2) {
+            binding.viewFinder.setEGLContextClientVersion(2)
+            binding.viewFinder.setRenderer(
+                renderer
+            )
 
-            binding.glSurfaceView.setEGLContextClientVersion(2)
+          /*  binding.glSurfaceView.setEGLContextClientVersion(2)
             binding.glSurfaceView.setRenderer(
                renderer
-            )
+            )*/
             rendererSet = true
         } else {
             Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
                 .show()
             return
         }
-        binding.glSurfaceView.setOnTouchListener { v, event ->
+
+        binding.viewFinder.setOnTouchListener { v, event ->
+            if (event != null) {
+                // Convert touch coordinates into normalized device
+                // coordinates, keeping in mind that Android's Y
+                // coordinates are inverted.
+                val normalizedX =
+                    (event.x / v.width.toFloat()) * 2 - 1
+                val normalizedY =
+                    -((event.y / v.height.toFloat()) * 2 - 1)
+
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    //    glSurfaceView!!.queueEvent {
+
+                    binding.viewFinder.setAspectRatio(2,1)
+                    renderer.handleTouchPress(
+                        normalizedX, normalizedY
+                    )
+                    //   }
+                } else if (event.action == MotionEvent.ACTION_MOVE) {
+                    //   glSurfaceView!!.queueEvent {
+                    renderer.handleTouchDrag(
+                        normalizedX, normalizedY
+                    )
+                    //   }
+                }
+
+                true
+            } else {
+                false
+            }
+        }
+       /* binding.glSurfaceView.setOnTouchListener { v, event ->
             if (event != null) {
                 // Convert touch coordinates into normalized device
                 // coordinates, keeping in mind that Android's Y
@@ -160,7 +198,7 @@ class MainActivity : Activity() {
             } else {
                 false
             }
-        }
+        }*/
 
     }
 

@@ -8,13 +8,20 @@
     android:layout_height="match_parent">
 
 
+    <com.yes.flashcamera.utils.AutoFitSurfaceView
+        android:id="@+id/view_finder"
+        android:layout_width="100dp"
+        android:layout_height="match_parent"
+
+         />
+
     <LinearLayout
         android:id="@+id/linearLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
         android:orientation="vertical"
         android:paddingBottom="8dp"
-        app:layout_constraintBottom_toBottomOf="parent">
+        tools:layout_editor_absoluteY="631dp">
 
         <SeekBar
             android:id="@+id/iso"
@@ -57,21 +64,20 @@
 
     <android.opengl.GLSurfaceView
         android:id="@+id/glSurfaceView"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:visibility="gone"
+        tools:layout_editor_absoluteY="647dp" />
 
     <ImageButton
         android:id="@+id/capture_button"
         android:layout_width="52dp"
         android:layout_height="53dp"
-        android:layout_marginBottom="32dp"
         android:background="@android:drawable/ic_menu_camera"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="562dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

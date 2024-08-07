@@ -11,6 +11,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
+import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
 import android.view.Surface
@@ -61,27 +62,51 @@ class CameraRepository(
     }
     private var onCameraOpened:(()->Unit)?=null
     @SuppressLint("MissingPermission")
-    fun openCamera(id:String,onCameraOpened:()->Unit) {
-        this.onCameraOpened = onCameraOpened
+    fun openCamera(id:String,onCameraOpened:(camera:Camera)->Unit) {
+       // this.onCameraOpened = onCameraOpened
             cameraManager.openCamera(
                 id,
-                mCameraCallback,
+                object : CameraDevice.StateCallback() {
+
+                    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+                    override fun onOpened(camera: CameraDevice) {
+                        cameraDevice=camera
+                        onCameraOpened(
+                            getCameraCharacteristics(camera.id)
+                        )
+                    }
+
+                    override fun onDisconnected(camera: CameraDevice) {
+                        camera.close()
+                    }
+
+                    override fun onError(camera: CameraDevice, error: Int) {}
+                },
                 mBackgroundHandler
             )
     }
     fun getCameraCharacteristics(id:String): Camera{
         val characteristics =cameraManager.getCameraCharacteristics(id)
-        characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
+
+        val config = characteristics.get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+
+        // If image format is provided, use it to determine supported sizes; or else use target class
+        val allSizes =  config?.getOutputSizes(ImageReader::class.java)
+        allSizes?.maxBy { it.height * it.width }
+
+     /*   characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
             Arrays.sort(
                 map.getOutputSizes(ImageFormat.JPEG),
                 Collections.reverseOrder { lhs, rhs -> // Cast to ensure the multiplications won't overflow
                     java.lang.Long.signum((lhs.width.toLong() * lhs.height.toLong()) - (rhs.width.toLong() * rhs.height.toLong() ))
                 })
-        }
+        }*/
 
         return Camera(
             iso=characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE),
-            exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+            exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE),
+            resolutions = allSizes
         )
     }
     var previewCaptureBuilder: CaptureRequest.Builder? = null
