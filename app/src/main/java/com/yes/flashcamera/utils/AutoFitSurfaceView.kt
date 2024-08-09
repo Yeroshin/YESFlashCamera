@@ -15,12 +15,14 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     defStyle: Int = 0
 ) : GLSurfaceView(context, attrs) {
 
-    private var aspectRatio = 0.8f
+    private var aspectRatio = 1.5f
     private var fullscreen = true
 
     fun setAspectRatio(width: Int, height: Int) {
         require(width > 0 && height > 0) { "Size cannot be negative" }
-        aspectRatio = width.toFloat() / height.toFloat()
+      //  aspectRatio = width.toFloat() / height.toFloat()
+        aspectRatio = if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+
         //  holder.setFixedSize(320,400)
         requestLayout()
     }
@@ -35,17 +37,18 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         val height = MeasureSpec.getSize(heightMeasureSpec)
 
         if (fullscreen){
-            if((width*aspectRatio).toInt()>height){
-                setMeasuredDimension(
-                    width,
-                    (width*aspectRatio).toInt()
-                )
-
-            }else{
+            if((height*aspectRatio).toInt()<height){
                 setMeasuredDimension(
                     (height*aspectRatio).toInt(),
                     height
                 )
+
+            }else{
+                setMeasuredDimension(
+                    width,
+                    (height*aspectRatio).toInt(),
+                )
+
             }
         }else{
             if((width*aspectRatio).toInt()>height){
