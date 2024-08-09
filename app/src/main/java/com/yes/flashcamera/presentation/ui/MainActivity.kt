@@ -152,7 +152,7 @@ class MainActivity : Activity() {
                 if (event.action == MotionEvent.ACTION_DOWN) {
                     //    glSurfaceView!!.queueEvent {
 
-                    binding.viewFinder.setAspectRatio(2,1)
+                    binding.viewFinder.setAspectRatio(3,2)
                     renderer.handleTouchPress(
                         normalizedX, normalizedY
                     )

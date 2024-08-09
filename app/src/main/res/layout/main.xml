@@ -1,27 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/frameLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:gravity="center_vertical"
+    android:orientation="vertical">
 
 
     <com.yes.flashcamera.utils.AutoFitSurfaceView
         android:id="@+id/view_finder"
-        android:layout_width="100dp"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_gravity="center"
 
-         />
+        />
 
     <LinearLayout
         android:id="@+id/linearLayout"
-        android:layout_width="100dp"
+        android:layout_width="match_parent"
         android:layout_height="100dp"
+        android:layout_gravity="bottom"
         android:orientation="vertical"
         android:paddingBottom="8dp"
-        tools:layout_editor_absoluteY="631dp">
+        android:visibility="gone">
 
         <SeekBar
             android:id="@+id/iso"
@@ -46,12 +50,7 @@
         android:id="@+id/linear"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:orientation="vertical"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:visibility="gone">
 
         <TextureView
             android:id="@+id/textureView"
@@ -66,8 +65,7 @@
         android:id="@+id/glSurfaceView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:visibility="gone"
-        tools:layout_editor_absoluteY="647dp" />
+        android:visibility="gone" />
 
     <ImageButton
         android:id="@+id/capture_button"
@@ -75,9 +73,6 @@
         android:layout_height="53dp"
         android:background="@android:drawable/ic_menu_camera"
         android:scaleType="fitCenter"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:layout_editor_absoluteY="562dp" />
+        tools:visibility="gone" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>
