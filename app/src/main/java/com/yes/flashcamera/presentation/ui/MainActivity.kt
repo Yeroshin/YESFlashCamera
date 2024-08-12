@@ -8,54 +8,128 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Resources
-import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraAccessException
-import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
-import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.TotalCaptureResult
-import android.hardware.camera2.params.OutputConfiguration
-import android.hardware.camera2.params.SessionConfiguration
-import android.media.ImageReader
-import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Range
 import android.util.Size
 import android.view.MotionEvent
-import android.view.Surface
 import android.view.View
-import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.core.view.updatePaddingRelative
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.hannesdorfmann.adapterdelegates4.ListDelegationAdapter
+import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import com.yes.flashcamera.data.repository.CameraRepository
 import com.yes.flashcamera.databinding.MainBinding
-import com.yes.flashcamera.presentation.ui.MainActivity.CameraUI
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.asExecutor
+import com.yes.flashcamera.databinding.ParamValueItemBinding
+import com.yes.flashcamera.presentation.model.IAdapterDelegate
+import com.yes.flashcamera.presentation.model.ParamValueUI
 import java.io.BufferedReader
-import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 
 private const val PERMISSIONS_REQUEST_CODE = 10
 
 class MainActivity : Activity() {
+
+    private val adapter by lazy {
+        ListDelegationAdapter(
+            parametrAdapterDelegate(),
+        )
+    }
+    private fun parametrAdapterDelegate() =
+        adapterDelegateViewBinding<ParamValueUI, IAdapterDelegate, ParamValueItemBinding>(
+            { layoutInflater, root -> ParamValueItemBinding.inflate(layoutInflater, root, false) }
+        ) {
+
+            bind {
+                binding.value.text = item.value
+            }
+        }
+    private var recyclerViewWidth=0
+    private fun dataLoaded() {
+        binding .RecyclerView.layoutManager =
+            LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding .RecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                // Убедитесь, что этот код выполняется только один раз
+                binding .RecyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                // Получите ширину RecyclerView
+                recyclerViewWidth = binding .RecyclerView.width
+                binding.RecyclerView.updatePaddingRelative(start = recyclerViewWidth/2, end = recyclerViewWidth/2)
+                binding.RecyclerView.clipToPadding=false
+                binding.RecyclerView.adapter = adapter
+                adapter.items = listOf(
+                    ParamValueUI("100"),
+                    ParamValueUI("200"),
+                    ParamValueUI("300"),
+                    ParamValueUI("400"),
+                    ParamValueUI("500"),
+                    ParamValueUI("600"),
+                    ParamValueUI("700"),
+                    ParamValueUI("800"),
+                    ParamValueUI("900"),
+                    ParamValueUI("1000"),
+                    ParamValueUI("2000"),
+                    ParamValueUI("2100"),
+                    ParamValueUI("2200"),
+                    ParamValueUI("2300"),
+                    ParamValueUI("2400"),
+                    ParamValueUI("2500"),
+                )
+
+            }
+        })
+        binding.RecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+
+
+                // Проверяем, что элемент оказался в середине
+                val centerPosition = recyclerView.childCount / 2
+
+                val centerView = recyclerView.getChildAt(centerPosition)// as ParamValueUI
+              val tmp=recyclerView.childCount
+                for(i in 0..recyclerView.childCount){
+                    val view = recyclerView.layoutManager?.getChildAt(i)
+                    view?.let {
+                        if((view.x+(view.width/2))>recyclerViewWidth/2&&(view.x-(view.width/2))<recyclerViewWidth/2){
+                            for(i in 0..adapter.itemCount){
+                                val tmpView=binding.RecyclerView.findViewHolderForAdapterPosition(i)
+                                if(tmpView?.itemView==view){
+                                    println((adapter.items?.get(i) as ParamValueUI).value)
+                                }
+                            }
+
+                           /* val item=adapter.items?.get(i) as ParamValueUI
+                              println(item.value)*/
+                        }
+                    }
+
+                }
+
+
+
+                // Обрабатываем событие для элемента в середине
+                // (например, вызываем нужный метод или отправляем событие)
+            }
+        })
+
+
+    }
+
 
     private lateinit var binding: MainBinding
 
@@ -91,6 +165,7 @@ class MainActivity : Activity() {
         }
         gles()
         setContentView(binding.root)
+        dataLoaded()
     }
 
 

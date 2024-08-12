@@ -15,7 +15,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     defStyle: Int = 0
 ) : GLSurfaceView(context, attrs) {
 
-    private var aspectRatio = 1.5f
+    private var aspectRatio = 1.0f
     private var fullscreen = true
 
     fun setAspectRatio(width: Int, height: Int) {

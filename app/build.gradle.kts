@@ -101,4 +101,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.2.0")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.constraintlayout:constraintlayout:1.1.3")
+
+    //adapter delegate
+    implementation ("com.hannesdorfmann:adapterdelegates4-kotlin-dsl-viewbinding:4.3.2")
 }
