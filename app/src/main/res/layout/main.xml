@@ -12,18 +12,44 @@
     <com.yes.flashcamera.utils.AutoFitSurfaceView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_gravity="center"
 
         />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/RecyclerView"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:clipToPadding="false"
-        tools:itemCount="3"
-        tools:listitem="@layout/param_value_item" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#F60000"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/radioButton2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RadioButton" />
+
+            <RadioButton
+                android:id="@+id/radioButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RadioButton" />
+        </RadioGroup>
+
+        <com.yes.flashcamera.presentation.ui.ScrollableSeekBar
+            android:id="@+id/RecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:background="@drawable/arrow_drop_up"
+            android:clipToPadding="false"
+            tools:itemCount="3"
+            tools:listitem="@layout/param_value_item" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/linearLayout"

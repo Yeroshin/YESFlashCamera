@@ -20,14 +20,13 @@ import android.util.Range
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewTreeObserver
 import android.view.WindowInsets
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.view.updatePaddingRelative
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearSnapHelper
+import androidx.recyclerview.widget.SnapHelper
 import com.hannesdorfmann.adapterdelegates4.ListDelegationAdapter
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import com.yes.flashcamera.data.repository.CameraRepository
@@ -46,87 +45,122 @@ class MainActivity : Activity() {
 
     private val adapter by lazy {
         ListDelegationAdapter(
-            parametrAdapterDelegate(),
+            parameterAdapterDelegate(),
         )
     }
-    private fun parametrAdapterDelegate() =
+
+    private fun parameterAdapterDelegate() =
         adapterDelegateViewBinding<ParamValueUI, IAdapterDelegate, ParamValueItemBinding>(
             { layoutInflater, root -> ParamValueItemBinding.inflate(layoutInflater, root, false) }
         ) {
-
             bind {
                 binding.value.text = item.value
             }
         }
-    private var recyclerViewWidth=0
+
     private fun dataLoaded() {
-        binding .RecyclerView.layoutManager =
+        binding.RecyclerView.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        binding .RecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                // Убедитесь, что этот код выполняется только один раз
-                binding .RecyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+        binding.RecyclerView.adapter = adapter
+        binding.RecyclerView.setOnItemScrolledListener { position ->
+            println((adapter.items?.get(position) as ParamValueUI).value)
+          /*  binding.RecyclerView.smoothScrollToPosition(
+                position
+            )*/
+        }
+        adapter.items = listOf(
+            ParamValueUI("100"),
+            ParamValueUI("200"),
+            ParamValueUI("300"),
+            ParamValueUI("400"),
+            ParamValueUI("500"),
+            ParamValueUI("600"),
+            ParamValueUI("700"),
+            ParamValueUI("800"),
+            ParamValueUI("900"),
+            ParamValueUI("1000"),
+            ParamValueUI("2000"),
+            ParamValueUI("2100"),
+            ParamValueUI("2200"),
+            ParamValueUI("2300"),
+            ParamValueUI("2400"),
+            ParamValueUI("2500"),
+        )
+      //  val tmp=binding.RecyclerView.children.last().width/2
+        binding.RecyclerView.smoothScrollToPosition(
+            -adapter.itemCount/2
+        )
+        val helper: SnapHelper = LinearSnapHelper()
+     //   helper.attachToRecyclerView(binding.RecyclerView)
+        /*   binding .RecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+               override fun onGlobalLayout() {
+                   // Убедитесь, что этот код выполняется только один раз
+                   binding .RecyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
 
-                // Получите ширину RecyclerView
-                recyclerViewWidth = binding .RecyclerView.width
-                binding.RecyclerView.updatePaddingRelative(start = recyclerViewWidth/2, end = recyclerViewWidth/2)
-                binding.RecyclerView.clipToPadding=false
-                binding.RecyclerView.adapter = adapter
-                adapter.items = listOf(
-                    ParamValueUI("100"),
-                    ParamValueUI("200"),
-                    ParamValueUI("300"),
-                    ParamValueUI("400"),
-                    ParamValueUI("500"),
-                    ParamValueUI("600"),
-                    ParamValueUI("700"),
-                    ParamValueUI("800"),
-                    ParamValueUI("900"),
-                    ParamValueUI("1000"),
-                    ParamValueUI("2000"),
-                    ParamValueUI("2100"),
-                    ParamValueUI("2200"),
-                    ParamValueUI("2300"),
-                    ParamValueUI("2400"),
-                    ParamValueUI("2500"),
-                )
+                   // Получите ширину RecyclerView
+                   recyclerViewWidth = binding .RecyclerView.width
+                   binding.RecyclerView.updatePaddingRelative(start = recyclerViewWidth/2, end = recyclerViewWidth/2)
+                   binding.RecyclerView.clipToPadding=false
+                   binding.RecyclerView.adapter = adapter
+                   adapter.items = listOf(
+                       ParamValueUI("100"),
+                       ParamValueUI("200"),
+                       ParamValueUI("300"),
+                       ParamValueUI("400"),
+                       ParamValueUI("500"),
+                       ParamValueUI("600"),
+                       ParamValueUI("700"),
+                       ParamValueUI("800"),
+                       ParamValueUI("900"),
+                       ParamValueUI("1000"),
+                       ParamValueUI("2000"),
+                       ParamValueUI("2100"),
+                       ParamValueUI("2200"),
+                       ParamValueUI("2300"),
+                       ParamValueUI("2400"),
+                       ParamValueUI("2500"),
+                   )
 
-            }
-        })
-        binding.RecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-
-
-                // Проверяем, что элемент оказался в середине
-                val centerPosition = recyclerView.childCount / 2
-
-                val centerView = recyclerView.getChildAt(centerPosition)// as ParamValueUI
-              val tmp=recyclerView.childCount
-                for(i in 0..recyclerView.childCount){
-                    val view = recyclerView.layoutManager?.getChildAt(i)
-                    view?.let {
-                        if((view.x+(view.width/2))>recyclerViewWidth/2&&(view.x-(view.width/2))<recyclerViewWidth/2){
-                            for(i in 0..adapter.itemCount){
-                                val tmpView=binding.RecyclerView.findViewHolderForAdapterPosition(i)
-                                if(tmpView?.itemView==view){
-                                    println((adapter.items?.get(i) as ParamValueUI).value)
-                                }
-                            }
-
-                           /* val item=adapter.items?.get(i) as ParamValueUI
-                              println(item.value)*/
-                        }
-                    }
-
-                }
+               }
+           })*/
+        /* binding.RecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
 
 
+                 // Проверяем, что элемент оказался в середине
+                 val centerPosition = recyclerView.childCount / 2
 
-                // Обрабатываем событие для элемента в середине
-                // (например, вызываем нужный метод или отправляем событие)
-            }
-        })
+                 val centerView = recyclerView.getChildAt(centerPosition)// as ParamValueUI
+               val tmp=recyclerView.childCount
+                 for(i in 0..recyclerView.childCount){
+                     val view = recyclerView.layoutManager?.getChildAt(i)
+                     view?.let {
+                         if((view.x+(view.width/2))>recyclerViewWidth/2&&(view.x-(view.width/2))<recyclerViewWidth/2){
+                             for(i in 0..adapter.itemCount){
+                                 val tmpView=binding.RecyclerView.findViewHolderForAdapterPosition(i)
+                                 if(tmpView?.itemView==view){
+                                     println((adapter.items?.get(i) as ParamValueUI).value)
+                                 }
+                             }
 
+                            /* val item=adapter.items?.get(i) as ParamValueUI
+                               println(item.value)*/
+                         }
+                     }
+
+                 }
+
+
+
+                 // Обрабатываем событие для элемента в середине
+                 // (например, вызываем нужный метод или отправляем событие)
+             }
+         })*/
+
+
+    }
+
+    private fun onItemScrolled() {
 
     }
 
@@ -135,7 +169,8 @@ class MainActivity : Activity() {
 
     private val mBackgroundThread: HandlerThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
-   // private lateinit var cameraService: CameraService
+
+    // private lateinit var cameraService: CameraService
     private val cameraRepository by lazy {
         CameraRepository(
             getSystemService(CAMERA_SERVICE) as CameraManager,
@@ -147,13 +182,13 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-       /* cameraService = CameraService(
-            this,
-            getSystemService(CAMERA_SERVICE) as CameraManager,
-            mBackgroundHandler
-        ) { state ->
-            render(state)
-        }*/
+        /* cameraService = CameraService(
+             this,
+             getSystemService(CAMERA_SERVICE) as CameraManager,
+             mBackgroundHandler
+         ) { state ->
+             render(state)
+         }*/
 
 
         binding = MainBinding.inflate(layoutInflater)
@@ -173,14 +208,14 @@ class MainActivity : Activity() {
 
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private val renderer=MyRenderer(
+    private val renderer = MyRenderer(
         this
     ) { surfaceTexture ->
         cameraRepository.getBackCameraId()?.let {
             cameraRepository.openCamera(
                 it
-            ) {camera->
-                val cam=camera
+            ) { camera ->
+                val cam = camera
                 cameraRepository.createCaptureSession(surfaceTexture)
             }
         }
@@ -189,11 +224,10 @@ class MainActivity : Activity() {
     }
 
 
-
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun gles() {
 
-       // glSurfaceView = GLSurfaceView(this)
+        // glSurfaceView = GLSurfaceView(this)
         val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
         val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
@@ -203,10 +237,10 @@ class MainActivity : Activity() {
                 renderer
             )
 
-          /*  binding.glSurfaceView.setEGLContextClientVersion(2)
-            binding.glSurfaceView.setRenderer(
-               renderer
-            )*/
+            /*  binding.glSurfaceView.setEGLContextClientVersion(2)
+              binding.glSurfaceView.setRenderer(
+                 renderer
+              )*/
             rendererSet = true
         } else {
             Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
@@ -227,7 +261,7 @@ class MainActivity : Activity() {
                 if (event.action == MotionEvent.ACTION_DOWN) {
                     //    glSurfaceView!!.queueEvent {
 
-                    binding.viewFinder.setAspectRatio(3,2)
+                    binding.viewFinder.setAspectRatio(3, 2)
                     renderer.handleTouchPress(
                         normalizedX, normalizedY
                     )
@@ -245,35 +279,35 @@ class MainActivity : Activity() {
                 false
             }
         }
-       /* binding.glSurfaceView.setOnTouchListener { v, event ->
-            if (event != null) {
-                // Convert touch coordinates into normalized device
-                // coordinates, keeping in mind that Android's Y
-                // coordinates are inverted.
-                val normalizedX =
-                    (event.x / v.width.toFloat()) * 2 - 1
-                val normalizedY =
-                    -((event.y / v.height.toFloat()) * 2 - 1)
+        /* binding.glSurfaceView.setOnTouchListener { v, event ->
+             if (event != null) {
+                 // Convert touch coordinates into normalized device
+                 // coordinates, keeping in mind that Android's Y
+                 // coordinates are inverted.
+                 val normalizedX =
+                     (event.x / v.width.toFloat()) * 2 - 1
+                 val normalizedY =
+                     -((event.y / v.height.toFloat()) * 2 - 1)
 
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                //    glSurfaceView!!.queueEvent {
-                        renderer.handleTouchPress(
-                            normalizedX, normalizedY
-                        )
-                 //   }
-                } else if (event.action == MotionEvent.ACTION_MOVE) {
-                 //   glSurfaceView!!.queueEvent {
-                        renderer.handleTouchDrag(
-                            normalizedX, normalizedY
-                        )
-                 //   }
-                }
+                 if (event.action == MotionEvent.ACTION_DOWN) {
+                 //    glSurfaceView!!.queueEvent {
+                         renderer.handleTouchPress(
+                             normalizedX, normalizedY
+                         )
+                  //   }
+                 } else if (event.action == MotionEvent.ACTION_MOVE) {
+                  //   glSurfaceView!!.queueEvent {
+                         renderer.handleTouchDrag(
+                             normalizedX, normalizedY
+                         )
+                  //   }
+                 }
 
-                true
-            } else {
-                false
-            }
-        }*/
+                 true
+             } else {
+                 false
+             }
+         }*/
 
     }
 
@@ -346,7 +380,7 @@ class MainActivity : Activity() {
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
             if (fromUser) {
-              //  cameraService.setExposure(progress)
+                //  cameraService.setExposure(progress)
             }
 
         }
@@ -360,7 +394,6 @@ class MainActivity : Activity() {
         }
 
     }
-
 
 
     private fun getDisplaySize(): Pair<Int, Int> {
@@ -411,56 +444,54 @@ class MainActivity : Activity() {
 
     private var surfaceTexture: SurfaceTexture? = null
     private var surfaceTexture2: SurfaceTexture? = null
-   /* private var glTexture: SurfaceTexture? = null
-    private fun setGLTexture(glTexture: SurfaceTexture) {
-        this.glTexture = glTexture
-    }*/
+    /* private var glTexture: SurfaceTexture? = null
+     private fun setGLTexture(glTexture: SurfaceTexture) {
+         this.glTexture = glTexture
+     }*/
 
-  /*  fun setTexture1(surfaceTexture: SurfaceTexture) {
-        this.surfaceTexture = surfaceTexture
-    }
+    /*  fun setTexture1(surfaceTexture: SurfaceTexture) {
+          this.surfaceTexture = surfaceTexture
+      }
 
-    fun setTexture2(surfaceTexture: SurfaceTexture) {
-        this.surfaceTexture2 = surfaceTexture
-    }*/
+      fun setTexture2(surfaceTexture: SurfaceTexture) {
+          this.surfaceTexture2 = surfaceTexture
+      }*/
 
-  /*  private val textureListener = object : TextureView.SurfaceTextureListener {
-        @RequiresApi(Build.VERSION_CODES.S)
-        override fun onSurfaceTextureAvailable(
-            surfaceTexture: SurfaceTexture,
-            width: Int,
-            height: Int
-        ) {
-            surfaceTexture.setDefaultBufferSize(width, height)
-            setTexture1(surfaceTexture)
-            openCamera()
-        }
+    /*  private val textureListener = object : TextureView.SurfaceTextureListener {
+          @RequiresApi(Build.VERSION_CODES.S)
+          override fun onSurfaceTextureAvailable(
+              surfaceTexture: SurfaceTexture,
+              width: Int,
+              height: Int
+          ) {
+              surfaceTexture.setDefaultBufferSize(width, height)
+              setTexture1(surfaceTexture)
+              openCamera()
+          }
 
-        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+          override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
 
-        }
+          }
 
-        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-            return false
-        }
+          override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+              return false
+          }
 
-        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+          override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
 
-        }
+          }
 
-    }*/
+      }*/
 
 
     @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun setUpView() {
-       // binding.textureView.surfaceTextureListener = textureListener
+        // binding.textureView.surfaceTextureListener = textureListener
 
         //  binding.camera1.setOnClickListener(listenerButtonCamera1)
         binding.iso.setOnSeekBarChangeListener(listenerIsoSeekBar)
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)
-
-
 
 
     }
