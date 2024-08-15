@@ -50,7 +50,6 @@ class ScrollableSeekBar(
         )
         val linearSnapHelper=LinearSnapHelper()
         linearSnapHelper.attachToRecyclerView(this)
-
     }
 
     fun setOnItemScrolledListener(onItemScrolled: (itme: Int) -> Unit) {

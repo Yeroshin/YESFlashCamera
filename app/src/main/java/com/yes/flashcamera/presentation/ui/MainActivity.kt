@@ -88,9 +88,9 @@ class MainActivity : Activity() {
         )
       //  val tmp=binding.RecyclerView.children.last().width/2
         binding.RecyclerView.smoothScrollToPosition(
-            -adapter.itemCount/2
+            0
         )
-        val helper: SnapHelper = LinearSnapHelper()
+      //  val helper: SnapHelper = LinearSnapHelper()
      //   helper.attachToRecyclerView(binding.RecyclerView)
         /*   binding .RecyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
                override fun onGlobalLayout() {
