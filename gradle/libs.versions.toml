@@ -1,5 +1,5 @@
 [versions]
-agp = "8.4.0"
+agp = "8.5.2"
 kotlin = "1.9.0"
 coreKtx = "1.10.1"
 junit = "4.13.2"
@@ -12,6 +12,7 @@ appcompat = "1.7.0"
 playServicesBasement = "18.4.0"
 cameraViewfinder = "1.4.0-alpha07"
 sceneformBase = "1.17.1"
+material = "1.12.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -32,6 +33,7 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 play-services-basement = { group = "com.google.android.gms", name = "play-services-basement", version.ref = "playServicesBasement" }
 androidx-camera-viewfinder = { group = "androidx.camera", name = "camera-viewfinder", version.ref = "cameraViewfinder" }
 sceneform-base = { group = "com.google.ar.sceneform", name = "sceneform-base", version.ref = "sceneformBase" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

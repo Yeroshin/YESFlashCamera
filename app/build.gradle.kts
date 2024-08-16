@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.play.services.basement)
     implementation(libs.androidx.camera.viewfinder)
     implementation(libs.sceneform.base)
+    implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

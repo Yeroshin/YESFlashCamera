@@ -18,116 +18,123 @@
 
         />
 
-    <RadioGroup
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_margin="8dp"
-        android:orientation="horizontal">
-
-        <RadioButton
-            android:id="@+id/radioButton2"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_margin="8dp"
-            android:layout_weight="1"
-            android:button="@drawable/reset_shutter_speed" />
-
-        <RadioButton
-            android:id="@+id/radioButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:layout_weight="1"
-            android:button="@drawable/iso"
-            android:elevation="2dp"
-            android:shadowColor="#000000"
-            android:shadowDx="5"
-            android:shadowDy="5"
-            android:shadowRadius="15" />
-
-        <RadioButton
-            android:id="@+id/radioButton3"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_margin="8dp"
-            android:layout_weight="1"
-            android:button="@drawable/center_focus" />
-
-        <RadioButton
-            android:id="@+id/radioButton4"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:layout_weight="1"
-            android:button="@drawable/white_balance" />
-
-        <RadioButton
-            android:id="@+id/radioButton5"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="8dp"
-            android:layout_weight="1"
-            android:button="@drawable/mettering" />
-
-    </RadioGroup>
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
+        android:layout_gravity="top"
         android:orientation="vertical">
 
-        <com.yes.flashcamera.presentation.ui.ScrollableSeekBar
-            android:id="@+id/RecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:clipToPadding="false"
-            tools:itemCount="3"
-            tools:listitem="@layout/param_value_item">
-
-        </com.yes.flashcamera.presentation.ui.ScrollableSeekBar>
-
-        <View
-            android:id="@+id/view"
-            android:layout_width="30dp"
-            android:layout_height="18dp"
-            android:layout_gravity="center_horizontal"
-            android:background="@drawable/arrow_drop_upn"
-            android:backgroundTint="#BDBBBB" />
-
-        <LinearLayout
+        <RadioGroup
+            android:id="@+id/settings_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:layout_margin="8dp"
-            android:gravity="center_horizontal|center_vertical"
+            android:addStatesFromChildren="true"
             android:orientation="horizontal">
 
-            <ImageButton
-                android:id="@+id/imageButton2"
-                android:layout_width="match_parent"
+            <ToggleButton
+                android:id="@+id/button"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="?android:attr/selectableItemBackground"
-                app:srcCompat="@drawable/settings" />
+                android:drawableTop="@drawable/reset_shutter_speed"
+                android:text="Your Text"
+                android:gravity="center"
+                android:padding="10dp"/>
 
-            <ImageButton
-                android:id="@+id/imageButton"
+            <RadioButton
+                android:id="@+id/iso"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_margin="8dp"
                 android:layout_weight="1"
-                android:background="?android:attr/selectableItemBackground"
-                app:srcCompat="@drawable/camera" />
+                android:button="@drawable/iso"
+                 />
 
-            <ImageButton
-                android:id="@+id/imageButton3"
+            <RadioButton
+                android:id="@+id/focus"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_margin="8dp"
+                android:layout_weight="1"
+                android:button="@drawable/center_focus" />
+
+            <RadioButton
+                android:id="@+id/wb"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_margin="8dp"
                 android:layout_weight="1"
-                android:background="?android:attr/selectableItemBackground"
-                app:srcCompat="@drawable/cameraswitch" />
+                android:button="@drawable/white_balance" />
+
+            <RadioButton
+                android:id="@+id/mettering"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:layout_weight="1"
+                android:button="@drawable/metering" />
+
+        </RadioGroup>
+
+        <LinearLayout
+            android:id="@+id/settings_selector"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <com.yes.flashcamera.presentation.ui.ScrollableSeekBar
+                android:id="@+id/RecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:clipToPadding="false"
+                tools:itemCount="3"
+                tools:listitem="@layout/param_value_item">
+
+            </com.yes.flashcamera.presentation.ui.ScrollableSeekBar>
+
+            <View
+                android:id="@+id/view"
+                android:layout_width="30dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/arrow_drop_upn"
+                android:backgroundTint="#BDBBBB" />
+
         </LinearLayout>
 
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_margin="8dp"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
+            app:srcCompat="@drawable/settings" />
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/shoot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
+            app:srcCompat="@drawable/camera" />
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/caamera_flip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
+            app:srcCompat="@drawable/cameraswitch" />
     </LinearLayout>
 
     <LinearLayout
@@ -140,7 +147,7 @@
         android:visibility="gone">
 
         <SeekBar
-            android:id="@+id/iso"
+            android:id="@+id/isoOld"
             style="@style/Widget.AppCompat.SeekBar.Discrete"
             android:layout_width="match_parent"
             android:layout_height="30dp"
