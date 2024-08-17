@@ -24,58 +24,30 @@
         android:layout_gravity="top"
         android:orientation="vertical">
 
-        <RadioGroup
+        <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/settings_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_margin="8dp"
-            android:addStatesFromChildren="true"
+            app:singleSelection="true"
             android:orientation="horizontal">
 
-            <ToggleButton
-                android:id="@+id/button"
+            <com.google.android.material.button.MaterialButton
+                style="?attr/materialButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:drawableTop="@drawable/reset_shutter_speed"
-                android:text="Your Text"
-                android:gravity="center"
-                android:padding="10dp"/>
-
-            <RadioButton
-                android:id="@+id/iso"
-                android:layout_width="match_parent"
+                android:drawableBottom="@drawable/camera"
+                android:text="hello" />
+            <com.google.android.material.button.MaterialButton
+                style="@style/mybutton"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:layout_weight="1"
-                android:button="@drawable/iso"
-                 />
+                android:drawableBottom="@drawable/camera"
+                android:text="hell"/>
 
-            <RadioButton
-                android:id="@+id/focus"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_margin="8dp"
-                android:layout_weight="1"
-                android:button="@drawable/center_focus" />
 
-            <RadioButton
-                android:id="@+id/wb"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:layout_weight="1"
-                android:button="@drawable/white_balance" />
-
-            <RadioButton
-                android:id="@+id/mettering"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:layout_weight="1"
-                android:button="@drawable/metering" />
-
-        </RadioGroup>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <LinearLayout
             android:id="@+id/settings_selector"

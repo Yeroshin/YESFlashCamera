@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.FlashCamera" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.FlashCamera" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+<style name="mybutton" parent="Theme.FlashCamera">
+    <item name="android:backgroundTint">#00000000</item>
+    <item name="android:elevation">0dp</item>
+
+</style>
 </resources>

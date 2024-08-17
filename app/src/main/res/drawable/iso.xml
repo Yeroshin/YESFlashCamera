@@ -3,7 +3,7 @@
     android:height="38dp"
     android:viewportWidth="85"
     android:viewportHeight="71.6"
-    android:tint="@color/checked_color_state">
+    android:tint="@color/primary_checked_color_state">
   <path
       android:fillColor="#FF000000"
       android:pathData="M65.7,16.2c-4.2,0 -6.7,7.5 -6.7,20.1c0,12.6 2.5,20.1 6.7,20.1c4.2,0 6.7,-7.5 6.7,-20.1C72.4,23.7 69.9,16.2 65.7,16.2z"/>

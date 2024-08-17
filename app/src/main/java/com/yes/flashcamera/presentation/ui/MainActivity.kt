@@ -2,6 +2,7 @@ package com.yes.flashcamera.presentation.ui
 
 
 import android.Manifest
+import android.R
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
@@ -20,8 +21,6 @@ import android.util.Range
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
-import android.view.View.GONE
-import android.view.View.VISIBLE
 import android.view.WindowInsets
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -29,6 +28,7 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.button.MaterialButtonToggleGroup.OnButtonCheckedListener
 import com.hannesdorfmann.adapterdelegates4.ListDelegationAdapter
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import com.yes.flashcamera.data.repository.CameraRepository
@@ -496,8 +496,27 @@ class MainActivity : Activity() {
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)*/
        val t=RadioGroup(this)
         val c=RadioButton(this)
-        binding.settingsGroup.setOnCheckedChangeListener { group, checkedId ->
-            when (checkedId) {
+
+     /*   binding.settingsGroup.setOnCheckedChangeListener(object : RadioGroup.OnCheckedChangeListener {
+            private fun isChecked(group: RadioGroup, viewId: Int): Boolean {
+                if (viewId != -1) {
+                    val v = group.findViewById<View>(viewId)
+                    if (v is RadioButton) {
+                        return v.isChecked
+                    }
+                }
+                return true
+            }
+
+            override fun onCheckedChanged(group: RadioGroup, checkedId: Int) {
+                if (!isChecked(group, checkedId)) {
+                    return
+                }
+                // put your code here
+            }
+        })*/
+      /*  binding.settingsGroup.setOnCheckedChangeListener { group, checkedId ->
+          /*  when (checkedId) {
                 -1 -> {
                     binding.settingsSelector.visibility = GONE
                 }
@@ -512,23 +531,31 @@ class MainActivity : Activity() {
                     }
 
                 }
-            }
-        }
-     /*   for (i in 0 until binding.settingsGroup.childCount) {
+            }*/
+        }*/
+       /* for (i in 0 until binding.settingsGroup.childCount) {
             val child: View = binding.settingsGroup.getChildAt(i)
             if (child is RadioButton) {
+
                 child.setOnClickListener {button->
-                    (button as RadioButton).toggle()
-                   /* if ((button as RadioButton).isChecked){
-                        button.isChecked=false
-                        binding.settingsSelector.visibility = GONE
+                  //  (button as ToggleButton).toggle()
+
+                    if ((button as RadioButton).isChecked){
+                       // binding.settingsGroup.clearCheck()
+                      //  button.isChecked=false
+                      //  binding.settingsSelector.visibility = GONE
                     }else{
-                        button.isChecked=true
-                        binding.settingsSelector.visibility = VISIBLE
-                    }*/
+                       // button.isChecked=true
+                       // binding.settingsSelector.visibility = VISIBLE
+                    }
                 }
             }
         }*/
+        binding.settingsGroup.addOnButtonCheckedListener(OnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked) {
+
+            }
+        })
 
     }
 
