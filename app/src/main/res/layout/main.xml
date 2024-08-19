@@ -24,7 +24,7 @@
         android:layout_gravity="top"
         android:orientation="vertical">
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
+        <RadioGroup
             android:id="@+id/settings_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -33,21 +33,20 @@
             app:singleSelection="true"
             android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                style="?attr/materialButtonStyle"
+            <com.yes.flashcamera.presentation.ui.But
+                android:id="@+id/shutter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:drawableBottom="@drawable/camera"
                 android:text="hello" />
-            <com.google.android.material.button.MaterialButton
-                style="@style/mybutton"
+            <com.yes.flashcamera.presentation.ui.But
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:drawableBottom="@drawable/camera"
                 android:text="hell"/>
 
 
-        </com.google.android.material.button.MaterialButtonToggleGroup>
+        </RadioGroup>
 
         <LinearLayout
             android:id="@+id/settings_selector"

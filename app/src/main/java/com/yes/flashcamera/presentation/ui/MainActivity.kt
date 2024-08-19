@@ -2,7 +2,6 @@ package com.yes.flashcamera.presentation.ui
 
 
 import android.Manifest
-import android.R
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
@@ -17,10 +16,13 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import android.util.Range
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.view.WindowInsets
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -28,12 +30,13 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.button.MaterialButtonToggleGroup.OnButtonCheckedListener
 import com.hannesdorfmann.adapterdelegates4.ListDelegationAdapter
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
+import com.yes.flashcamera.R
 import com.yes.flashcamera.data.repository.CameraRepository
 import com.yes.flashcamera.databinding.MainBinding
 import com.yes.flashcamera.databinding.ParamValueItemBinding
+import com.yes.flashcamera.presentation.model.CameraUI
 import com.yes.flashcamera.presentation.model.IAdapterDelegate
 import com.yes.flashcamera.presentation.model.ParamValueUI
 import java.io.BufferedReader
@@ -340,10 +343,7 @@ class MainActivity : Activity() {
     }
 
 
-    data class CameraUI(
-        val iso: Range<Int>? = null,
-        val exposure: Range<Long>? = null
-    )
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun render(state: CameraUI) {
@@ -494,27 +494,29 @@ class MainActivity : Activity() {
         //  binding.camera1.setOnClickListener(listenerButtonCamera1)
       /*  binding.isoOld.setOnSeekBarChangeListener(listenerIsoSeekBar)
         binding.exposure.setOnSeekBarChangeListener(listenerExposureSeekBar)*/
-       val t=RadioGroup(this)
-        val c=RadioButton(this)
 
-     /*   binding.settingsGroup.setOnCheckedChangeListener(object : RadioGroup.OnCheckedChangeListener {
-            private fun isChecked(group: RadioGroup, viewId: Int): Boolean {
-                if (viewId != -1) {
-                    val v = group.findViewById<View>(viewId)
-                    if (v is RadioButton) {
-                        return v.isChecked
-                    }
-                }
-                return true
-            }
+        binding.settingsGroup.setOnCheckedChangeListener(object : RadioGroup.OnCheckedChangeListener {
 
             override fun onCheckedChanged(group: RadioGroup, checkedId: Int) {
-                if (!isChecked(group, checkedId)) {
-                    return
+                if (checkedId !== -1) {
+                    val radioButton = findViewById<RadioButton>(checkedId)
+                    if (radioButton.isChecked) {
+                        binding.settingsSelector.visibility=VISIBLE
+                          when(checkedId){
+                              R.id.shutter->{
+                                  Log.d("chk", "id" + checkedId);
+                              }
+                              else ->{
+                                  Log.d("chk", "id" + checkedId);
+                              }
+                          }
+                    }else{
+                        binding.settingsSelector.visibility=GONE
+                    }
                 }
-                // put your code here
+
             }
-        })*/
+        })
       /*  binding.settingsGroup.setOnCheckedChangeListener { group, checkedId ->
           /*  when (checkedId) {
                 -1 -> {
@@ -551,11 +553,11 @@ class MainActivity : Activity() {
                 }
             }
         }*/
-        binding.settingsGroup.addOnButtonCheckedListener(OnButtonCheckedListener { group, checkedId, isChecked ->
+       /* binding.settingsGroup.addOnButtonCheckedListener(OnButtonCheckedListener { group, checkedId, isChecked ->
             if (isChecked) {
 
             }
-        })
+        })*/
 
     }
 
