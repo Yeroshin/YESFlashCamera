@@ -5,11 +5,13 @@ import android.opengl.GLES20.GL_FLOAT
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glVertexAttribPointer
+import android.opengl.Matrix.setIdentityM
+import android.opengl.Matrix.translateM
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class Magnifier(
+class GlMagnifier(
     val radius:Float, val  height:Float, val numPointsAroundMallet:Int
 ) {
     private val BYTES_PER_FLOAT: Int = 4
@@ -20,14 +22,7 @@ class Magnifier(
     private val STRIDE: Int = (POSITION_COMPONENT_COUNT
             + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
 
-   /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-       -0.5f,   0.5f,
-        0.5f,   0.5f,
-        0.5f,  -0.5f,
-        0.5f,  -0.5f,
-       -0.5f,  -0.5f,
-       -0.5f,   0.5f,
-    )*/
+
     private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
         -1.0f,   1.0f,
         1.0f,   1.0f,
@@ -56,15 +51,10 @@ class Magnifier(
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer()
         .put(textureData)
+
+    val modelMatrix = FloatArray(16)
     fun updateVertexBuffer( width:Float,height: Float) {
-       /* val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            0.0f-width, 0.0f+width,
-            0.0f+width, 0.0f+width,
-            0.0f+width, 0.0f-width,
-            0.0f+width, 0.0f-width,
-            0.0f-width, 0.0f-width,
-            0.0f-width, 0.0f+width
-        )*/
+
         val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
             0.0f-width/2, 0.0f+height/2,
             0.0f+width/2, 0.0f+height/2,
@@ -91,7 +81,7 @@ class Magnifier(
         textureBuffer.put(textureData, 0, vertexDataSize)
         textureBuffer.position(0)
     }
-    fun bindData(textureProgram: ScaledTextureProgram) {
+    private fun bindData(textureProgram: ScaledTextureProgram) {
         vertexBuffer.position(0)
         glVertexAttribPointer(
             textureProgram.positionAttributeLocation,
@@ -118,39 +108,19 @@ class Magnifier(
             textureProgram.textureCoordinatesAttributeLocation
         )
     }
-
-  /*  fun bindData(textureProgram: ScaledTextureProgram) {
-
-        setVertexAttribPointer(
-            0,
-            textureProgram.positionAttributeLocation,
-            POSITION_COMPONENT_COUNT,
-            STRIDE
-        )
-
-        setVertexAttribPointer(
-            POSITION_COMPONENT_COUNT,
-            textureProgram.textureCoordinatesAttributeLocation,
-            TEXTURE_COORDINATES_COMPONENT_COUNT,
-            STRIDE
-        )
-    }*/
-    private fun setVertexAttribPointer(
-        dataOffset: Int, attributeLocation: Int,
-        componentCount: Int, stride: Int
-    ) {
-        vertexBuffer.position(dataOffset)
-        glVertexAttribPointer(
-            attributeLocation, componentCount, GL_FLOAT,
-            false, stride, vertexBuffer
-        )
-        glEnableVertexAttribArray(attributeLocation)
-
-
+    fun translate(x: Float, y: Float){
+        setIdentityM(modelMatrix, 0)
+        translateM(modelMatrix, 0, x, y, 0f)
     }
-    fun draw() {
 
+    fun draw(textureProgram: ScaledTextureProgram,modelViewProjectionMatrix:FloatArray) {
+        bindData(textureProgram)
+        textureProgram.useProgram()
+        textureProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
+    }
+    fun configure(magnification:Float,magnifierSizeW:Float,magnifierSizeH:Float,ratio:Float){
+
     }
 
 

@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Flash Camera"
 include(":app")
- 
+include(":shared")
+include(":camera")
+include(":settings")

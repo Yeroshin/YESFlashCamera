@@ -5,6 +5,8 @@ import android.opengl.GLES20.GL_FLOAT
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glVertexAttribPointer
+import android.opengl.Matrix.setIdentityM
+import android.opengl.Matrix.translateM
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -60,6 +62,7 @@ class GLScreen {
         .order(ByteOrder.nativeOrder())
         .asFloatBuffer()
         .put(textureData)
+    val modelMatrix = FloatArray(16)
     fun updateVertexBuffer( width:Float,height:Float) {
         val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
             0.0f-width/2, 0.0f+height/2,
@@ -122,8 +125,14 @@ class GLScreen {
 
 
     }
-    fun draw() {
-
+    fun translate(x: Float, y: Float){
+        setIdentityM(modelMatrix, 0)
+        translateM(modelMatrix, 0, x, y, 0f)
+    }
+    fun draw(textureProgram: TextureShaderProgram,modelViewProjectionMatrix:FloatArray) {
+        bindData(textureProgram)
+        textureProgram.useProgram()
+        textureProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
     }
 

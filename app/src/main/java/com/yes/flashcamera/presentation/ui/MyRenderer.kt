@@ -26,8 +26,6 @@ import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.abs
-import kotlin.math.sqrt
 
 
 class MyRenderer(
@@ -42,20 +40,30 @@ class MyRenderer(
     private val invertedViewProjectionMatrix = FloatArray(16)
     private val modelViewProjectionMatrix = FloatArray(16)
 
-    private var textureProgram: TextureShaderProgram? = null
-    private var colorProgram: ColorShaderProgram? = null
-    private var scaledTextureProgram: ScaledTextureProgram? = null
+    //private var textureProgram: TextureShaderProgram? = null
+    private val textureProgram by lazy{
+        TextureShaderProgram(context)
+    }
+
+ //   private var colorProgram: ColorShaderProgram? = null
+   // private var scaledTextureProgram: ScaledTextureProgram? = null
+    private val scaledTextureProgram by lazy{
+       ScaledTextureProgram(context)
+   }
 
 
     private var surfaceTexture: SurfaceTexture? = null
     private val glScreen by lazy {
         GLScreen()
     }
-    private val magnifier by lazy {
-        Magnifier(0.5f, 270.3f, 32)
+    private val glMagnifier by lazy {
+        GlMagnifier(0.5f, 270.3f, 32)
     }
-    private var blueMalletPosition: Geometry.Point? = null
-    private var previousBlueMalletPosition: Geometry.Point? = null
+    private val glCamera by lazy {
+        GlCamera(context)
+    }
+    private var magnifierPosition: Geometry.Point? = null
+    private var previousMagnifierPosition: Geometry.Point? = null
     private val leftBound = -1f
     private val rightBound = 1f
     private val farBound = -1f
@@ -75,10 +83,7 @@ class MyRenderer(
     private fun convertNormalized2DPointToRay(
         normalizedX: Float, normalizedY: Float
     ): Ray {
-        // We'll convert these normalized device coordinates into world-space
-        // coordinates. We'll pick a point on the near and far planes, and draw a
-        // line between them. To do this transform, we need to first multiply by
-        // the inverse matrix, and then we need to undo the perspective divide.
+
         val nearPointNdc = floatArrayOf(normalizedX, normalizedY, -1f, 1f)
         val farPointNdc = floatArrayOf(normalizedX, normalizedY, 1f, 1f)
 
@@ -92,15 +97,9 @@ class MyRenderer(
             farPointWorld, 0, invertedViewProjectionMatrix, 0, farPointNdc, 0
         )
 
-        // Why are we dividing by W? We multiplied our vector by an inverse
-        // matrix, so the W value that we end up is actually the *inverse* of
-        // what the projection matrix would create. By dividing all 3 components
-        // by W, we effectively undo the hardware perspective divide.
         divideByW(nearPointWorld)
         divideByW(farPointWorld)
 
-        // We don't care about the W value anymore, because our points are now
-        // in world coordinates.
         val nearPointRay =
             Geometry.Point(nearPointWorld[0], nearPointWorld[1], nearPointWorld[2])
 
@@ -117,20 +116,14 @@ class MyRenderer(
     fun handleTouchPress(normalizedX: Float, normalizedY: Float) {
         val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
 
-        // Now test if this ray intersects with the mallet by creating a
-        // bounding sphere that wraps the mallet.
         val malletBoundingSphere: Geometry.Sphere = Geometry.Sphere(
             Geometry.Point(
-                blueMalletPosition!!.x,
-                blueMalletPosition!!.y,
-                blueMalletPosition!!.z
+                magnifierPosition!!.x,
+                magnifierPosition!!.y,
+                magnifierPosition!!.z
             ),
             0.5f
         )
-
-        // If the ray intersects (if the user touched a part of the screen that
-        // intersects the mallet's bounding sphere), then set malletPressed =
-        // true.
         malletPressed = Geometry.intersects(malletBoundingSphere, ray)
     }
 
@@ -138,91 +131,70 @@ class MyRenderer(
 
         if (malletPressed) {
             val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
-            // Define a plane representing our air hockey table.
             val plane = Geometry.Plane(
                 Geometry.Point(0f, 0f, 0f),
                 Geometry.Vector(0f, 0f, 1f)
             )
-            // Find out where the touched point intersects the plane
-            // representing our table. We'll move the mallet along this plane.
             val touchedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
 
-            // Clamp to bounds
-            previousBlueMalletPosition = blueMalletPosition
+            previousMagnifierPosition = magnifierPosition
 
 
-           // blueMalletPosition = Geometry.Point(touchedPoint.x, touchedPoint.y, 0f);
-           /* val magnifierWidth = if (rotationPortrait) {
-                (width / 2).toFloat()
-            } else {
-                (height / 2).toFloat()
-            }*/
-            ////////////////////////////
             val ratio =
                 if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
 
             /////////////////////////////
             val magnification = 2.0f
-            val magnifierSizeW =0.5f
-            val magnifierSizeH =0.5f
+            val magnifierSizeW = 0.5f
+            val magnifierSizeH = 0.5f
             ///////////////////////////
-             val he=2f
-            val wid=ratio*he
-
-            val ratioMagnifier = if (magnifierSizeW > magnifierSizeH) magnifierSizeW / magnifierSizeH
-            else magnifierSizeH / magnifierSizeW
-
-          /*  val he=2f
-            val wid=ratio*he*/
+            val he = 2f
+            val wid = ratio * he
 
 
+            val magnifierVertexWidth =
+                maxOf(wid, he) * magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
+            val magnifierVertexHeight = minOf(wid, he) * magnifierSizeH//1.0f// he*magnifierSizeW
 
-            val magnifierVertexWidth= maxOf(wid, he)*magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
-            val magnifierVertexHeight =minOf(wid, he)*magnifierSizeH//1.0f// he*magnifierSizeW
 
+            val magnifierTextureWidth = 1f * (magnifierSizeW / magnification) // 0.0625fratio
+            val magnifierTextureHeight = 1f * (magnifierSizeH / magnification) // 0.0625f
 
-            val magnifierTextureWidth= 1f*(magnifierSizeW/magnification) // 0.0625fratio
-            val magnifierTextureHeight= 1f*(magnifierSizeH/magnification) // 0.0625f
+            magnifierPosition = Geometry.Point(
+                clamp(
+                    touchedPoint.x,
+                    -1 * ratio + magnifierVertexWidth / 2,
+                    1 * ratio - magnifierVertexWidth / 2
+                ),
+                clamp(
+                    touchedPoint.y,
+                    -1 + magnifierVertexHeight / 2,
+                    1 - magnifierVertexHeight / 2
+                ),
+                0f// mallet.radius,
+            )
+             val position = mapVertexToTextureCords(
+                magnifierPosition!!.x / ratio,
+                magnifierPosition!!.y
+            )
 
-            // val magnifierWidth = (height/2 ).toFloat()
-               blueMalletPosition = Geometry.Point(
-                   clamp(
-                       touchedPoint.x,
-                       -1*ratio + magnifierVertexWidth/2,
-                       1 *ratio- magnifierVertexWidth/2
-                   ),
-                   clamp(
-                       touchedPoint.y,
-                       -1 + magnifierVertexHeight/2,
-                       1 -magnifierVertexHeight/2
-                   ),
-                   0f// mallet.radius,
-               )
-            // val magnification=0.03125f
-
-            //    val magnifierValue = ((1 / magnifierWidth) * magnification * 2)
-            val position = mapVertexToTextureCoords(
-                    blueMalletPosition!!.x /ratio,
-                    blueMalletPosition!!.y
-                )
-
-            magnifier.updateVertexBuffer(
+            glMagnifier.updateVertexBuffer(
                 magnifierVertexWidth,
                 magnifierVertexHeight
             )
 
-                magnifier.updateTextureBuffer(
-                    position,
-                    magnifierTextureWidth,
-                    magnifierTextureHeight,
-                )
+            glMagnifier.updateTextureBuffer(
+                position,
+                magnifierTextureWidth,
+                magnifierTextureHeight,
+            )
 
         }
 
 
     }
 
-    private fun mapVertexToTextureCoords(vertexX: Float, vertexY: Float): Pair<Float, Float> {
+    private fun mapVertexToTextureCords(vertexX: Float, vertexY: Float): Pair<Float, Float> {
         val textureX = (vertexX + 1.0f) / 2.0f
         val textureY = 1.0f - (vertexY + 1.0f) / 2.0f
 
@@ -233,149 +205,24 @@ class MyRenderer(
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
         createSurfaceTexture()
-        textureProgram = TextureShaderProgram(context)
-        colorProgram = ColorShaderProgram(context)
-        scaledTextureProgram = ScaledTextureProgram(context)
+      //  textureProgram = TextureShaderProgram(context)
+     //   colorProgram = ColorShaderProgram(context)
+       // scaledTextureProgram = ScaledTextureProgram(context)
 
-        blueMalletPosition = Geometry.Point(0f, 0f, 0f)
+        magnifierPosition = Geometry.Point(0f, 0f, 0f)
     }
 
     var width = 0
     var height = 0
-    var rotationPortrait = false
-
-    /*  override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-          glViewport(0, 0, width, height)
-          this.width = width
-          this.height = height
-          val tmp = maxOf(
-              width.toFloat() * 2,
-              height.toFloat() * 2
-          )
-          val windowManager: WindowManager = context
-              .getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
-          var rotationX = 0f
-          var rotationY = 0f
-          var length=0f
-          when (windowManager.defaultDisplay.rotation) {
-              Surface.ROTATION_0 -> {
-                  rotationX = -1f
-                  rotationY = 0f
-                  length=sqrt(width.toFloat() * width.toFloat() + height.toFloat() * height.toFloat())*1.09f
-                  rotationPortrait=true
-              }
-
-              Surface.ROTATION_90 -> {
-                  rotationX = 0f
-                  rotationY = 1f
-                  length=sqrt(width.toFloat() * width + height * height)*0.44f
-                  rotationPortrait=false
-              }
-
-              Surface.ROTATION_180 -> {
-                  rotationX = 1f
-                  rotationY = 0f
-                  length=sqrt(width.toFloat() * width + height * height)*1.09f
-                  rotationPortrait=true
-              }
-
-              Surface.ROTATION_270 -> {
-                  rotationX = 0f
-                  rotationY = -1f
-                  length=sqrt(width.toFloat() * width + height * height)*0.44f
-                  rotationPortrait=false
-              }
-
-              else -> "Не понятно"
-          }
-
-          perspectiveM(
-              projectionMatrix,
-              0,
-              45f,
-              width.toFloat() / height.toFloat(),
-              1f,
-              maxOf(
-                  width.toFloat() * 4,
-                  height.toFloat() * 4
-              )
-              // width.toFloat() * 4
-          )
 
 
-          setLookAtM(
-              viewMatrix,
-              0,
-              0f,
-              0.0f,
-             /*  maxOf(
-                   width.toFloat() * 3,
-                   height.toFloat() * 3
-               ),*/
-             // sqrt(width.toFloat() * width + height * height)*1.09f,
-             // sqrt(width.toFloat() * width + height * height)*0.44f,
-              length,
-              //height.toFloat()+1000 ,
-              0f,
-              0f,
-              0f,
-              rotationX,
-              rotationY,
-              0f
-          )
-          /*  glScreen.updateVertexBuffer(
-                height.toFloat(), width.toFloat(),
-            )*/
-          glScreen.updateVertexBuffer(
-              maxOf(
-                  width.toFloat(),
-                  height.toFloat()
-              ),
-              minOf(
-                  width.toFloat(),
-                  height.toFloat()
-              )
-          )
-          magnifier.updateVertexBuffer(
-              600f
-          )
-          magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
-      }*/
+
     override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
         ///////////tmp
-        this.width=width
-        this.height=height
-        //////////////
-        // Set the OpenGL viewport to fill the entire surface.
-       /* glViewport(0, 0, width, height)
-
-        val aspectRatio =
-            if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
-
-        if (width > height) {
-            // Landscape
-            orthoM(projectionMatrix, 0, -aspectRatio, aspectRatio, -1f, 1f, -1f, 1f)
-        } else {
-            // Portrait or square
-            orthoM(projectionMatrix, 0, -1f, 1f, -aspectRatio, aspectRatio, -1f, 1f)
-        }*/
-
-        /* glScreen.updateVertexBuffer(
-             maxOf(
-                 normalizeValue(width.toFloat(), -1f, 1f),
-                         normalizeValue(height.toFloat(), -1f, 1f)
-                // width.toFloat(),
-               //  height.toFloat()
-             ),
-             minOf(
-                 normalizeValue(width.toFloat(), -1f, 1f),
-                         normalizeValue(height.toFloat(), -1f, 1f)
-               //  width.toFloat(),
-               //  height.toFloat()
-             )
-         )*/
-        var rotationX = 0f
+        this.width = width
+        this.height = height
+        glCamera.setProjection(width,height)
+      /*  var rotationX = 0f
         var rotationY = 0f
         val windowManager: WindowManager = context
             .getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -383,47 +230,43 @@ class MyRenderer(
             Surface.ROTATION_0 -> {
                 rotationX = -1f
                 rotationY = 0f
-                rotationPortrait=true
             }
 
             Surface.ROTATION_90 -> {
                 rotationX = 0f
                 rotationY = 1f
-                rotationPortrait=false
             }
 
             Surface.ROTATION_180 -> {
                 rotationX = 1f
                 rotationY = 0f
-                rotationPortrait=true
             }
 
             Surface.ROTATION_270 -> {
                 rotationX = 0f
                 rotationY = -1f
-                rotationPortrait=false
             }
 
             else -> "Не понятно"
-        }
+        }*/
         val ratio =
             if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
 
-       // val ratio: Float = width.toFloat() / height.toFloat()
+        // val ratio: Float = width.toFloat() / height.toFloat()
 
         ////////////////////////////////
-        glViewport(0, 0, width, height)
-        setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
+     //   glViewport(0, 0, width, height)
+     //  setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
         glScreen.updateVertexBuffer(
-            ratio*2,
+            ratio * 2,
             2f,
         )
-        magnifier.updateVertexBuffer(
+        glMagnifier.updateVertexBuffer(
             1f,
             1f
         )
-        magnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
-        if (width > height) {
+        glMagnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
+      /*  if (width > height) {
             // Landscape
 
             orthoM(projectionMatrix, 0, -ratio, ratio, -1f, 1f, -1f, 1f)
@@ -431,14 +274,15 @@ class MyRenderer(
             // Portrait or square
             orthoM(projectionMatrix, 0, -1f, 1f, -ratio, ratio, -1f, 1f)
         }
-
+        multiplyMM(
+            viewProjectionMatrix, 0, projectionMatrix, 0,
+            viewMatrix, 0
+        )*/
 
         // create a projection matrix from device screen geometry
-       // frustumM(projectionMatrix, 0,  -1f, 1f, -ratio, ratio,1f, 2f)
+        // frustumM(projectionMatrix, 0,  -1f, 1f, -ratio, ratio,1f, 2f)
     }
 
-
-    // private val transformMatrix = FloatArray(16)
     override fun onDrawFrame(gl: GL10?) {
         surfaceTexture?.updateTexImage()
         //   surfaceTexture?.getTransformMatrix(transformMatrix)
@@ -454,19 +298,20 @@ class MyRenderer(
         glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
 
-        multiplyMM(
+      /*  multiplyMM(
             viewProjectionMatrix, 0, projectionMatrix, 0,
             viewMatrix, 0
-        )
-        invertM(invertedViewProjectionMatrix, 0, viewProjectionMatrix, 0)
+        )*/
+        invertM(invertedViewProjectionMatrix, 0, glCamera.viewProjectionMatrix, 0)
 
-        positionScreenInScene()
+      //  positionScreenInScene()
       //  multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-        glScreen.bindData(textureProgram!!)
-        textureProgram?.useProgram()
-        textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
-        // textureProgram?.setUniforms(modelViewProjectionMatrix, texture)
-        glScreen.draw()
+       // glScreen.bindData(textureProgram)
+      //  textureProgram?.useProgram()
+       // textureProgram?.setUniforms(modelViewProjectionMatrix)
+        glScreen.translate(0f,0f)
+        val c=glCamera.translateObjectInScene(glScreen.modelMatrix)
+        glScreen.draw(textureProgram,c)
         /*  positionObjectInScene(
               1f,
               2f,
@@ -477,15 +322,17 @@ class MyRenderer(
          colorProgram?.setUniforms(modelViewProjectionMatrix)
          mallet.draw()*/
         ///////////////////////////////////////////
-        positionObjectInScene(
-            blueMalletPosition!!.x,
-            blueMalletPosition!!.y,
+       /* positionObjectInScene(
+            magnifierPosition!!.x,
+            magnifierPosition!!.y,
             0f
+        )*/
+        glMagnifier.translate(
+            magnifierPosition!!.x,
+            magnifierPosition!!.y
         )
-        magnifier.bindData(scaledTextureProgram!!)
-        scaledTextureProgram?.useProgram()
-        scaledTextureProgram?.setUniforms(modelViewProjectionMatrix, texture)
-        magnifier.draw()
+        val m=glCamera.translateObjectInScene(glMagnifier.modelMatrix)
+        glMagnifier.draw(scaledTextureProgram,m)
     }
 
     private fun positionScreenInScene() {

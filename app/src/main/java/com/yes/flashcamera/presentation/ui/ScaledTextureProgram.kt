@@ -21,7 +21,7 @@ class ScaledTextureProgram (context: Context) : ShaderProgram(
 
 
 
-    fun setUniforms(matrix: FloatArray?, textureId: Int) {
+    fun setUniforms(matrix: FloatArray?) {
         // Pass the matrix into the shader program.
         glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
 
