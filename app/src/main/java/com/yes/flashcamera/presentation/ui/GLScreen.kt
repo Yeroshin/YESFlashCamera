@@ -63,7 +63,7 @@ class GLScreen {
         .asFloatBuffer()
         .put(textureData)
     val modelMatrix = FloatArray(16)
-    fun updateVertexBuffer( width:Float,height:Float) {
+    private fun updateVertexBuffer( width:Float,height:Float) {
         val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
             0.0f-width/2, 0.0f+height/2,
             0.0f+width/2, 0.0f+height/2,
@@ -77,7 +77,7 @@ class GLScreen {
         vertexBuffer.position(0)
     }
 
-    fun bindData(textureProgram: TextureShaderProgram) {
+    private fun bindData(textureProgram: TextureShaderProgram) {
 
        vertexBuffer.position(0)
         glVertexAttribPointer(
@@ -136,7 +136,12 @@ class GLScreen {
         glDrawArrays(GL_TRIANGLES, 0, 6)
     }
 
-
+    fun onRatioChanged(ratio:Float){
+        updateVertexBuffer(
+            ratio * 2,
+            2f,
+        )
+    }
 
 
 }

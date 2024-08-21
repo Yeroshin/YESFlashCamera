@@ -3,27 +3,31 @@ package com.yes.flashcamera.presentation.ui
 
 import android.content.Context
 import android.graphics.SurfaceTexture
+import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
+import android.opengl.GLES20.GL_FLOAT
+import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glClearColor
+import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glGenTextures
+import android.opengl.GLES20.glGetAttribLocation
+import android.opengl.GLES20.glGetUniformLocation
 import android.opengl.GLES20.glTexParameterf
-import android.opengl.GLES20.glViewport
+import android.opengl.GLES20.glUniformMatrix4fv
+import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
-import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.multiplyMV
-import android.opengl.Matrix.orthoM
 import android.opengl.Matrix.setIdentityM
-import android.opengl.Matrix.setLookAtM
 import android.opengl.Matrix.translateM
-import android.view.Surface
-import android.view.WindowManager
-import androidx.core.math.MathUtils.clamp
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -34,22 +38,23 @@ class MyRenderer(
 ) : GLSurfaceView.Renderer {
 
     private val projectionMatrix = FloatArray(16)
-    private val modelMatrix = FloatArray(16)
+
+    //  private val modelMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
     private val viewProjectionMatrix = FloatArray(16)
     private val invertedViewProjectionMatrix = FloatArray(16)
     private val modelViewProjectionMatrix = FloatArray(16)
 
     //private var textureProgram: TextureShaderProgram? = null
-    private val textureProgram by lazy{
+    private val textureProgram by lazy {
         TextureShaderProgram(context)
     }
 
- //   private var colorProgram: ColorShaderProgram? = null
-   // private var scaledTextureProgram: ScaledTextureProgram? = null
-    private val scaledTextureProgram by lazy{
-       ScaledTextureProgram(context)
-   }
+    //   private var colorProgram: ColorShaderProgram? = null
+    // private var scaledTextureProgram: ScaledTextureProgram? = null
+    private val scaledTextureProgram by lazy {
+        ScaledTextureProgram(context)
+    }
 
 
     private var surfaceTexture: SurfaceTexture? = null
@@ -57,13 +62,14 @@ class MyRenderer(
         GLScreen()
     }
     private val glMagnifier by lazy {
-        GlMagnifier(0.5f, 270.3f, 32)
+        GlMagnifier()
     }
     private val glCamera by lazy {
         GlCamera(context)
     }
-    private var magnifierPosition: Geometry.Point? = null
-    private var previousMagnifierPosition: Geometry.Point? = null
+
+    // private var magnifierPosition: Geometry.Point? = null
+    //  private var previousMagnifierPosition: Geometry.Point? = null
     private val leftBound = -1f
     private val rightBound = 1f
     private val farBound = -1f
@@ -89,7 +95,7 @@ class MyRenderer(
 
         val nearPointWorld = FloatArray(4)
         val farPointWorld = FloatArray(4)
-
+        invertM(invertedViewProjectionMatrix, 0, glCamera.viewProjectionMatrix, 0)
         multiplyMV(
             nearPointWorld, 0, invertedViewProjectionMatrix, 0, nearPointNdc, 0
         )
@@ -112,82 +118,114 @@ class MyRenderer(
         )
     }
 
-    private var malletPressed = false
+    // private var magnifierPressed = false
+    var touchedPoint = Geometry.Point(0f, 0f, 0f)
     fun handleTouchPress(normalizedX: Float, normalizedY: Float) {
         val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
-
-        val malletBoundingSphere: Geometry.Sphere = Geometry.Sphere(
-            Geometry.Point(
-                magnifierPosition!!.x,
-                magnifierPosition!!.y,
-                magnifierPosition!!.z
-            ),
-            0.5f
+        val plane = Geometry.Plane(
+            Geometry.Point(0f, 0f, 0f),
+            Geometry.Vector(0f, 0f, 1f)
         )
-        malletPressed = Geometry.intersects(malletBoundingSphere, ray)
+        touchedPoint = Geometry.intersectionPoint(ray, plane)
+        /*  val objectBoundingSphere: Geometry.Sphere = Geometry.Sphere(
+              Geometry.Point(
+                  glMagnifier.vertexPosition.x,
+                  glMagnifier.vertexPosition.y,
+                  glMagnifier.vertexPosition.z,
+              ),
+             /* Geometry.Point(
+                  magnifierPosition!!.x,
+                  magnifierPosition!!.y,
+                  magnifierPosition!!.z
+              ),*/
+              0.5f
+          )*/
+        val objectBoundingRectangle = Geometry.Rectangle(
+            Geometry.Point(
+                glMagnifier.vertexPosition.x,
+                glMagnifier.vertexPosition.y,
+                glMagnifier.vertexPosition.z,
+            ),
+            glMagnifier.vertexWidth,
+            glMagnifier.vertexHeight
+        )
+        glMagnifier.setSelected(
+            Geometry.intersects(
+                objectBoundingRectangle, ray
+            ),
+            touchedPoint.x,
+            touchedPoint.y
+        )
+        /*  glMagnifier.pressed = Geometry.intersects(
+              objectBoundingRectangle, ray
+          )*/
+
+
+        //  magnifierPressed = Geometry.intersects(objectBoundingSphere, ray)
     }
 
     fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
 
-        if (malletPressed) {
+        if (glMagnifier.selected) {
             val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
             val plane = Geometry.Plane(
                 Geometry.Point(0f, 0f, 0f),
                 Geometry.Vector(0f, 0f, 1f)
             )
-            val touchedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
+            val draggedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
 
-            previousMagnifierPosition = magnifierPosition
+            //  previousMagnifierPosition = magnifierPosition
 
 
-            val ratio =
-                if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+            // val ratio = if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+            //////////////////////////////
 
+            glMagnifier.translate(draggedPoint)
             /////////////////////////////
-            val magnification = 2.0f
-            val magnifierSizeW = 0.5f
-            val magnifierSizeH = 0.5f
-            ///////////////////////////
-            val he = 2f
-            val wid = ratio * he
+            /*     val magnification = 2.0f
+                 val magnifierSizeW = 0.5f
+                 val magnifierSizeH = 0.5f
+                 ///////////////////////////
+                 val he = 2f
+                 val wid = ratio * he
 
 
-            val magnifierVertexWidth =
-                maxOf(wid, he) * magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
-            val magnifierVertexHeight = minOf(wid, he) * magnifierSizeH//1.0f// he*magnifierSizeW
+                 val magnifierVertexWidth =
+                     maxOf(wid, he) * magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
+                 val magnifierVertexHeight = minOf(wid, he) * magnifierSizeH//1.0f// he*magnifierSizeW
 
 
-            val magnifierTextureWidth = 1f * (magnifierSizeW / magnification) // 0.0625fratio
-            val magnifierTextureHeight = 1f * (magnifierSizeH / magnification) // 0.0625f
+                 val magnifierTextureWidth = 1f * (magnifierSizeW / magnification) // 0.0625fratio
+                 val magnifierTextureHeight = 1f * (magnifierSizeH / magnification) // 0.0625f
 
-            magnifierPosition = Geometry.Point(
-                clamp(
-                    touchedPoint.x,
-                    -1 * ratio + magnifierVertexWidth / 2,
-                    1 * ratio - magnifierVertexWidth / 2
-                ),
-                clamp(
-                    touchedPoint.y,
-                    -1 + magnifierVertexHeight / 2,
-                    1 - magnifierVertexHeight / 2
-                ),
-                0f// mallet.radius,
-            )
-             val position = mapVertexToTextureCords(
-                magnifierPosition!!.x / ratio,
-                magnifierPosition!!.y
-            )
+                 magnifierPosition = Geometry.Point(
+                     clamp(
+                         touchedPoint.x,
+                         -1 * ratio + magnifierVertexWidth / 2,
+                         1 * ratio - magnifierVertexWidth / 2
+                     ),
+                     clamp(
+                         touchedPoint.y,
+                         -1 + magnifierVertexHeight / 2,
+                         1 - magnifierVertexHeight / 2
+                     ),
+                     0f// mallet.radius,
+                 )
+                  val position = mapVertexToTextureCords(
+                     magnifierPosition!!.x / ratio,
+                     magnifierPosition!!.y
+                 )
 
-            glMagnifier.updateVertexBuffer(
-                magnifierVertexWidth,
-                magnifierVertexHeight
-            )
+                 glMagnifier.updateVertexBuffer(
+                     magnifierVertexWidth,
+                     magnifierVertexHeight
+                 )
 
-            glMagnifier.updateTextureBuffer(
-                position,
-                magnifierTextureWidth,
-                magnifierTextureHeight,
-            )
+                 glMagnifier.updateTextureBuffer(
+                     position,
+                     magnifierTextureWidth,
+                     magnifierTextureHeight,
+                 )*/
 
         }
 
@@ -205,68 +243,74 @@ class MyRenderer(
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
         createSurfaceTexture()
-      //  textureProgram = TextureShaderProgram(context)
-     //   colorProgram = ColorShaderProgram(context)
-       // scaledTextureProgram = ScaledTextureProgram(context)
+        //  textureProgram = TextureShaderProgram(context)
+        //   colorProgram = ColorShaderProgram(context)
+        // scaledTextureProgram = ScaledTextureProgram(context)
 
-        magnifierPosition = Geometry.Point(0f, 0f, 0f)
+        //magnifierPosition = Geometry.Point(0f, 0f, 0f)
     }
 
-    var width = 0
-    var height = 0
+    //  var width = 0
+    //  var height = 0
 
 
-
+    //  private var ratio=1f
     override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
         ///////////tmp
-        this.width = width
-        this.height = height
-        glCamera.setProjection(width,height)
-      /*  var rotationX = 0f
-        var rotationY = 0f
-        val windowManager: WindowManager = context
-            .getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        when (windowManager.defaultDisplay.rotation) {
-            Surface.ROTATION_0 -> {
-                rotationX = -1f
-                rotationY = 0f
-            }
+        //   this.width = width
+        //   this.height = height
+        glCamera.setProjection(width, height)
+        /*  var rotationX = 0f
+          var rotationY = 0f
+          val windowManager: WindowManager = context
+              .getSystemService(Context.WINDOW_SERVICE) as WindowManager
+          when (windowManager.defaultDisplay.rotation) {
+              Surface.ROTATION_0 -> {
+                  rotationX = -1f
+                  rotationY = 0f
+              }
 
-            Surface.ROTATION_90 -> {
-                rotationX = 0f
-                rotationY = 1f
-            }
+              Surface.ROTATION_90 -> {
+                  rotationX = 0f
+                  rotationY = 1f
+              }
 
-            Surface.ROTATION_180 -> {
-                rotationX = 1f
-                rotationY = 0f
-            }
+              Surface.ROTATION_180 -> {
+                  rotationX = 1f
+                  rotationY = 0f
+              }
 
-            Surface.ROTATION_270 -> {
-                rotationX = 0f
-                rotationY = -1f
-            }
+              Surface.ROTATION_270 -> {
+                  rotationX = 0f
+                  rotationY = -1f
+              }
 
-            else -> "Не понятно"
-        }*/
+              else -> "Не понятно"
+          }*/
         val ratio =
             if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
 
         // val ratio: Float = width.toFloat() / height.toFloat()
 
         ////////////////////////////////
-     //   glViewport(0, 0, width, height)
-     //  setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
-        glScreen.updateVertexBuffer(
-            ratio * 2,
-            2f,
-        )
-        glMagnifier.updateVertexBuffer(
-            1f,
-            1f
-        )
-        glMagnifier.updateTextureBuffer(Pair(0f, 0f), 0.5f, 0.5f)
-      /*  if (width > height) {
+        //   glViewport(0, 0, width, height)
+        //  setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
+        /*  glScreen.updateVertexBuffer(
+              ratio * 2,
+              2f,
+          )*/
+        glScreen.onRatioChanged(ratio)
+        ////////////////////////////////
+
+        glMagnifier.onRatioChanged(ratio)
+        glMagnifier.configure(2f, 0.5f, 0.5f)
+        /*   glMagnifier.updateVertexBuffer(
+               1f,
+               1f
+           )
+           glMagnifier.updateTextureBuffer(Geometry.Point(0f, 0f,0f), 0.5f, 0.5f)
+         */
+        /*  if (width > height) {
             // Landscape
 
             orthoM(projectionMatrix, 0, -ratio, ratio, -1f, 1f, -1f, 1f)
@@ -298,20 +342,19 @@ class MyRenderer(
         glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
 
-      /*  multiplyMM(
-            viewProjectionMatrix, 0, projectionMatrix, 0,
-            viewMatrix, 0
-        )*/
-        invertM(invertedViewProjectionMatrix, 0, glCamera.viewProjectionMatrix, 0)
+        /*  multiplyMM(
+              viewProjectionMatrix, 0, projectionMatrix, 0,
+              viewMatrix, 0
+          )*/
 
-      //  positionScreenInScene()
-      //  multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
-       // glScreen.bindData(textureProgram)
-      //  textureProgram?.useProgram()
-       // textureProgram?.setUniforms(modelViewProjectionMatrix)
-        glScreen.translate(0f,0f)
-        val c=glCamera.translateObjectInScene(glScreen.modelMatrix)
-        glScreen.draw(textureProgram,c)
+        //  positionScreenInScene()
+        //  multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+        // glScreen.bindData(textureProgram)
+        //  textureProgram?.useProgram()
+        // textureProgram?.setUniforms(modelViewProjectionMatrix)
+        glScreen.translate(0f, 0f)
+        val c = glCamera.translateObjectInScene(glScreen.modelMatrix)
+        glScreen.draw(textureProgram, c)
         /*  positionObjectInScene(
               1f,
               2f,
@@ -322,49 +365,48 @@ class MyRenderer(
          colorProgram?.setUniforms(modelViewProjectionMatrix)
          mallet.draw()*/
         ///////////////////////////////////////////
-       /* positionObjectInScene(
-            magnifierPosition!!.x,
-            magnifierPosition!!.y,
-            0f
-        )*/
-        glMagnifier.translate(
-            magnifierPosition!!.x,
-            magnifierPosition!!.y
-        )
-        val m=glCamera.translateObjectInScene(glMagnifier.modelMatrix)
-        glMagnifier.draw(scaledTextureProgram,m)
+        /* positionObjectInScene(
+             magnifierPosition!!.x,
+             magnifierPosition!!.y,
+             0f
+         )*/
+        /* glMagnifier.translate(
+             magnifierPosition!!.x,
+             magnifierPosition!!.y
+         )*/
+        val m = glCamera.translateObjectInScene(glMagnifier.modelMatrix)
+        glMagnifier.draw(scaledTextureProgram, m)
     }
 
-    private fun positionScreenInScene() {
-        setIdentityM(modelMatrix, 0)
-        //  rotateM(modelMatrix, 0, -45f, 1f, 0f, 0f)
-        multiplyMM(
-            modelViewProjectionMatrix, 0, viewProjectionMatrix,
-            0, modelMatrix, 0
-        )
-    }
+    /*  private fun positionScreenInScene() {
+          setIdentityM(modelMatrix, 0)
+          //  rotateM(modelMatrix, 0, -45f, 1f, 0f, 0f)
+          multiplyMM(
+              modelViewProjectionMatrix, 0, viewProjectionMatrix,
+              0, modelMatrix, 0
+          )
+      }*/
 
-    private fun positionObjectInScene(x: Float, y: Float, z: Float) {
-        setIdentityM(modelMatrix, 0)
+    /*  private fun positionObjectInScene(x: Float, y: Float, z: Float) {
+          setIdentityM(modelMatrix, 0)
 
-        translateM(modelMatrix, 0, x, y, z)
-        // rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
-        //   scaleM(modelMatrix,0,0.2f,0.2f,0.0f)
-        multiplyMM(
-            modelViewProjectionMatrix, 0, viewProjectionMatrix,
-            0, modelMatrix, 0
-        )
-    }
+          translateM(modelMatrix, 0, x, y, z)
+          // rotateM(modelMatrix, 0, -90f, 0f, 0f, 1f)
+          //   scaleM(modelMatrix,0,0.2f,0.2f,0.0f)
+          multiplyMM(
+              modelViewProjectionMatrix, 0, viewProjectionMatrix,
+              0, modelMatrix, 0
+          )
+      }*/
 
 
-    private var texture = 0
+    // private var texture = 0
     private fun createSurfaceTexture() {
 
-        texture = createOESTextureObject()
-        surfaceTexture = SurfaceTexture(texture)
-        callback(
-            surfaceTexture!!
-        )
+        //  texture = createOESTextureObject()
+        surfaceTexture = SurfaceTexture(createOESTextureObject()).apply {
+            callback(this)
+        }
 
     }
 
@@ -431,6 +473,115 @@ class MyRenderer(
           glBindTexture(GL_TEXTURE_2D, 0);
 
           return textureObjectIds[0];*/
+    }
+
+    abstract class GLObject(private val textureProgram:GlShaderProgram) {
+        var selected = false
+        private val BYTES_PER_FLOAT: Int = 4
+        private val vertexDataSize: Int = 12
+        private val POSITION_COMPONENT_COUNT = 2
+        private val TEXTURE_COORDINATES_COMPONENT_COUNT = 2
+        private val STRIDE: Int = (POSITION_COMPONENT_COUNT
+                + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
+        abstract val vertexData: FloatArray
+        abstract val textureData: FloatArray
+        private val vertexBuffer: FloatBuffer = ByteBuffer
+            .allocateDirect(vertexData.size * BYTES_PER_FLOAT)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .put(vertexData)
+        private val textureBuffer: FloatBuffer = ByteBuffer
+            .allocateDirect(vertexDataSize * BYTES_PER_FLOAT)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+            .put(textureData)
+        val modelMatrix = FloatArray(16)
+        private fun updateVertexBuffer(width: Float, height: Float) {
+            val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
+                0.0f - width / 2, 0.0f + height / 2,
+                0.0f + width / 2, 0.0f + height / 2,
+                0.0f + width / 2, 0.0f - height / 2,
+                0.0f + width / 2, 0.0f - height / 2,
+                0.0f - width / 2, 0.0f - height / 2,
+                0.0f - width / 2, 0.0f + height / 2
+            )
+            vertexBuffer.position(0)
+            vertexBuffer.put(vertexData, 0, vertexDataSize)
+            vertexBuffer.position(0)
+        }
+
+        private fun bindData() {
+
+            vertexBuffer.position(0)
+            glVertexAttribPointer(
+                textureProgram.positionAttributeLocation,
+                2,
+                GL_FLOAT,
+                false,
+                8,
+                vertexBuffer
+            )
+            glEnableVertexAttribArray(
+                textureProgram.positionAttributeLocation
+            )
+            ////////////////////////
+            textureBuffer.position(0)
+            glVertexAttribPointer(
+                textureProgram.textureCoordinatesAttributeLocation,
+                2,
+                GL_FLOAT,
+                false,
+                8,
+                textureBuffer
+            )
+            glEnableVertexAttribArray(
+                textureProgram.textureCoordinatesAttributeLocation
+            )
+        }
+
+        fun translate(x: Float, y: Float) {
+            setIdentityM(modelMatrix, 0)
+            translateM(modelMatrix, 0, x, y, 0f)
+        }
+
+        fun draw( modelViewProjectionMatrix: FloatArray) {
+            bindData()
+            textureProgram.useProgram()
+            textureProgram.setUniforms(modelViewProjectionMatrix)
+            glDrawArrays(GL_TRIANGLES, 0, 6)
+        }
+
+        fun onRatioChanged(ratio: Float) {
+            updateVertexBuffer(
+                ratio * 2,
+                2f,
+            )
+        }
+
+    }
+
+    class GlShaderProgram(
+        val context: Context,
+        val vertexShaderResourceId: Int,
+        val fragmentShaderResourceId: Int
+    ) : ShaderProgram(
+        context,
+        vertexShaderResourceId,
+        fragmentShaderResourceId
+    ){
+        private val U_TEXTURE_UNIT: String = "u_TextureUnit"
+        private  val A_TEXTURE_COORDINATES: String = "a_TextureCoordinates"
+
+        val positionAttributeLocation = glGetAttribLocation(program, A_POSITION)
+        val textureCoordinatesAttributeLocation = glGetAttribLocation(program, A_TEXTURE_COORDINATES)
+        private val uMatrixLocation = glGetUniformLocation(program, U_MATRIX)
+        private val uTextureUnitLocation = glGetUniformLocation(program, U_TEXTURE_UNIT)
+
+
+
+        fun setUniforms(matrix: FloatArray?) {
+            glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
+        }
     }
 
 }

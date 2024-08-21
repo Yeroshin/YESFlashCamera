@@ -15,9 +15,9 @@ class GlCamera(context: Context,) {
     private val viewMatrix = FloatArray(16)
     private val modelViewProjectionMatrix = FloatArray(16)
     val viewProjectionMatrix = FloatArray(16)
-    var rotationX = 0f
-    var rotationY = 0f
-    val windowManager: WindowManager = context
+    private var rotationX = 0f
+    private var rotationY = 0f
+    private val windowManager: WindowManager = context
         .getSystemService(Context.WINDOW_SERVICE) as WindowManager
     fun setProjection( width: Int, height: Int){
         val ratio = if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()

@@ -1,5 +1,6 @@
 package com.yes.flashcamera.presentation.ui
 
+import android.graphics.Rect
 import kotlin.math.sqrt
 
 
@@ -15,11 +16,26 @@ object Geometry {
     fun intersects(sphere: Sphere, ray: Ray): Boolean {
         return distanceBetween(sphere.center, ray) < sphere.radius
     }
+    fun intersects(rect:Rectangle, ray: Ray): Boolean {
+        val plane = Plane(
+            Point(0f, 0f, 0f),
+            Vector(0f, 0f, 1f)
+        )
+        val intersectionPoint = Geometry.intersectionPoint(ray, plane)
+        return (intersectionPoint.x<rect.center.x+rect.width/2
+                &&
+                intersectionPoint.x>rect.center.x-rect.width/2
+                &&
+                intersectionPoint.y<rect.center.y+rect.height/2
+                &&
+                intersectionPoint.y>rect.center.y-rect.height/2)
+
+    }
 
     // http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
     // Note that this formula treats Ray as if it extended infinitely past
     // either point.
-    fun distanceBetween(point: Point, ray: Ray): Float {
+    private fun distanceBetween(point: Point, ray: Ray): Float {
         val p1ToPoint = vectorBetween(ray.point, point)
         val p2ToPoint = vectorBetween(ray.point.translate(ray.vector), point)
 
@@ -103,10 +119,11 @@ object Geometry {
             return Circle(center, radius * scale)
         }
     }
-
+    interface Figure
     class Cylinder(val center: Point, val radius: Float, val height: Float)
 
     class Sphere(val center: Point, val radius: Float)
 
     class Plane(val point: Point, val normal: Vector)
+    class Rectangle(val center: Point, val width: Float,val height: Float):Figure
 }
