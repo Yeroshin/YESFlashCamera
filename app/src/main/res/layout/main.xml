@@ -10,7 +10,7 @@
     android:orientation="vertical">
 
 
-    <com.yes.flashcamera.utils.AutoFitSurfaceView
+    <com.yes.flashcamera.presentation.ui.AutoFitSurfaceView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_margin="8dp"
-            app:singleSelection="true"
+
             android:orientation="horizontal">
 
             <com.yes.flashcamera.presentation.ui.But
