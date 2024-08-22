@@ -11,136 +11,35 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class GLScreen {
-    private val BYTES_PER_FLOAT: Int = 4
-    private val vertexDataSize:Int=12
-    private val POSITION_COMPONENT_COUNT = 2
-    private val TEXTURE_COORDINATES_COMPONENT_COUNT = 2
-    private val STRIDE: Int = (POSITION_COMPONENT_COUNT
-            + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
+class GLScreen(glShaderProgram: MyRenderer.GlShaderProgram) :
+MyRenderer.GLObject(glShaderProgram){
 
-   /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-        -1f,  1f,   0f, 1f,
-        1f,  1f,   1f, 1f,
-        1f,  -1f,   1f, 0f,
-        1f,  -1f,   1f, 0f,
-        -1f,  -1f,   0f, 0f,
-        -1f,  1f,   0f, 1f
-    )*/
-  /* private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-       -3.6f,  6.4f,  0.0f, 0.0f,
-       3.6f,   6.4f, 1.0f, 0.0f,
-       3.6f,  -6.4f, 1.0f, 1.0f,
-       3.6f,  -6.4f, 1.0f, 1.0f,
-       -3.6f, -6.4f, 0.0f, 1.0f,
-       -3.6f,  6.4f, 0.0f, 0.0f
-   )*/
-    private val VERTEX_DATA = floatArrayOf( // Order of coordinates: X, Y, S, T
-        -1.0f,   1.0f,
-        1.0f,   1.0f,
-        1.0f,  -1.0f,
-        1.0f,  -1.0f,
-        -1.0f,  -1.0f,
-        -1.0f,   1.0f,
+    override val vertexData = FloatArray(12)
+    override val textureData  = floatArrayOf( // Order of coordinates: X, Y, S, T
+    0f, 0f,
+    1f, 0f,
+    1f, 1f,
+    1f, 1f,
+    0f, 1f,
+    0f, 0f
     )
-
-    private val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-        0f, 0f,
-        1f, 0f,
-        1f, 1f,
-        1f, 1f,
-        0f, 1f,
-        0f, 0f
-    )
-    private val vertexBuffer: FloatBuffer = ByteBuffer
-        .allocateDirect(VERTEX_DATA.size * BYTES_PER_FLOAT)
-        .order(ByteOrder.nativeOrder())
-        .asFloatBuffer()
-        .put(VERTEX_DATA)
-    private val textureBuffer: FloatBuffer = ByteBuffer
-        .allocateDirect(vertexDataSize * BYTES_PER_FLOAT)
-        .order(ByteOrder.nativeOrder())
-        .asFloatBuffer()
-        .put(textureData)
-    val modelMatrix = FloatArray(16)
-    private fun updateVertexBuffer( width:Float,height:Float) {
-        val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            0.0f-width/2, 0.0f+height/2,
-            0.0f+width/2, 0.0f+height/2,
-            0.0f+width/2, 0.0f-height/2,
-            0.0f+width/2, 0.0f-height/2,
-            0.0f-width/2, 0.0f-height/2,
-            0.0f-width/2, 0.0f+height/2
-        )
-        vertexBuffer.position(0)
-        vertexBuffer.put(vertexData, 0, vertexDataSize)
-        vertexBuffer.position(0)
-    }
-
-    private fun bindData(textureProgram: TextureShaderProgram) {
-
-       vertexBuffer.position(0)
-        glVertexAttribPointer(
-            textureProgram.positionAttributeLocation,
-            2,
-            GL_FLOAT,
-            false,
-            8,
-            vertexBuffer
-        )
-        glEnableVertexAttribArray(
-            textureProgram.positionAttributeLocation
-        )
-        ////////////////////////
-        textureBuffer.position(0)
-        glVertexAttribPointer(
-            textureProgram.textureCoordinatesAttributeLocation,
-            2,
-            GL_FLOAT,
-            false,
-            8,
-            textureBuffer
-        )
-        glEnableVertexAttribArray(
-            textureProgram.textureCoordinatesAttributeLocation
-        )
-        //////////////////////////////
-        /*  glEnableVertexAttribArray(
-            textureProgram.positionAttributeLocation
-        )*/
-       /* glEnableVertexAttribArray(
-            textureProgram.textureCoordinatesAttributeLocation
-        )*/
-    }
-    private fun setVertexAttribPointer(
-        dataOffset: Int, attributeLocation: Int,
-        componentCount: Int, stride: Int
-    ) {
-        vertexBuffer.position(dataOffset)
-        glVertexAttribPointer(
-            attributeLocation, componentCount, GL_FLOAT,
-            false, stride, vertexBuffer
-        )
-        glEnableVertexAttribArray(attributeLocation)
-
+    override fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float) {
 
     }
-    fun translate(x: Float, y: Float){
+
+
+    override fun translate(draggedPointX: Float, draggedPointY: Float){
         setIdentityM(modelMatrix, 0)
-        translateM(modelMatrix, 0, x, y, 0f)
-    }
-    fun draw(textureProgram: TextureShaderProgram,modelViewProjectionMatrix:FloatArray) {
-        bindData(textureProgram)
-        textureProgram.useProgram()
-        textureProgram.setUniforms(modelViewProjectionMatrix)
-        glDrawArrays(GL_TRIANGLES, 0, 6)
+        translateM(modelMatrix, 0, draggedPointX, draggedPointY, 0f)
     }
 
-    fun onRatioChanged(ratio:Float){
+
+    override fun onRatioChanged(ratio:Float){
         updateVertexBuffer(
             ratio * 2,
             2f,
         )
+        translate(0f, 0f)
     }
 
 
