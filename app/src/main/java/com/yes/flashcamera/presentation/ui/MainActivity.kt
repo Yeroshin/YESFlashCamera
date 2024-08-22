@@ -254,6 +254,7 @@ class MainActivity : Activity() {
         }
 
         binding.viewFinder.setOnTouchListener { v, event ->
+            v.performClick()
             if (event != null) {
                 // Convert touch coordinates into normalized device
                 // coordinates, keeping in mind that Android's Y

@@ -1,12 +1,9 @@
-package com.yes.flashcamera.utils
+package com.yes.flashcamera.presentation.ui
 
 
 import android.content.Context
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
-import android.util.Log
-import android.view.SurfaceView
-import kotlin.math.roundToInt
 
 
 class AutoFitSurfaceView @JvmOverloads constructor(
@@ -17,6 +14,11 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     private var aspectRatio = 1.0f
     private var fullscreen = true
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
 
     fun setAspectRatio(width: Int, height: Int) {
         require(width > 0 && height > 0) { "Size cannot be negative" }
