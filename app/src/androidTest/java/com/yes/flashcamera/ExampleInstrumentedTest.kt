@@ -30,8 +30,8 @@ class ExampleInstrumentedTest {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertEquals("com.yes.flashcamera", appContext.packageName)
         ////////////////////
-        val comparator= ImageComparator(appContext)
-        comparator.getImages()
+      /*  val comparator= ImageComparator(appContext)
+        comparator.getImages()*/
         ////////////////////
 
     }
