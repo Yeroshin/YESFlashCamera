@@ -4,8 +4,8 @@ import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
 import androidx.core.math.MathUtils.clamp
 
-class GlMagnifier(glShaderProgram: MyRenderer.GlShaderProgram) :
-    MyRenderer.GLObject(glShaderProgram) {
+class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
+    GLRenderer.GLObject(glShaderProgram) {
     private var magnification = 2.0f
     private var magnifierSizeW = 0.5f
     private var magnifierSizeH = 0.5f

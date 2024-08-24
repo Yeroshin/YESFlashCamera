@@ -9,7 +9,6 @@ import android.util.AttributeSet
 class AutoFitSurfaceView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyle: Int = 0
 ) : GLSurfaceView(context, attrs) {
 
     private var aspectRatio = 1.0f
@@ -32,12 +31,18 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     fun setFullscreen(fullScreen: Boolean) {
         this.fullscreen = fullScreen
     }
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        // Теперь у вас есть доступные размеры w и h
+        val availableWidth = w
+        val availableHeight = h
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
-
+        val v=suggestedMinimumHeight
         if (fullscreen){
             if((height*aspectRatio).toInt()<height){
                 setMeasuredDimension(

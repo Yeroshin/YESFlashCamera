@@ -1,4 +1,4 @@
-package com.yes.flashcamera.ui.theme
+package com.yes.flashcamera.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

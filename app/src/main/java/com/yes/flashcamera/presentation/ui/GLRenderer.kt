@@ -1,6 +1,7 @@
 package com.yes.flashcamera.presentation.ui
 
 
+import android.app.ActivityManager
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.opengl.GLES10.glDrawArrays
@@ -21,6 +22,8 @@ import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMV
+import android.widget.Toast
+import androidx.activity.ComponentActivity.ACTIVITY_SERVICE
 import com.yes.flashcamera.R
 import com.yes.flashcamera.presentation.ui.Geometry.Ray
 import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
@@ -30,7 +33,7 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 
-class MyRenderer(
+class GLRenderer(
     private val context: Context,
     private val callback: (surfaceTexture: SurfaceTexture) -> Unit
 ) : GLSurfaceView.Renderer {
@@ -147,14 +150,39 @@ class MyRenderer(
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
-        createSurfaceTexture()
-        addGlObjects(
-            listOf(
-                glScreen,
-                glMagnifier
+        if (checkSupport()){
+            createSurfaceTexture()
+            addGlObjects(
+                listOf(
+                    glScreen,
+                    glMagnifier
+                )
             )
-        )
+        }
 
+
+    }
+    private fun checkSupport():Boolean{
+        val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val configurationInfo = activityManager.deviceConfigurationInfo
+        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
+        return if (supportsEs2) {
+            true
+           /* binding.viewFinder.setEGLContextClientVersion(2)
+            binding.viewFinder.setRenderer(
+                renderer
+            )*/
+
+            /*  binding.glSurfaceView.setEGLContextClientVersion(2)
+              binding.glSurfaceView.setRenderer(
+                 renderer
+              )*/
+
+        } else {
+           /* Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
+                .show()*/
+            false
+        }
     }
     override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
 

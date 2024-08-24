@@ -3,7 +3,6 @@ package com.yes.flashcamera.presentation.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -17,7 +16,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
-import android.util.Range
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
@@ -28,6 +26,7 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.hannesdorfmann.adapterdelegates4.ListDelegationAdapter
@@ -42,11 +41,17 @@ import com.yes.flashcamera.presentation.model.ParamValueUI
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import androidx.activity.compose.setContent
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
+import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
 
 
 private const val PERMISSIONS_REQUEST_CODE = 10
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
 
     private val adapter by lazy {
         ListDelegationAdapter(
@@ -182,11 +187,26 @@ class MainActivity : Activity() {
             mBackgroundHandler
         )
     }
-
+    @Composable
+    fun Greeting(name: String, modifier: Modifier = Modifier) {
+        Text(
+            text = "Hello $name!",
+            modifier = modifier
+        )
+    }
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        ///////////////////////////
+        setContent {
+            FlashCameraTheme {
+                val navController = rememberNavController()
+                Nav(this,navController)
+            }
+        }
+
+        ///////////////////////////
         /* cameraService = CameraService(
              this,
              getSystemService(CAMERA_SERVICE) as CameraManager,
@@ -196,7 +216,7 @@ class MainActivity : Activity() {
          }*/
 
 
-        binding = MainBinding.inflate(layoutInflater)
+      /*  binding = MainBinding.inflate(layoutInflater)
 
         setUpView()
 
@@ -205,7 +225,7 @@ class MainActivity : Activity() {
         }
         gles()
         setContentView(binding.root)
-        dataLoaded()
+        dataLoaded()*/
     }
 
 
@@ -213,7 +233,7 @@ class MainActivity : Activity() {
 
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private val renderer = MyRenderer(
+    private val renderer = GLRenderer(
         this
     ) { surfaceTexture ->
         cameraRepository.getBackCameraId()?.let {

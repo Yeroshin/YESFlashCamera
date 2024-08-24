@@ -13,6 +13,8 @@ playServicesBasement = "18.4.0"
 cameraViewfinder = "1.4.0-alpha07"
 sceneformBase = "1.17.1"
 material = "1.12.0"
+navigationRuntimeKtx = "2.7.7"
+navigationCompose = "2.7.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +36,8 @@ play-services-basement = { group = "com.google.android.gms", name = "play-servic
 androidx-camera-viewfinder = { group = "androidx.camera", name = "camera-viewfinder", version.ref = "cameraViewfinder" }
 sceneform-base = { group = "com.google.ar.sceneform", name = "sceneform-base", version.ref = "sceneformBase" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
