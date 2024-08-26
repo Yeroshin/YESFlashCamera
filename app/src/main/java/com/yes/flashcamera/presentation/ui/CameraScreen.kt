@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.flashcamera.data.repository.CameraRepository
+import com.yes.flashcamera.presentation.model.ShutterItemUI
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
@@ -40,12 +41,13 @@ fun CameraScreen(
         Spacer(modifier = Modifier.height(45.dp))
         var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
         Button(onClick = {
-          //  onButtonClick()
+            //  onButtonClick()
             autoFitSurfaceView?.setFullscreen(false)
-           // navController.navigate("B")
+            // navController.navigate("B")
         }) {
             Text(text = "Go to screen B", fontSize = 40.sp)
         }
+
         val mBackgroundThread= HandlerThread("CameraThread").apply { start() }
         val mBackgroundHandler = Handler(mBackgroundThread.looper)
         val cameraRepository =
@@ -58,7 +60,67 @@ fun CameraScreen(
                 println()
             }*/
         )
-        AndroidView(
+        val adapter = CompositeAdapter(
+            mapOf(
+                ShutterItemUI::class.java to ShutterValueItemAdapterDelegate(),
+
+            )
+        )
+        val items = listOf(
+            ShutterItemUI("1"),
+            ShutterItemUI("2"),
+            ShutterItemUI("3"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+            ShutterItemUI("Hello"),
+            ShutterItemUI("World"),
+        )
+        ValueSelector(
+            items = items,
+            adapter =adapter
+        )
+      /*  AndroidView(
             factory = {
                 AutoFitSurfaceView(
                     context,
@@ -85,7 +147,7 @@ fun CameraScreen(
                     )
                     }
             }
-        )
+        )*/
 
 
     }
