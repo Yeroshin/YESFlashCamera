@@ -16,6 +16,7 @@ fun ComposeTest() {
             )
     )
     val items = listOf(
+
         ShutterItemUI("1"),
         ShutterItemUI("World"),
         ShutterItemUI("Hello"),
@@ -28,6 +29,19 @@ fun ComposeTest() {
         ShutterItemUI("World"),
         ShutterItemUI("Hello"),
         ShutterItemUI("8"),
+        ShutterItemUI("1"),
+        ShutterItemUI("World"),
+        ShutterItemUI("Hello"),
+        ShutterItemUI("World"),
+        ShutterItemUI("Hello"),
+        ShutterItemUI("World"),
+        ShutterItemUI("Hello"),
+        ShutterItemUI("World"),
+        ShutterItemUI("Hello"),
+        ShutterItemUI("World"),
+        ShutterItemUI("Hello"),
+        ShutterItemUI("8"),
+
     )
     ValueSelector(
         items = items,
