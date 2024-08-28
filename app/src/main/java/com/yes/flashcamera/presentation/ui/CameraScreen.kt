@@ -67,6 +67,7 @@ fun CameraScreen(
             )
         )
         val items = listOf(
+            ShutterItemUI("0"),
             ShutterItemUI("1"),
             ShutterItemUI("2"),
             ShutterItemUI("3"),
@@ -80,14 +81,20 @@ fun CameraScreen(
             ShutterItemUI("11"),
             ShutterItemUI("12"),
             ShutterItemUI("13"),
-            ShutterItemUI("14"),
 
 
         )
+        fun pr(value:Int){
+            println(value)
+        }
         ValueSelector(
             items = items,
-            adapter =adapter
+            adapter =adapter,
+            onSelectedItemChanged ={item->
+                pr(item)
+            }
         )
+
       /*  AndroidView(
             factory = {
                 AutoFitSurfaceView(
