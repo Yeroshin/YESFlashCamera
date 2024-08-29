@@ -21,11 +21,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.flashcamera.data.repository.CameraRepository
 import com.yes.flashcamera.presentation.model.ShutterItemUI
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Preview
+@Composable
+fun Previ(){
+    CameraScreen(
+        LocalContext.current
+    ) { }
+}
+
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
@@ -55,11 +67,20 @@ fun CameraScreen(
                 context.getSystemService(CAMERA_SERVICE) as CameraManager,
                 mBackgroundHandler
             )
+        fun prin(value:Int?){
+            println(value.toString())
+        }
         RadioGroup(
+            context=context,
+            onOptionSelected ={value->
+                prin(value)
+            }
           /*  onOptionSelected = {
                 println()
             }*/
+
         )
+
         val adapter = CompositeAdapter(
             mapOf(
                 ShutterItemUI::class.java to ShutterValueItemAdapterDelegate(),

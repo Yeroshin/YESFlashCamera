@@ -33,5 +33,6 @@ class ShutterValueItemAdapterDelegate: AdapterDelegate<ShutterItemUI> {
 
         )
 
+
     }
 }
