@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,7 +39,6 @@ import com.yes.flashcamera.R
 fun RadioGroup(
     radioOptions: List<Int> = listOf(1),
     onOptionSelected:((value:Int?)->Unit),
-    context: Context
 ) {
 
     val selectedOption = remember { mutableStateOf<Int?>(null) }
@@ -53,7 +53,7 @@ fun RadioGroup(
         radioOptions.forEach { value ->
             Column(
                 Modifier
-
+                    .fillMaxHeight()
                    // .height(120.dp)
                     .selectable(
                         selected = (value == selectedOption.value),

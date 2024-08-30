@@ -46,6 +46,6 @@ fun ComposeTest() {
     ValueSelector(
         items = items,
         adapter =adapter
-    )
+    ){}
 
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.yes.flashcamera.R
 import org.xmlpull.v1.XmlPullParser
@@ -40,7 +41,7 @@ fun parseVector(
     }
     return pathData
 }
-@Preview
+@Preview(widthDp = 120, heightDp = 120)
 @Composable
 fun prev(){
     VectorShadow(R.drawable.camera )
@@ -49,12 +50,13 @@ fun prev(){
 @Composable
 fun VectorShadow(
     resId:Int,
+    resSize: Dp=200.dp,
     vectorColor:Color=Color.Red,
     shadowColor:Color=Color.Black,
     shadowBlur:Float=20f,
     shadowOffsetXPct:Float=0.95f,
     shadowOffsetYPct:Float=0.95f,
-    scale:Float=0.8f
+    scale:Float=0.85f
 ) {
     val pathData= parseVector(
         context =LocalContext.current,
@@ -64,57 +66,64 @@ fun VectorShadow(
     val pathVector = PathParser().parsePathString(pathData).toPath()
     Canvas(
         modifier = Modifier
-            .size(120.dp)
+            .size(resSize)
             .background(color = Color.Green)
 
     ) {
         val canvasWidth = size.width
         val canvasHeight = size.height
         drawIntoCanvas { canvas ->
+
+
+            val matrix = Matrix()
+            /////Shadow
             val shadowPaint = Paint().apply {
                 color =shadowColor// Color.Black.copy(alpha = 1.0f)
                 asFrameworkPaint().apply {
                     maskFilter = BlurMaskFilter(shadowBlur, android.graphics.BlurMaskFilter.Blur.NORMAL)
                 }
             }
-            val paintVector = Paint().apply {
-                color = vectorColor
-
-            }
-            val matrix = Matrix()
-            /////Shadow
-           val pathShadowBounds = pathShadow.getBounds()
-            val scaleShadowX = (canvasWidth / pathShadowBounds.width)*scale
-            val scaleShadowY =( canvasHeight / pathShadowBounds.height)*scale
+           val pathShadowWidth = pathShadow.getBounds().width
+            val pathShadowHeight = pathShadow.getBounds().height
+            val scaleShadowX = (canvasWidth / pathShadowWidth)*scale
+            val scaleShadowY =( canvasHeight /pathShadowHeight)*scale
 
             matrix.scale(scaleShadowX,scaleShadowY)
             matrix.translate(pathShadow.getBounds().left*-1,pathShadow.getBounds().top*-1)
+            pathShadow.transform(matrix)
 
             val offsetX= (1-shadowOffsetXPct)*canvasWidth
             val offsetY= (1-shadowOffsetYPct)*canvasHeight
+            val sdx = ((canvasWidth - pathShadowWidth * scaleShadowX)/2)+offsetX
+            val sdy = ((canvasHeight - pathShadowHeight * scaleShadowY)/2)+offsetY
 
-            val sdx = ((canvasWidth - pathShadow.getBounds().width * scaleShadowX)/2)+offsetX
-            val sdy = ((canvasHeight - pathShadow.getBounds().height * scaleShadowY)/2)+offsetY
+            matrix.reset()
             matrix.translate(sdx,sdy)
-
             pathShadow.transform(matrix)
             canvas.drawPath(pathShadow, shadowPaint)
             ////////////////////////
             ////Vector
-            val pathVectorBounds = pathVector.getBounds()
-            val scaleVectorX = (canvasWidth /  pathVector.getBounds().width)*scale
-            val scaleVectorY =( canvasHeight /  pathVector.getBounds().height)*scale
+            val paintVector = Paint().apply {
+                color = vectorColor
+
+            }
+            val pathVectorWidth = pathVector.getBounds().width
+            val pathVectorHeight = pathVector.getBounds().height
+            val scaleVectorX = (canvasWidth / pathVectorWidth)*scale
+            val scaleVectorY =( canvasHeight /  pathVectorHeight)*scale
+
             matrix.reset()
             matrix.scale(scaleVectorX,scaleVectorY)
             matrix.translate( pathVector.getBounds().left*-1, pathVector.getBounds().top*-1)
-
-            val vdx = (canvasWidth -  pathVector.getBounds().width * scaleVectorX)/2
-            val vdy = (canvasHeight -  pathVector.getBounds().height * scaleVectorY)/2
-            matrix.translate(vdx,vdy)
-
             pathVector.transform(matrix)
 
-            val t=pathVector.getBounds()
+            val vdx = (canvasWidth -  pathVector.getBounds().width )/2
+            val vdy = (canvasHeight -  pathVector.getBounds().height)/2
+
+            matrix.reset()
+            matrix.translate(vdx,vdy)
+            pathVector.transform(matrix)
+
             canvas.drawPath(pathVector, paintVector)
         }
     }

@@ -70,16 +70,7 @@ fun CameraScreen(
         fun prin(value:Int?){
             println(value.toString())
         }
-        RadioGroup(
-            context=context,
-            onOptionSelected ={value->
-                prin(value)
-            }
-          /*  onOptionSelected = {
-                println()
-            }*/
 
-        )
 
         val adapter = CompositeAdapter(
             mapOf(
@@ -145,6 +136,11 @@ fun CameraScreen(
             }
         )*/
 
-
+        RadioGroup(
+            onOptionSelected ={value->
+                println(value.toString())
+            }
+        )
     }
+
 }
