@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.magnifier
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -33,28 +36,67 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yes.flashcamera.R
+abstract class RadioButton(val id:Int,){
 
+    @Composable
+    abstract fun item(
+
+    )
+}
 
 @Composable
 fun RadioGroup(
     radioOptions: List<Int> = listOf(1),
     onOptionSelected:((value:Int?)->Unit),
+    items:List<RadioButton>
 ) {
 
     val selectedOption = remember { mutableStateOf<Int?>(null) }
     Row(
         Modifier
             .selectableGroup()
-           // .height(120.dp)
+             .height(120.dp)
             .fillMaxWidth(),
          verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        radioOptions.forEach { value ->
+        items.forEach{item->
+            Column(
+                Modifier
+                   // .fillMaxHeight()
+                    .wrapContentWidth()
+                    .wrapContentHeight()
+                   //  .height(60.dp)
+                    .selectable(
+                        selected = (item.id == selectedOption.value),
+                        onClick = {
+                            if (item.id == selectedOption.value) {
+                                selectedOption.value = null
+                                onOptionSelected(null)
+                            } else {
+                                selectedOption.value = item.id
+                                onOptionSelected(item.id)
+                            }
+                        },
+                        role = Role.RadioButton
+                    )
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                /*  RadioButton(
+                      selected = (text == selectedOption.value),
+                      onClick = null
+                  )*/
+                item.item(
+
+                )
+            }
+        }
+      /*  radioOptions.forEach { value ->
             Column(
                 Modifier
                     .fillMaxHeight()
-                   // .height(120.dp)
+                    // .height(120.dp)
                     .selectable(
                         selected = (value == selectedOption.value),
                         onClick = {
@@ -75,6 +117,7 @@ fun RadioGroup(
                     selected = (text == selectedOption.value),
                     onClick = null
                 )*/
+                items[0].item( )
                 Column {
                   /*  Image(
                         modifier = Modifier
@@ -94,6 +137,6 @@ fun RadioGroup(
                 }
 
             }
-        }
+        }*/
     }
 }

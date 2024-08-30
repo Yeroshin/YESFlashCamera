@@ -14,7 +14,6 @@ import com.yes.flashcamera.presentation.model.ShutterItemUI
 class ShutterValueItemAdapterDelegate: AdapterDelegate<ShutterItemUI> {
     @Composable
     override fun Content(
-
         item:  ShutterItemUI
     ) {
         Text(

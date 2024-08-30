@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+import com.yes.flashcamera.R
 import com.yes.flashcamera.data.repository.CameraRepository
 import com.yes.flashcamera.presentation.model.ShutterItemUI
 
@@ -67,10 +67,6 @@ fun CameraScreen(
                 context.getSystemService(CAMERA_SERVICE) as CameraManager,
                 mBackgroundHandler
             )
-        fun prin(value:Int?){
-            println(value.toString())
-        }
-
 
         val adapter = CompositeAdapter(
             mapOf(
@@ -78,7 +74,20 @@ fun CameraScreen(
 
             )
         )
-        val items = listOf(
+        val radioGroupItems=listOf(
+            RadioItem(1,"shutter", R.drawable.camera),
+            RadioItem(2,"iso", R.drawable.iso),
+            RadioItem(3,"focus", R.drawable.metering)
+        )
+        RadioGroup(
+            items =radioGroupItems ,
+            onOptionSelected ={value->
+                println(value.toString())
+
+                radioGroupItems[0].resId=R.drawable.iso
+            }
+        )
+        val valueSelectorItems = listOf(
             ShutterItemUI("0"),
             ShutterItemUI("1"),
             ShutterItemUI("2"),
@@ -96,14 +105,12 @@ fun CameraScreen(
 
 
         )
-        fun pr(value:Int){
-            println(value)
-        }
+
         ValueSelector(
-            items = items,
+            items = valueSelectorItems,
             adapter =adapter,
             onSelectedItemChanged ={item->
-                pr(item)
+                println(item)
             }
         )
 
@@ -136,11 +143,6 @@ fun CameraScreen(
             }
         )*/
 
-        RadioGroup(
-            onOptionSelected ={value->
-                println(value.toString())
-            }
-        )
     }
 
 }

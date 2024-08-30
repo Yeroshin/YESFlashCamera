@@ -5,6 +5,7 @@ import android.graphics.BlurMaskFilter
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -31,11 +32,9 @@ fun parseVector(
         if (eventType==XmlPullParser.START_TAG&&parser.name=="path"){
            for (i in 0 until parser.attributeCount) {
                if(parser.getAttributeName(i)=="pathData"){
-                   pathData=parser.getAttributeValue(i)
-                   break
+                   pathData+=parser.getAttributeValue(i)
                }
            }
-            break
         }
         eventType=parser.next()
     }
@@ -44,13 +43,13 @@ fun parseVector(
 @Preview(widthDp = 120, heightDp = 120)
 @Composable
 fun prev(){
-    VectorShadow(R.drawable.camera )
+   // VectorShadow(R.drawable.camera )
 }
 
 @Composable
 fun VectorShadow(
+    modifier: Modifier,
     resId:Int,
-    resSize: Dp=200.dp,
     vectorColor:Color=Color.Red,
     shadowColor:Color=Color.Black,
     shadowBlur:Float=20f,
@@ -65,9 +64,10 @@ fun VectorShadow(
     val pathShadow = PathParser().parsePathString(pathData).toPath()
     val pathVector = PathParser().parsePathString(pathData).toPath()
     Canvas(
-        modifier = Modifier
-            .size(resSize)
-            .background(color = Color.Green)
+        modifier = modifier
+         /*   .fillMaxSize()
+          //  .size(resSize)
+            .background(color = Color.Green)*/
 
     ) {
         val canvasWidth = size.width
