@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.geometry.Offset
@@ -17,8 +18,8 @@ import com.yes.flashcamera.R
 
 class RadioItem(
     id:Int,
-    val title:String,
-    var resId:Int
+    private val title:String,
+    var resId:Int,
 ):RadioButton(id) {
     @Composable
     override fun item() {
@@ -35,16 +36,24 @@ class RadioItem(
         Text(
             text = title,
             style = TextStyle(
-                fontSize = 24.sp,
+                color = Color.White,
+                fontSize = 14.sp,
                 shadow = Shadow(
-                    color = Color.DarkGray, offset = Offset(5.0f, 10.0f), blurRadius = 3f
+                    color = Color.DarkGray,
+                    offset = Offset(5.0f, 5.0f),
+                    blurRadius = 5f
                 )
             )
             // style = MaterialTheme.typography.body1.merge(),
             //  modifier = Modifier.padding(start = 16.dp)
         )
             VectorShadow(
-                Modifier.size(42.dp),
+                Modifier
+                    .size(24.dp)
+
+                ,
+                vectorColor = Color.White,
+                shadowColor = Color.DarkGray,
                 resId = resId
             )
 

@@ -4,9 +4,6 @@ import android.content.Context
 import android.graphics.BlurMaskFilter
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,9 +13,6 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import com.yes.flashcamera.R
 import org.xmlpull.v1.XmlPullParser
 
 fun parseVector(
@@ -52,7 +46,7 @@ fun VectorShadow(
     resId:Int,
     vectorColor:Color=Color.Red,
     shadowColor:Color=Color.Black,
-    shadowBlur:Float=20f,
+    shadowBlur:Float=10f,
     shadowOffsetXPct:Float=0.95f,
     shadowOffsetYPct:Float=0.95f,
     scale:Float=0.85f
@@ -105,7 +99,6 @@ fun VectorShadow(
             ////Vector
             val paintVector = Paint().apply {
                 color = vectorColor
-
             }
             val pathVectorWidth = pathVector.getBounds().width
             val pathVectorHeight = pathVector.getBounds().height

@@ -2,6 +2,7 @@ package com.yes.flashcamera.presentation.ui
 
 import android.content.Context
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -36,7 +38,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yes.flashcamera.R
-abstract class RadioButton(val id:Int,){
+abstract class RadioButton(val id:Int){
 
     @Composable
     abstract fun item(
@@ -46,7 +48,6 @@ abstract class RadioButton(val id:Int,){
 
 @Composable
 fun RadioGroup(
-    radioOptions: List<Int> = listOf(1),
     onOptionSelected:((value:Int?)->Unit),
     items:List<RadioButton>
 ) {
@@ -54,8 +55,13 @@ fun RadioGroup(
     val selectedOption = remember { mutableStateOf<Int?>(null) }
     Row(
         Modifier
+            .background(
+                Color.LightGray.copy(alpha = 0.5f)
+            )
             .selectableGroup()
-             .height(120.dp)
+            .wrapContentHeight()
+            .padding(4.dp)
+            // .height(120.dp)
             .fillMaxWidth(),
          verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
@@ -63,7 +69,15 @@ fun RadioGroup(
         items.forEach{item->
             Column(
                 Modifier
+                    .alpha(
+                        if(item.id == selectedOption.value){
+                            1.0f
+                        }else{
+                            0.5f
+                        }
+                    )
                    // .fillMaxHeight()
+
                     .wrapContentWidth()
                     .wrapContentHeight()
                    //  .height(60.dp)
