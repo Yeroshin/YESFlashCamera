@@ -43,13 +43,13 @@ fun DropDown(
         targetValue = if (isOpen) 1f else 0f,
         animationSpec = tween(
             durationMillis = 300
-        )
+        ), label = ""
     )
     val rotateX = animateFloatAsState(
         targetValue = if (isOpen) 0f else -90f,
         animationSpec = tween(
             durationMillis = 300
-        )
+        ), label = ""
     )
     Box(
         contentAlignment = Alignment.Center,

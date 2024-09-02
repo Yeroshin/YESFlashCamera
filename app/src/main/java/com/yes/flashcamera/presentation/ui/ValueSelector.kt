@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -60,6 +61,11 @@ fun ValueSelector(
             }
     }
     Column(
+        modifier = Modifier
+            .background(
+                Color.LightGray
+            )
+            .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
 
@@ -75,18 +81,26 @@ fun ValueSelector(
             ),
             flingBehavior = flingBehavior
         ) {
+
             items(items.size) { index ->
                 adapter.Content(items[index])
             }
         }
-        Image(
-            modifier = Modifier
+        VectorShadow(
+            Modifier
                 .size(24.dp),
-
-            painter = painterResource(R.drawable.arrow_drop_up),
-            contentDescription = "icon",
-            // colorFilter = ColorFilter.tint(color = Color.Black)
+            vectorColor = Color.Green,
+            shadowColor = Color.DarkGray,
+            resId = R.drawable.arrow_drop_up
         )
+        /*  Image(
+              modifier = Modifier
+                  .size(24.dp),
+
+              painter = painterResource(R.drawable.arrow_drop_up),
+              contentDescription = "icon",
+               colorFilter = ColorFilter.tint(color = Color.Green)
+          )*/
 
     }
 

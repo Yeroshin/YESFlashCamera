@@ -14,7 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    onButtonClick: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize()
         , verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -22,7 +24,7 @@ fun SettingsScreen() {
         Text(text = "Settings", fontSize = 64.sp)
         Spacer(modifier = Modifier.height(45.dp))
         Button(onClick = {
-
+            onButtonClick()
             // navController.navigate("B")
         }) {
             Text(text = "Go to screen B", fontSize = 40.sp)

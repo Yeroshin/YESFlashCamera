@@ -48,13 +48,14 @@ abstract class RadioButton(val id:Int){
 
 @Composable
 fun RadioGroup(
+    modifier: Modifier,
     onOptionSelected:((value:Int?)->Unit),
     items:List<RadioButton>
 ) {
 
     val selectedOption = remember { mutableStateOf<Int?>(null) }
     Row(
-        Modifier
+        modifier
             .background(
                 Color.LightGray.copy(alpha = 0.5f)
             )

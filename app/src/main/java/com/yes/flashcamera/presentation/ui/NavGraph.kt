@@ -27,7 +27,11 @@ fun Nav(
             )
         }
         composable("Settings") {
-            SettingsScreen()
+            SettingsScreen(
+                onButtonClick = {
+                    navController.navigate("Camera")
+                }
+            )
         }
 
 
