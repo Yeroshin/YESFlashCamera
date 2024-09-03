@@ -4,7 +4,7 @@ import android.content.Context
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
 import android.opengl.GLES20.glUniformMatrix4fv
-import com.yes.flashcamera.R
+import com.yes.camera.R
 
 class ScaledTextureProgram (context: Context) : ShaderProgram(
     context, R.raw.vertex, R.raw.scaled_fragment

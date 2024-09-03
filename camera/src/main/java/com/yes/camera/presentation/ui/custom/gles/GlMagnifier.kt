@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.custom.gles
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
 import androidx.core.math.MathUtils.clamp
+import com.yes.camera.utils.Geometry
 
 class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
     GLRenderer.GLObject(glShaderProgram) {

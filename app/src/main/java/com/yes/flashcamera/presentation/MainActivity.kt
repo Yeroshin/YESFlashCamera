@@ -28,7 +28,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yes.camera.data.repository.CameraRepository
-import com.yes.flashcamera.databinding.MainBinding
+
 import com.yes.camera.presentation.model.CameraUI
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
@@ -157,7 +157,7 @@ class MainActivity : ComponentActivity() {
 
     }*/
 
-    private lateinit var binding: MainBinding
+
 
     private val mBackgroundThread: HandlerThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)

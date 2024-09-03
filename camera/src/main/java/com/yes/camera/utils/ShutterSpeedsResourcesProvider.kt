@@ -1,7 +1,7 @@
 package com.yes.camera.utils
 
 import android.content.Context
-import com.yes.flashcamera.R
+import com.yes.camera.R
 import org.xmlpull.v1.XmlPullParser
 
 class ShutterSpeedsResourcesProvider(val context: Context) {

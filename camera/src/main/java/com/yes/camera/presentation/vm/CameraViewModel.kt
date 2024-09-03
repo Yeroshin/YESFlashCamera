@@ -3,10 +3,14 @@ package com.yes.camera.presentation.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.yes.camera.presentation.contract.CameraContract.*
+import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
 
 
 class CameraViewModel: BaseViewModel<Event, State, Effect>() {
+    interface DependencyResolver {
+        fun resolveCameraDependency(): BaseDependency
+    }
     class Factory(
 
 

@@ -15,9 +15,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.camera.presentation.model.ShutterItemUI
-import com.yes.shared.presentation.adapter.CompositeAdapter
 
-class ShutterValueItemAdapterDelegate : CompositeAdapter.AdapterDelegate<ShutterItemUI> {
+class ShutterValueItemAdapterDelegate : AdapterDelegate<ShutterItemUI> {
     @Composable
     override fun Content(
         item: ShutterItemUI

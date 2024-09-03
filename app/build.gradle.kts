@@ -48,8 +48,11 @@ android {
     buildToolsVersion = "34.0.0"
 
     buildFeatures {
-        viewBinding = true
+
         compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
     }
 }
 
@@ -58,57 +61,26 @@ dependencies {
     implementation(project(":settings"))
     implementation(project(":camera"))
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.play.services.basement)
-    implementation(libs.androidx.camera.viewfinder)
-    implementation(libs.sceneform.base)
-    implementation(libs.androidx.navigation.runtime.ktx)
-    implementation(libs.androidx.navigation.compose)
 
+    //compose
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation ("androidx.navigation:navigation-compose:2.7.7")
+    //testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
-
-    //camerax
-    implementation("androidx.camera:camera-core:1.2.2")
-    implementation("androidx.camera:camera-camera2:1.2.2")
-    implementation("androidx.camera:camera-lifecycle:1.2.2")
-    implementation("androidx.camera:camera-video:1.2.2")
-
-    implementation("androidx.camera:camera-view:1.2.2")
-    implementation("androidx.camera:camera-extensions:1.2.2")
-
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
 
 
 
 
-    // Kotlin lang
-    implementation("androidx.core:core-ktx:1.2.0")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.2.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.4")
 
-    // App compat and UI things
-    implementation("androidx.appcompat:appcompat:1.1.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.2.0")
-    implementation("androidx.viewpager2:viewpager2:1.0.0")
-    implementation("androidx.constraintlayout:constraintlayout:1.1.3")
 
-    //adapter delegate
-    implementation ("com.hannesdorfmann:adapterdelegates4-kotlin-dsl-viewbinding:4.3.2")
+
 
 }

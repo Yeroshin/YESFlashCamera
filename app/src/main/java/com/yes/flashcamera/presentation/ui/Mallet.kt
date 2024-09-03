@@ -5,6 +5,7 @@ import android.opengl.GLES20.GL_POINTS
 import android.opengl.GLES20.glDrawArrays
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glVertexAttribPointer
+import com.yes.camera.presentation.ui.custom.gles.ColorShaderProgram
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer

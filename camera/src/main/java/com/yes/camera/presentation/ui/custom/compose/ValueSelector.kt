@@ -25,8 +25,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
-import com.yes.shared.presentation.adapter.CompositeAdapter
-import com.yes.shared.presentation.ui.VectorShadow
+import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 
@@ -73,7 +72,7 @@ fun ValueSelector(
         ) {
 
             items(items.size) { index ->
-                adapter.Content(items[index])
+                adapter.go(items[index])
             }
         }
         VectorShadow(

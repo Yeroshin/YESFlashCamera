@@ -8,6 +8,7 @@ import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glViewport
 import android.opengl.GLSurfaceView
+import com.yes.camera.presentation.ui.custom.gles.ColorShaderProgram
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -93,7 +94,7 @@ class AirHockeyRenderer(
 
 
         glUseProgram(program)*/
-        val program=ColorShaderProgram(context)
+        val program= ColorShaderProgram(context)
         program.useProgram()
         mallet.bindData(program)
       /*  aPositionLocation = program.positionAttributeLocation

@@ -3,6 +3,7 @@ package com.yes.shared.domain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+
 interface CoroutinesUseCaseRunner {
     val useCaseCoroutineScope: CoroutineScope
 

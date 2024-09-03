@@ -1,10 +1,11 @@
 package com.yes.camera.presentation.ui
 
 import android.content.Context
+import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraManager
 import android.os.Handler
 import android.os.HandlerThread
-import androidx.activity.ComponentActivity.CAMERA_SERVICE
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -38,19 +39,18 @@ import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
-import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.camera.utils.ShutterSpeedsResourcesProvider
-import com.yes.shared.presentation.adapter.CompositeAdapter
+import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import kotlinx.coroutines.delay
 
 @Composable
 fun CameraScreen(
     context: Context,
     onButtonClick: () -> Unit,
-  //  cameraViewModel: CameraViewModel
+    //  cameraViewModel: CameraViewModel
 ) {
-    val shutterSpeeds =ShutterSpeedsResourcesProvider(LocalContext.current).getShutterSpeeds()
-   // ResourcesProvider(LocalContext.current).getString()
+    val shutterSpeeds = ShutterSpeedsResourcesProvider(LocalContext.current).getShutterSpeeds()
+    // ResourcesProvider(LocalContext.current).getString()
 
     Column(
         modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
@@ -60,7 +60,7 @@ fun CameraScreen(
         Spacer(modifier = Modifier.height(45.dp))
         var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
         Button(onClick = {
-              onButtonClick()
+            onButtonClick()
             autoFitSurfaceView?.setFullscreen(false)
             // navController.navigate("B")
         }) {
@@ -78,7 +78,7 @@ fun CameraScreen(
         val adapter = CompositeAdapter(
             mapOf(
                 ShutterItemUI::class.java to ShutterValueItemAdapterDelegate(),
-                )
+            )
         )
         val radioGroupItems = listOf(
             RadioItem(1, "SHUTTER", R.drawable.camera),
@@ -117,7 +117,7 @@ fun CameraScreen(
             visible = true
         })
         AnimatedVisibility(
-            visible = visible ,
+            visible = visible,
             enter = scaleIn(),
             exit = fadeOut() + shrinkVertically()
         ) {
@@ -168,34 +168,32 @@ fun CameraScreen(
              }
          )*/
 
-        /*  AndroidView(
-              factory = {
-                  AutoFitSurfaceView(
-                      context,
-                      null
-                      ).also {
-                          autoFitSurfaceView = it
-                              it.setEGLContextClientVersion(2)
-                      it.setRenderer(
-                          GLRenderer(
-                              context
-                          ) { surfaceTexture ->
+       /* AndroidView(
+            factory = {
+                AutoFitSurfaceView(
+                    context,
+                    null
+                ).also {
+                    autoFitSurfaceView = it
+                    it.setEGLContextClientVersion(2)
+                    it.setRenderer(
+                        GLRenderer(
+                            context
+                        ) { surfaceTexture ->
 
-                              cameraRepository.getBackCameraId()?.let {
-                                  cameraRepository.openCamera(
-                                      it
-                                  ) { camera ->
-                                      val cam = camera
-                                      cameraRepository.createCaptureSession(surfaceTexture)
-                                  }
-                              }
-
-
-                          }
-                      )
-                      }
-              }
-          )*/
+                            cameraRepository.getBackCameraId()?.let {
+                                cameraRepository.openCamera(
+                                    it
+                                ) { camera ->
+                                    val cam = camera
+                                    cameraRepository.createCaptureSession(surfaceTexture)
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        )*/
 
     }
 

@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.custom.gles
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Context.ACTIVITY_SERVICE
 import android.graphics.SurfaceTexture
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
@@ -22,7 +23,7 @@ import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMV
-import androidx.activity.ComponentActivity.ACTIVITY_SERVICE
+
 import com.yes.camera.R
 import com.yes.camera.utils.Geometry
 import com.yes.camera.utils.Geometry.Ray
