@@ -72,7 +72,7 @@ fun ValueSelector(
         ) {
 
             items(items.size) { index ->
-                adapter.go(items[index])
+                adapter.Content(items[index])
             }
         }
         VectorShadow(

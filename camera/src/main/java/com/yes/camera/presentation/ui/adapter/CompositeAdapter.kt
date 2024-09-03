@@ -1,14 +1,14 @@
 package com.yes.camera.presentation.ui.adapter
 
 import androidx.compose.runtime.Composable
-interface AdapterDelegate<T> {
-    @Composable
-    fun Content(item: T)
-}
-class CompositeAdapter(private val delegates: Map<Class<*>, AdapterDelegate<*>>) {
 
+class CompositeAdapter(private val delegates: Map<Class<*>, AdapterDelegate<*>>) {
+    interface AdapterDelegate<T> {
+        @Composable
+        fun Content(item: T)
+    }
     @Composable
-    fun <T:Any> go(item: T) {
+    fun <T:Any> Content(item: T) {
 
         val delegate = delegates[item::class.java] as AdapterDelegate<T>
         delegate.Content(item)

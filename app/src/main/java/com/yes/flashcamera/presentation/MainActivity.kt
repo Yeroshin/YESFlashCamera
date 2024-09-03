@@ -22,6 +22,7 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -32,6 +33,7 @@ import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.presentation.model.CameraUI
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
+import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.settings.presentation.ui.SettingsScreen
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
 import java.io.BufferedReader
@@ -169,7 +171,13 @@ class MainActivity : ComponentActivity() {
             mBackgroundHandler
         )
     }
-
+    private val dependency by lazy {
+        (application as CameraViewModel.DependencyResolver)
+            .resolveCameraDependency()
+    }
+    private val cameraViewModel:CameraViewModel by viewModels {
+        dependency.viewModelFactory
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -182,6 +190,7 @@ class MainActivity : ComponentActivity() {
                     composable("Camera") {
                         CameraScreen(
                             LocalContext.current,
+                            cameraViewModel,
                             onButtonClick = {
                                 navController.navigate("Settings")
                             }

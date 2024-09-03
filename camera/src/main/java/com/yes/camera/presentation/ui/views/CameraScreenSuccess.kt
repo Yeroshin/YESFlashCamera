@@ -1,11 +1,10 @@
-package com.yes.camera.presentation.ui
+package com.yes.camera.presentation.ui.views
 
 import android.content.Context
 import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraManager
 import android.os.Handler
 import android.os.HandlerThread
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -21,55 +20,36 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.model.ShutterItemUI
+import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
 import com.yes.camera.presentation.ui.custom.compose.DropDown
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
-import com.yes.camera.utils.ShutterSpeedsResourcesProvider
-import com.yes.camera.presentation.ui.adapter.CompositeAdapter
-import com.yes.camera.presentation.ui.views.CameraScreenSuccess
-import com.yes.camera.presentation.vm.CameraViewModel
+import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.delay
 
-
 @Composable
-fun CameraScreen(
+fun CameraScreenSuccess(
     context: Context,
-    cameraViewModel: CameraViewModel,
+    state: CameraContract.MainState.Success,
     onButtonClick: () -> Unit
-
 ) {
-    val viewState = cameraViewModel.uiState.collectAsState()
-    when(val state = viewState.value.state){
-        CameraContract.MainState.Idle -> { }
-        CameraContract.MainState.Loading -> {}
-        is CameraContract.MainState.Success -> CameraScreenSuccess(
-            context,
-            state ,
-            onButtonClick
-        )
-    }
-    val shutterSpeeds = ShutterSpeedsResourcesProvider(LocalContext.current).getShutterSpeeds()
-    // ResourcesProvider(LocalContext.current).getString()
-
-   /* Column(
+    Column(
         modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -104,22 +84,7 @@ fun CameraScreen(
         )
         val valueSelectorItems by remember {
             mutableStateOf(
-                listOf(
-                    ShutterItemUI("0"),
-                    ShutterItemUI("1"),
-                    ShutterItemUI("2"),
-                    ShutterItemUI("3"),
-                    ShutterItemUI("4"),
-                    ShutterItemUI("5"),
-                    ShutterItemUI("6"),
-                    ShutterItemUI("7"),
-                    ShutterItemUI("8"),
-                    ShutterItemUI("9"),
-                    ShutterItemUI("10"),
-                    ShutterItemUI("11"),
-                    ShutterItemUI("12"),
-                    ShutterItemUI("13"),
-                )
+                state.shutterValues
             )
         }
 
@@ -174,18 +139,7 @@ fun CameraScreen(
                 }
             )
         }
-
-
-        /* ValueSelector(
-             items = valueSelectorItems,
-             adapter =adapter,
-             onSelectedItemChanged ={item->
-
-                 println(item)
-             }
-         )*/
-
-       /* AndroidView(
+        AndroidView(
             factory = {
                 AutoFitSurfaceView(
                     context,
@@ -210,8 +164,6 @@ fun CameraScreen(
                     )
                 }
             }
-        )*/
-
-    }*/
-
+        )
+    }
 }
