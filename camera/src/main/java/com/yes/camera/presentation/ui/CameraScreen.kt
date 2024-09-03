@@ -43,10 +43,6 @@ import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.shared.presentation.adapter.CompositeAdapter
 import kotlinx.coroutines.delay
 
-
-
-
-
 @Composable
 fun CameraScreen(
     context: Context,

@@ -1,4 +1,4 @@
-package com.yes.flashcamera.domain.model
+package com.yes.camera.data.repository
 
 import android.util.Range
 import android.util.Size

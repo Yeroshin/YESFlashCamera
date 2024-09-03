@@ -15,7 +15,6 @@ import android.os.Build
 import android.os.Handler
 import android.view.Surface
 import androidx.annotation.RequiresApi
-import com.yes.flashcamera.domain.model.Camera
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 

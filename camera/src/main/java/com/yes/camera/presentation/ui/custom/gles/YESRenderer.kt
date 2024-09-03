@@ -22,7 +22,7 @@ import android.opengl.GLES20.glViewport
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.SystemClock
-import com.yes.flashcamera.R
+import com.yes.camera.R
 import com.yes.camera.presentation.ui.custom.gles.OpenGLRenderer.ShaderUtils.createProgram
 import com.yes.camera.presentation.ui.custom.gles.OpenGLRenderer.ShaderUtils.createShader
 import java.nio.ByteBuffer

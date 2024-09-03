@@ -23,9 +23,10 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMV
 import androidx.activity.ComponentActivity.ACTIVITY_SERVICE
-import com.yes.flashcamera.R
-import com.yes.flashcamera.presentation.ui.Geometry.Ray
-import com.yes.flashcamera.presentation.ui.Geometry.vectorBetween
+import com.yes.camera.R
+import com.yes.camera.utils.Geometry
+import com.yes.camera.utils.Geometry.Ray
+import com.yes.camera.utils.Geometry.vectorBetween
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.microedition.khronos.egl.EGLConfig

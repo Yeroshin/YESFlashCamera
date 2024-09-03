@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -180,7 +181,7 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "Camera") {
                     composable("Camera") {
                         CameraScreen(
-                            this,
+                            LocalContext.current,
                             onButtonClick = {
                                 navController.navigate("Settings")
                             }
@@ -193,8 +194,6 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-
-
                 }
             }
         }

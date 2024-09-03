@@ -30,8 +30,8 @@ import android.opengl.GLES20.glUniform4f
 import android.opengl.GLES20.glUseProgram
 import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLSurfaceView.Renderer
-import com.yes.flashcamera.R
-import com.yes.flashcamera.presentation.MainActivity.FileUtils
+import com.yes.camera.R
+import com.yes.camera.utils.FileUtils
 import com.yes.camera.presentation.ui.custom.gles.OpenGLRenderer.ShaderUtils.createProgram
 import com.yes.camera.presentation.ui.custom.gles.OpenGLRenderer.ShaderUtils.createShader
 import java.nio.ByteBuffer
