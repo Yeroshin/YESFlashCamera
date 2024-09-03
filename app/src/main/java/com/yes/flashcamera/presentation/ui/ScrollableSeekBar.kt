@@ -7,7 +7,7 @@ import android.view.ViewTreeObserver
 import androidx.core.view.updatePaddingRelative
 import androidx.recyclerview.widget.LinearSnapHelper
 
-
+@Deprecated("not used")
 class ScrollableSeekBar(
     context: Context, attrs: AttributeSet?,
 ) : RecyclerView(context, attrs) {

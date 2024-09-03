@@ -7,7 +7,7 @@ import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewOutlineProvider
-
+@Deprecated("not used")
 class ShadowDrawableView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

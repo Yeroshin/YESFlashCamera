@@ -5,9 +5,10 @@ import android.content.Context
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
 import android.opengl.GLES20.glUniformMatrix4fv
+import com.yes.camera.presentation.ui.custom.gles.ShaderProgram
 import com.yes.flashcamera.R
 
-
+@Deprecated("test usage")
 class ColorShaderProgram(context: Context) : ShaderProgram(
     context, R.raw.simple_vertex,
     R.raw.simple_fragment

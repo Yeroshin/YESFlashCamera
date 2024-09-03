@@ -13,7 +13,7 @@ import javax.microedition.khronos.opengles.GL10
 
 
 
-
+@Deprecated("test usage")
 class AirHockeyRenderer(
     private val context: Context
 ) : GLSurfaceView.Renderer {

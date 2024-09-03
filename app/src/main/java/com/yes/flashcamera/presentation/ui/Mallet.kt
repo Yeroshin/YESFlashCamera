@@ -8,7 +8,7 @@ import android.opengl.GLES20.glVertexAttribPointer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
-
+@Deprecated("learning purpose")
 class Mallet(
     val radius:Float, val  height:Float, val numPointsAroundMallet:Int
 ) {

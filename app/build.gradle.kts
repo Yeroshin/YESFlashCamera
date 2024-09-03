@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.yes.flashcamera"
-        minSdk = 24
+        minSdk =33
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -54,6 +54,10 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared"))
+    implementation(project(":settings"))
+    implementation(project(":camera"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -68,6 +72,7 @@ dependencies {
     implementation(libs.sceneform.base)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

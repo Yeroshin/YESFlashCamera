@@ -2,10 +2,10 @@ package com.yes.flashcamera
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.yes.flashcamera.presentation.model.ShutterItemUI
-import com.yes.flashcamera.presentation.ui.CompositeAdapter
-import com.yes.flashcamera.presentation.ui.ShutterValueItemAdapterDelegate
-import com.yes.flashcamera.presentation.ui.ValueSelector
+import com.yes.camera.presentation.model.ShutterItemUI
+import com.yes.shared.presentation.adapter.CompositeAdapter
+import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
+import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 
 @Preview
 @Composable

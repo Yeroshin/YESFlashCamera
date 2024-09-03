@@ -7,7 +7,7 @@ import android.view.SoundEffectConstants
 import android.widget.RadioGroup
 import androidx.appcompat.R
 
-
+@Deprecated("not used")
 class But (
     context: Context,
     attrs: AttributeSet? = null,

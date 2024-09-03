@@ -8,8 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.ExperimentalMaterial3Api
 
-class MainActivity : ComponentActivity() {
-    private val activityResultLauncher =
+class MainActivity {//}: ComponentActivity() {
+   /* private val activityResultLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions())
         { permissions ->
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
         )
-    }
+    }*/
 }
 
 

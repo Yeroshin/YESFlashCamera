@@ -9,7 +9,7 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import javax.microedition.khronos.opengles.GL10
 
-
+@Deprecated("not used")
 object Utils {
     fun createOESTextureObject(): Int {
         val tex = IntArray(1)
