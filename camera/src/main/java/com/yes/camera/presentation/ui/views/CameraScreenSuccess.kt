@@ -2,9 +2,11 @@ package com.yes.camera.presentation.ui.views
 
 import android.content.Context
 import android.content.Context.CAMERA_SERVICE
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraManager
 import android.os.Handler
 import android.os.HandlerThread
+import android.view.MotionEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -26,13 +28,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.presentation.contract.CameraContract
-import com.yes.camera.presentation.model.ShutterItemUI
+import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
 import com.yes.camera.presentation.ui.custom.compose.DropDown
@@ -46,8 +49,9 @@ import kotlinx.coroutines.delay
 @Composable
 fun CameraScreenSuccess(
     context: Context,
-    state: CameraContract.MainState.Success,
-    onButtonClick: () -> Unit
+    state: CameraContract.CameraState.Success,
+    onSettingsClick: () -> Unit,
+    onGetSurface:(surface: SurfaceTexture) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
@@ -57,24 +61,24 @@ fun CameraScreenSuccess(
         Spacer(modifier = Modifier.height(45.dp))
         var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
         Button(onClick = {
-            onButtonClick()
+            onSettingsClick()
             autoFitSurfaceView?.setFullscreen(false)
             // navController.navigate("B")
         }) {
             Text(text = "Go to screen B", fontSize = 40.sp)
         }
 
-        val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
+      /*  val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
         val mBackgroundHandler = Handler(mBackgroundThread.looper)
         val cameraRepository =
             CameraRepository(
                 context.getSystemService(CAMERA_SERVICE) as CameraManager,
                 mBackgroundHandler
-            )
+            )*/
 
         val adapter = CompositeAdapter(
             mapOf(
-                ShutterItemUI::class.java to ShutterValueItemAdapterDelegate(),
+                SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
             )
         )
         val radioGroupItems = listOf(
@@ -82,9 +86,9 @@ fun CameraScreenSuccess(
             RadioItem(2, "ISO", R.drawable.iso),
             RadioItem(3, "FOCUS", R.drawable.metering)
         )
-        val valueSelectorItems by remember {
+        var valueSelectorItems:List<SettingsItemUI>? by remember {
             mutableStateOf(
-                state.shutterValues
+                null
             )
         }
 
@@ -111,10 +115,19 @@ fun CameraScreenSuccess(
 
                     value?.let {
                         isOpen = true
+                        when(it){
+                            1->{
+                                valueSelectorItems=state.camera.shutterValues
+                            }
+                            2->{
+                                valueSelectorItems=state.camera.isoValues
+                            }
+                            3->{}
+                        }
                     } ?: run {
                         isOpen = false
                     }
-                    radioGroupItems[0].resId = R.drawable.iso
+                  //  radioGroupItems[0].resId = R.drawable.iso
                 }
             )
         }
@@ -130,14 +143,29 @@ fun CameraScreenSuccess(
                 items = valueSelectorItems,
                 adapter = adapter,
                 onSelectedItemChanged = { index ->
-
-                    for (i in valueSelectorItems.indices) {
-                        valueSelectorItems[i].passed = i <= index
+                    valueSelectorItems?.let {
+                        for (i in it.indices) {
+                            it[i].passed = i <= index
+                        }
                     }
+
 
 
                 }
             )
+        }
+        val renderer=GLRenderer(
+            context
+        ) { surfaceTexture ->
+            onGetSurface(surfaceTexture)
+            /* cameraRepository.getBackCameraId()?.let {
+                 cameraRepository.openCamera(
+                     it
+                 ) { camera ->
+                     val cam = camera
+                     cameraRepository.createCaptureSession(surfaceTexture)
+                 }
+             }*/
         }
         AndroidView(
             factory = {
@@ -148,22 +176,43 @@ fun CameraScreenSuccess(
                     autoFitSurfaceView = it
                     it.setEGLContextClientVersion(2)
                     it.setRenderer(
-                        GLRenderer(
-                            context
-                        ) { surfaceTexture ->
-
-                            cameraRepository.getBackCameraId()?.let {
-                                cameraRepository.openCamera(
-                                    it
-                                ) { camera ->
-                                    val cam = camera
-                                    cameraRepository.createCaptureSession(surfaceTexture)
-                                }
-                            }
-                        }
+                        renderer
                     )
+                    it.setOnTouchListener { v, event ->
+                        v.performClick()
+                        if (event != null) {
+                            // Convert touch coordinates into normalized device
+                            // coordinates, keeping in mind that Android's Y
+                            // coordinates are inverted.
+                            val normalizedX =
+                                (event.x / v.width.toFloat()) * 2 - 1
+                            val normalizedY =
+                                -((event.y / v.height.toFloat()) * 2 - 1)
+
+                            if (event.action == MotionEvent.ACTION_DOWN) {
+                                //    glSurfaceView!!.queueEvent {
+
+                                it.setAspectRatio(3, 2)
+                                renderer.handleTouchPress(
+                                    normalizedX, normalizedY
+                                )
+                                //   }
+                            } else if (event.action == MotionEvent.ACTION_MOVE) {
+                                //   glSurfaceView!!.queueEvent {
+                                renderer.handleTouchDrag(
+                                    normalizedX, normalizedY
+                                )
+                                //   }
+                            }
+
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 }
             }
+
         )
     }
 }

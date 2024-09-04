@@ -15,36 +15,23 @@ import android.os.Build
 import android.os.Handler
 import android.view.Surface
 import androidx.annotation.RequiresApi
+import com.yes.camera.domain.model.Camera
+import com.yes.camera.domain.model.Dimensions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 
 class CameraRepository(
     private val cameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
 
-) {
+    ) {
 
     private var cameraDevice: CameraDevice? = null
-    private val mCameraCallback: CameraDevice.StateCallback =
-        object : CameraDevice.StateCallback() {
-
-            @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-            override fun onOpened(camera: CameraDevice) {
-                cameraDevice=camera
-                onCameraOpened?.let {
-                    it()
-                }
-            }
-
-            override fun onDisconnected(camera: CameraDevice) {
-                camera.close()
-            }
-
-            override fun onError(camera: CameraDevice, error: Int) {}
-        }
-
-    private fun getCameraByFacing(facing: Int):String?{
+    private fun getCameraByFacing(facing: Int): String? {
         cameraManager.cameraIdList.forEach {
             val characteristics = cameraManager.getCameraCharacteristics(it)
             if (characteristics.get(CameraCharacteristics.LENS_FACING) == facing) {
@@ -53,66 +40,105 @@ class CameraRepository(
         }
         return null
     }
-    fun getBackCameraId():String?{
-        return getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)
+
+    private val _cameraFlow:MutableStateFlow<Camera?> = MutableStateFlow(null)
+    private val cameraFlow: StateFlow<Camera?> = _cameraFlow
+    fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Camera?> {
+        this.glSurfaceTexture=glSurfaceTexture
+        getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+            openCamera(
+                it
+            ) {camera->
+                _cameraFlow.value=camera
+            }
+        }
+        return cameraFlow
     }
-    private var onCameraOpened:(()->Unit)?=null
+
+    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Camera?>  {
+        this.glSurfaceTexture=glSurfaceTexture
+        getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
+            openCamera(
+                it
+            ) {camera->
+                _cameraFlow.value=camera
+            }
+        }
+        return cameraFlow
+    }
+
+    // private var onCameraOpened:(()->Unit)?=null
     @SuppressLint("MissingPermission")
-    fun openCamera(id:String,onCameraOpened:(camera:Camera)->Unit) {
-       // this.onCameraOpened = onCameraOpened
-            cameraManager.openCamera(
-                id,
-                object : CameraDevice.StateCallback() {
+    private fun openCamera(id: String, onCameraOpened: (camera: Camera) -> Unit) {
+        // this.onCameraOpened = onCameraOpened
+        cameraManager.openCamera(
+            id,
+            object : CameraDevice.StateCallback() {
 
-                    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-                    override fun onOpened(camera: CameraDevice) {
-                        cameraDevice=camera
-                        onCameraOpened(
-                            getCameraCharacteristics(camera.id)
-                        )
-                    }
+                @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+                override fun onOpened(camera: CameraDevice) {
+                    cameraDevice = camera
+                    createCaptureSession()
+                    onCameraOpened(
+                        getCameraCharacteristics(camera.id)
+                    )
+                }
 
-                    override fun onDisconnected(camera: CameraDevice) {
-                        camera.close()
-                    }
+                override fun onDisconnected(camera: CameraDevice) {
+                    camera.close()
+                }
 
-                    override fun onError(camera: CameraDevice, error: Int) {}
-                },
-                mBackgroundHandler
-            )
-    }
-    fun getCameraCharacteristics(id:String): Camera{
-        val characteristics =cameraManager.getCameraCharacteristics(id)
-
-        val config = characteristics.get(
-            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-
-        // If image format is provided, use it to determine supported sizes; or else use target class
-        val allSizes =  config?.getOutputSizes(ImageReader::class.java)
-        allSizes?.maxBy { it.height * it.width }
-
-     /*   characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
-            Arrays.sort(
-                map.getOutputSizes(ImageFormat.JPEG),
-                Collections.reverseOrder { lhs, rhs -> // Cast to ensure the multiplications won't overflow
-                    java.lang.Long.signum((lhs.width.toLong() * lhs.height.toLong()) - (rhs.width.toLong() * rhs.height.toLong() ))
-                })
-        }*/
-
-        return Camera(
-            iso=characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE),
-            exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE),
-            resolutions = allSizes
+                override fun onError(camera: CameraDevice, error: Int) {
+                    println()
+                }
+            },
+            mBackgroundHandler
         )
     }
-    var previewCaptureBuilder: CaptureRequest.Builder? = null
+
+    private fun getCameraCharacteristics(id: String): Camera {
+        val characteristics = cameraManager.getCameraCharacteristics(id)
+
+        val config = characteristics.get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
+        )
+
+        // If image format is provided, use it to determine supported sizes; or else use target class
+        val allSizes = config?.getOutputSizes(ImageReader::class.java)
+        allSizes?.maxBy { it.height * it.width }
+        val iso=characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val exposure=characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        /*   characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
+               Arrays.sort(
+                   map.getOutputSizes(ImageFormat.JPEG),
+                   Collections.reverseOrder { lhs, rhs -> // Cast to ensure the multiplications won't overflow
+                       java.lang.Long.signum((lhs.width.toLong() * lhs.height.toLong()) - (rhs.width.toLong() * rhs.height.toLong() ))
+                   })
+           }*/
+
+        return Camera(
+            iso = iso?.let{IntRange(it.lower,it.upper)}?: IntRange(0,0),
+            exposure = exposure?.let{LongRange(it.lower,it.upper)}?:LongRange(0,0),
+            resolutions = allSizes?.map {
+                Dimensions(
+                    it.width,it.height
+                )
+            }?:listOf(
+                Dimensions(0,0)
+            )
+        )
+    }
+
+    private var previewCaptureBuilder: CaptureRequest.Builder? = null
+    private var glSurfaceTexture: SurfaceTexture?=null
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun createCaptureSession(glSurfaceTexture: SurfaceTexture) {
+    private fun createCaptureSession() {
 
 
         val configs = mutableListOf<OutputConfiguration>()
         //  glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
-        glSurfaceTexture.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
+       // glSurfaceTexture.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
         val surface = Surface(glSurfaceTexture)
 
         /////////////////////////////////preview
@@ -127,9 +153,9 @@ class CameraRepository(
              CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
          */
         //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-   /*     val streamUseCase = CameraMetadata
-            .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
-*/
+        /*     val streamUseCase = CameraMetadata
+                 .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
+     */
         /* targets.forEach {
              val config = OutputConfiguration(it)
              //   config.streamUseCase = streamUseCase.toLong()

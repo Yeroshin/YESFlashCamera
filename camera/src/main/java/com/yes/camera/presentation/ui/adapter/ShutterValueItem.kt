@@ -14,12 +14,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.ShutterItemUI
+import com.yes.camera.presentation.model.SettingsItemUI
 
-class ShutterValueItemAdapterDelegate : CompositeAdapter.AdapterDelegate<ShutterItemUI> {
+class ShutterValueItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SettingsItemUI> {
     @Composable
     override fun Content(
-        item: ShutterItemUI
+        item: SettingsItemUI
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

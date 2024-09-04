@@ -1,6 +1,6 @@
 package com.yes.camera.presentation.model
 
-data class ShutterItemUI(
+data class SettingsItemUI(
     val text: String,
     var passed:Boolean=false
 )

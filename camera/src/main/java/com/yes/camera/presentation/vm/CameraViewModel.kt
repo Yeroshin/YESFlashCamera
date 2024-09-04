@@ -1,54 +1,110 @@
 package com.yes.camera.presentation.vm
 
+import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.contract.CameraContract.*
-import com.yes.camera.presentation.model.ShutterItemUI
+import com.yes.camera.presentation.mapper.MapperUI
+import com.yes.camera.presentation.model.CameraUI
+import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
 
 
-class CameraViewModel: BaseViewModel<Event, State, Effect>() {
+class CameraViewModel(
+    private val mapper:MapperUI,
+    private val openCameraUseCase: OpenCameraUseCase
+): BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
     }
-    class Factory(
 
 
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return CameraViewModel(
 
-            ) as T
-        }
-    }
+
 
     override fun createInitialState(): State {
         return State(
-            MainState.Success(
-                listOf(
-                    ShutterItemUI("0"),
-                    ShutterItemUI("1"),
-                    ShutterItemUI("2"),
-                    ShutterItemUI("3"),
-                    ShutterItemUI("4"),
-                    ShutterItemUI("5"),
-                    ShutterItemUI("6"),
-                    ShutterItemUI("7"),
-                    ShutterItemUI("8"),
-                    ShutterItemUI("9"),
-                    ShutterItemUI("10"),
-                    ShutterItemUI("11"),
-                    ShutterItemUI("12"),
-                    ShutterItemUI("13"),
+            CameraState.Success(
+                CameraUI(
+                    true,
+                    listOf(
+                        SettingsItemUI("0"),
+                        SettingsItemUI("1"),
+                        SettingsItemUI("2"),
+                        SettingsItemUI("3"),
+                        SettingsItemUI("4"),
+                        SettingsItemUI("5"),
+                        SettingsItemUI("6"),
+                        SettingsItemUI("7"),
+                        SettingsItemUI("8"),
+                        SettingsItemUI("9"),
+                        SettingsItemUI("10"),
+                        SettingsItemUI("11"),
+                        SettingsItemUI("12"),
+                        SettingsItemUI("13"),
+                    ),
+                    listOf(
+                        SettingsItemUI("000"),
+                        SettingsItemUI("100"),
+                        SettingsItemUI("200"),
+                        SettingsItemUI("300"),
+                        SettingsItemUI("400"),
+                        SettingsItemUI("500"),
+                        SettingsItemUI("600"),
+                        SettingsItemUI("700"),
+                        SettingsItemUI("800"),
+                        SettingsItemUI("900"),
+                        SettingsItemUI("1000"),
+                        SettingsItemUI("1100"),
+                        SettingsItemUI("1200"),
+                        SettingsItemUI("1300"),
+                    )
                 )
+
             )
         )
     }
 
     override fun handleEvent(event: Event) {
-        TODO("Not yet implemented")
+        when (event) {
+            Event.OnGetOffers -> {}
+            is Event.OnOpenCamera -> {
+                openCamera(event.backCamera,event.surfaceTexture)
+            }
+        }
+    }
+    private fun openCamera(backCamera:Boolean,surfaceTexture: SurfaceTexture){
+        withUseCaseScope(
+            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
+            onError = { println(it.message) },
+            block = {
+                val camera=openCameraUseCase(
+                    OpenCameraUseCase.Params(backCamera,surfaceTexture)
+                )
+                setState {
+                    copy(
+                        state = CameraState.Success(
+                            camera = mapper.map(camera)
+                        )
+
+                    )
+                }
+            }
+        )
+    }
+    class Factory(
+        private val mapper:MapperUI,
+        private val openCameraUseCase: OpenCameraUseCase
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return CameraViewModel(
+                mapper,
+                openCameraUseCase
+            ) as T
+        }
     }
 }

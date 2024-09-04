@@ -2,11 +2,12 @@ package com.yes.camera.di.component
 
 import com.yes.camera.di.CameraScope
 import com.yes.camera.di.module.CameraModule
+import com.yes.shared.di.component.SharedComponent
 import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Component
 
 @Component(
-  //  dependencies = [SharedComponent::class],
+    dependencies = [SharedComponent::class],
     modules = [
         CameraModule::class
     ]

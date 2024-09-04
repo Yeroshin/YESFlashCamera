@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.devtoolsKsp)
 }
 
 android {
@@ -33,6 +34,9 @@ android {
 }
 
 dependencies {
+    //Dagger/////////////////////
+    implementation ("com.google.dagger:dagger:2.48")
+    ksp ("com.google.dagger:dagger-compiler:2.48")
     //compose
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))

@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
-    items: List<Any>,
+    items: List<Any>?,
     adapter: CompositeAdapter,
     onSelectedItemChanged: (Int) -> Unit
 ) {
@@ -70,10 +70,12 @@ fun ValueSelector(
             ),
             flingBehavior = flingBehavior
         ) {
-
-            items(items.size) { index ->
-                adapter.Content(items[index])
+            items?.let {
+                items(it.size) { index ->
+                    adapter.Content(items[index])
+                }
             }
+
         }
         VectorShadow(
             Modifier

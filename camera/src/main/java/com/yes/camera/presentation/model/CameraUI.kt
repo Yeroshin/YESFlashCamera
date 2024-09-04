@@ -3,6 +3,8 @@ package com.yes.camera.presentation.model
 import android.util.Range
 
 data class CameraUI (
-    val iso: Range<Int>? = null,
-    val exposure: Range<Long>? = null
+    val backCamera:Boolean=true,
+    val shutterValues:List<SettingsItemUI>,
+    val isoValues:List<SettingsItemUI>
+
 )

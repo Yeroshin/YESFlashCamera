@@ -1,44 +1,24 @@
 package com.yes.flashcamera.presentation
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.ActivityManager
-import android.content.Context
-import android.content.pm.PackageManager
-import android.content.res.Resources
-import android.graphics.Point
-import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.util.Size
-import android.view.MotionEvent
-import android.view.View
-import android.view.WindowInsets
-import android.widget.SeekBar
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yes.camera.data.repository.CameraRepository
 
-import com.yes.camera.presentation.model.CameraUI
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.settings.presentation.ui.SettingsScreen
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStreamReader
+
 private const val PERMISSIONS_REQUEST_CODE = 10
 class MainActivity : ComponentActivity() {
 
@@ -191,7 +171,7 @@ class MainActivity : ComponentActivity() {
                         CameraScreen(
                             LocalContext.current,
                             cameraViewModel,
-                            onButtonClick = {
+                            onSettingsClick = {
                                 navController.navigate("Settings")
                             }
                         )
@@ -232,7 +212,7 @@ class MainActivity : ComponentActivity() {
 
     private var rendererSet = false
 
-    private val renderer = GLRenderer(
+   /* private val renderer = GLRenderer(
         this
     ) { surfaceTexture ->
         cameraRepository.getBackCameraId()?.let {
@@ -240,12 +220,12 @@ class MainActivity : ComponentActivity() {
                 it
             ) { camera ->
                 val cam = camera
-                cameraRepository.createCaptureSession(surfaceTexture)
+                //cameraRepository.createCaptureSession(surfaceTexture)
             }
         }
 
 
-    }
+    }*/
 
 
     /*  @RequiresApi(Build.VERSION_CODES.TIRAMISU)

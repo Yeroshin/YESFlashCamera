@@ -7,18 +7,26 @@ abstract class UseCase<REQUEST, RESULT>(
     private val dispatcher: CoroutineDispatcher
 ) {
 
-    suspend operator fun invoke(params: REQUEST?=null): RESULT {
+    suspend operator fun invoke(params: REQUEST): RESULT {
 
         return withContext(dispatcher) {
             run(params)
         }
     }
+
     suspend operator fun invoke(): RESULT {
 
         return withContext(dispatcher) {
-            run(null)
+            run()
         }
     }
-    abstract suspend fun run(params: REQUEST?): RESULT
+
+    open suspend fun run(params: REQUEST): RESULT {
+        throw NotImplementedError("This method is optional and not implemented")
+    }
+
+    open suspend fun run(): RESULT {
+        throw NotImplementedError("This method is optional and not implemented")
+    }
 
 }
