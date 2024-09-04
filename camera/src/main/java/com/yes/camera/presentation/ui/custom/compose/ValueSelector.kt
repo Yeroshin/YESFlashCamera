@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -54,6 +55,7 @@ fun ValueSelector(
             .background(
                 Color.LightGray
             )
+            .height(80.dp)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

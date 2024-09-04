@@ -8,10 +8,14 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.view.MotionEvent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,120 +57,43 @@ fun CameraScreenSuccess(
     onSettingsClick: () -> Unit,
     onGetSurface:(surface: SurfaceTexture) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Camera", fontSize = 64.sp)
-        Spacer(modifier = Modifier.height(45.dp))
-        var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
-        Button(onClick = {
-            onSettingsClick()
-            autoFitSurfaceView?.setFullscreen(false)
-            // navController.navigate("B")
-        }) {
-            Text(text = "Go to screen B", fontSize = 40.sp)
-        }
-
-      /*  val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
-        val mBackgroundHandler = Handler(mBackgroundThread.looper)
-        val cameraRepository =
-            CameraRepository(
-                context.getSystemService(CAMERA_SERVICE) as CameraManager,
-                mBackgroundHandler
-            )*/
-
-        val adapter = CompositeAdapter(
-            mapOf(
-                SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
-            )
+    var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
+    val renderer=GLRenderer(
+        context
+    ) { surfaceTexture ->
+        onGetSurface(surfaceTexture)
+        /* cameraRepository.getBackCameraId()?.let {
+             cameraRepository.openCamera(
+                 it
+             ) { camera ->
+                 val cam = camera
+                 cameraRepository.createCaptureSession(surfaceTexture)
+             }
+         }*/
+    }
+    val adapter = CompositeAdapter(
+        mapOf(
+            SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
         )
-        val radioGroupItems = listOf(
-            RadioItem(1, "SHUTTER", R.drawable.camera),
-            RadioItem(2, "ISO", R.drawable.iso),
-            RadioItem(3, "FOCUS", R.drawable.metering)
+    )
+    val radioGroupItems = listOf(
+        RadioItem(1, "SHUTTER", R.drawable.camera),
+        RadioItem(2, "ISO", R.drawable.iso),
+        RadioItem(3, "FOCUS", R.drawable.metering)
+    )
+    var valueSelectorItems:List<SettingsItemUI>? by remember {
+        mutableStateOf(
+            null
         )
-        var valueSelectorItems:List<SettingsItemUI>? by remember {
-            mutableStateOf(
-                null
-            )
-        }
+    }
 
-        var isOpen by remember {
-            mutableStateOf(true)
-        }
-        var visible by remember {
-            mutableStateOf(false)
-        }
-        LaunchedEffect(key1 = Unit, block = {
-            delay(600L)
-            visible = true
-        })
-        AnimatedVisibility(
-            visible = visible,
-            enter = scaleIn(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            RadioGroup(
-                modifier = Modifier,
-                items = radioGroupItems,
-                onOptionSelected = { value ->
-                    println(value.toString())
-
-                    value?.let {
-                        isOpen = true
-                        when(it){
-                            1->{
-                                valueSelectorItems=state.camera.shutterValues
-                            }
-                            2->{
-                                valueSelectorItems=state.camera.isoValues
-                            }
-                            3->{}
-                        }
-                    } ?: run {
-                        isOpen = false
-                    }
-                  //  radioGroupItems[0].resId = R.drawable.iso
-                }
-            )
-        }
-
-        DropDown(
-            isOpen,
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-            //   .wrapContentHeight()
-        ) {
-            ValueSelector(
-                items = valueSelectorItems,
-                adapter = adapter,
-                onSelectedItemChanged = { index ->
-                    valueSelectorItems?.let {
-                        for (i in it.indices) {
-                            it[i].passed = i <= index
-                        }
-                    }
-
-
-
-                }
-            )
-        }
-        val renderer=GLRenderer(
-            context
-        ) { surfaceTexture ->
-            onGetSurface(surfaceTexture)
-            /* cameraRepository.getBackCameraId()?.let {
-                 cameraRepository.openCamera(
-                     it
-                 ) { camera ->
-                     val cam = camera
-                     cameraRepository.createCaptureSession(surfaceTexture)
-                 }
-             }*/
-        }
+    var isOpen by remember {
+        mutableStateOf(true)
+    }
+    var visible by remember {
+        mutableStateOf(false)
+    }
+    Box(){
         AndroidView(
             factory = {
                 AutoFitSurfaceView(
@@ -192,7 +119,7 @@ fun CameraScreenSuccess(
                             if (event.action == MotionEvent.ACTION_DOWN) {
                                 //    glSurfaceView!!.queueEvent {
 
-                                it.setAspectRatio(3, 2)
+                                //   it.setAspectRatio(3, 2)
                                 renderer.handleTouchPress(
                                     normalizedX, normalizedY
                                 )
@@ -214,5 +141,86 @@ fun CameraScreenSuccess(
             }
 
         )
+        Column(
+            modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+             Button(onClick = {
+               // onSettingsClick()
+                 visible=!visible
+              //  autoFitSurfaceView?.setFullscreen(false)
+            }) {
+                Text(text = "Go to screen B", fontSize = 40.sp)
+            }
+
+            LaunchedEffect(key1 = Unit, block = {
+                delay(1000L)
+                //visible = true
+            })
+            Column(
+                modifier = Modifier
+                    .height(80.dp)
+                    .fillMaxWidth()
+            ){
+                this@Column.AnimatedVisibility(
+                    visible = visible,
+                    enter = scaleIn() + expandHorizontally(),
+                    exit = scaleOut() + shrinkHorizontally()
+                ) {
+                    RadioGroup(
+                        modifier = Modifier,
+                        items = radioGroupItems,
+                        onOptionSelected = { value ->
+                            println(value.toString())
+
+                            value?.let {
+                                isOpen = true
+                                when(it){
+                                    1->{
+                                        valueSelectorItems=state.camera.shutterValues
+                                    }
+
+                                    2->{
+                                        valueSelectorItems=state.camera.isoValues
+                                    }
+
+                                    3->{}
+                                }
+                            } ?: run {
+                                isOpen = false
+                            }
+                            //  radioGroupItems[0].resId = R.drawable.iso
+                        }
+                    )
+                }
+
+                DropDown(
+                    isOpen,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                    //   .wrapContentHeight()
+                ) {
+                    ValueSelector(
+                        items = valueSelectorItems,
+                        adapter = adapter,
+                        onSelectedItemChanged = { index ->
+                            valueSelectorItems?.let {
+                                for (i in it.indices) {
+                                    it[i].passed = i <= index
+                                }
+                            }
+
+
+
+                        }
+                    )
+                }
+            }
+
+
+
+        }
     }
+
 }
