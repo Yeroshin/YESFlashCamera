@@ -12,22 +12,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 class RadioItem(
-    id:Int,
-    private val title:String,
-    var resId:Int,
-):RadioButton(id) {
+    id: Int,
+    private val title: String,
+    var resId: Int,
+) : RadioButton(id) {
     @Composable
     override fun item() {
 
-            /*  Image(
-                  modifier = Modifier
-                      .size(50.dp)
-                      ,
-                  painter = painterResource(
-                      id = R.drawable.camera
-                  ),
-                  contentDescription = null,
-              )*/
+        /*  Image(
+              modifier = Modifier
+                  .size(50.dp)
+                  ,
+              painter = painterResource(
+                  id = R.drawable.camera
+              ),
+              contentDescription = null,
+          )*/
         Text(
 
             text = title,
@@ -43,16 +43,14 @@ class RadioItem(
             // style = MaterialTheme.typography.body1.merge(),
             //  modifier = Modifier.padding(start = 16.dp)
         )
-            VectorShadow(
-                Modifier
-                    .size(24.dp)
+        VectorShadow(
+            Modifier
+                .size(24.dp),
+            vectorColor = Color.White,
+            shadowColor = Color.DarkGray,
+            resId = resId
+        )
 
-                ,
-                vectorColor = Color.White,
-                shadowColor = Color.DarkGray,
-                resId = resId
-            )
-
-        }
+    }
 
 }

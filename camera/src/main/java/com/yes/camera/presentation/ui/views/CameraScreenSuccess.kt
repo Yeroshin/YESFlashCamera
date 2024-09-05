@@ -1,48 +1,34 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
-import android.content.Context.CAMERA_SERVICE
 import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraManager
-import android.os.Handler
-import android.os.HandlerThread
 import android.view.MotionEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
-import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
-import com.yes.camera.presentation.ui.custom.compose.DropDown
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
@@ -62,14 +48,6 @@ fun CameraScreenSuccess(
         context
     ) { surfaceTexture ->
         onGetSurface(surfaceTexture)
-        /* cameraRepository.getBackCameraId()?.let {
-             cameraRepository.openCamera(
-                 it
-             ) { camera ->
-                 val cam = camera
-                 cameraRepository.createCaptureSession(surfaceTexture)
-             }
-         }*/
     }
     val adapter = CompositeAdapter(
         mapOf(
@@ -91,9 +69,11 @@ fun CameraScreenSuccess(
         mutableStateOf(true)
     }
     var visible by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
-    Box(){
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ){
         AndroidView(
             factory = {
                 AutoFitSurfaceView(
@@ -108,9 +88,6 @@ fun CameraScreenSuccess(
                     it.setOnTouchListener { v, event ->
                         v.performClick()
                         if (event != null) {
-                            // Convert touch coordinates into normalized device
-                            // coordinates, keeping in mind that Android's Y
-                            // coordinates are inverted.
                             val normalizedX =
                                 (event.x / v.width.toFloat()) * 2 - 1
                             val normalizedY =
@@ -142,8 +119,9 @@ fun CameraScreenSuccess(
 
         )
         Column(
-            modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxSize(),
+          //  verticalArrangement = Arrangement.Center,
+         //   horizontalAlignment = Alignment.CenterHorizontally
         ) {
              Button(onClick = {
                // onSettingsClick()
@@ -157,12 +135,10 @@ fun CameraScreenSuccess(
                 delay(1000L)
                 //visible = true
             })
-            Column(
-                modifier = Modifier
-                    .height(80.dp)
-                    .fillMaxWidth()
-            ){
-                this@Column.AnimatedVisibility(
+            val position= remember {
+                mutableIntStateOf(0)
+            }
+               AnimatedVisibility(
                     visible = visible,
                     enter = scaleIn() + expandHorizontally(),
                     exit = scaleOut() + shrinkHorizontally()
@@ -178,10 +154,12 @@ fun CameraScreenSuccess(
                                 when(it){
                                     1->{
                                         valueSelectorItems=state.camera.shutterValues
+                                        position.value=1
                                     }
 
                                     2->{
                                         valueSelectorItems=state.camera.isoValues
+                                        position.value=3
                                     }
 
                                     3->{}
@@ -194,7 +172,27 @@ fun CameraScreenSuccess(
                     )
                 }
 
-                DropDown(
+            AnimatedVisibility(
+                visible = isOpen,
+                enter = scaleIn() + expandHorizontally(),
+                exit = scaleOut() + shrinkHorizontally()
+            ) {
+                ValueSelector(
+                    position = position,
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    items = valueSelectorItems,
+                    adapter = adapter,
+                    onSelectedItemChanged = { index ->
+                        valueSelectorItems?.let {
+                            for (i in it.indices) {
+                                it[i].passed = i <= index
+                            }
+                        }
+                    }
+                )
+            }
+             /*   DropDown(
                     isOpen,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -215,12 +213,12 @@ fun CameraScreenSuccess(
 
                         }
                     )
-                }
+                }*/
             }
 
 
 
-        }
+
     }
 
 }

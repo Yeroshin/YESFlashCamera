@@ -30,6 +30,7 @@ class CameraViewModel(
             CameraState.Success(
                 CameraUI(
                     true,
+                    3,
                     listOf(
                         SettingsItemUI("0"),
                         SettingsItemUI("1"),
