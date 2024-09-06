@@ -27,9 +27,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.yes.camera.presentation.model.Item
 import kotlinx.coroutines.delay
 
-abstract class RadioButton(val id:Int){
+abstract class RadioButton(val id: Item){
 
     @Composable
     abstract fun item(
@@ -40,11 +41,11 @@ abstract class RadioButton(val id:Int){
 @Composable
 fun RadioGroup(
     modifier: Modifier,
-    onOptionSelected:((value:Int?)->Unit),
+    onOptionSelected:((value:Item?)->Unit),
     items:List<RadioButton>
 ) {
 
-    val selectedOption = remember { mutableStateOf<Int?>(null) }
+    val selectedOption = remember { mutableStateOf<Item?>(null) }
 
     val visibleStates = remember { items.map { mutableStateOf(false) } }
 
@@ -88,13 +89,6 @@ fun RadioGroup(
                                     0.5f
                                 }
                             )
-
-                            //.width(80.dp)
-                            // .fillMaxHeight()
-
-                          //  .wrapContentWidth()
-                         //   .wrapContentHeight()
-                            //  .height(60.dp)
                             .selectable(
                                 selected = (item.id == selectedOption.value),
                                 onClick = {
@@ -111,62 +105,10 @@ fun RadioGroup(
                             .padding(horizontal = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        /*  RadioButton(
-                                  selected = (text == selectedOption.value),
-                                  onClick = null
-                              )*/
-                        item.item(
-
-                        )
+                        item.item()
                     }
                 }
             }
         }
-      /*  radioOptions.forEach { value ->
-            Column(
-                Modifier
-                    .fillMaxHeight()
-                    // .height(120.dp)
-                    .selectable(
-                        selected = (value == selectedOption.value),
-                        onClick = {
-                            if (value == selectedOption.value) {
-                                selectedOption.value = null
-                                onOptionSelected(null)
-                            } else {
-                                selectedOption.value = value
-                                onOptionSelected(value)
-                            }
-                        },
-                        role = Role.RadioButton
-                    )
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-              /*  RadioButton(
-                    selected = (text == selectedOption.value),
-                    onClick = null
-                )*/
-                items[0].item( )
-                Column {
-                  /*  Image(
-                        modifier = Modifier
-                            .size(50.dp)
-                            ,
-                        painter = painterResource(
-                            id = R.drawable.camera
-                        ),
-                        contentDescription = null,
-                    )*/
-                    VectorShadow(R.drawable.camera)
-                    Text(
-                        text = value.toString(),
-                        // style = MaterialTheme.typography.body1.merge(),
-                        //  modifier = Modifier.padding(start = 16.dp)
-                    )
-                }
-
-            }
-        }*/
     }
 }

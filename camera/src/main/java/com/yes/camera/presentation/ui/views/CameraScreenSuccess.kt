@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.views
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.view.MotionEvent
+import androidx.collection.mutableObjectIntMapOf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.scaleIn
@@ -16,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -25,7 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
-import com.yes.camera.presentation.contract.CameraContract
+import com.yes.camera.presentation.model.Characteristic
+import com.yes.camera.presentation.model.CharacteristicsUI
+import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
@@ -39,10 +43,12 @@ import kotlinx.coroutines.delay
 @Composable
 fun CameraScreenSuccess(
     context: Context,
-    state: CameraContract.CameraState.Success,
+    characteristicsInitial: CharacteristicsUI,
     onSettingsClick: () -> Unit,
     onGetSurface:(surface: SurfaceTexture) -> Unit,
+    onCharacteristicChanged:(characteristics:CharacteristicsUI)->Unit
 ) {
+    var characteristics =characteristicsInitial
     var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
     val renderer=GLRenderer(
         context
@@ -54,11 +60,43 @@ fun CameraScreenSuccess(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
         )
     )
+
+   /* val radioGroupItems = characteristics.characteristics.map{ item ->
+            when (item.key) {
+                Item.SHUTTER -> RadioItem(
+                    item.key,
+                    item.value.title,
+                    R.drawable.camera
+                )
+
+                Item.ISO -> RadioItem(
+                    item.key,
+                    item.value.title,
+                    R.drawable.iso
+                )
+
+                Item.FOCUS -> RadioItem(
+                    item.key,
+                    item.value.title,
+                    R.drawable.center_focus
+                )
+            }
+    }*/
     val radioGroupItems = listOf(
+        RadioItem(Item.SHUTTER, "SHUTTER", R.drawable.camera),
+        RadioItem(Item.ISO, "ISO", R.drawable.iso),
+        RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
+    )
+
+
+
+
+
+   /* val radioGroupItems = listOf(
         RadioItem(1, "SHUTTER", R.drawable.camera),
         RadioItem(2, "ISO", R.drawable.iso),
         RadioItem(3, "FOCUS", R.drawable.metering)
-    )
+    )*/
     var valueSelectorItems:List<SettingsItemUI>? by remember {
         mutableStateOf(
             null
@@ -138,6 +176,9 @@ fun CameraScreenSuccess(
             val position= remember {
                 mutableIntStateOf(0)
             }
+            var selectedCharacteristic:MutableState<Item?> = remember {
+                mutableStateOf(null)
+            }
                AnimatedVisibility(
                     visible = visible,
                     enter = scaleIn() + expandHorizontally(),
@@ -148,25 +189,36 @@ fun CameraScreenSuccess(
                         items = radioGroupItems,
                         onOptionSelected = { value ->
                             println(value.toString())
-
-                            value?.let {
+                            selectedCharacteristic.value=value
+                            characteristics.characteristics[value]
+                            valueSelectorItems= characteristics.characteristics[value]?.items
+                            position.intValue= when(value){
+                                Item.SHUTTER -> characteristics.shutterValue
+                                Item.ISO -> characteristics.isoValue
+                                Item.FOCUS -> characteristics.focusValue
+                                null -> 0
+                            }
+                            value?.let {isOpen=true}?:run{isOpen=false}
+                           /* value?.let {
                                 isOpen = true
+
+
                                 when(it){
-                                    1->{
-                                        valueSelectorItems=state.camera.shutterValues
+                                    Item.SHUTTER->{
+                                        valueSelectorItems=characteristics.shutterValues
                                         position.value=1
                                     }
 
-                                    2->{
-                                        valueSelectorItems=state.camera.isoValues
+                                    Item.ISO->{
+                                        valueSelectorItems=characteristics.isoValues
                                         position.value=3
                                     }
 
-                                    3->{}
+                                    Item.FOCUS->{}
                                 }
                             } ?: run {
                                 isOpen = false
-                            }
+                            }*/
                             //  radioGroupItems[0].resId = R.drawable.iso
                         }
                     )
@@ -184,6 +236,24 @@ fun CameraScreenSuccess(
                     items = valueSelectorItems,
                     adapter = adapter,
                     onSelectedItemChanged = { index ->
+
+                        characteristics = when(selectedCharacteristic.value){
+                            Item.SHUTTER -> characteristics.copy(
+                                shutterValue= index
+                            )
+                            Item.ISO -> characteristics.copy(
+                                isoValue = index
+                            )
+                            Item.FOCUS -> characteristics.copy(
+                                focusValue =  index
+                            )
+                            null -> characteristics.copy()
+                        }
+                           onCharacteristicChanged(
+                               characteristics
+                           )
+
+
                         valueSelectorItems?.let {
                             for (i in it.indices) {
                                 it[i].passed = i <= index

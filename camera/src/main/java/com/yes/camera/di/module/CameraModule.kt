@@ -9,6 +9,7 @@ import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
+import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
@@ -18,7 +19,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 @Module
 class CameraModule {
     @Provides
-    fun providesMapper(): MapperUI {
+    fun providesMapper(
+    ): MapperUI {
         return MapperUI()
     }
 

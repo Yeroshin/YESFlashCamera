@@ -15,11 +15,9 @@ import android.os.Build
 import android.os.Handler
 import android.view.Surface
 import androidx.annotation.RequiresApi
-import com.yes.camera.domain.model.Camera
 import com.yes.camera.domain.model.Dimensions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -41,35 +39,35 @@ class CameraRepository(
         return null
     }
 
-    private val _cameraFlow:MutableStateFlow<Camera?> = MutableStateFlow(null)
-    private val cameraFlow: StateFlow<Camera?> = _cameraFlow
-    fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Camera?> {
+    private val _CharacteristicsFlow:MutableStateFlow<com.yes.camera.domain.model.Characteristics?> = MutableStateFlow(null)
+    private val characteristicsFlow: StateFlow<com.yes.camera.domain.model.Characteristics?> = _CharacteristicsFlow
+    fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?> {
         this.glSurfaceTexture=glSurfaceTexture
         getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
             openCamera(
                 it
             ) {camera->
-                _cameraFlow.value=camera
+                _CharacteristicsFlow.value=camera
             }
         }
-        return cameraFlow
+        return characteristicsFlow
     }
 
-    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Camera?>  {
+    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?>  {
         this.glSurfaceTexture=glSurfaceTexture
         getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
             openCamera(
                 it
             ) {camera->
-                _cameraFlow.value=camera
+                _CharacteristicsFlow.value=camera
             }
         }
-        return cameraFlow
+        return characteristicsFlow
     }
 
     // private var onCameraOpened:(()->Unit)?=null
     @SuppressLint("MissingPermission")
-    private fun openCamera(id: String, onCameraOpened: (camera: Camera) -> Unit) {
+    private fun openCamera(id: String, onCameraOpened: (characteristics: com.yes.camera.domain.model.Characteristics) -> Unit) {
         // this.onCameraOpened = onCameraOpened
         cameraManager.openCamera(
             id,
@@ -96,7 +94,7 @@ class CameraRepository(
         )
     }
 
-    private fun getCameraCharacteristics(id: String): Camera {
+    private fun getCameraCharacteristics(id: String): com.yes.camera.domain.model.Characteristics {
         val characteristics = cameraManager.getCameraCharacteristics(id)
 
         val config = characteristics.get(
@@ -116,9 +114,9 @@ class CameraRepository(
                    })
            }*/
 
-        return Camera(
-            iso = iso?.let{IntRange(it.lower,it.upper)}?: IntRange(0,0),
-            exposure = exposure?.let{LongRange(it.lower,it.upper)}?:LongRange(0,0),
+        return com.yes.camera.domain.model.Characteristics(
+            isoRange = iso?.let{IntRange(it.lower,it.upper)}?: IntRange(0,0),
+            shutterRange = exposure?.let{LongRange(it.lower,it.upper)}?:LongRange(0,0),
             resolutions = allSizes?.map {
                 Dimensions(
                     it.width,it.height

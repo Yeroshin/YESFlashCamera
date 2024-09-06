@@ -5,13 +5,11 @@ import com.yes.camera.R
 import org.xmlpull.v1.XmlPullParser
 
 class ShutterSpeedsResourcesProvider(val context: Context) {
-    private val shutterSpeeds = mutableMapOf<String, String>()
-    private var inShutterSpeedsSection = false
-    private var currentTag: String? = null
-
-
 
     fun getShutterSpeeds() :Map<String, String>{
+        val shutterSpeeds = mutableMapOf<String, String>()
+        var inShutterSpeedsSection = false
+        var currentTag: String? = null
         var value: String? = null
         var time: String? = null
         val parser=context.resources.getXml(R.xml.shutter_speeds)

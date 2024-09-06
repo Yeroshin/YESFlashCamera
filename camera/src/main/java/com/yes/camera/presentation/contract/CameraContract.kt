@@ -1,8 +1,7 @@
 package com.yes.camera.presentation.contract
 
 import android.graphics.SurfaceTexture
-import com.yes.camera.presentation.model.CameraUI
-import com.yes.camera.presentation.model.SettingsItemUI
+import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseViewModel.*
 
 class CameraContract {
@@ -11,6 +10,9 @@ class CameraContract {
         data class OnOpenCamera(
             val backCamera:Boolean,
             val surfaceTexture: SurfaceTexture
+        ): Event()
+        data class OnSetCharacteristics(
+            val characteristics:CharacteristicsUI
         ): Event()
 
     }
@@ -22,7 +24,7 @@ class CameraContract {
         data object Idle : CameraState()
         data object Loading : CameraState()
         data class Success(
-            val camera:CameraUI,
+            val characteristics:CharacteristicsUI,
        ): CameraState()
 
     }

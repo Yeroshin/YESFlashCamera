@@ -22,16 +22,23 @@ fun CameraScreen(
         CameraContract.CameraState.Idle -> { }
         CameraContract.CameraState.Loading -> {}
         is CameraContract.CameraState.Success -> CameraScreenSuccess(
-            context,
-            state ,
-            onSettingsClick
-        ) {surfaceTexture->
+            context = context,
+            characteristicsInitial = state.characteristics ,
+            onSettingsClick = onSettingsClick,
+            onGetSurface = {surfaceTexture->
             surfaceTexture.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
             cameraViewModel.setEvent(
                 CameraContract.Event.OnOpenCamera(true,surfaceTexture)
             )
-        }
+        },
+            onCharacteristicChanged = {characteristics->
+                cameraViewModel.setEvent(
+                    CameraContract.Event.OnSetCharacteristics(characteristics)
+                )
+            }
+        )
     }
+
     val shutterSpeeds = ShutterSpeedsResourcesProvider(LocalContext.current).getShutterSpeeds()
     // ResourcesProvider(LocalContext.current).getString()
 

@@ -4,10 +4,9 @@ import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.yes.camera.domain.usecase.OpenCameraUseCase
-import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.contract.CameraContract.*
 import com.yes.camera.presentation.mapper.MapperUI
-import com.yes.camera.presentation.model.CameraUI
+import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
@@ -28,43 +27,7 @@ class CameraViewModel(
     override fun createInitialState(): State {
         return State(
             CameraState.Success(
-                CameraUI(
-                    true,
-                    3,
-                    listOf(
-                        SettingsItemUI("0"),
-                        SettingsItemUI("1"),
-                        SettingsItemUI("2"),
-                        SettingsItemUI("3"),
-                        SettingsItemUI("4"),
-                        SettingsItemUI("5"),
-                        SettingsItemUI("6"),
-                        SettingsItemUI("7"),
-                        SettingsItemUI("8"),
-                        SettingsItemUI("9"),
-                        SettingsItemUI("10"),
-                        SettingsItemUI("11"),
-                        SettingsItemUI("12"),
-                        SettingsItemUI("13"),
-                    ),
-                    listOf(
-                        SettingsItemUI("000"),
-                        SettingsItemUI("100"),
-                        SettingsItemUI("200"),
-                        SettingsItemUI("300"),
-                        SettingsItemUI("400"),
-                        SettingsItemUI("500"),
-                        SettingsItemUI("600"),
-                        SettingsItemUI("700"),
-                        SettingsItemUI("800"),
-                        SettingsItemUI("900"),
-                        SettingsItemUI("1000"),
-                        SettingsItemUI("1100"),
-                        SettingsItemUI("1200"),
-                        SettingsItemUI("1300"),
-                    )
-                )
-
+                CharacteristicsUI()
             )
         )
     }
@@ -74,6 +37,10 @@ class CameraViewModel(
             Event.OnGetOffers -> {}
             is Event.OnOpenCamera -> {
                 openCamera(event.backCamera,event.surfaceTexture)
+            }
+
+            is Event.OnSetCharacteristics -> {
+                println()
             }
         }
     }
@@ -88,7 +55,7 @@ class CameraViewModel(
                 setState {
                     copy(
                         state = CameraState.Success(
-                            camera = mapper.map(camera)
+                            characteristics = mapper.map(camera)
                         )
 
                     )

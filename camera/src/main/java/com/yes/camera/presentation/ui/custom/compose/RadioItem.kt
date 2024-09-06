@@ -10,11 +10,12 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yes.camera.presentation.model.Item
 
 class RadioItem(
-    id: Int,
+    id: Item,
     private val title: String,
-    var resId: Int,
+    private var resId: Int,
 ) : RadioButton(id) {
     @Composable
     override fun item() {
