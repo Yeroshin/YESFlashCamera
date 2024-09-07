@@ -6,7 +6,7 @@ import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
 
-class MapperUI() {
+class MapperUI {
 
     fun map(characteristics:Characteristics):CharacteristicsUI{
 

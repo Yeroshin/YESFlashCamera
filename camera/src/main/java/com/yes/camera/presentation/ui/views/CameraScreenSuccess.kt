@@ -60,43 +60,12 @@ fun CameraScreenSuccess(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
         )
     )
-
-   /* val radioGroupItems = characteristics.characteristics.map{ item ->
-            when (item.key) {
-                Item.SHUTTER -> RadioItem(
-                    item.key,
-                    item.value.title,
-                    R.drawable.camera
-                )
-
-                Item.ISO -> RadioItem(
-                    item.key,
-                    item.value.title,
-                    R.drawable.iso
-                )
-
-                Item.FOCUS -> RadioItem(
-                    item.key,
-                    item.value.title,
-                    R.drawable.center_focus
-                )
-            }
-    }*/
     val radioGroupItems = listOf(
         RadioItem(Item.SHUTTER, "SHUTTER", R.drawable.camera),
         RadioItem(Item.ISO, "ISO", R.drawable.iso),
         RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
     )
 
-
-
-
-
-   /* val radioGroupItems = listOf(
-        RadioItem(1, "SHUTTER", R.drawable.camera),
-        RadioItem(2, "ISO", R.drawable.iso),
-        RadioItem(3, "FOCUS", R.drawable.metering)
-    )*/
     var valueSelectorItems:List<SettingsItemUI>? by remember {
         mutableStateOf(
             null
@@ -158,8 +127,6 @@ fun CameraScreenSuccess(
         )
         Column(
             modifier = Modifier.fillMaxSize(),
-          //  verticalArrangement = Arrangement.Center,
-         //   horizontalAlignment = Alignment.CenterHorizontally
         ) {
              Button(onClick = {
                // onSettingsClick()

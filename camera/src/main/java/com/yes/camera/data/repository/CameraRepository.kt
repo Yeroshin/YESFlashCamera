@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -76,7 +77,9 @@ class CameraRepository(
                 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera
-                    createCaptureSession()
+                  //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                    setCharacteristics(51200)
+                   createCaptureSession()
                     onCameraOpened(
                         getCameraCharacteristics(camera.id)
                     )
@@ -115,7 +118,9 @@ class CameraRepository(
            }*/
 
         return com.yes.camera.domain.model.Characteristics(
+            isoValue = 0,
             isoRange = iso?.let{IntRange(it.lower,it.upper)}?: IntRange(0,0),
+            shutterValue = 0,
             shutterRange = exposure?.let{LongRange(it.lower,it.upper)}?:LongRange(0,0),
             resolutions = allSizes?.map {
                 Dimensions(
@@ -130,18 +135,26 @@ class CameraRepository(
     private var previewCaptureBuilder: CaptureRequest.Builder? = null
     private var glSurfaceTexture: SurfaceTexture?=null
 
+    fun setCharacteristics(iso:Int){
+      //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+       // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
+        createCaptureSession()
+    }
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
 
 
-        val configs = mutableListOf<OutputConfiguration>()
+
         //  glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
        // glSurfaceTexture.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
-        val surface = Surface(glSurfaceTexture)
 
         /////////////////////////////////preview
-        previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        previewCaptureBuilder?.addTarget(surface)
+       // previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+
         /* previewCaptureBuilder?.set(
              CaptureRequest.CONTROL_AE_MODE,
              CameraMetadata.CONTROL_AE_MODE_OFF
@@ -159,11 +172,11 @@ class CameraRepository(
              //   config.streamUseCase = streamUseCase.toLong()
              configs.add(config)
          }*/
+        val surface = Surface(glSurfaceTexture)
+        previewCaptureBuilder?.addTarget(surface)
+        val configs = mutableListOf<OutputConfiguration>()
         val conf = OutputConfiguration(surface)
         configs.add(conf)
-        /*  val conf2 = OutputConfiguration(surface2)
-          configs.add(conf2)*/
-
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
@@ -171,7 +184,7 @@ class CameraRepository(
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
-                        // session.stopRepeating()
+                         session.stopRepeating()
                         previewCaptureBuilder?.let {
                             session.setRepeatingRequest(
                                 it.build(),
