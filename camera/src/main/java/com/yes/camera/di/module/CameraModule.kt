@@ -16,6 +16,7 @@ import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.CoroutineDispatcher
+import javax.inject.Singleton
 
 @Module
 class CameraModule {
@@ -24,7 +25,7 @@ class CameraModule {
     ): MapperUI {
         return MapperUI()
     }
-
+@Singleton
     @Provides
     fun providesCameraRepository(
         context: Context

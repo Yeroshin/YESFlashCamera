@@ -8,7 +8,7 @@ import dagger.Component
 import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Singleton
 
-@Singleton
+
 @Component(
     modules = [
         SharedModule::class,

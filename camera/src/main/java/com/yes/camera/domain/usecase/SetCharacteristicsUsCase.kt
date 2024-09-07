@@ -14,11 +14,11 @@ class SetCharacteristicsUsCase(
 ) : UseCase<SetCharacteristicsUsCase.Params, Unit>(dispatcher) {
     override suspend fun run(params: Params) {
 
-        cameraRepository.setCharacteristics(params.iso)
+        cameraRepository.setCharacteristics(params.characteristics)
 
     }
 
     data class Params(
-        val iso:Int
+        val characteristics:Characteristics
     )
 }

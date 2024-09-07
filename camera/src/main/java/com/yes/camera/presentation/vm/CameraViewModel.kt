@@ -43,17 +43,19 @@ class CameraViewModel(
             }
 
             is Event.OnSetCharacteristics -> {
-                setCharacteristics(event.characteristics.isoValue)
+                setCharacteristics(event.characteristics)
             }
         }
     }
-    private fun setCharacteristics(iso:Int){
+    private fun setCharacteristics(characteristics:CharacteristicsUI){
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
                 val camera=setCharacteristicsUsCase(
-                    SetCharacteristicsUsCase.Params(iso*100*2)
+                    SetCharacteristicsUsCase.Params(
+                        mapper.map(characteristics)
+                    )
                 )
                /* setState {
                     copy(

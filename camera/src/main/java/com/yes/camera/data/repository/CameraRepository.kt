@@ -7,7 +7,6 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -16,6 +15,7 @@ import android.os.Build
 import android.os.Handler
 import android.view.Surface
 import androidx.annotation.RequiresApi
+import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
@@ -78,7 +78,7 @@ class CameraRepository(
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera
                   //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                    setCharacteristics(51200)
+                   // setCharacteristics(51200)
                    createCaptureSession()
                     onCameraOpened(
                         getCameraCharacteristics(camera.id)
@@ -109,6 +109,9 @@ class CameraRepository(
         allSizes?.maxBy { it.height * it.width }
         val iso=characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
         val exposure=characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val minFocusDistance =
+            characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val minFocus = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         /*   characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
                Arrays.sort(
                    map.getOutputSizes(ImageFormat.JPEG),
@@ -117,10 +120,12 @@ class CameraRepository(
                    })
            }*/
 
-        return com.yes.camera.domain.model.Characteristics(
+        return Characteristics(
             isoValue = 0,
             isoRange = iso?.let{IntRange(it.lower,it.upper)}?: IntRange(0,0),
             shutterValue = 0,
+            focusValue = 0F,
+            minFocusValue = minFocusDistance?:0f,
             shutterRange = exposure?.let{LongRange(it.lower,it.upper)}?:LongRange(0,0),
             resolutions = allSizes?.map {
                 Dimensions(
@@ -135,15 +140,24 @@ class CameraRepository(
     private var previewCaptureBuilder: CaptureRequest.Builder? = null
     private var glSurfaceTexture: SurfaceTexture?=null
 
-    fun setCharacteristics(iso:Int){
-      //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
-        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+    fun setCharacteristics(characteristics: Characteristics){
+        previewCaptureBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
 
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+        previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+        //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+
+      //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
+        previewCaptureBuilder?.let {
+            sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
+        }
+
        // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
-        createCaptureSession()
-    }
+       // createCaptureSession()
 
+    }
+var sessio: CameraCaptureSession?=null
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
 
@@ -173,6 +187,7 @@ class CameraRepository(
              configs.add(config)
          }*/
         val surface = Surface(glSurfaceTexture)
+        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         previewCaptureBuilder?.addTarget(surface)
         val configs = mutableListOf<OutputConfiguration>()
         val conf = OutputConfiguration(surface)
@@ -184,9 +199,10 @@ class CameraRepository(
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
-                         session.stopRepeating()
+                        sessio = session
+                         //session.stopRepeating()
                         previewCaptureBuilder?.let {
-                            session.setRepeatingRequest(
+                            sessio?.setRepeatingRequest(
                                 it.build(),
                                 null,// cameraCaptureSessionCaptureCallback,
                                 mBackgroundHandler
