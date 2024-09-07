@@ -3,7 +3,6 @@ package com.yes.camera.presentation.ui.views
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.view.MotionEvent
-import androidx.collection.mutableObjectIntMapOf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.scaleIn
@@ -27,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
-import com.yes.camera.presentation.model.Characteristic
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
@@ -45,12 +43,12 @@ fun CameraScreenSuccess(
     context: Context,
     characteristicsInitial: CharacteristicsUI,
     onSettingsClick: () -> Unit,
-    onGetSurface:(surface: SurfaceTexture) -> Unit,
-    onCharacteristicChanged:(characteristics:CharacteristicsUI)->Unit
+    onGetSurface: (surface: SurfaceTexture) -> Unit,
+    onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
-    var characteristics =characteristicsInitial
+    var characteristics = characteristicsInitial
     var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
-    val renderer=GLRenderer(
+    val renderer = GLRenderer(
         context
     ) { surfaceTexture ->
         onGetSurface(surfaceTexture)
@@ -60,27 +58,12 @@ fun CameraScreenSuccess(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
         )
     )
-    val radioGroupItems = listOf(
-        RadioItem(Item.SHUTTER, "SHUTTER", R.drawable.camera),
-        RadioItem(Item.ISO, "ISO", R.drawable.iso),
-        RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
-    )
 
-    var valueSelectorItems:List<SettingsItemUI>? by remember {
-        mutableStateOf(
-            null
-        )
-    }
 
-    var isOpen by remember {
-        mutableStateOf(true)
-    }
-    var visible by remember {
-        mutableStateOf(true)
-    }
+
     Box(
         modifier = Modifier.fillMaxSize()
-    ){
+    ) {
         AndroidView(
             factory = {
                 AutoFitSurfaceView(
@@ -128,10 +111,33 @@ fun CameraScreenSuccess(
         Column(
             modifier = Modifier.fillMaxSize(),
         ) {
-             Button(onClick = {
-               // onSettingsClick()
-                 visible=!visible
-              //  autoFitSurfaceView?.setFullscreen(false)
+            var visibleRadioGroup by remember {
+                mutableStateOf(true)
+            }
+            var visibleSelector by remember {
+                mutableStateOf(true)
+            }
+            val position = remember {
+                mutableIntStateOf(0)
+            }
+            var selectedCharacteristic: MutableState<Item?> = remember {
+                mutableStateOf(null)
+            }
+            val radioGroupItems = listOf(
+                RadioItem(Item.SHUTTER, "SHUTTER", R.drawable.camera),
+                RadioItem(Item.ISO, "ISO", R.drawable.iso),
+                RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
+            )
+
+            var valueSelectorItems: List<SettingsItemUI>? by remember {
+                mutableStateOf(
+                    null
+                )
+            }
+            Button(onClick = {
+                // onSettingsClick()
+                visibleRadioGroup = !visibleRadioGroup
+                //  autoFitSurfaceView?.setFullscreen(false)
             }) {
                 Text(text = "Go to screen B", fontSize = 40.sp)
             }
@@ -140,59 +146,56 @@ fun CameraScreenSuccess(
                 delay(1000L)
                 //visible = true
             })
-            val position= remember {
-                mutableIntStateOf(0)
-            }
-            var selectedCharacteristic:MutableState<Item?> = remember {
-                mutableStateOf(null)
-            }
-               AnimatedVisibility(
-                    visible = visible,
-                    enter = scaleIn() + expandHorizontally(),
-                    exit = scaleOut() + shrinkHorizontally()
-                ) {
-                    RadioGroup(
-                        modifier = Modifier,
-                        items = radioGroupItems,
-                        onOptionSelected = { value ->
-                            println(value.toString())
-                            selectedCharacteristic.value=value
-                            characteristics.characteristics[value]
-                            valueSelectorItems= characteristics.characteristics[value]?.items
-                            position.intValue= when(value){
-                                Item.SHUTTER -> characteristics.shutterValue
-                                Item.ISO -> characteristics.isoValue
-                                Item.FOCUS -> characteristics.focusValue
-                                null -> 0
-                            }
-                            value?.let {isOpen=true}?:run{isOpen=false}
-                           /* value?.let {
-                                isOpen = true
 
 
-                                when(it){
-                                    Item.SHUTTER->{
-                                        valueSelectorItems=characteristics.shutterValues
-                                        position.value=1
-                                    }
 
-                                    Item.ISO->{
-                                        valueSelectorItems=characteristics.isoValues
-                                        position.value=3
-                                    }
-
-                                    Item.FOCUS->{}
-                                }
-                            } ?: run {
-                                isOpen = false
-                            }*/
-                            //  radioGroupItems[0].resId = R.drawable.iso
-                        }
-                    )
-                }
 
             AnimatedVisibility(
-                visible = isOpen,
+                visible = visibleRadioGroup,
+                enter = scaleIn() + expandHorizontally(),
+                exit = scaleOut() + shrinkHorizontally()
+            ) {
+                RadioGroup(
+                    modifier = Modifier,
+                    items = radioGroupItems,
+                    onOptionSelected = { value ->
+                        println(value.toString())
+                        selectedCharacteristic.value = value
+                        characteristics.characteristics[value]
+                        valueSelectorItems = characteristics.characteristics[value]?.items
+                        position.intValue = when (value) {
+                            Item.SHUTTER -> characteristics.shutterValue
+                            Item.ISO -> characteristics.isoValue
+                            Item.FOCUS -> characteristics.focusValue
+                            null -> 0
+                        }
+                        value?.let { visibleSelector = true } ?: run { visibleSelector = false }
+                        /* value?.let {
+                             isOpen = true
+
+
+                             when(it){
+                                 Item.SHUTTER->{
+                                     valueSelectorItems=characteristics.shutterValues
+                                     position.value=1
+                                 }
+
+                                 Item.ISO->{
+                                     valueSelectorItems=characteristics.isoValues
+                                     position.value=3
+                                 }
+
+                                 Item.FOCUS->{}
+                             }
+                         } ?: run {
+                             isOpen = false
+                         }*/
+                        //  radioGroupItems[0].resId = R.drawable.iso
+                    }
+                )
+            }
+            AnimatedVisibility(
+                visible = visibleSelector,
                 enter = scaleIn() + expandHorizontally(),
                 exit = scaleOut() + shrinkHorizontally()
             ) {
@@ -204,21 +207,24 @@ fun CameraScreenSuccess(
                     adapter = adapter,
                     onSelectedItemChanged = { index ->
 
-                        characteristics = when(selectedCharacteristic.value){
+                        characteristics = when (selectedCharacteristic.value) {
                             Item.SHUTTER -> characteristics.copy(
-                                shutterValue= index
+                                shutterValue = index
                             )
+
                             Item.ISO -> characteristics.copy(
                                 isoValue = index
                             )
+
                             Item.FOCUS -> characteristics.copy(
-                                focusValue =  index
+                                focusValue = index
                             )
+
                             null -> characteristics.copy()
                         }
-                           onCharacteristicChanged(
-                               characteristics
-                           )
+                        onCharacteristicChanged(
+                            characteristics
+                        )
 
 
                         valueSelectorItems?.let {
@@ -229,31 +235,81 @@ fun CameraScreenSuccess(
                     }
                 )
             }
-             /*   DropDown(
-                    isOpen,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                    //   .wrapContentHeight()
-                ) {
-                    ValueSelector(
-                        items = valueSelectorItems,
-                        adapter = adapter,
-                        onSelectedItemChanged = { index ->
-                            valueSelectorItems?.let {
-                                for (i in it.indices) {
-                                    it[i].passed = i <= index
-                                }
-                            }
+            /*   DropDown(
+                   isOpen,
+                   modifier = Modifier
+                       .fillMaxWidth()
+                       .wrapContentHeight()
+                   //   .wrapContentHeight()
+               ) {
+                   ValueSelector(
+                       items = valueSelectorItems,
+                       adapter = adapter,
+                       onSelectedItemChanged = { index ->
+                           valueSelectorItems?.let {
+                               for (i in it.indices) {
+                                   it[i].passed = i <= index
+                               }
+                           }
 
 
 
-                        }
-                    )
-                }*/
+                       }
+                   )
+               }*/
+            /////////////////////magnifier
+            var visibleSelectorMagnifier by remember {
+                mutableStateOf(true)
             }
-
-
+            Button(onClick = {
+                // onSettingsClick()
+                visibleSelectorMagnifier = !visibleSelectorMagnifier
+                //  autoFitSurfaceView?.setFullscreen(false)
+            }) {
+                Text(text = "Magnifier", fontSize = 40.sp)
+            }
+            var magnifierSelectorItems: List<SettingsItemUI> by remember {
+                mutableStateOf(
+                    listOf(
+                        SettingsItemUI("1"),
+                        SettingsItemUI("2"),
+                        SettingsItemUI("3"),
+                        SettingsItemUI("4"),
+                        SettingsItemUI("5"),
+                        SettingsItemUI("6"),
+                        SettingsItemUI("7"),
+                        SettingsItemUI("8"),
+                        SettingsItemUI("9"),
+                        SettingsItemUI("10"),
+                    )
+                )
+            }
+            AnimatedVisibility(
+                visible = visibleSelectorMagnifier,
+                enter = scaleIn() + expandHorizontally(),
+                exit = scaleOut() + shrinkHorizontally()
+            ) {
+                ValueSelector(
+                    position = position,
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    items = magnifierSelectorItems,
+                    adapter = adapter,
+                    onSelectedItemChanged = { index ->
+                        renderer.configureMagnifier(
+                            magnifierSelectorItems[index].text.toFloat(),
+                            0.2f,
+                            0.4f
+                        )
+                        valueSelectorItems?.let {
+                            for (i in it.indices) {
+                                it[i].passed = i <= index
+                            }
+                        }
+                    }
+                )
+            }
+        }
 
 
     }

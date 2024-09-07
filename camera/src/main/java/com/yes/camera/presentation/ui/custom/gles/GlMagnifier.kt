@@ -7,7 +7,7 @@ import com.yes.camera.utils.Geometry
 
 class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
     GLRenderer.GLObject(glShaderProgram) {
-    private var magnification = 2.0f
+    private var magnification = 4.0f
     private var magnifierSizeW = 0.5f
     private var magnifierSizeH = 0.5f
     private var ratio = 1f

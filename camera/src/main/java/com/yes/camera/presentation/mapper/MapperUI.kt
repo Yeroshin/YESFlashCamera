@@ -122,6 +122,7 @@ class MapperUI {
                     value = 0,
                     title = "Focus",
                     items= listOf(
+                        SettingsItemUI("0.2"),
                     SettingsItemUI("1"),
                         SettingsItemUI("2"),
                         SettingsItemUI("3"),
@@ -133,6 +134,12 @@ class MapperUI {
                         SettingsItemUI("9"),
                         SettingsItemUI("9.5"),
                     SettingsItemUI("10"),
+                        SettingsItemUI("11"),
+                        SettingsItemUI("12"),
+                        SettingsItemUI("13"),
+                        SettingsItemUI("14"),
+                        SettingsItemUI("15"),
+
                     )
                 )
             )

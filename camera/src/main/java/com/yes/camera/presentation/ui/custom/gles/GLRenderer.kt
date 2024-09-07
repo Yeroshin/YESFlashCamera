@@ -135,6 +135,21 @@ class GLRenderer(
         }
     }
 
+    fun configureMagnifier(
+        magnification: Float,
+        magnifierSizeW: Float,
+        magnifierSizeH: Float,
+    ) {
+        if(glObjects.size>1){
+            (glObjects[1] as GlMagnifier).configure(
+                magnification,
+                magnifierSizeW,
+                magnifierSizeH,
+            )
+        }
+
+    }
+
     fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
         glObjects.forEach {
             if (it.selected) {
@@ -151,7 +166,7 @@ class GLRenderer(
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
-        if (checkSupport()){
+        if (checkSupport()) {
             createSurfaceTexture()
             addGlObjects(
                 listOf(
@@ -163,16 +178,17 @@ class GLRenderer(
 
 
     }
-    private fun checkSupport():Boolean{
+
+    private fun checkSupport(): Boolean {
         val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
         val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
         return if (supportsEs2) {
             true
-           /* binding.viewFinder.setEGLContextClientVersion(2)
-            binding.viewFinder.setRenderer(
-                renderer
-            )*/
+            /* binding.viewFinder.setEGLContextClientVersion(2)
+             binding.viewFinder.setRenderer(
+                 renderer
+             )*/
 
             /*  binding.glSurfaceView.setEGLContextClientVersion(2)
               binding.glSurfaceView.setRenderer(
@@ -180,16 +196,18 @@ class GLRenderer(
               )*/
 
         } else {
-           /* Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
-                .show()*/
+            /* Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
+                 .show()*/
             false
         }
     }
+
     override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
 
         glCamera.setProjection(width, height)
 
-        val ratio = if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+        val ratio =
+            if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
         glObjects.forEach {
             it.onRatioChanged(ratio)
         }
