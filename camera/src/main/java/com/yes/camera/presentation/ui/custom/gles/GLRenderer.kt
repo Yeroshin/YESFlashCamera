@@ -5,6 +5,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Context.ACTIVITY_SERVICE
 import android.graphics.SurfaceTexture
+import android.opengl.GLES10.GL_NEAREST
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
@@ -253,7 +254,7 @@ class GLRenderer(
         )
         glTexParameterf(
             GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR.toFloat()
+            GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_NEAREST.toFloat()
         )
         glTexParameterf(
             GL_TEXTURE_EXTERNAL_OES,

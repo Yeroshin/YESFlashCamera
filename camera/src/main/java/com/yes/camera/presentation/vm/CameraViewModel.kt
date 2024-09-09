@@ -23,10 +23,6 @@ class CameraViewModel(
         fun resolveCameraDependency(): BaseDependency
     }
 
-
-
-
-
     override fun createInitialState(): State {
         return State(
             CameraState.Success(

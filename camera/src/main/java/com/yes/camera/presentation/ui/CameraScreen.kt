@@ -4,8 +4,10 @@ import android.content.Context
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.yes.camera.presentation.contract.CameraContract
+import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.camera.presentation.ui.views.CameraScreenSuccess
 import com.yes.camera.presentation.vm.CameraViewModel
@@ -17,12 +19,23 @@ fun CameraScreen(
     cameraViewModel: CameraViewModel,
     onSettingsClick: () -> Unit
 ) {
+    val renderer = remember {
+        GLRenderer(
+            context
+        ) { surfaceTexture ->
+            surfaceTexture.setDefaultBufferSize(3072,4096)//(3072x4096)//(1280, 720)//(1920,1080)
+            cameraViewModel.setEvent(
+                CameraContract.Event.OnOpenCamera(true, surfaceTexture)
+            )
+        }
+    }
     val viewState = cameraViewModel.uiState.collectAsState()
     when(val state = viewState.value.state){
         CameraContract.CameraState.Idle -> { }
         CameraContract.CameraState.Loading -> {}
         is CameraContract.CameraState.Success -> CameraScreenSuccess(
             context = context,
+            renderer = renderer,
             characteristicsInitial = state.characteristics ,
             onSettingsClick = onSettingsClick,
             onGetSurface = {surfaceTexture->

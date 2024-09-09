@@ -41,18 +41,20 @@ import kotlinx.coroutines.delay
 @Composable
 fun CameraScreenSuccess(
     context: Context,
+    renderer : GLRenderer,
     characteristicsInitial: CharacteristicsUI,
     onSettingsClick: () -> Unit,
     onGetSurface: (surface: SurfaceTexture) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
     var characteristics = characteristicsInitial
+
     var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
-    val renderer = GLRenderer(
+   /* val renderer = GLRenderer(
         context
     ) { surfaceTexture ->
         onGetSurface(surfaceTexture)
-    }
+    }*/
     val adapter = CompositeAdapter(
         mapOf(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
@@ -90,7 +92,13 @@ fun CameraScreenSuccess(
                                 renderer.handleTouchPress(
                                     normalizedX, normalizedY
                                 )
+
                                 //   }
+                                renderer.configureMagnifier(
+                                    8f,
+                                    0.2f,
+                                    0.4f
+                                )
                             } else if (event.action == MotionEvent.ACTION_MOVE) {
                                 //   glSurfaceView!!.queueEvent {
                                 renderer.handleTouchDrag(
