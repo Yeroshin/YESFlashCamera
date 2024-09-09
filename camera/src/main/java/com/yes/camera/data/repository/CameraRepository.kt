@@ -11,6 +11,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
+import android.icu.text.SimpleDateFormat
 import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaCodecList
@@ -29,6 +30,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
+import java.util.Date
+import java.util.Locale
 
 
 class CameraRepository(
@@ -77,7 +80,7 @@ class CameraRepository(
 
     // private var onCameraOpened:(()->Unit)?=null
     @SuppressLint("MissingPermission")
-    private fun openCamera(id: String, onCameraOpened: (characteristics: com.yes.camera.domain.model.Characteristics) -> Unit) {
+    private fun openCamera(id: String, onCameraOpened: (characteristics: Characteristics) -> Unit) {
         // this.onCameraOpened = onCameraOpened
         cameraManager.openCamera(
             id,
@@ -175,31 +178,6 @@ var sessio: CameraCaptureSession?=null
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
 
-
-
-        //  glSurfaceTexture?.setDefaultBufferSize(4096, 3072)//3072x4096
-       // glSurfaceTexture.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
-
-        /////////////////////////////////preview
-       // previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-
-        /* previewCaptureBuilder?.set(
-             CaptureRequest.CONTROL_AE_MODE,
-             CameraMetadata.CONTROL_AE_MODE_OFF
-         )
-         previewCaptureBuilder?.set(
-             CaptureRequest.CONTROL_AF_MODE,
-             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-         */
-        //   captureBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        /*     val streamUseCase = CameraMetadata
-                 .SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW_VIDEO_STILL
-     */
-        /* targets.forEach {
-             val config = OutputConfiguration(it)
-             //   config.streamUseCase = streamUseCase.toLong()
-             configs.add(config)
-         }*/
         val surface = Surface(glSurfaceTexture)
         previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         previewCaptureBuilder?.addTarget(surface)
@@ -207,14 +185,10 @@ var sessio: CameraCaptureSession?=null
 
 
         setUpMediaRecorder()
-        val recorderSurface= MediaCodec.createPersistentInputSurface();
-      //  recorderSurface = mMediaRecorder.surface
-        mMediaRecorder.setInputSurface(recorderSurface)
-        try {
-            mMediaRecorder.prepare()
-        } catch (e: Exception) {
-            println()
-        }
+       // val recorderSurface= MediaCodec.createPersistentInputSurface();
+        val recorderSurface = mMediaRecorder.surface
+      //  mMediaRecorder.setInputSurface(recorderSurface)
+
         previewCaptureBuilder?.addTarget(recorderSurface)
         /////////////
         val configs = mutableListOf<OutputConfiguration>()
@@ -282,9 +256,11 @@ var sessio: CameraCaptureSession?=null
             }
         }
         //////////////////////
+        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
+        val t= sdf.format(Date())
         val mCurrentFile = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-            "test6.mp4"
+            "test${t}.mp4"
         )
         if (isSupported()){
             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
@@ -293,6 +269,11 @@ var sessio: CameraCaptureSession?=null
             mMediaRecorder.setVideoSize(640,480) // 480p
             mMediaRecorder.setVideoFrameRate(30)
             mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
+            try {
+                mMediaRecorder.prepare()
+            } catch (e: Exception) {
+                println()
+            }
         }
 
       //  mMediaRecorder.prepare()

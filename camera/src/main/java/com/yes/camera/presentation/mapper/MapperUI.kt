@@ -9,7 +9,7 @@ import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
 
 class MapperUI {
-    val standardShutterSpeeds = mapOf(
+    private val standardShutterSpeeds = mapOf(
         31_250L to "1/32000",
         62_500L to "1/16000",
         125_000L to "1/8000",
@@ -30,7 +30,7 @@ class MapperUI {
         4_000_000_000L to "4",
         8_000_000_000L to "8",
     )
-    val standardIsoValues = listOf(
+    private val standardIsoValues = listOf(
         50,
         100,
         200,
