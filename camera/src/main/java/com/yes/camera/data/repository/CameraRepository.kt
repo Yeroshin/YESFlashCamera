@@ -1,6 +1,7 @@
 package com.yes.camera.data.repository
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
@@ -11,19 +12,27 @@ import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
+import android.media.MediaCodec
+import android.media.MediaCodecList
+import android.media.MediaRecorder
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
+import android.util.Log
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
 
 
 class CameraRepository(
+    private val context: Context,
     private val cameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
 
@@ -112,6 +121,10 @@ class CameraRepository(
         val minFocusDistance =
             characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val minFocus = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+        /////////////////
+        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        val sizes = map?.getOutputSizes(MediaRecorder::class.java)
+        /////////////////
         /*   characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.let {map->
                Arrays.sort(
                    map.getOutputSizes(ImageFormat.JPEG),
@@ -158,6 +171,7 @@ class CameraRepository(
 
     }
 var sessio: CameraCaptureSession?=null
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
 
@@ -187,11 +201,27 @@ var sessio: CameraCaptureSession?=null
              configs.add(config)
          }*/
         val surface = Surface(glSurfaceTexture)
-        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         previewCaptureBuilder?.addTarget(surface)
+        ////video
+
+
+        setUpMediaRecorder()
+        val recorderSurface= MediaCodec.createPersistentInputSurface();
+      //  recorderSurface = mMediaRecorder.surface
+        mMediaRecorder.setInputSurface(recorderSurface)
+        try {
+            mMediaRecorder.prepare()
+        } catch (e: Exception) {
+            println()
+        }
+        previewCaptureBuilder?.addTarget(recorderSurface)
+        /////////////
         val configs = mutableListOf<OutputConfiguration>()
         val conf = OutputConfiguration(surface)
+        val conf2 = OutputConfiguration(recorderSurface)
         configs.add(conf)
+        configs.add(conf2)
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
@@ -220,7 +250,80 @@ var sessio: CameraCaptureSession?=null
 
         cameraDevice?.createCaptureSession(config)
     }
-    fun recordVideo(){
-        println()
+    /////////////////////////////
+    private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
+
+    private fun setUpMediaRecorder() {
+       // mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+     /*   mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        val mCurrentFile = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
+            "test.mp4"
+        )
+        mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
+        val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P)
+        mMediaRecorder.setVideoSize(640, 480)
+        mMediaRecorder.setVideoFrameRate(profile.videoFrameRate)
+        mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight)
+        mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate)
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)*/
+      //  mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+      //  mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate)
+     //   mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate)
+        //////////////////////
+        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+        val codecs = codecList.codecInfos
+        for (codecInfo in codecs) {
+            if (!codecInfo.isEncoder) continue
+            val types = codecInfo.supportedTypes
+            for (type in types) {
+                Log.d("CodecInfo", "Encoder: ${codecInfo.name}, Type: $type")
+            }
+        }
+        //////////////////////
+        val mCurrentFile = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
+            "test6.mp4"
+        )
+        if (isSupported()){
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+            mMediaRecorder.setVideoSize(640,480) // 480p
+            mMediaRecorder.setVideoFrameRate(30)
+            mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
+        }
+
+      //  mMediaRecorder.prepare()
+    }
+    suspend fun recordVideo(){
+       // setUpMediaRecorder()
+     //   mMediaRecorder.prepare()
+        mMediaRecorder.start()
+        delay(5000)
+        mMediaRecorder.stop()
+    }
+    private fun isCodecSupported(mimeType: String?): Boolean {
+        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+        val codecInfos = codecList.codecInfos
+        for (codecInfo in codecInfos) {
+            if (!codecInfo.isEncoder) {
+                continue
+            }
+            val supportedTypes = codecInfo.supportedTypes
+            for (type in supportedTypes) {
+                if (type.equals(mimeType, ignoreCase = true)) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private fun isSupported(): Boolean {
+        val isOutputFormatSupported = isCodecSupported("video/mp4v-es")
+        val isVideoEncoderSupported = isCodecSupported("video/avc")
+        return isOutputFormatSupported && isVideoEncoderSupported
     }
 }

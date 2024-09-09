@@ -145,12 +145,12 @@ class MainActivity : ComponentActivity() {
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
 
     // private lateinit var cameraService: CameraService
-    private val cameraRepository by lazy {
+   /* private val cameraRepository by lazy {
         CameraRepository(
             getSystemService(CAMERA_SERVICE) as CameraManager,
             mBackgroundHandler
         )
-    }
+    }*/
     private val dependency by lazy {
         (application as CameraViewModel.DependencyResolver)
             .resolveCameraDependency()

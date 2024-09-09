@@ -33,6 +33,7 @@ class CameraModule {
     ): CameraRepository {
         val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
         return CameraRepository(
+            context,
             context.getSystemService(CAMERA_SERVICE) as CameraManager,
             Handler(mBackgroundThread.looper),
         )
