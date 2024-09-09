@@ -38,12 +38,11 @@ fun CameraScreen(
             renderer = renderer,
             characteristicsInitial = state.characteristics ,
             onSettingsClick = onSettingsClick,
-            onGetSurface = {surfaceTexture->
-            surfaceTexture.setDefaultBufferSize(1280, 720)//(3072x4096)//(1280, 720)//(1920,1080)
-            cameraViewModel.setEvent(
-                CameraContract.Event.OnOpenCamera(true,surfaceTexture)
-            )
-        },
+            onStartVideoRecord = {
+                cameraViewModel.setEvent(
+                    CameraContract.Event.OnStartVideoRecord
+                )
+            },
             onCharacteristicChanged = {characteristics->
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnSetCharacteristics(characteristics)

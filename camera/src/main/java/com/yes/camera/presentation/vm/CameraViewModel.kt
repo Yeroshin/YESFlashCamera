@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.usecase.OpenCameraUseCase
+import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetCharacteristicsUsCase
 import com.yes.camera.presentation.contract.CameraContract.*
 import com.yes.camera.presentation.mapper.MapperUI
@@ -17,7 +18,8 @@ import com.yes.shared.presentation.vm.BaseViewModel
 class CameraViewModel(
     private val mapper:MapperUI,
     private val openCameraUseCase: OpenCameraUseCase,
-    private val setCharacteristicsUsCase: SetCharacteristicsUsCase
+    private val setCharacteristicsUsCase: SetCharacteristicsUsCase,
+    private val recordVideoUseCase: RecordVideoUseCase
 ): BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
@@ -41,7 +43,18 @@ class CameraViewModel(
             is Event.OnSetCharacteristics -> {
                 setCharacteristics(event.characteristics)
             }
+
+            Event.OnStartVideoRecord -> startVideoRecord()
         }
+    }
+    private fun startVideoRecord (){
+        withUseCaseScope(
+            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
+            onError = { println(it.message) },
+            block = {
+                recordVideoUseCase()
+            }
+        )
     }
     private fun setCharacteristics(characteristics:CharacteristicsUI){
         withUseCaseScope(
@@ -86,14 +99,16 @@ class CameraViewModel(
     class Factory(
         private val mapper:MapperUI,
         private val openCameraUseCase: OpenCameraUseCase,
-        private val setCharacteristicsUsCase: SetCharacteristicsUsCase
+        private val setCharacteristicsUsCase: SetCharacteristicsUsCase,
+        private val recordVideoUseCase: RecordVideoUseCase
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return CameraViewModel(
                 mapper,
                 openCameraUseCase,
-                setCharacteristicsUsCase
+                setCharacteristicsUsCase,
+                recordVideoUseCase
             ) as T
         }
     }

@@ -220,4 +220,7 @@ var sessio: CameraCaptureSession?=null
 
         cameraDevice?.createCaptureSession(config)
     }
+    fun recordVideo(){
+        println()
+    }
 }

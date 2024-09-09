@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.domain.usecase.OpenCameraUseCase
+import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetCharacteristicsUsCase
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
@@ -48,11 +49,21 @@ class CameraModule {
         )
     }
     @Provides
-    fun providesSetCharacteristicsUsCase(
+    fun providesSetCharacteristicsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository
     ): SetCharacteristicsUsCase {
         return SetCharacteristicsUsCase(
+            dispatcher,
+            cameraRepository
+        )
+    }
+    @Provides
+    fun providesSetRecordVideoUseCase(
+        @IoDispatcher dispatcher: CoroutineDispatcher,
+        cameraRepository: CameraRepository
+    ): RecordVideoUseCase {
+        return RecordVideoUseCase(
             dispatcher,
             cameraRepository
         )
@@ -62,12 +73,14 @@ class CameraModule {
     fun providesMainViewModelFactory(
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
-        setCharacteristicsUsCase: SetCharacteristicsUsCase
+        setCharacteristicsUsCase: SetCharacteristicsUsCase,
+        recordVideoUseCase: RecordVideoUseCase
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
             openCameraUseCase,
-            setCharacteristicsUsCase
+            setCharacteristicsUsCase,
+            recordVideoUseCase
         )
     }
 

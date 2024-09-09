@@ -22,7 +22,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
@@ -44,7 +46,7 @@ fun CameraScreenSuccess(
     renderer : GLRenderer,
     characteristicsInitial: CharacteristicsUI,
     onSettingsClick: () -> Unit,
-    onGetSurface: (surface: SurfaceTexture) -> Unit,
+    onStartVideoRecord:()->Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
     var characteristics = characteristicsInitial
@@ -94,11 +96,6 @@ fun CameraScreenSuccess(
                                 )
 
                                 //   }
-                                renderer.configureMagnifier(
-                                    8f,
-                                    0.2f,
-                                    0.4f
-                                )
                             } else if (event.action == MotionEvent.ACTION_MOVE) {
                                 //   glSurfaceView!!.queueEvent {
                                 renderer.handleTouchDrag(
@@ -317,8 +314,15 @@ fun CameraScreenSuccess(
                     }
                 )
             }
-        }
 
+        }
+        Button(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            onClick = {
+                onStartVideoRecord()
+            }) {
+            Text(text = "Capture", fontSize = 40.sp)
+        }
 
     }
 

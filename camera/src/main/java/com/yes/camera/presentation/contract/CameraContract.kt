@@ -7,6 +7,7 @@ import com.yes.shared.presentation.vm.BaseViewModel.*
 class CameraContract {
     sealed class Event : UiEvent {
         data object OnGetOffers : Event()
+        data object OnStartVideoRecord : Event()
         data class OnOpenCamera(
             val backCamera:Boolean,
             val surfaceTexture: SurfaceTexture
