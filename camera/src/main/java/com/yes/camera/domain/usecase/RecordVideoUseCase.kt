@@ -10,10 +10,11 @@ import kotlinx.coroutines.flow.first
 
 class RecordVideoUseCase (dispatcher: CoroutineDispatcher,
                           private val cameraRepository: CameraRepository
-) : UseCase<Unit, Unit>(dispatcher) {
-    override suspend fun run(): Unit {
+) : UseCase<RecordVideoUseCase.Params, Unit>(dispatcher) {
+    override suspend fun run(params:Params): Unit {
 
-            cameraRepository.recordVideo()
+            cameraRepository.recordVideo(params.enable)
 
     }
+    data class Params(val enable:Boolean)
 }

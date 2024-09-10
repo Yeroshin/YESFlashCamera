@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.VerticalAlignmentLine
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
@@ -43,20 +45,20 @@ import kotlinx.coroutines.delay
 @Composable
 fun CameraScreenSuccess(
     context: Context,
-    renderer : GLRenderer,
+    renderer: GLRenderer,
     characteristicsInitial: CharacteristicsUI,
     onSettingsClick: () -> Unit,
-    onStartVideoRecord:()->Unit,
+    onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
     var characteristics = characteristicsInitial
 
     var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
-   /* val renderer = GLRenderer(
-        context
-    ) { surfaceTexture ->
-        onGetSurface(surfaceTexture)
-    }*/
+    /* val renderer = GLRenderer(
+         context
+     ) { surfaceTexture ->
+         onGetSurface(surfaceTexture)
+     }*/
     val adapter = CompositeAdapter(
         mapOf(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
@@ -316,11 +318,20 @@ fun CameraScreenSuccess(
             }
 
         }
+        var isCheck by remember { mutableStateOf(false) }
         Button(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            onClick = {
-                onStartVideoRecord()
-            }) {
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .toggleable(
+                    value = isCheck,
+                    onValueChange = {
+                        isCheck = it
+                        onStartVideoRecord(isCheck)
+                    },
+                    role = Role.Checkbox,
+                ),
+            onClick = {}
+        ) {
             Text(text = "Capture", fontSize = 40.sp)
         }
 

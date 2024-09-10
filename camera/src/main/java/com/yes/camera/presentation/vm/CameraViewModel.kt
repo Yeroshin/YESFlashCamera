@@ -44,15 +44,20 @@ class CameraViewModel(
                 setCharacteristics(event.characteristics)
             }
 
-            Event.OnStartVideoRecord -> startVideoRecord()
+            is Event.OnStartVideoRecord -> {
+                startVideoRecord(event.enabled)
+            }
+
         }
     }
-    private fun startVideoRecord (){
+    private fun startVideoRecord (enabled:Boolean){
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-                recordVideoUseCase()
+                recordVideoUseCase(
+                    RecordVideoUseCase.Params(enable = enabled)
+                )
             }
         )
     }
