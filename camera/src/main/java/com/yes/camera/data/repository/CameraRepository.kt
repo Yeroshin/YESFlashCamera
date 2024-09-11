@@ -2,6 +2,7 @@ package com.yes.camera.data.repository
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
@@ -13,6 +14,7 @@ import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.icu.text.SimpleDateFormat
 import android.media.CamcorderProfile
+import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
@@ -194,9 +196,9 @@ var sessio: CameraCaptureSession?=null
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
+        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         ////////////////////////////////////////////////
         val surface = Surface(glSurfaceTexture)
-        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         previewCaptureBuilder?.addTarget(surface)
         configs.add(
             OutputConfiguration(surface)
@@ -211,9 +213,14 @@ var sessio: CameraCaptureSession?=null
       //  mMediaRecorder.setInputSurface(recorderSurface)
    //  val conf2 = OutputConfiguration(recorderSurface)
         previewCaptureBuilder?.addTarget(recorderSurface)*/
-        /////////////
+        /////////////photo
+        imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+        previewCaptureBuilder?.addTarget(imageReader.surface)
+        configs.add(
+            OutputConfiguration(imageReader.surface)
+        )
         /////////////////media codec
-        prepareMediaCodec()
+     /*   prepareMediaCodec()
 
        // val mEncoderSurface =  mCodec!!.createInputSurface()
 
@@ -223,7 +230,7 @@ var sessio: CameraCaptureSession?=null
         previewCaptureBuilder?.addTarget(mEncoderSurface)
         configs.add(
             OutputConfiguration(mEncoderSurface)
-        )
+        )*/
         /////////////////////////////////
      //   configs.add(conf2)
         val config = SessionConfiguration(
@@ -413,7 +420,33 @@ var sessio: CameraCaptureSession?=null
             println()
         }
     }
+    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        val image = reader.acquireLatestImage()
+        saveImage(image)
+        image.close()
+    }
+    private val imageReader = ImageReader.newInstance(640, 480, ImageFormat.JPEG, 1)
+
     fun recordVideo(enable:Boolean){
+        imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+
+    }
+    private fun saveImage(image: Image) {
+        val buffer = image.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+
+        var output: FileOutputStream? = null
+        try {
+            output = FileOutputStream(
+                createFile()
+            )
+            output.write(bytes)
+        } finally {
+            output?.close()
+        }
+    }
+   /* fun recordVideo(enable:Boolean){
         // setUpMediaRecorder()
         //   mMediaRecorder.prepare()
         if (enable){
@@ -422,7 +455,7 @@ var sessio: CameraCaptureSession?=null
             mCodec!!.stop()
         }
 
-    }
+    }*/
    /* fun recordVideo(enable:Boolean){
        // setUpMediaRecorder()
      //   mMediaRecorder.prepare()
