@@ -38,6 +38,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.util.Arrays
 import java.util.Date
 import java.util.Locale
 
@@ -192,11 +193,15 @@ var sessio: CameraCaptureSession?=null
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
-
+        val configs = mutableListOf<OutputConfiguration>()
+        ////////////////////////////////////////////////
         val surface = Surface(glSurfaceTexture)
         previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-      //  previewCaptureBuilder?.addTarget(surface)
-      //  val conf = OutputConfiguration(surface)
+        previewCaptureBuilder?.addTarget(surface)
+        configs.add(
+            OutputConfiguration(surface)
+        )
+        ////////////////
         ////video
 
 
@@ -204,23 +209,22 @@ var sessio: CameraCaptureSession?=null
        // val recorderSurface= MediaCodec.createPersistentInputSurface();
         val recorderSurface = mMediaRecorder.surface
       //  mMediaRecorder.setInputSurface(recorderSurface)
-
+   //  val conf2 = OutputConfiguration(recorderSurface)
         previewCaptureBuilder?.addTarget(recorderSurface)*/
         /////////////
         /////////////////media codec
         prepareMediaCodec()
-        val mEncoderSurface =  mCodec!!.createInputSurface()
 
+       // val mEncoderSurface =  mCodec!!.createInputSurface()
+
+        val mEncoderSurface = MediaCodec.createPersistentInputSurface()
+        mCodec!!.setInputSurface(mEncoderSurface)
+      //  val mEncoderSurface=mCodec!!.createInputSurface()
         previewCaptureBuilder?.addTarget(mEncoderSurface)
-
-
-        val conf3 = OutputConfiguration(mEncoderSurface)
-        /////////////////////////
-        val configs = mutableListOf<OutputConfiguration>()
-
-      //  val conf2 = OutputConfiguration(recorderSurface)
-     //   configs.add(conf)
-        configs.add(conf3)
+        configs.add(
+            OutputConfiguration(mEncoderSurface)
+        )
+        /////////////////////////////////
      //   configs.add(conf2)
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
@@ -290,7 +294,7 @@ var sessio: CameraCaptureSession?=null
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
             "test${t}.mp4"
         )
-        if (isSupported()){
+      /*  if (isSupported()){
             //////////////////
 
             val profiles:CamcorderProfile = CamcorderProfile.get(
@@ -318,7 +322,7 @@ var sessio: CameraCaptureSession?=null
             } catch (e: Exception) {
                 println()
             }
-        }
+        }*/
         println()
 
       //  mMediaRecorder.prepare()
@@ -334,6 +338,7 @@ var sessio: CameraCaptureSession?=null
 
 
     private fun prepareMediaCodec(){
+       val supported=isSupported(MediaFormat.MIMETYPE_VIDEO_MPEG4)
         val mFile = createFile()
         try {
             outputStream = BufferedOutputStream(FileOutputStream(mFile))
@@ -345,26 +350,26 @@ var sessio: CameraCaptureSession?=null
         val width = 640 // ширина видео
         val height = 480
         try {
-            mCodec = MediaCodec.createEncoderByType("video/avc") // H264 кодек
+            mCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
         } catch (e: java.lang.Exception) {
             println()
         }
-        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height)
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 500000) // битрейт видео в bps (бит в секунду)
+        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 3840, 2160)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, 45000000) // битрейт видео в bps (бит в секунду)
         format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 5)
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
         mCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
 
-      /*  mCodec?.setCallback(EncoderCallback(
+        mCodec?.setCallback(EncoderCallback(
             outPutByteBuffer,
             mCodec,
         outputStream
-        ))*/
+        ))
 
 
 
@@ -445,9 +450,9 @@ var sessio: CameraCaptureSession?=null
         return false
     }
 
-    private fun isSupported(): Boolean {
-        val isOutputFormatSupported = isCodecSupported("video/mp4v-es")
-        val isVideoEncoderSupported = isCodecSupported("video/avc")
-        return isOutputFormatSupported && isVideoEncoderSupported
+    private fun isSupported(type:String): Boolean {
+        val isOutputFormatSupported = isCodecSupported(type)
+      //  val isVideoEncoderSupported = isCodecSupported("video/avc")
+        return isOutputFormatSupported //&& isVideoEncoderSupported
     }
 }

@@ -330,7 +330,10 @@ fun CameraScreenSuccess(
                     },
                     role = Role.Checkbox,
                 ),
-            onClick = {}
+            onClick = {
+                isCheck=!isCheck
+                onStartVideoRecord(isCheck)
+            }
         ) {
             Text(text = "Capture", fontSize = 40.sp)
         }
