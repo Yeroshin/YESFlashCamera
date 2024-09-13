@@ -3,13 +3,16 @@ package com.yes.camera.data.repository
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
+import android.graphics.YuvImage
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -24,7 +27,6 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
-import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.Surface
@@ -36,6 +38,7 @@ import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -92,10 +95,11 @@ class CameraRepository(
 
 
     // private var onCameraOpened:(()->Unit)?=null
+
     @SuppressLint("MissingPermission")
     private fun openCamera(id: String, onCameraOpened: (characteristics: Characteristics) -> Unit) {
         // this.onCameraOpened = onCameraOpened
-
+        cameraManager.getCameraCharacteristics(id)
         cameraManager.openCamera(
             id,
             object : CameraDevice.StateCallback() {
@@ -207,7 +211,7 @@ class CameraRepository(
             characteristics.shutterValue
         )
         ////////preview
-     //   val surface = Surface(glSurfaceTexture)
+        //   val surface = Surface(glSurfaceTexture)
         previewCaptureBuilder?.addTarget(surface)
 
         ////////////////
@@ -219,7 +223,7 @@ class CameraRepository(
           previewCaptureBuilder?.addTarget(imageReader.surface)*/
 
 
-           previewCaptureBuilder?.addTarget(imageReader.surface)
+        previewCaptureBuilder?.addTarget(imageReader.surface)
         //////////////
 
         // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
@@ -231,7 +235,7 @@ class CameraRepository(
     }
 
     var sessio: CameraCaptureSession? = null
-
+    private var captureResult: CaptureResult?=null
     val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -239,6 +243,8 @@ class CameraRepository(
             result: TotalCaptureResult
         ) {
             super.onCaptureCompleted(session, request, result)
+            captureResult=result
+
         }
     }
 
@@ -250,37 +256,49 @@ class CameraRepository(
             enableSurfaceSharing()
         }
     }
+
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        /* val image = reader.acquireLatestImage()
+        val image = reader.acquireLatestImage()
+        characteristics?.let {
+            captureResult?.let {
+                saveImage(image,characteristics!!,captureResult!!)
+            }
+        }
+        image.close()
+
          if(singleCapture){
-             // val image = reader.acquireLatestImage()
-             saveImage(image)
+              val image = reader.acquireLatestImage()
+             saveImage(image,characteristics!!,captureResult!!)
              if (!repeatingCapture){
                  singleCapture=false
              }
-             // image.close()
+              image.close()
          }
-         image?.close()*/
         println("render")
     }
-    private var imageReader: ImageReader = ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1).apply {
-        setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
-    }
-    private val imageReaderSurfaceConfiguration=OutputConfiguration(imageReader.surface).apply {
+    private var imageReader: ImageReader =
+        ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1).apply {
+            setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+        }
+    private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         enableSurfaceSharing()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
-        previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
-      //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        previewCaptureBuilder =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+        //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         previewCaptureBuilder?.set(
             CaptureRequest.CONTROL_AE_MODE,
             CaptureRequest.CONTROL_AE_MODE_OFF
         )
         //////////settings
-        previewCaptureBuilder?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+        previewCaptureBuilder?.set(
+            CaptureRequest.EDGE_MODE,
+            CaptureRequest.EDGE_MODE_OFF
+        )
         previewCaptureBuilder?.set(
             CaptureRequest.NOISE_REDUCTION_MODE,
             CaptureRequest.NOISE_REDUCTION_MODE_OFF
@@ -317,14 +335,14 @@ class CameraRepository(
         // imageReader = ImageReader.newInstance(4096, 3072, ImageFormat.JPEG, 1)
         // val imageReader =ImageReader.newInstance(4096, 3072, ImageFormat.RAW_SENSOR, 1)
 
-       // val  imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
-       // imageReader.setOnImageAvailableListener(imageAvailableListener, null)//imageReaderHandler)
+        // val  imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
+        // imageReader.setOnImageAvailableListener(imageAvailableListener, null)//imageReaderHandler)
 
 
         configs.add(
             imageReaderSurfaceConfiguration
         )
-         previewCaptureBuilder?.addTarget(imageReader.surface)
+        previewCaptureBuilder?.addTarget(imageReader.surface)
 
         /////////////////media codec
         /*   prepareMediaCodec()
@@ -352,7 +370,7 @@ class CameraRepository(
                         previewCaptureBuilder?.let {
                             sessio?.setRepeatingRequest(
                                 it.build(),
-                                null,//captureCallback,
+                                captureCallback,
                                 mBackgroundHandler
                             )
                         }
@@ -439,6 +457,7 @@ class CameraRepository(
 
         //  mMediaRecorder.prepare()
     }
+
     private fun createFile(): File {
         val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
         val t = sdf.format(Date())
@@ -447,6 +466,7 @@ class CameraRepository(
             "test${t}.jpg"
         )
     }
+
     private fun prepareMediaCodec() {
         val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_MPEG4)
         val mFile = createFile()
@@ -485,6 +505,7 @@ class CameraRepository(
 
 
     }
+
     private var mCodec: MediaCodec? = null // кодер
     var mEncoderSurface: Surface? = null // Surface как вход данных для кодера
     private var outputStream: BufferedOutputStream? = null
@@ -541,8 +562,8 @@ class CameraRepository(
 
     }
 
-    private fun saveImage(image: Image) {
-        when (image.format) {
+    private fun saveImage(image: Image,cameraCharacteristics: CameraCharacteristics,captureResult: CaptureResult) {
+       /* when (image.format) {
             ImageFormat.JPEG -> {
                 val buffer = image.planes[0].buffer
                 val bytes = ByteArray(buffer.remaining())
@@ -559,14 +580,56 @@ class CameraRepository(
                 }
             }
 
-            ImageFormat.RAW_SENSOR -> {}
+            ImageFormat.RAW_SENSOR -> {
+
+            }
+        }*/
+        ////////////////
+       /*  val dngCreator= DngCreator(cameraCharacteristics,captureResult)
+        var output: FileOutputStream? = null
+        try {
+            output = FileOutputStream(
+                createFile()
+            )
+            dngCreator.writeImage(output,image)
+        } finally {
+            output?.close()
+        }*/
+        ////////////////
+        val bytes=NV21toJPEG(
+            YUV_420_888toNV21(image),
+            image.getWidth(), image.getHeight())
+        var output: FileOutputStream? = null
+        try {
+            output = FileOutputStream(
+                createFile()
+            )
+            output.write(bytes)
+        } finally {
+            output?.close()
         }
-        ////////////////
-        // val dngCreator=DngCreator()
 
-        ////////////////
+    }
+    private fun YUV_420_888toNV21(image: Image): ByteArray {
+        val nv21: ByteArray
+        val yBuffer = image.planes[0].buffer
+        val vuBuffer = image.planes[2].buffer
 
+        val ySize = yBuffer.remaining()
+        val vuSize = vuBuffer.remaining()
 
+        nv21 = ByteArray(ySize + vuSize)
+
+        yBuffer[nv21, 0, ySize]
+        vuBuffer[nv21, ySize, vuSize]
+
+        return nv21
+    }
+    private fun NV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        val yuv = YuvImage(nv21, ImageFormat.NV21, width, height, null)
+        yuv.compressToJpeg(Rect(0, 0, width, height), 100, out)
+        return out.toByteArray()
     }
 
     /* fun recordVideo(enable:Boolean){
