@@ -138,6 +138,7 @@ class CameraRepository(
             characteristics?.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val minFocus = characteristics?.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         /////////////////
+        val g =characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
         val map = characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(MediaRecorder::class.java)
         /////////////////
@@ -175,14 +176,22 @@ class CameraRepository(
     private var glSurfaceTexture: SurfaceTexture?=null
 
     fun setCharacteristics(characteristics: Characteristics){
-        previewCaptureBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+        previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+
+
+        previewCaptureBuilder?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+        previewCaptureBuilder?.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+
 
         previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
-      //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+       // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
         previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
         previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
+        val surface = Surface(glSurfaceTexture)
+        previewCaptureBuilder?.addTarget(surface)
         previewCaptureBuilder?.let {
             sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
         }
@@ -206,7 +215,8 @@ var sessio: CameraCaptureSession?=null
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
-        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+        previewCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
         ////////preview
         val surface = Surface(glSurfaceTexture)
         previewCaptureBuilder?.addTarget(surface)
@@ -224,15 +234,17 @@ var sessio: CameraCaptureSession?=null
    //  val conf2 = OutputConfiguration(recorderSurface)
         previewCaptureBuilder?.addTarget(recorderSurface)*/
         /////////////photo
-        val imageReader=ImageReader.newInstance(640, 480, ImageFormat.JPEG, 1)
-    //  imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.RAW_SENSOR, 1)
+
+    //val imageReader =ImageReader.newInstance(4096, 3072, ImageFormat.PRIVATE, 1)
+       // val imageReader =ImageReader.newInstance(4096, 3072, ImageFormat.RAW_SENSOR, 1)
+       val imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
         imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
-        imageReader.let {
-            previewCaptureBuilder?.addTarget(it.surface)
+
+            previewCaptureBuilder?.addTarget(imageReader.surface)
             configs.add(
-                OutputConfiguration(it.surface)
+                OutputConfiguration(imageReader.surface)
             )
-        }
+
 
         /////////////////media codec
      /*   prepareMediaCodec()
@@ -439,6 +451,7 @@ var sessio: CameraCaptureSession?=null
     private var repeatingCapture=false
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         val image = reader.acquireLatestImage()
+
 
         if(singleCapture){
            // val image = reader.acquireLatestImage()
