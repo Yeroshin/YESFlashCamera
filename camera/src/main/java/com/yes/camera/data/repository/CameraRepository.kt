@@ -10,7 +10,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -25,6 +24,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.Surface
@@ -48,7 +48,7 @@ class CameraRepository(
     context: Context,
     private val cameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
-    ) {
+) {
 
     private var cameraDevice: CameraDevice? = null
     private fun getCameraByFacing(facing: Int): String? {
@@ -61,27 +61,30 @@ class CameraRepository(
         return null
     }
 
-    private val _characteristicsFlow:MutableStateFlow<com.yes.camera.domain.model.Characteristics?> = MutableStateFlow(null)
-    private val characteristicsFlow: StateFlow<com.yes.camera.domain.model.Characteristics?> = _characteristicsFlow
+    private val _characteristicsFlow: MutableStateFlow<com.yes.camera.domain.model.Characteristics?> =
+        MutableStateFlow(null)
+    private val characteristicsFlow: StateFlow<com.yes.camera.domain.model.Characteristics?> =
+        _characteristicsFlow
+
     fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?> {
-        this.glSurfaceTexture=glSurfaceTexture
+        this.glSurfaceTexture = glSurfaceTexture
         getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
             openCamera(
                 it
-            ) {camera->
-                _characteristicsFlow.value=camera
+            ) { camera ->
+                _characteristicsFlow.value = camera
             }
         }
         return characteristicsFlow
     }
 
-    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?>  {
-        this.glSurfaceTexture=glSurfaceTexture
+    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?> {
+        this.glSurfaceTexture = glSurfaceTexture
         getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
             openCamera(
                 it
-            ) {camera->
-                _characteristicsFlow.value=camera
+            ) { camera ->
+                _characteristicsFlow.value = camera
             }
         }
         return characteristicsFlow
@@ -100,9 +103,9 @@ class CameraRepository(
                 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera
-                  //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                   // setCharacteristics(51200)
-                   createCaptureSession()
+                    //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                    // setCharacteristics(51200)
+                    createCaptureSession()
                     onCameraOpened(
                         getCameraCharacteristics(camera.id)
                     )
@@ -119,7 +122,8 @@ class CameraRepository(
             mBackgroundHandler
         )
     }
-    var characteristics:CameraCharacteristics?=null
+
+    var characteristics: CameraCharacteristics? = null
     private fun getCameraCharacteristics(id: String): Characteristics {
         characteristics = cameraManager.getCameraCharacteristics(id)
 
@@ -128,17 +132,18 @@ class CameraRepository(
         )
 
         // If image format is provided, use it to determine supported sizes; or else use target class
-       // val allSizes = config?.getOutputSizes(ImageReader::class.java)
+        // val allSizes = config?.getOutputSizes(ImageReader::class.java)
         val t = config?.getOutputSizes(ImageFormat.RAW_SENSOR)
         val allSizes = config?.getOutputSizes(ImageFormat.JPEG)
         allSizes?.maxBy { it.height * it.width }
-        val iso=characteristics?.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-        val exposure=characteristics?.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val iso = characteristics?.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val exposure = characteristics?.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocusDistance =
             characteristics?.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val minFocus = characteristics?.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         /////////////////
-        val g =characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
+        val g =
+            characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
         val map = characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(MediaRecorder::class.java)
         /////////////////
@@ -157,52 +162,77 @@ class CameraRepository(
         }
         return Characteristics(
             isoValue = 0,
-            isoRange = iso?.let{IntRange(it.lower,it.upper)}?: IntRange(0,0),
+            isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterValue = 0,
             focusValue = 0F,
-            minFocusValue = minFocusDistance?:0f,
-            shutterRange = exposure?.let{LongRange(it.lower,it.upper)}?:LongRange(0,0),
+            minFocusValue = minFocusDistance ?: 0f,
+            shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
             resolutions = allSizes?.map {
                 Dimensions(
-                    it.width,it.height
+                    it.width, it.height
                 )
-            }?:listOf(
-                Dimensions(0,0)
+            } ?: listOf(
+                Dimensions(0, 0)
             )
         )
     }
 
     private var previewCaptureBuilder: CaptureRequest.Builder? = null
-    private var glSurfaceTexture: SurfaceTexture?=null
+    private var glSurfaceTexture: SurfaceTexture? = null
 
-    fun setCharacteristics(characteristics: Characteristics){
-        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+    fun setCharacteristics(characteristics: Characteristics) {
+        previewCaptureBuilder =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
         previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
 
 
         previewCaptureBuilder?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
-        previewCaptureBuilder?.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+        previewCaptureBuilder?.set(
+            CaptureRequest.NOISE_REDUCTION_MODE,
+            CaptureRequest.NOISE_REDUCTION_MODE_OFF
+        )
+        previewCaptureBuilder?.set(
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+        )
 
 
         previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
-       // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
         previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
-        val surface = Surface(glSurfaceTexture)
+        previewCaptureBuilder?.set(
+            CaptureRequest.SENSOR_EXPOSURE_TIME,
+            characteristics.shutterValue
+        )
+        ////////preview
+     //   val surface = Surface(glSurfaceTexture)
         previewCaptureBuilder?.addTarget(surface)
+
+        ////////////////
+
+        ///capture
+        /*  val imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
+         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+
+          previewCaptureBuilder?.addTarget(imageReader.surface)*/
+
+
+           previewCaptureBuilder?.addTarget(imageReader.surface)
+        //////////////
+
+        // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
+        // createCaptureSession()
         previewCaptureBuilder?.let {
             sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
         }
 
-       // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
-       // createCaptureSession()
-
     }
-var sessio: CameraCaptureSession?=null
 
-    val captureCallback=object : CameraCaptureSession.CaptureCallback() {
+    var sessio: CameraCaptureSession? = null
+
+    val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
             request: CaptureRequest,
@@ -212,54 +242,104 @@ var sessio: CameraCaptureSession?=null
         }
     }
 
+    private val surface by lazy {
+        Surface(glSurfaceTexture)
+    }
+    private val surfaceConfiguration by lazy {
+        OutputConfiguration(surface).apply {
+            enableSurfaceSharing()
+        }
+    }
+    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        /* val image = reader.acquireLatestImage()
+         if(singleCapture){
+             // val image = reader.acquireLatestImage()
+             saveImage(image)
+             if (!repeatingCapture){
+                 singleCapture=false
+             }
+             // image.close()
+         }
+         image?.close()*/
+        println("render")
+    }
+    private var imageReader: ImageReader = ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1).apply {
+        setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+    }
+    private val imageReaderSurfaceConfiguration=OutputConfiguration(imageReader.surface).apply {
+        enableSurfaceSharing()
+    }
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
-        previewCaptureBuilder =cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
-        previewCaptureBuilder?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+        previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+      //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        previewCaptureBuilder?.set(
+            CaptureRequest.CONTROL_AE_MODE,
+            CaptureRequest.CONTROL_AE_MODE_OFF
+        )
+        //////////settings
+        previewCaptureBuilder?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+        previewCaptureBuilder?.set(
+            CaptureRequest.NOISE_REDUCTION_MODE,
+            CaptureRequest.NOISE_REDUCTION_MODE_OFF
+        )
+        previewCaptureBuilder?.set(
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+        )
+
+
+        // previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.2f)
+        //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+
+        // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, 12800)
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 4_000_000L)
         ////////preview
-        val surface = Surface(glSurfaceTexture)
+
         previewCaptureBuilder?.addTarget(surface)
+
         configs.add(
-            OutputConfiguration(surface)
+            surfaceConfiguration
         )
         ////////////////
         ////video
-
-
-     /*   setUpMediaRecorder()
-       // val recorderSurface= MediaCodec.createPersistentInputSurface();
-        val recorderSurface = mMediaRecorder.surface
-      //  mMediaRecorder.setInputSurface(recorderSurface)
-   //  val conf2 = OutputConfiguration(recorderSurface)
-        previewCaptureBuilder?.addTarget(recorderSurface)*/
+        /*   setUpMediaRecorder()
+          // val recorderSurface= MediaCodec.createPersistentInputSurface();
+           val recorderSurface = mMediaRecorder.surface
+         //  mMediaRecorder.setInputSurface(recorderSurface)
+      //  val conf2 = OutputConfiguration(recorderSurface)
+           previewCaptureBuilder?.addTarget(recorderSurface)*/
         /////////////photo
 
-    //val imageReader =ImageReader.newInstance(4096, 3072, ImageFormat.PRIVATE, 1)
-       // val imageReader =ImageReader.newInstance(4096, 3072, ImageFormat.RAW_SENSOR, 1)
-       val imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
-        imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+        // imageReader = ImageReader.newInstance(4096, 3072, ImageFormat.JPEG, 1)
+        // val imageReader =ImageReader.newInstance(4096, 3072, ImageFormat.RAW_SENSOR, 1)
 
-            previewCaptureBuilder?.addTarget(imageReader.surface)
-            configs.add(
-                OutputConfiguration(imageReader.surface)
-            )
+       // val  imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
+       // imageReader.setOnImageAvailableListener(imageAvailableListener, null)//imageReaderHandler)
 
+
+        configs.add(
+            imageReaderSurfaceConfiguration
+        )
+         previewCaptureBuilder?.addTarget(imageReader.surface)
 
         /////////////////media codec
-     /*   prepareMediaCodec()
+        /*   prepareMediaCodec()
 
-       // val mEncoderSurface =  mCodec!!.createInputSurface()
+          // val mEncoderSurface =  mCodec!!.createInputSurface()
 
-        val mEncoderSurface = MediaCodec.createPersistentInputSurface()
-        mCodec!!.setInputSurface(mEncoderSurface)
-      //  val mEncoderSurface=mCodec!!.createInputSurface()
-        previewCaptureBuilder?.addTarget(mEncoderSurface)
-        configs.add(
-            OutputConfiguration(mEncoderSurface)
-        )*/
+           val mEncoderSurface = MediaCodec.createPersistentInputSurface()
+           mCodec!!.setInputSurface(mEncoderSurface)
+         //  val mEncoderSurface=mCodec!!.createInputSurface()
+           previewCaptureBuilder?.addTarget(mEncoderSurface)
+           configs.add(
+               OutputConfiguration(mEncoderSurface)
+           )*/
         /////////////////////////////////
-     //   configs.add(conf2)
+        //   configs.add(conf2)
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
@@ -268,11 +348,11 @@ var sessio: CameraCaptureSession?=null
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
                         sessio = session
-                         //session.stopRepeating()
+                        //session.stopRepeating()
                         previewCaptureBuilder?.let {
                             sessio?.setRepeatingRequest(
                                 it.build(),
-                                captureCallback,// cameraCaptureSessionCaptureCallback,
+                                null,//captureCallback,
                                 mBackgroundHandler
                             )
                         }
@@ -283,32 +363,30 @@ var sessio: CameraCaptureSession?=null
 
                 override fun onConfigureFailed(session: CameraCaptureSession) {}
             }
-
         )
-
         cameraDevice?.createCaptureSession(config)
     }
+
     /////////////////////////////
     private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
-
     private fun setUpMediaRecorder() {
-       // mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
-     /*   mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-        val mCurrentFile = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-            "test.mp4"
-        )
-        mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
-        val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P)
-        mMediaRecorder.setVideoSize(640, 480)
-        mMediaRecorder.setVideoFrameRate(profile.videoFrameRate)
-        mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight)
-        mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate)
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)*/
-      //  mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-      //  mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate)
-     //   mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate)
+        // mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        /*   mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+           mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+           val mCurrentFile = File(
+               Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
+               "test.mp4"
+           )
+           mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
+           val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P)
+           mMediaRecorder.setVideoSize(640, 480)
+           mMediaRecorder.setVideoFrameRate(profile.videoFrameRate)
+           mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight)
+           mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate)
+           mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)*/
+        //  mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        //  mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate)
+        //   mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate)
         ///////////tmp
 
         //////////////////////
@@ -323,56 +401,54 @@ var sessio: CameraCaptureSession?=null
         }
         //////////////////////
         val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
-        val t= sdf.format(Date())
+        val t = sdf.format(Date())
         val mCurrentFile = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
             "test${t}.mp4"
         )
-      /*  if (isSupported()){
-            //////////////////
+        /*  if (isSupported()){
+              //////////////////
 
-            val profiles:CamcorderProfile = CamcorderProfile.get(
-               0,
-                  CamcorderProfile.QUALITY_HIGH)
-            var highQualityProfile: CamcorderProfile? = null
+              val profiles:CamcorderProfile = CamcorderProfile.get(
+                 0,
+                    CamcorderProfile.QUALITY_HIGH)
+              var highQualityProfile: CamcorderProfile? = null
 
-           /* for (profile in profiles!!) {
-                if (profile.quality == CamcorderProfile.QUALITY_HIGH) {
-                    highQualityProfile = profile
-                    break
-                }
-            }*/
-            /////////////////
-            val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
-            mMediaRecorder.setProfile(profile)
-            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            mMediaRecorder.setVideoSize(1920,1080) // 480p
-            mMediaRecorder.setVideoFrameRate(10)
-            mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
-            try {
-                mMediaRecorder.prepare()
-            } catch (e: Exception) {
-                println()
-            }
-        }*/
+             /* for (profile in profiles!!) {
+                  if (profile.quality == CamcorderProfile.QUALITY_HIGH) {
+                      highQualityProfile = profile
+                      break
+                  }
+              }*/
+              /////////////////
+              val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
+              mMediaRecorder.setProfile(profile)
+              mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+              mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+              mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+              mMediaRecorder.setVideoSize(1920,1080) // 480p
+              mMediaRecorder.setVideoFrameRate(10)
+              mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
+              try {
+                  mMediaRecorder.prepare()
+              } catch (e: Exception) {
+                  println()
+              }
+          }*/
         println()
 
-      //  mMediaRecorder.prepare()
+        //  mMediaRecorder.prepare()
     }
-    private fun createFile():File{
+    private fun createFile(): File {
         val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
-        val t= sdf.format(Date())
+        val t = sdf.format(Date())
         return File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
             "test${t}.jpg"
         )
     }
-
-
-    private fun prepareMediaCodec(){
-       val supported=isSupported(MediaFormat.MIMETYPE_VIDEO_MPEG4)
+    private fun prepareMediaCodec() {
+        val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_MPEG4)
         val mFile = createFile()
         try {
             outputStream = BufferedOutputStream(FileOutputStream(mFile))
@@ -399,12 +475,13 @@ var sessio: CameraCaptureSession?=null
         mCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
 
-        mCodec?.setCallback(EncoderCallback(
-            outPutByteBuffer,
-            mCodec,
-        outputStream
-        ))
-
+        mCodec?.setCallback(
+            EncoderCallback(
+                outPutByteBuffer,
+                mCodec,
+                outputStream
+            )
+        )
 
 
     }
@@ -412,11 +489,12 @@ var sessio: CameraCaptureSession?=null
     var mEncoderSurface: Surface? = null // Surface как вход данных для кодера
     private var outputStream: BufferedOutputStream? = null
     private var outPutByteBuffer: ByteBuffer? = null
-     class EncoderCallback (
-         private var outPutByteBuffer: ByteBuffer?,
-         private val mCodec: MediaCodec?,
-         private val outputStream: BufferedOutputStream?
-     ): MediaCodec.Callback() {
+
+    class EncoderCallback(
+        private var outPutByteBuffer: ByteBuffer?,
+        private val mCodec: MediaCodec?,
+        private val outputStream: BufferedOutputStream?
+    ) : MediaCodec.Callback() {
         override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
         }
 
@@ -447,37 +525,25 @@ var sessio: CameraCaptureSession?=null
             println()
         }
     }
-    private var singleCapture=false
-    private var repeatingCapture=false
-    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        val image = reader.acquireLatestImage()
 
+    private var singleCapture = false
+    private var repeatingCapture = false
 
-        if(singleCapture){
-           // val image = reader.acquireLatestImage()
-            saveImage(image)
-            if (!repeatingCapture){
-                singleCapture=false
-            }
-           // image.close()
-        }
-        image?.close()
+    // private var imageReader:ImageReader? = null
 
+    fun singleCapture(enable: Boolean) {
+        singleCapture = true
+        // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
 
     }
-   // private var imageReader:ImageReader? = null
 
-    fun singleCapture(enable:Boolean){
-        singleCapture=true
-       // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+    fun repeatingCapture() {
 
     }
-    fun repeatingCapture(){
 
-    }
     private fun saveImage(image: Image) {
-        when(image.format){
-            ImageFormat.JPEG->{
+        when (image.format) {
+            ImageFormat.JPEG -> {
                 val buffer = image.planes[0].buffer
                 val bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
@@ -492,35 +558,37 @@ var sessio: CameraCaptureSession?=null
                     output?.close()
                 }
             }
-            ImageFormat.RAW_SENSOR->{}
+
+            ImageFormat.RAW_SENSOR -> {}
         }
         ////////////////
-       // val dngCreator=DngCreator()
+        // val dngCreator=DngCreator()
 
         ////////////////
 
 
     }
-   /* fun recordVideo(enable:Boolean){
+
+    /* fun recordVideo(enable:Boolean){
+         // setUpMediaRecorder()
+         //   mMediaRecorder.prepare()
+         if (enable){
+             mCodec!!.start()
+         }else{
+             mCodec!!.stop()
+         }
+
+     }*/
+    /* fun recordVideo(enable:Boolean){
         // setUpMediaRecorder()
-        //   mMediaRecorder.prepare()
-        if (enable){
-            mCodec!!.start()
-        }else{
-            mCodec!!.stop()
-        }
+      //   mMediaRecorder.prepare()
+         if (enable){
+             mMediaRecorder.start()
+         }else{
+             mMediaRecorder.stop()
+         }
 
-    }*/
-   /* fun recordVideo(enable:Boolean){
-       // setUpMediaRecorder()
-     //   mMediaRecorder.prepare()
-        if (enable){
-            mMediaRecorder.start()
-        }else{
-            mMediaRecorder.stop()
-        }
-
-    }*/
+     }*/
     private fun isCodecSupported(mimeType: String?): Boolean {
         val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
         val codecInfos = codecList.codecInfos
@@ -538,9 +606,9 @@ var sessio: CameraCaptureSession?=null
         return false
     }
 
-    private fun isSupported(type:String): Boolean {
+    private fun isSupported(type: String): Boolean {
         val isOutputFormatSupported = isCodecSupported(type)
-      //  val isVideoEncoderSupported = isCodecSupported("video/avc")
+        //  val isVideoEncoderSupported = isCodecSupported("video/avc")
         return isOutputFormatSupported //&& isVideoEncoderSupported
     }
 }
