@@ -2,6 +2,7 @@ package com.yes.camera.data.repository
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
 import android.graphics.Rect
@@ -33,13 +34,20 @@ import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.Surface
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
+import com.yes.camera.utils.ImageComparator
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -51,7 +59,7 @@ import java.util.Locale
 
 
 class CameraRepository(
-    context: Context,
+    val context: Context,
     private val cameraManager: CameraManager,
     private val mBackgroundHandler: Handler,
 ) {
@@ -67,14 +75,15 @@ class CameraRepository(
         return null
     }
 
-    private val _characteristicsFlow: MutableStateFlow<com.yes.camera.domain.model.Characteristics?> =
+    private val _characteristicsFlow: MutableStateFlow<Characteristics?> =
         MutableStateFlow(null)
-    private val characteristicsFlow: StateFlow<com.yes.camera.domain.model.Characteristics?> =
+    private val characteristicsFlow: StateFlow<Characteristics?> =
         _characteristicsFlow
 
-    fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?> {
+    fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
-        getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+       // getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+        getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
             openCamera(
                 it
             ) { camera ->
@@ -84,7 +93,7 @@ class CameraRepository(
         return characteristicsFlow
     }
 
-    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<com.yes.camera.domain.model.Characteristics?> {
+    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
         getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
             openCamera(
@@ -188,8 +197,8 @@ class CameraRepository(
     private var glSurfaceTexture: SurfaceTexture? = null
 
     fun setCharacteristics(characteristics: Characteristics) {
-        previewCaptureBuilder =
-            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+       /* previewCaptureBuilder =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
         previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
 
 
@@ -239,7 +248,7 @@ class CameraRepository(
 
     var sessio: CameraCaptureSession? = null
     private var captureResult: CaptureResult?=null
-    private var lastFrameTime: Long = 0
+
     val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -251,25 +260,35 @@ class CameraRepository(
             val currentTime = System.currentTimeMillis()
             if (lastFrameTime != 0L) {
                 val fps = 1000.0 / (currentTime - lastFrameTime)
-                println("FPS: $fps")
+            //    println("FPS: $fps")
             }
             lastFrameTime = currentTime
         }
     }
 
-    private val surface by lazy {
-        Surface(glSurfaceTexture)
-    }
-    private val surfaceConfiguration by lazy {
-        OutputConfiguration(surface).apply {
-            enableSurfaceSharing()
-        }
-    }
 
+    private var lastFrameTime: Long = 0
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
        // val image = reader.acquireLatestImage()
+        ////////////////////////
+      /*  val currentTime = System.currentTimeMillis()
+        if (lastFrameTime != 0L) {
+            val fps = 1000.0 / (currentTime - lastFrameTime)
+            Log.e("","FPS: $fps")
+              //  println("FPS: $fps")
+        }
+        lastFrameTime = currentTime*/
+        /////////////////////////
         val image = reader.acquireNextImage()
-         if(singleCapture){
+        image?.let {
+            characteristics?.let { characteristics ->
+                captureResult?.let { captureResult ->
+                    saveImage(image, characteristics, captureResult)
+                }
+            }
+        }
+
+        /* if(singleCapture){
              characteristics?.let { characteristics ->
                  captureResult?.let { captureResult ->
                      saveImage(image, characteristics, captureResult)
@@ -279,21 +298,30 @@ class CameraRepository(
                  singleCapture=false
              }
 
-         }
+         }*/
         image?.close()
-        println("render")
+      //  println("render")
     }
     val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+        priority = Thread.MAX_PRIORITY
         start()
     }
     val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
     val imageFormat=ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
+    private val surface by lazy {
+        Surface(glSurfaceTexture)
+    }
+    private val surfaceConfiguration by lazy {
+        OutputConfiguration(surface).apply {
+           // enableSurfaceSharing()
+        }
+    }
     private var imageReader: ImageReader =
-        ImageReader.newInstance(4096,3072,  imageFormat, 1).apply {
-            setOnImageAvailableListener(imageAvailableListener, null)
+        ImageReader.newInstance(4096,3072,  imageFormat, 10).apply {
+            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
         }
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-        enableSurfaceSharing()
+       // enableSurfaceSharing()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -325,8 +353,8 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, 12800)
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 4_000_000L)
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, 3200)
+        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
         ////////preview
 
         previewCaptureBuilder?.addTarget(surface)
@@ -573,9 +601,43 @@ class CameraRepository(
     fun repeatingCapture() {
 
     }
+    val comparator= ImageComparator()
+    var prevImage: Bitmap?=null
 
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            event.collect {image->
+                image?.let {
+                    prevImage?.let {
+                        val dif=comparator.compareImageValues(it,image)
+                        if (dif>36){//1/15s worked;1/8s relible
+                            println("capturd")
+                           // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                        }
+                        Log.e("","dif:${
+                           dif
+                        }")
+                        prevImage=image
+                    }?:run{
+                        prevImage=image
+                    }
+                }
+            }
+
+        }
+    }
+    private val _event: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
+    private val event = _event.asSharedFlow()
     private fun saveImage(image: Image,cameraCharacteristics: CameraCharacteristics,captureResult: CaptureResult) {
-        when (image.format) {
+       // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+     //////////////////////////
+        _event.update {
+           comparator.yuv420_888imageToBitmap(image)
+        }
+
+
+        ////////////////////////////
+      /*  when (image.format) {
             ImageFormat.JPEG -> {
                 val buffer = image.planes[0].buffer
                 val bytes = ByteArray(buffer.remaining())
@@ -618,25 +680,7 @@ class CameraRepository(
             }
 
             else -> {}
-        }
-        ////////////////
-       /*  val dngCreator= DngCreator(cameraCharacteristics,captureResult)
-        var output: FileOutputStream? = null
-        try {
-            output = FileOutputStream(
-                createFile()
-            )
-            dngCreator.writeImage(output,image)
-        } finally {
-            output?.close()
         }*/
-        ////////////////
-       /* val bytes=NV21toJPEG(
-            YUV_420_888toNV21(image),
-            image.getWidth(), image.getHeight())*/
-        ////worked
-
-////////////endofworked
     }
     fun jpegByteArrayFrom(yuv420_888: Image): ByteArray {
       return  yuv420_888.nv21ByteArray

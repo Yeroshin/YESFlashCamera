@@ -219,15 +219,7 @@ class GLRenderer(
     override fun onDrawFrame(gl: GL10?) {
         surfaceTexture?.updateTexImage()
         //   surfaceTexture?.getTransformMatrix(transformMatrix)
-        /////////////////////
-        /*   val buffer =
-               ByteBuffer.allocateDirect(width * height * 4) // 4 байта на пиксель (ARGB)
-           glReadPixels(0, 0, width, height, GL10.GL_RGBA, GL10.GL_UNSIGNED_BYTE, buffer)
-           buffer.rewind()
 
-           val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-           bitmap.copyPixelsFromBuffer(buffer)*/
-        /////////////////////
         glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
 
