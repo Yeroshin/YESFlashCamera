@@ -287,7 +287,7 @@ class CameraRepository(
         // val image = reader.acquireLatestImage()
 
 
-        val image = reader.acquireLatestImage()
+        val image = reader.acquireNextImage()
         image?.let {
             characteristics?.let { characteristics ->
                 captureResult?.let { captureResult ->
@@ -320,7 +320,7 @@ class CameraRepository(
         //  println("render")
     }
     private val imageReader: ImageReader =
-        ImageReader.newInstance(4096,3072,  imageFormat, 2).apply {
+        ImageReader.newInstance(4096,3072,  imageFormat, 15).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
         }
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
@@ -615,7 +615,7 @@ class CameraRepository(
                 image?.let {
                     prevImage?.let {
                         val dif=comparator.compareImageValues(it,image)
-                        if (dif>36){//1/15s worked;1/8s relible
+                        if (dif>36){//1/15s worked;1/8s relible(1/15s )
                             println("capturd")
                            // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
                         }
