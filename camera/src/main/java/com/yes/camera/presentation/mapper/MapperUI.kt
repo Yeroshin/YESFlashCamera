@@ -72,7 +72,7 @@ class MapperUI {
                 Item.SHUTTER to Characteristic(
                     value = 0,
                     title = "Shutter",
-                    items= listOf(
+                   /* items= listOf(
                         SettingsItemUI("1/32000"),
                         SettingsItemUI("1/16000"),
                         SettingsItemUI("1/8000"),
@@ -92,7 +92,11 @@ class MapperUI {
                         SettingsItemUI("2"),
                         SettingsItemUI("4"),
                         SettingsItemUI("8"),
-                    )
+                    )*/
+                    items = standardShutterSpeeds
+                        .keys // Преобразуем Map в List пар
+                        .sortedDescending()  // Сортируем по ключам (первый элемент пары)
+                        .map { SettingsItemUI(standardShutterSpeeds[it]!!) }
                 ),
                 Item.ISO to Characteristic(
                     value = 0,

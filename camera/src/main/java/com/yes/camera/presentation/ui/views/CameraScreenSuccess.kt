@@ -40,7 +40,6 @@ import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
-import com.yes.camera.presentation.ui.custom.gles.SurfacePanel
 import kotlinx.coroutines.delay
 
 @Composable

@@ -15,7 +15,6 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
-import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -34,7 +33,6 @@ import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.Surface
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
@@ -42,7 +40,6 @@ import com.yes.camera.utils.ImageComparator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -83,7 +80,7 @@ class CameraRepository(
     fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
        // getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
-        getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
+        getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
             openCamera(
                 it
             ) { camera ->
@@ -149,6 +146,7 @@ class CameraRepository(
 
         // If image format is provided, use it to determine supported sizes; or else use target class
         // val allSizes = config?.getOutputSizes(ImageReader::class.java)
+        val v = config?.getOutputSizes(ImageFormat.YUV_420_888)
         val t = config?.getOutputSizes(ImageFormat.RAW_SENSOR)
         val allSizes = config?.getOutputSizes(ImageFormat.JPEG)
         allSizes?.maxBy { it.height * it.width }
@@ -193,38 +191,38 @@ class CameraRepository(
         )
     }
 
-    private var previewCaptureBuilder: CaptureRequest.Builder? = null
+    private var captureRequest: CaptureRequest.Builder? = null
     private var glSurfaceTexture: SurfaceTexture? = null
 
     fun setCharacteristics(characteristics: Characteristics) {
        /* previewCaptureBuilder =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
-        previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+      /*  captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
 
 
-        previewCaptureBuilder?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
-        previewCaptureBuilder?.set(
+        captureRequest?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+        captureRequest?.set(
             CaptureRequest.NOISE_REDUCTION_MODE,
             CaptureRequest.NOISE_REDUCTION_MODE_OFF
         )
-        previewCaptureBuilder?.set(
+        captureRequest?.set(
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-        )
+        )*/
 
 
-        previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+        captureRequest?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
-        previewCaptureBuilder?.set(
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+        captureRequest?.set(
             CaptureRequest.SENSOR_EXPOSURE_TIME,
             characteristics.shutterValue
         )
         ////////preview
         //   val surface = Surface(glSurfaceTexture)
-        previewCaptureBuilder?.addTarget(surface)
+       // previewCaptureBuilder?.addTarget(surface)
 
         ////////////////
 
@@ -235,13 +233,15 @@ class CameraRepository(
           previewCaptureBuilder?.addTarget(imageReader.surface)*/
 
 
-        previewCaptureBuilder?.addTarget(imageReader.surface)
+       // captureRequest?.addTarget(imageReader.surface)
         //////////////
 
         // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
         // createCaptureSession()
-        previewCaptureBuilder?.let {
-            sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
+
+        captureRequest?.let {
+           // sessio?.stopRepeating()
+            sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
         }
 
     }
@@ -267,19 +267,27 @@ class CameraRepository(
     }
 
 
+
+    val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+        priority = Thread.MAX_PRIORITY
+        start()
+    }
+    val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    val imageFormat=ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
+    private val surface by lazy {
+        Surface(glSurfaceTexture)
+    }
+    private val surfaceConfiguration by lazy {
+        OutputConfiguration(surface).apply {
+            enableSurfaceSharing()
+        }
+    }
     private var lastFrameTime: Long = 0
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-       // val image = reader.acquireLatestImage()
-        ////////////////////////
-      /*  val currentTime = System.currentTimeMillis()
-        if (lastFrameTime != 0L) {
-            val fps = 1000.0 / (currentTime - lastFrameTime)
-            Log.e("","FPS: $fps")
-              //  println("FPS: $fps")
-        }
-        lastFrameTime = currentTime*/
-        /////////////////////////
-        val image = reader.acquireNextImage()
+        // val image = reader.acquireLatestImage()
+
+
+        val image = reader.acquireLatestImage()
         image?.let {
             characteristics?.let { characteristics ->
                 captureResult?.let { captureResult ->
@@ -299,51 +307,46 @@ class CameraRepository(
              }
 
          }*/
-        image?.close()
-      //  println("render")
-    }
-    val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
-        priority = Thread.MAX_PRIORITY
-        start()
-    }
-    val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
-    val imageFormat=ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
-    private val surface by lazy {
-        Surface(glSurfaceTexture)
-    }
-    private val surfaceConfiguration by lazy {
-        OutputConfiguration(surface).apply {
-           // enableSurfaceSharing()
+        ////////////////////////
+        val currentTime = System.currentTimeMillis()
+        if (lastFrameTime != 0L) {
+            val fps = 1000.0 / (currentTime - lastFrameTime)
+            Log.e("","FPS: $fps")
+            //  println("FPS: $fps")
         }
+        lastFrameTime = currentTime
+        /////////////////////////
+        image?.close()
+        //  println("render")
     }
-    private var imageReader: ImageReader =
-        ImageReader.newInstance(4096,3072,  imageFormat, 10).apply {
+    private val imageReader: ImageReader =
+        ImageReader.newInstance(4096,3072,  imageFormat, 2).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
         }
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-       // enableSurfaceSharing()
+        enableSurfaceSharing()
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
-        previewCaptureBuilder =
+        captureRequest =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
         //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        previewCaptureBuilder?.set(
+        captureRequest?.set(
             CaptureRequest.CONTROL_AE_MODE,
             CaptureRequest.CONTROL_AE_MODE_OFF
         )
         //////////settings
-        previewCaptureBuilder?.set(
+        captureRequest?.set(
             CaptureRequest.EDGE_MODE,
             CaptureRequest.EDGE_MODE_OFF
         )
-        previewCaptureBuilder?.set(
+        captureRequest?.set(
             CaptureRequest.NOISE_REDUCTION_MODE,
             CaptureRequest.NOISE_REDUCTION_MODE_OFF
         )
-        previewCaptureBuilder?.set(
+        captureRequest?.set(
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
         )
@@ -353,11 +356,11 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_SENSITIVITY, 3200)
-        previewCaptureBuilder?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 3200)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
         ////////preview
 
-        previewCaptureBuilder?.addTarget(surface)
+        captureRequest?.addTarget(surface)
 
         configs.add(
             surfaceConfiguration
@@ -382,7 +385,8 @@ class CameraRepository(
         configs.add(
             imageReaderSurfaceConfiguration
         )
-        previewCaptureBuilder?.addTarget(imageReader.surface)
+
+        captureRequest?.addTarget(imageReader.surface)
 
         /////////////////media codec
         /*   prepareMediaCodec()
@@ -407,7 +411,7 @@ class CameraRepository(
                     try {
                         sessio = session
                         //session.stopRepeating()
-                        previewCaptureBuilder?.let {
+                        captureRequest?.let {
                             sessio?.setRepeatingRequest(
                                 it.build(),
                                 captureCallback,
@@ -424,6 +428,7 @@ class CameraRepository(
         )
         cameraDevice?.createCaptureSession(config)
     }
+
 
     /////////////////////////////
     private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
