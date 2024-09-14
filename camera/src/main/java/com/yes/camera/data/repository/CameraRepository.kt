@@ -287,9 +287,9 @@ class CameraRepository(
         start()
     }
     val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
-    val imageFormat=ImageFormat.RAW_SENSOR//ImageFormat.YUV_420_888//
+    val imageFormat=ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
     private var imageReader: ImageReader =
-        ImageReader.newInstance(4096, 3072, imageFormat, 1).apply {
+        ImageReader.newInstance(4096,3072,  imageFormat, 1).apply {
             setOnImageAvailableListener(imageAvailableListener, null)
         }
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
