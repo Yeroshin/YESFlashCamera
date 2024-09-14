@@ -3,6 +3,7 @@ package com.yes.camera.data.repository
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.ImageFormat
+import android.graphics.ImageFormat.NV21
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.graphics.YuvImage
@@ -258,22 +259,20 @@ class CameraRepository(
     }
 
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        val image = reader.acquireLatestImage()
-        characteristics?.let {
-            captureResult?.let {
-                saveImage(image,characteristics!!,captureResult!!)
-            }
-        }
-        image.close()
-
+       // val image = reader.acquireLatestImage()
+        val image = reader.acquireNextImage()
          if(singleCapture){
-              val image = reader.acquireLatestImage()
-             saveImage(image,characteristics!!,captureResult!!)
+             characteristics?.let { characteristics ->
+                 captureResult?.let { captureResult ->
+                     saveImage(image, characteristics, captureResult)
+                 }
+             }
              if (!repeatingCapture){
                  singleCapture=false
              }
-              image.close()
+
          }
+        image?.close()
         println("render")
     }
     private var imageReader: ImageReader =
@@ -596,9 +595,10 @@ class CameraRepository(
             output?.close()
         }*/
         ////////////////
-        val bytes=NV21toJPEG(
+       /* val bytes=NV21toJPEG(
             YUV_420_888toNV21(image),
-            image.getWidth(), image.getHeight())
+            image.getWidth(), image.getHeight())*/
+        val bytes=jpegByteArrayFrom(image)
         var output: FileOutputStream? = null
         try {
             output = FileOutputStream(
@@ -610,6 +610,37 @@ class CameraRepository(
         }
 
     }
+    fun jpegByteArrayFrom(yuv420_888: Image): ByteArray {
+      return  yuv420_888.nv21ByteArray
+            .let { YuvImage(it, NV21, yuv420_888.width, yuv420_888.height, null) }
+            .getJpegDataWithQuality(100)
+}
+    private val Image.nv21ByteArray
+        get() = ByteArray(width * height * 3 / 2).also {
+            val vPlane = planes[2]
+            val y = planes[0].buffer.apply { rewind() }
+            val u = planes[1].buffer.apply { rewind() }
+            val v = vPlane.buffer.apply { rewind() }
+            y.get(it, 0, y.capacity()) // copy Y components
+            if (vPlane.pixelStride == 2) {
+                // Both of U and V are interleaved data, so copying V makes VU series but last U
+                v.get(it, y.capacity(), v.capacity())
+                it[it.size - 1] = u.get(u.capacity() - 1) // put last U
+            } else { // vPlane.pixelStride == 1
+                var offset = it.size - 1
+                var i = v.capacity()
+                while (i-- != 0) { // make VU interleaved data into ByteArray
+                    it[offset - 0] = u[i]
+                    it[offset - 1] = v[i]
+                    offset -= 2
+                }
+            }
+        }
+
+    private fun YuvImage.getJpegDataWithQuality(quality: Int) =
+        ByteArrayOutputStream().also {
+            compressToJpeg(Rect(0, 0, width, height), quality, it)
+        }.toByteArray()
     private fun YUV_420_888toNV21(image: Image): ByteArray {
         val nv21: ByteArray
         val yBuffer = image.planes[0].buffer
