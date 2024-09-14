@@ -14,6 +14,7 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
@@ -28,6 +29,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.Surface
@@ -237,6 +239,7 @@ class CameraRepository(
 
     var sessio: CameraCaptureSession? = null
     private var captureResult: CaptureResult?=null
+    private var lastFrameTime: Long = 0
     val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -245,7 +248,12 @@ class CameraRepository(
         ) {
             super.onCaptureCompleted(session, request, result)
             captureResult=result
-
+            val currentTime = System.currentTimeMillis()
+            if (lastFrameTime != 0L) {
+                val fps = 1000.0 / (currentTime - lastFrameTime)
+                println("FPS: $fps")
+            }
+            lastFrameTime = currentTime
         }
     }
 
@@ -275,9 +283,14 @@ class CameraRepository(
         image?.close()
         println("render")
     }
+    val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+        start()
+    }
+    val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    val imageFormat=ImageFormat.RAW_SENSOR//ImageFormat.YUV_420_888//
     private var imageReader: ImageReader =
-        ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1).apply {
-            setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+        ImageReader.newInstance(4096, 3072, imageFormat, 1).apply {
+            setOnImageAvailableListener(imageAvailableListener, null)
         }
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         enableSurfaceSharing()
@@ -457,18 +470,18 @@ class CameraRepository(
         //  mMediaRecorder.prepare()
     }
 
-    private fun createFile(): File {
+    private fun createFile(extensionn:String): File {
         val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
         val t = sdf.format(Date())
         return File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-            "test${t}.jpg"
+            "test${t}.${extensionn}"
         )
     }
 
     private fun prepareMediaCodec() {
         val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_MPEG4)
-        val mFile = createFile()
+        val mFile = createFile("mp4")
         try {
             outputStream = BufferedOutputStream(FileOutputStream(mFile))
             Log.i("Encoder", "outputStream initialized")
@@ -562,7 +575,7 @@ class CameraRepository(
     }
 
     private fun saveImage(image: Image,cameraCharacteristics: CameraCharacteristics,captureResult: CaptureResult) {
-       /* when (image.format) {
+        when (image.format) {
             ImageFormat.JPEG -> {
                 val buffer = image.planes[0].buffer
                 val bytes = ByteArray(buffer.remaining())
@@ -571,7 +584,7 @@ class CameraRepository(
                 var output: FileOutputStream? = null
                 try {
                     output = FileOutputStream(
-                        createFile()
+                        createFile("jpg")
                     )
                     output.write(bytes)
                 } finally {
@@ -580,9 +593,32 @@ class CameraRepository(
             }
 
             ImageFormat.RAW_SENSOR -> {
-
+                val dngCreator= DngCreator(cameraCharacteristics,captureResult)
+                var output: FileOutputStream? = null
+                try {
+                    output = FileOutputStream(
+                        createFile("dng")
+                    )
+                    dngCreator.writeImage(output,image)
+                } finally {
+                    output?.close()
+                }
             }
-        }*/
+            ImageFormat.YUV_420_888->{
+                val bytes=jpegByteArrayFrom(image)
+                var output: FileOutputStream? = null
+                try {
+                    output = FileOutputStream(
+                        createFile("jpg")
+                    )
+                    output.write(bytes)
+                } finally {
+                    output?.close()
+                }
+            }
+
+            else -> {}
+        }
         ////////////////
        /*  val dngCreator= DngCreator(cameraCharacteristics,captureResult)
         var output: FileOutputStream? = null
@@ -598,17 +634,9 @@ class CameraRepository(
        /* val bytes=NV21toJPEG(
             YUV_420_888toNV21(image),
             image.getWidth(), image.getHeight())*/
-        val bytes=jpegByteArrayFrom(image)
-        var output: FileOutputStream? = null
-        try {
-            output = FileOutputStream(
-                createFile()
-            )
-            output.write(bytes)
-        } finally {
-            output?.close()
-        }
+        ////worked
 
+////////////endofworked
     }
     fun jpegByteArrayFrom(yuv420_888: Image): ByteArray {
       return  yuv420_888.nv21ByteArray
