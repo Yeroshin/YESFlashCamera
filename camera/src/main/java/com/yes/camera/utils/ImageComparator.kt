@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.ImageFormat.NV21
@@ -17,6 +18,7 @@ import androidx.core.graphics.green
 import java.io.ByteArrayOutputStream
 
 import java.lang.Long.max
+import kotlin.math.max
 import kotlin.math.min
 
 
@@ -38,12 +40,27 @@ class ImageComparator() {
 
     }
     fun compareImageValues(firstBitmap:Bitmap,secondBitmap:Bitmap):Int{
-        val firstBitmapValue=getImageValue(
+       /* val firstBitmapValue=getImageValue(
             firstBitmap
         )
         val secondBitmapValue=getImageValue(
             secondBitmap
         )
+        return compareValues(firstBitmapValue,secondBitmapValue)*/
+        val firstBitmapValue=calculateAverageBrightness(firstBitmap)
+        val secondBitmapValue=calculateAverageBrightness(secondBitmap)
+        return compareValues(firstBitmapValue,secondBitmapValue)
+    }
+    fun compareImageValues(firstBitmap:YuvImage,secondBitmap:YuvImage):Int{
+        /* val firstBitmapValue=getImageValue(
+             firstBitmap
+         )
+         val secondBitmapValue=getImageValue(
+             secondBitmap
+         )
+         return compareValues(firstBitmapValue,secondBitmapValue)*/
+        val firstBitmapValue=calculateAverageBrightness(firstBitmap)
+        val secondBitmapValue=calculateAverageBrightness(secondBitmap)
         return compareValues(firstBitmapValue,secondBitmapValue)
     }
 
@@ -88,12 +105,54 @@ class ImageComparator() {
         buffer.get(bytes)
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
-    fun compareValues(firstValue:Long,secondValue:Long):Int{
+    fun compareValues(firstValue:Double,secondValue:Double):Int{
+        val a = max(firstValue, secondValue)
+        val b = min(firstValue, secondValue)
+        return (((a-b)/b)*100).toInt()
+    }
+  /*  fun compareValues(firstValue:Long,secondValue:Long):Int{
         val a = max(firstValue, secondValue).toFloat()
         val b = min(firstValue, secondValue).toFloat()
         return (((a-b)/b)*100).toInt()
+    }*/
+  fun calculateAverageBrightness(yuvImage: YuvImage): Double {
+      val yuvBytes = ByteArrayOutputStream()
+      yuvImage.compressToJpeg(android.graphics.Rect(0, 0, yuvImage.width, yuvImage.height), 100, yuvBytes)
+      val jpegBytes = yuvBytes.toByteArray()
+
+      var totalBrightness = 0.0
+      var pixelCount = 0
+
+      for (i in jpegBytes.indices step 3) {
+          val y = jpegBytes[i].toInt() and 0xFF
+          totalBrightness += y
+          pixelCount++
+      }
+
+      return totalBrightness / pixelCount
+  }
+    fun calculateAverageBrightness(bitmap: Bitmap): Double {
+      var totalBrightness = 0.0
+      val width = bitmap.width
+      val height = bitmap.height
+      val pixelCount = width * height
+
+      // Уменьшаем разрешение изображения
+      val scaledBitmap = Bitmap.createScaledBitmap(bitmap, width / 30, height / 30, true)
+      val scaledWidth = scaledBitmap.width
+      val scaledHeight = scaledBitmap.height
+
+      for (x in 0 until scaledWidth) {
+          for (y in 0 until scaledHeight) {
+              val pixel = scaledBitmap.getPixel(x, y)
+              val brightness = (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3.0
+              totalBrightness += brightness
+          }
+      }
+
+        return totalBrightness / pixelCount
     }
-    fun getImageValue(bitmap:Bitmap):Long{
+    private fun getImageValue(bitmap:Bitmap):Long{
         val width=bitmap.width
         val height=bitmap.height
         val imageSize = width*height*4

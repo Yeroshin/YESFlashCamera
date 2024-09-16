@@ -35,8 +35,8 @@ android {
 
 dependencies {
     //Dagger/////////////////////
-    implementation ("com.google.dagger:dagger:2.48")
-    ksp ("com.google.dagger:dagger-compiler:2.48")
+    implementation("com.google.dagger:dagger:2.48")
+    ksp("com.google.dagger:dagger-compiler:2.48")
     //compose
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
@@ -48,4 +48,9 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    //Preferences DataStore
+    implementation(libs.androidx.datastore.preferences)
+
+  
 }
