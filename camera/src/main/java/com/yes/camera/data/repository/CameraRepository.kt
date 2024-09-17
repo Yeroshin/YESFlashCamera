@@ -18,6 +18,7 @@ import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.icu.text.SimpleDateFormat
+import android.media.CamcorderProfile
 import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
@@ -29,11 +30,14 @@ import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.util.Log
-import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFmpegKitConfig
+import com.arthenica.ffmpegkit.ReturnCode
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
@@ -48,7 +52,10 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
 import java.nio.ByteBuffer
+import java.nio.channels.Pipe
 import java.util.Date
 import java.util.Locale
 
@@ -368,47 +375,120 @@ class CameraRepository(
     }
     private var lastFrameTime: Long = 0
 
+
+    /*   private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+          ////////ffmpeg
+           val image = reader.acquireNextImage()
+           val buffer = image.planes[0].buffer
+           val bytes = ByteArray(buffer.remaining())
+           buffer.get(bytes)
+
+           try {
+
+               sink.write(buffer)
+           } catch (e: IOException) {
+               println()
+           } finally {
+               source.close()
+               sink.close()
+           }
+           image.close()
+           //////////////////
+           /* val image = reader.acquireLatestImage()
+
+
+           // val image = reader.acquireNextImage()
+           image?.let {
+               characteristics?.let { characteristics ->
+                   captureResult?.let { captureResult ->
+                       saveImage(image, characteristics, captureResult)
+                   }
+               }
+           }
+
+           /* if(singleCapture){
+                characteristics?.let { characteristics ->
+                    captureResult?.let { captureResult ->
+                        saveImage(image, characteristics, captureResult)
+                    }
+                }
+                if (!repeatingCapture){
+                    singleCapture=false
+                }
+
+            }*/
+           ////////////////////////
+           val currentTime = System.currentTimeMillis()
+           if (lastFrameTime != 0L) {
+               val fps = 1000.0 / (currentTime - lastFrameTime)
+               Log.i("", "FPS: $fps")
+               //  println("FPS: $fps")
+           }
+           lastFrameTime = currentTime
+           /////////////////////////
+           image?.close()
+           //  println("render")*/
+       }*/
+    val pipe = Pipe.open()
+    var running = true
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        val image = reader.acquireLatestImage()
+       /* if (running){
+            val image = reader.acquireNextImage()
+            if (image!= null) {
+                val buffer = image.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
 
-
-        // val image = reader.acquireNextImage()
-        image?.let {
-            characteristics?.let { characteristics ->
-                captureResult?.let { captureResult ->
-                    saveImage(image, characteristics, captureResult)
+                try {
+                    val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                    sink.write(byteBuffer.array())
+                } catch (e: IOException) {
+                    println()
+                } finally {
+                    image.close() // Освобождаем изображение
                 }
             }
+        }*/
+        val image = reader.acquireLatestImage()
+        image?.let {
+            processImage(it.planes[0].buffer)
+            it.close()
         }
-
-        /* if(singleCapture){
-             characteristics?.let { characteristics ->
-                 captureResult?.let { captureResult ->
-                     saveImage(image, characteristics, captureResult)
-                 }
-             }
-             if (!repeatingCapture){
-                 singleCapture=false
-             }
-
-         }*/
-        ////////////////////////
-        val currentTime = System.currentTimeMillis()
-        if (lastFrameTime != 0L) {
-            val fps = 1000.0 / (currentTime - lastFrameTime)
-            Log.i("", "FPS: $fps")
-            //  println("FPS: $fps")
-        }
-        lastFrameTime = currentTime
-        /////////////////////////
-        image?.close()
-        //  println("render")
     }
-    val imageFormat = ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
-    private val imageReader: ImageReader =
-        ImageReader.newInstance(4096, 3072, imageFormat, 30).apply {
-            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+
+    private lateinit var sink: PipedOutputStream
+    private lateinit var source: PipedInputStream
+
+    val thread = Thread {
+        while (running) {
+            // Ждем события ImageReader.OnImageAvailableListener
+            Thread.sleep(10)
         }
+        sink.close()
+        source.close()
+        FFmpegKit.cancel()
+    }
+
+    init {
+        thread.start()
+
+        // Останавливаем поток через 10 секунд
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (thread.isAlive) {
+                thread.interrupt()
+                running = false
+            }
+        }, 10000)
+    }
+
+    val imageFormat = ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
+    val imageReader = ImageReader.newInstance(1920, 1080, ImageFormat.YUV_420_888, 10).apply {
+        setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+    }
+
+    /*  private val imageReader: ImageReader = ImageReader.newInstance(1024, 768, imageFormat, 10).apply {
+              setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+          }*/
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         enableSurfaceSharing()
     }
@@ -452,13 +532,17 @@ class CameraRepository(
             surfaceConfiguration
         )
         ////////////////
+        ffmpeg()
         ////video
-        /*   setUpMediaRecorder()
-          // val recorderSurface= MediaCodec.createPersistentInputSurface();
-           val recorderSurface = mMediaRecorder.surface
-         //  mMediaRecorder.setInputSurface(recorderSurface)
-      //  val conf2 = OutputConfiguration(recorderSurface)
-           previewCaptureBuilder?.addTarget(recorderSurface)*/
+        /* setUpMediaRecorder()
+        // val recorderSurface= MediaCodec.createPersistentInputSurface();
+         val recorderSurface = mMediaRecorder.surface
+       //  mMediaRecorder.setInputSurface(recorderSurface)
+      configs.add(
+          OutputConfiguration(recorderSurface)
+      )
+     // val conf2 = OutputConfiguration(recorderSurface)
+      captureRequest?.addTarget(recorderSurface)*/
         /////////////photo
 
         // imageReader = ImageReader.newInstance(4096, 3072, ImageFormat.JPEG, 1)
@@ -472,24 +556,23 @@ class CameraRepository(
             imageReaderSurfaceConfiguration
         )
 
-        // captureRequest?.addTarget(imageReader.surface)
+        captureRequest?.addTarget(imageReader.surface)
 
         /////////////////media codec
-        prepareMediaCodec()
-        try {
-            val mEncoderSurface = mCodec!!.createInputSurface()
-            mCodec!!.setInputSurface(mEncoderSurface)
-            captureRequest?.addTarget(mEncoderSurface)
-            configs.add(
-                OutputConfiguration(mEncoderSurface)
-            )
-        } catch (e: java.lang.Exception) {
-            println()
-        }
+        /*   prepareMediaCodec()
+           try {
+               val mEncoderSurface = mCodec!!.createInputSurface()
+               mCodec!!.setInputSurface(mEncoderSurface)
+               captureRequest?.addTarget(mEncoderSurface)
+               configs.add(
+                   OutputConfiguration(mEncoderSurface)
+               )
+           } catch (e: java.lang.Exception) {
+               println()
+           }*/
 
 
         // val mEncoderSurface = MediaCodec.createPersistentInputSurface()
-
 
 
         /////////////////////////////////
@@ -523,6 +606,79 @@ class CameraRepository(
 
 
     /////////////////////////////
+    private fun processImage(buffer: ByteBuffer) {
+        // Преобразование ByteBuffer в массив байтов
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+
+        // Отправка кадра в FFmpegKit
+        val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i - -c:v libx264 -y output.mp4"
+        FFmpegKit.executeAsync(command) { session ->
+            val returnCode = session.returnCode
+            if (returnCode.isValueSuccess) {
+                // Успешное выполнение
+            } else {
+                // Ошибка выполнения
+            }
+        }
+    }
+    fun ffmpeg() {
+        val outputFile = File("/storage/emulated/0/DCIM/output.mp4")
+        if (outputFile.exists()) {
+            outputFile.delete()
+        }
+        val outputFilePath = createFile("mp4")
+
+        // Создаем pipe
+        sink = PipedOutputStream()
+        source = PipedInputStream(sink)
+
+
+
+        val pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
+        val command = "-f image2pipe -i $pipe1  -c:v libx264 $outputFilePath" // Пример команды
+        FFmpegKit.executeAsync(command) {
+            when {
+                ReturnCode.isSuccess(it.returnCode) -> {
+                    println("FFMPEG SUCCESS :${it.state.name}")
+                }
+
+                ReturnCode.isCancel(it.returnCode) -> {
+                    println("FFMPEG CANCELLED :${it.returnCode}")
+                }
+
+                it.returnCode.isValueError -> {
+                    println("FFMPEG ERROR :${it.logs.last()}")
+                }
+            }
+        }
+
+        // Инициализируем FFmpeg
+        FFmpegKit.executeAsync(
+            "-f rawvideo -pix_fmt yuv420p -s ${1920}x${1080} -r 30 -i " + pipe1 + " -c:v libx264 -f mp4 $outputFilePath",
+            {
+                when {
+                    ReturnCode.isSuccess(it.returnCode) -> {
+                        println("FFMPEG SUCCESS :${it.state.name}")
+                    }
+
+                    ReturnCode.isCancel(it.returnCode) -> {
+                        println("FFMPEG CANCELLED :${it.returnCode}")
+                    }
+
+                    it.returnCode.isValueError -> {
+                        println("FFMPEG ERROR :${it.logs.last()}")
+                    }
+                }
+            },
+            {
+                println("FFMEPG LOG :${it.message}")
+            },
+            {
+                println("FFMEPG STATS :${it.speed}")
+            })
+    }
+
     private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
     private fun setUpMediaRecorder() {
         // mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -561,35 +717,36 @@ class CameraRepository(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
             "test${t}.mp4"
         )
-        /*  if (isSupported()){
-              //////////////////
+        if (isSupported("video/avc")) {
+            //////////////////
 
-              val profiles:CamcorderProfile = CamcorderProfile.get(
-                 0,
-                    CamcorderProfile.QUALITY_HIGH)
-              var highQualityProfile: CamcorderProfile? = null
+            val profiles: CamcorderProfile = CamcorderProfile.get(
+                0,
+                CamcorderProfile.QUALITY_HIGH
+            )
+            var highQualityProfile: CamcorderProfile? = null
 
-             /* for (profile in profiles!!) {
-                  if (profile.quality == CamcorderProfile.QUALITY_HIGH) {
-                      highQualityProfile = profile
-                      break
-                  }
-              }*/
-              /////////////////
-              val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
-              mMediaRecorder.setProfile(profile)
-              mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-              mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-              mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-              mMediaRecorder.setVideoSize(1920,1080) // 480p
-              mMediaRecorder.setVideoFrameRate(10)
-              mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
-              try {
-                  mMediaRecorder.prepare()
-              } catch (e: Exception) {
-                  println()
-              }
-          }*/
+            /* for (profile in profiles!!) {
+                 if (profile.quality == CamcorderProfile.QUALITY_HIGH) {
+                     highQualityProfile = profile
+                     break
+                 }
+             }*/
+            /////////////////
+            val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
+            //   mMediaRecorder.setProfile(profile)
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+            mMediaRecorder.setVideoSize(1920, 1080) // 480p
+            mMediaRecorder.setVideoFrameRate(10)
+            mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
+            try {
+                mMediaRecorder.prepare()
+            } catch (e: Exception) {
+                println()
+            }
+        }
         println()
 
         //  mMediaRecorder.prepare()
@@ -605,33 +762,30 @@ class CameraRepository(
     }
 
 
+    fun getMaxResolution(codecInfo: MediaCodecInfo, mimeType: String): Pair<Int, Int> {
+        val capabilities = codecInfo.getCapabilitiesForType(mimeType)
 
-        fun main() {
-            val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-            val codecInfos = codecList.codecInfos
+        val videoCapabilities = capabilities.videoCapabilities
+        val maxWidth = videoCapabilities.supportedWidths.upper
+        val maxHeight = videoCapabilities.supportedHeights.upper
+        return Pair(maxWidth, maxHeight)
+    }
 
-            for (codecInfo in codecInfos) {
-                if (!codecInfo.isEncoder) {
-                    val supportedTypes = codecInfo.supportedTypes
-                    for (type in supportedTypes) {
-                        println("Decoder: " + codecInfo.name + ", Type: " + type)
-                        val capabilities = codecInfo.getCapabilitiesForType(type)
-                        if (capabilities != null) {
-                            val videoCapabilities: MediaCodecInfo.VideoCapabilities? =
-                                capabilities.videoCapabilities
-                            if (videoCapabilities != null) {
-
-                                val widthRange: Range<Int> = videoCapabilities.supportedWidths
-                                val heightRange: Range<Int> = videoCapabilities.supportedHeights
-                                val frameRateRange: Range<Int> = videoCapabilities.supportedFrameRates
-                                println("  Supported Resolutions:")
-                            }
-                        }
-                    }
+    fun main() {
+        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+        val codecs = codecList.codecInfos.filter { it.isEncoder }
+        for (codec in codecs) {
+            val mimeTypes = codec.supportedTypes
+            for (mimeType in mimeTypes) {
+                if (mimeType.startsWith("video/")) {
+                    val (maxWidth, maxHeight) = getMaxResolution(codec, mimeType)
+                    println("Codec: ${codec.name}, MIME Type: $mimeType, Max Resolution: ${maxWidth}x${maxHeight}")
+                } else {
+                    println("Codec: ${codec.name}, MIME Type: $mimeType")
                 }
             }
         }
-
+    }
 
 
     private fun prepareMediaCodec() {
@@ -648,7 +802,7 @@ class CameraRepository(
         }
 
 
-        val width = 2048 // ширина видео 4096,3072// 3840 x2160
+        val width = 2048 // ширина видео 4096,3072// 3840 x2160//max 1920x1080
         val height = 2048
         try {
             mCodec = MediaCodec.createEncoderByType("video/avc")
@@ -657,19 +811,19 @@ class CameraRepository(
         }
         val format = MediaFormat.createVideoFormat("video/avc", width, height)
         /////////////////////////////
-      /*  var softwareCodec: MediaCodecInfo? = null
-        for (codecInfo in codecInfos) {
-            if (!codecInfo.isHardwareAccelerated && codecInfo.isEncoder && codecInfo.supportedTypes.contains(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
-                softwareCodec = codecInfo
-                break
-            }
-        }
+        /*  var softwareCodec: MediaCodecInfo? = null
+          for (codecInfo in codecInfos) {
+              if (!codecInfo.isHardwareAccelerated && codecInfo.isEncoder && codecInfo.supportedTypes.contains(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
+                  softwareCodec = codecInfo
+                  break
+              }
+          }
 
-        softwareCodec?.let {
-            val codec = MediaCodec.createByCodecName(it.name)
-            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            codec.start()
-        }*/
+          softwareCodec?.let {
+              val codec = MediaCodec.createByCodecName(it.name)
+              codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+              codec.start()
+          }*/
         ////////////////////////////
         format.setInteger(MediaFormat.KEY_BIT_RATE, 3000000) // битрейт видео в bps (бит в секунду)
         format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
@@ -744,9 +898,13 @@ class CameraRepository(
     // private var imageReader:ImageReader? = null
 
     fun singleCapture(enable: Boolean) {
-        singleCapture = true
+        //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
-
+        if (enable) {
+            mMediaRecorder.start()
+        } else {
+            mMediaRecorder.stop()
+        }
     }
 
     fun repeatingCapture() {
@@ -871,16 +1029,17 @@ class CameraRepository(
         return out.toByteArray()
     }
 
-    /* fun recordVideo(enable:Boolean){
-         // setUpMediaRecorder()
-         //   mMediaRecorder.prepare()
-         if (enable){
-             mCodec!!.start()
-         }else{
-             mCodec!!.stop()
-         }
+    fun recordVideo(enable: Boolean) {
+        setUpMediaRecorder()
+        //   mMediaRecorder.prepare()
+        if (enable) {
+            mCodec!!.start()
+        } else {
+            mCodec!!.stop()
+        }
 
-     }*/
+    }
+
     /* fun recordVideo(enable:Boolean){
         // setUpMediaRecorder()
       //   mMediaRecorder.prepare()

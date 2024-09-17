@@ -8,7 +8,9 @@
     <uses-feature android:name="android.hardware.camera.any" />
     <uses-feature android:name="android.hardware.camera.raw" android:required="false" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
     <application
+        android:extractNativeLibs="true"
         android:name=".YESApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
