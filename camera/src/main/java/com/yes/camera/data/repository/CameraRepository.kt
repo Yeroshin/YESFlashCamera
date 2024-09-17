@@ -2,8 +2,6 @@ package com.yes.camera.data.repository
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
 import android.graphics.Rect
@@ -32,6 +30,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
@@ -43,8 +42,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -83,8 +80,10 @@ class CameraRepository(
     private val _event: MutableStateFlow<YuvImage?> = MutableStateFlow(null)
     private val event = _event
     val comparator = ImageComparator()
-  //  var prevImage: Bitmap? = null
+
+    //  var prevImage: Bitmap? = null
     var prevImage: YuvImage? = null
+
     init {
         /* CoroutineScope(Dispatchers.IO).launch {
              event.collect {image->
@@ -109,34 +108,36 @@ class CameraRepository(
         CoroutineScope(Dispatchers.IO).launch {
             event.collect { yuvImage ->
                 yuvImage?.let {
-                   /* val yuvBytes = ByteArrayOutputStream()
-                     val bytes=it.getJpegDataWithQuality(100)
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    prevImage?.let {prev->
-                        val dif=comparator.compareImageValues(prev,bitmap)
-                        if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                    /* val yuvBytes = ByteArrayOutputStream()
+                      val bytes=it.getJpegDataWithQuality(100)
+                     val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                     prevImage?.let {prev->
+                         val dif=comparator.compareImageValues(prev,bitmap)
+                         if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                             println("capture")
+                             // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                         }
+                         Log.e("","dif:${
+                             dif
+                         }")
+                         prevImage=bitmap
+                     }?:run{
+                         prevImage=bitmap
+                     }*/
+                    prevImage?.let { prev ->
+                        val dif = comparator.compareImageValues(prev, yuvImage)
+                        if (dif > 36) {//1/15s worked;1/8s relible(1/15s )
                             println("capture")
                             // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
                         }
-                        Log.e("","dif:${
-                            dif
-                        }")
-                        prevImage=bitmap
-                    }?:run{
-                        prevImage=bitmap
-                    }*/
-                    prevImage?.let {prev->
-                        val dif=comparator.compareImageValues(prev,yuvImage)
-                        if (dif>36){//1/15s worked;1/8s relible(1/15s )
-                            println("capture")
-                            // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
-                        }
-                        Log.e("","dif:${
-                            dif
-                        }")
-                        prevImage=bitmap
-                    }?:run{
-                        prevImage=bitmap
+                        Log.e(
+                            "", "dif:${
+                                dif
+                            }"
+                        )
+                        //   prevImage=bitmap
+                    } ?: run {
+                        //  prevImage=bitmap
                     }
                 }
                 /*    byteArray?.let {
@@ -366,6 +367,7 @@ class CameraRepository(
         }
     }
     private var lastFrameTime: Long = 0
+
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         val image = reader.acquireLatestImage()
 
@@ -470,20 +472,26 @@ class CameraRepository(
             imageReaderSurfaceConfiguration
         )
 
-        captureRequest?.addTarget(imageReader.surface)
+        // captureRequest?.addTarget(imageReader.surface)
 
         /////////////////media codec
-        /*   prepareMediaCodec()
+        prepareMediaCodec()
+        try {
+            val mEncoderSurface = mCodec!!.createInputSurface()
+            mCodec!!.setInputSurface(mEncoderSurface)
+            captureRequest?.addTarget(mEncoderSurface)
+            configs.add(
+                OutputConfiguration(mEncoderSurface)
+            )
+        } catch (e: java.lang.Exception) {
+            println()
+        }
 
-          // val mEncoderSurface =  mCodec!!.createInputSurface()
 
-           val mEncoderSurface = MediaCodec.createPersistentInputSurface()
-           mCodec!!.setInputSurface(mEncoderSurface)
-         //  val mEncoderSurface=mCodec!!.createInputSurface()
-           previewCaptureBuilder?.addTarget(mEncoderSurface)
-           configs.add(
-               OutputConfiguration(mEncoderSurface)
-           )*/
+        // val mEncoderSurface = MediaCodec.createPersistentInputSurface()
+
+
+
         /////////////////////////////////
         //   configs.add(conf2)
         val config = SessionConfiguration(
@@ -596,8 +604,41 @@ class CameraRepository(
         )
     }
 
+
+
+        fun main() {
+            val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+            val codecInfos = codecList.codecInfos
+
+            for (codecInfo in codecInfos) {
+                if (!codecInfo.isEncoder) {
+                    val supportedTypes = codecInfo.supportedTypes
+                    for (type in supportedTypes) {
+                        println("Decoder: " + codecInfo.name + ", Type: " + type)
+                        val capabilities = codecInfo.getCapabilitiesForType(type)
+                        if (capabilities != null) {
+                            val videoCapabilities: MediaCodecInfo.VideoCapabilities? =
+                                capabilities.videoCapabilities
+                            if (videoCapabilities != null) {
+
+                                val widthRange: Range<Int> = videoCapabilities.supportedWidths
+                                val heightRange: Range<Int> = videoCapabilities.supportedHeights
+                                val frameRateRange: Range<Int> = videoCapabilities.supportedFrameRates
+                                println("  Supported Resolutions:")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+
     private fun prepareMediaCodec() {
-        val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_MPEG4)
+        main()
+        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+        val codecInfos = codecList.codecInfos
+        val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_HEVC)
         val mFile = createFile("mp4")
         try {
             outputStream = BufferedOutputStream(FileOutputStream(mFile))
@@ -606,22 +647,43 @@ class CameraRepository(
             e.printStackTrace()
         }
 
-        val width = 640 // ширина видео
-        val height = 480
+
+        val width = 2048 // ширина видео 4096,3072// 3840 x2160
+        val height = 2048
         try {
-            mCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+            mCodec = MediaCodec.createEncoderByType("video/avc")
         } catch (e: java.lang.Exception) {
             println()
         }
-        val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 3840, 2160)
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 45000000) // битрейт видео в bps (бит в секунду)
+        val format = MediaFormat.createVideoFormat("video/avc", width, height)
+        /////////////////////////////
+      /*  var softwareCodec: MediaCodecInfo? = null
+        for (codecInfo in codecInfos) {
+            if (!codecInfo.isHardwareAccelerated && codecInfo.isEncoder && codecInfo.supportedTypes.contains(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
+                softwareCodec = codecInfo
+                break
+            }
+        }
+
+        softwareCodec?.let {
+            val codec = MediaCodec.createByCodecName(it.name)
+            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            codec.start()
+        }*/
+        ////////////////////////////
+        format.setInteger(MediaFormat.KEY_BIT_RATE, 3000000) // битрейт видео в bps (бит в секунду)
         format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-        mCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        try {
+            mCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        } catch (e: java.lang.Exception) {
+            println()
+        }
+
 
 
         mCodec?.setCallback(
