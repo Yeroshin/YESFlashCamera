@@ -52,12 +52,14 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.Pipe
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.LinkedBlockingQueue
 
 
 class CameraRepository(
@@ -451,7 +453,8 @@ class CameraRepository(
         }*/
         val image = reader.acquireLatestImage()
         image?.let {
-            processImage(it.planes[0].buffer)
+            addImage(image)
+            //processImage(it.planes[0].buffer)
             it.close()
         }
     }
@@ -469,7 +472,7 @@ class CameraRepository(
         FFmpegKit.cancel()
     }
 
-    init {
+   /* init {
         thread.start()
 
         // Останавливаем поток через 10 секунд
@@ -479,7 +482,7 @@ class CameraRepository(
                 running = false
             }
         }, 10000)
-    }
+    }*/
 
     val imageFormat = ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
     val imageReader = ImageReader.newInstance(1920, 1080, ImageFormat.YUV_420_888, 10).apply {
@@ -532,7 +535,7 @@ class CameraRepository(
             surfaceConfiguration
         )
         ////////////////
-        ffmpeg()
+       // ffmpeg()
         ////video
         /* setUpMediaRecorder()
         // val recorderSurface= MediaCodec.createPersistentInputSurface();
@@ -606,23 +609,61 @@ class CameraRepository(
 
 
     /////////////////////////////
-    private fun processImage(buffer: ByteBuffer) {
-        // Преобразование ByteBuffer в массив байтов
-        val bytes = ByteArray(buffer.remaining())
-        buffer.get(bytes)
 
-        // Отправка кадра в FFmpegKit
-        val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i - -c:v libx264 -y output.mp4"
-        FFmpegKit.executeAsync(command) { session ->
-            val returnCode = session.returnCode
-            if (returnCode.isValueSuccess) {
-                // Успешное выполнение
-            } else {
-                // Ошибка выполнения
+    val ffmpegThread=Thread{
+        startFFmpeg()
+    }
+    init {
+        ffmpegThread.start()
+
+        // Останавливаем поток через 10 секунд
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (ffmpegThread.isAlive) {
+                ffmpegThread.interrupt()
+                running = false
+            }
+        }, 10000)
+    }
+    private val imageQueue=LinkedBlockingQueue<ByteArray>()
+    private fun addImage(image:Image){
+        val buffer=image.planes[0].buffer
+        val bytes=ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        imageQueue.add(bytes)
+        image.close()
+    }
+    private fun processImages(){
+        while (running){
+            val imageData=imageQueue.take()
+
+
+                // Запись байтов в pipe
+                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
+                process.outputStream.write(imageData)
+                process.outputStream.flush()
+                process.outputStream.close()
+
             }
         }
+
+    val pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
+
+    private fun startFFmpeg() {
+
+        val outputFilePath = createFile("mp4")
+        val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -c:v libx264 -y $outputFilePath"
+        FFmpegKit.executeAsync(command) { session ->
+
+            val returnCode = session.returnCode
+            if (returnCode.isValueSuccess) {
+               println("sucess")
+            } else {
+                println("error")
+            }
+        }
+
     }
-    fun ffmpeg() {
+   /* fun ffmpeg() {
         val outputFile = File("/storage/emulated/0/DCIM/output.mp4")
         if (outputFile.exists()) {
             outputFile.delete()
@@ -677,7 +718,7 @@ class CameraRepository(
             {
                 println("FFMEPG STATS :${it.speed}")
             })
-    }
+    }*/
 
     private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
     private fun setUpMediaRecorder() {
