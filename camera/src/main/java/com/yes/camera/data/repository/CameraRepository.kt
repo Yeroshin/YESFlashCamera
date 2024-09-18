@@ -46,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -431,37 +432,57 @@ class CameraRepository(
            image?.close()
            //  println("render")*/
        }*/
-    val pipe = Pipe.open()
-    var running = true
+
+    var running = false
+    var finished=false
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-       /* if (running){
+        /* if (running){
+             val image = reader.acquireNextImage()
+             if (image!= null) {
+                 val buffer = image.planes[0].buffer
+                 val bytes = ByteArray(buffer.remaining())
+                 buffer.get(bytes)
+
+                 try {
+                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                     sink.write(byteBuffer.array())
+                 } catch (e: IOException) {
+                     println()
+                 } finally {
+                     image.close() // Освобождаем изображение
+                 }
+             }
+         }*/
+        if (running) {
             val image = reader.acquireNextImage()
-            if (image!= null) {
-                val buffer = image.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
-
-                try {
-                    val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
-                    sink.write(byteBuffer.array())
-                } catch (e: IOException) {
-                    println()
-                } finally {
-                    image.close() // Освобождаем изображение
-                }
+            image?.let {
+                addImage(image)
+                //processImage(it.planes[0].buffer)
+                it.close()
             }
-        }*/
-        val image = reader.acquireLatestImage()
-        image?.let {
-            addImage(image)
-            //processImage(it.planes[0].buffer)
-            it.close()
+        } else if (finished){
+            FFmpegKit.cancel()
+            process?.outputStream?.flush()
+            process?.outputStream?.close()
+            finished=false
+        }else{
+            reader.acquireLatestImage()?.close()
         }
-    }
 
+    }
+    private fun addImage(image: Image) {
+        val buffer = image.planes[0].buffer
+
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        image.close()
+        //   imageQueue.add(bytes)
+
+        process?.outputStream?.write(bytes)
+
+    }
     private lateinit var sink: PipedOutputStream
     private lateinit var source: PipedInputStream
-
     val thread = Thread {
         while (running) {
             // Ждем события ImageReader.OnImageAvailableListener
@@ -472,18 +493,17 @@ class CameraRepository(
         FFmpegKit.cancel()
     }
 
-   /* init {
-        thread.start()
+    /* init {
+         thread.start()
 
-        // Останавливаем поток через 10 секунд
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (thread.isAlive) {
-                thread.interrupt()
-                running = false
-            }
-        }, 10000)
-    }*/
-
+         // Останавливаем поток через 10 секунд
+         Handler(Looper.getMainLooper()).postDelayed({
+             if (thread.isAlive) {
+                 thread.interrupt()
+                 running = false
+             }
+         }, 10000)
+     }*/
     val imageFormat = ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
     val imageReader = ImageReader.newInstance(1920, 1080, ImageFormat.YUV_420_888, 10).apply {
         setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
@@ -495,7 +515,6 @@ class CameraRepository(
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         enableSurfaceSharing()
     }
-
 
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
@@ -535,7 +554,7 @@ class CameraRepository(
             surfaceConfiguration
         )
         ////////////////
-       // ffmpeg()
+        // ffmpeg()
         ////video
         /* setUpMediaRecorder()
         // val recorderSurface= MediaCodec.createPersistentInputSurface();
@@ -606,119 +625,121 @@ class CameraRepository(
         )
         cameraDevice?.createCaptureSession(config)
     }
-
-
     /////////////////////////////
 
-    val ffmpegThread=Thread{
-        startFFmpeg()
-    }
+  /*  val ffmpegThread = Thread {
+
+        processImages()
+    }*/
+
     init {
-        ffmpegThread.start()
-
+        //   ffmpegThread.start()
+        startFFmpeg()
         // Останавливаем поток через 10 секунд
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (ffmpegThread.isAlive) {
-                ffmpegThread.interrupt()
+      /*  Handler(Looper.getMainLooper()).postDelayed({
+          //  running = false
+          /*  if (ffmpegThread.isAlive) {
+               // ffmpegThread.interrupt()
                 running = false
-            }
-        }, 10000)
+            }*/
+        }, 10000)*/
     }
-    private val imageQueue=LinkedBlockingQueue<ByteArray>()
-    private fun addImage(image:Image){
-        val buffer=image.planes[0].buffer
-        val bytes=ByteArray(buffer.remaining())
-        buffer.get(bytes)
-        imageQueue.add(bytes)
-        image.close()
-    }
-    private fun processImages(){
-        while (running){
-            val imageData=imageQueue.take()
+
+    private val imageQueue = LinkedBlockingQueue<ByteArray>()
 
 
-                // Запись байтов в pipe
-                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
-                process.outputStream.write(imageData)
-                process.outputStream.flush()
-                process.outputStream.close()
+
+
+
+    private fun processImages() {
+        while (running) {
+            imageQueue?.let {
+                val imageData = it.take()
+                process?.outputStream?.write(imageData)
 
             }
         }
 
-    val pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
+        process?.outputStream?.flush()
+        process?.outputStream?.close()
+    }
 
+
+    var pipe1: String? = null
+    var process: Process? = null
     private fun startFFmpeg() {
-
+        pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
+        process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
         val outputFilePath = createFile("mp4")
-        val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -c:v libx264 -y $outputFilePath"
+        val command =
+            "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -c:v mpeg4 -y $outputFilePath"
         FFmpegKit.executeAsync(command) { session ->
 
             val returnCode = session.returnCode
             if (returnCode.isValueSuccess) {
-               println("sucess")
+                println("sucess")
             } else {
                 println("error")
             }
         }
 
     }
-   /* fun ffmpeg() {
-        val outputFile = File("/storage/emulated/0/DCIM/output.mp4")
-        if (outputFile.exists()) {
-            outputFile.delete()
-        }
-        val outputFilePath = createFile("mp4")
+    /* fun ffmpeg() {
+         val outputFile = File("/storage/emulated/0/DCIM/output.mp4")
+         if (outputFile.exists()) {
+             outputFile.delete()
+         }
+         val outputFilePath = createFile("mp4")
 
-        // Создаем pipe
-        sink = PipedOutputStream()
-        source = PipedInputStream(sink)
+         // Создаем pipe
+         sink = PipedOutputStream()
+         source = PipedInputStream(sink)
 
 
 
-        val pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
-        val command = "-f image2pipe -i $pipe1  -c:v libx264 $outputFilePath" // Пример команды
-        FFmpegKit.executeAsync(command) {
-            when {
-                ReturnCode.isSuccess(it.returnCode) -> {
-                    println("FFMPEG SUCCESS :${it.state.name}")
-                }
+         val pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
+         val command = "-f image2pipe -i $pipe1  -c:v libx264 $outputFilePath" // Пример команды
+         FFmpegKit.executeAsync(command) {
+             when {
+                 ReturnCode.isSuccess(it.returnCode) -> {
+                     println("FFMPEG SUCCESS :${it.state.name}")
+                 }
 
-                ReturnCode.isCancel(it.returnCode) -> {
-                    println("FFMPEG CANCELLED :${it.returnCode}")
-                }
+                 ReturnCode.isCancel(it.returnCode) -> {
+                     println("FFMPEG CANCELLED :${it.returnCode}")
+                 }
 
-                it.returnCode.isValueError -> {
-                    println("FFMPEG ERROR :${it.logs.last()}")
-                }
-            }
-        }
+                 it.returnCode.isValueError -> {
+                     println("FFMPEG ERROR :${it.logs.last()}")
+                 }
+             }
+         }
 
-        // Инициализируем FFmpeg
-        FFmpegKit.executeAsync(
-            "-f rawvideo -pix_fmt yuv420p -s ${1920}x${1080} -r 30 -i " + pipe1 + " -c:v libx264 -f mp4 $outputFilePath",
-            {
-                when {
-                    ReturnCode.isSuccess(it.returnCode) -> {
-                        println("FFMPEG SUCCESS :${it.state.name}")
-                    }
+         // Инициализируем FFmpeg
+         FFmpegKit.executeAsync(
+             "-f rawvideo -pix_fmt yuv420p -s ${1920}x${1080} -r 30 -i " + pipe1 + " -c:v libx264 -f mp4 $outputFilePath",
+             {
+                 when {
+                     ReturnCode.isSuccess(it.returnCode) -> {
+                         println("FFMPEG SUCCESS :${it.state.name}")
+                     }
 
-                    ReturnCode.isCancel(it.returnCode) -> {
-                        println("FFMPEG CANCELLED :${it.returnCode}")
-                    }
+                     ReturnCode.isCancel(it.returnCode) -> {
+                         println("FFMPEG CANCELLED :${it.returnCode}")
+                     }
 
-                    it.returnCode.isValueError -> {
-                        println("FFMPEG ERROR :${it.logs.last()}")
-                    }
-                }
-            },
-            {
-                println("FFMEPG LOG :${it.message}")
-            },
-            {
-                println("FFMEPG STATS :${it.speed}")
-            })
-    }*/
+                     it.returnCode.isValueError -> {
+                         println("FFMPEG ERROR :${it.logs.last()}")
+                     }
+                 }
+             },
+             {
+                 println("FFMEPG LOG :${it.message}")
+             },
+             {
+                 println("FFMEPG STATS :${it.speed}")
+             })
+     }*/
 
     private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
     private fun setUpMediaRecorder() {
@@ -941,11 +962,15 @@ class CameraRepository(
     fun singleCapture(enable: Boolean) {
         //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
-        if (enable) {
+        /*if (enable) {
             mMediaRecorder.start()
         } else {
             mMediaRecorder.stop()
-        }
+        }*/
+
+            running=enable
+            finished=!enable
+
     }
 
     fun repeatingCapture() {
