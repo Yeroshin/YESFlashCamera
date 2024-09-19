@@ -45,7 +45,8 @@ android {
 dependencies {
     implementation(project(":shared"))
    // implementation (libs.material)
-    implementation ("com.arthenica:ffmpeg-kit-full:6.0-2")
+    implementation ("com.arthenica:ffmpeg-kit-full-gpl:6.0-2")
+
 
     implementation(libs.androidx.core.ktx)
 
