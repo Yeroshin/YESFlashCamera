@@ -39,10 +39,12 @@ import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -88,7 +90,7 @@ class CameraRepository(
     var prevImage: YuvImage? = null
 
     //enable this comparator!!
-    init {
+   /* init {
         /* CoroutineScope(Dispatchers.IO).launch {
              event.collect {image->
                  image?.let {
@@ -164,7 +166,7 @@ class CameraRepository(
                      }*/
              }
          }*/
-    }
+    }*/
 
     fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
@@ -190,9 +192,6 @@ class CameraRepository(
         }
         return characteristicsFlow
     }
-
-
-    // private var onCameraOpened:(()->Unit)?=null
 
     @SuppressLint("MissingPermission")
     private fun openCamera(id: String, onCameraOpened: (characteristics: Characteristics) -> Unit) {
@@ -334,10 +333,20 @@ class CameraRepository(
         }
 
     }
+    init {
+        startFFmpeg()
+        CoroutineScope(Dispatchers.IO).launch {
+            event.collect { yuvImage ->
+                yuvImage?.let {
+                    addNVImage(it)
+                }
+            }
+        }
+    }
 
     var sessio: CameraCaptureSession? = null
     private var captureResult: CaptureResult? = null
-
+    var frameTime:Long=0
     val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -346,28 +355,27 @@ class CameraRepository(
         ) {
             super.onCaptureCompleted(session, request, result)
             captureResult = result
+            ////////////////////////
             val currentTime = System.currentTimeMillis()
-            if (lastFrameTime != 0L) {
-                val fps = 1000.0 / (currentTime - lastFrameTime)
-                    println("FPS: $fps")
+            if (frameTime != 0L) {
+                val fps = 1000.0 / (currentTime - frameTime)
+             //   Log.e("CaptureSession", "FPS: $fps")
+                //  println("FPS: $fps")
             }
-            lastFrameTime = currentTime
+            frameTime = currentTime
+            /////////////////////////
         }
     }
 
 
-  /*  val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
-        priority = Thread.MAX_PRIORITY
-        start()
-    }
-    val imageReaderHandler = Handler(imageReaderHandlerThread.looper)*/
+
 
     private val surface by lazy {
         Surface(glSurfaceTexture)
     }
     private val surfaceConfiguration by lazy {
         OutputConfiguration(surface).apply {
-          //  enableSurfaceSharing()
+            enableSurfaceSharing()
         }
     }
     private var lastFrameTime: Long = 0
@@ -426,9 +434,7 @@ class CameraRepository(
            image?.close()
            //  println("render")*/
        }*/
-    init {
-      //  startFFmpeg()
-    }
+
 
     private var pipe1: String? = null
     var running = false
@@ -436,6 +442,15 @@ class CameraRepository(
     var frameCount = 0
     private var previousFrameTime = 0L
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        ////////////////////////
+        val currentTime = System.currentTimeMillis()
+        if (lastFrameTime != 0L) {
+            val fps = 1000.0 / (currentTime - lastFrameTime)
+            Log.e("ImageReader", "FPS: $fps")
+            //  println("FPS: $fps")
+        }
+        lastFrameTime = currentTime
+        /////////////////////////
         /* if (running){
              val image = reader.acquireNextImage()
              if (image!= null) {
@@ -458,14 +473,15 @@ class CameraRepository(
             image?.let {
                 val currentTime = System.nanoTime()
                 val timeDiff = currentTime - previousFrameTime
-                if(true){
-               // if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
+
+                if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
                     frameCount++
 
 
                     val fps: Double = 1 / (timeDiff / 1e9)
-                    Log.e("FPS", "FPS: $fps")
-                 //   addImage(image)
+                    Log.e("FPS", "captured")
+                    saveImage(image)
+                  //  addNVImage(image)
                     previousFrameTime = currentTime
                 }
 
@@ -476,6 +492,7 @@ class CameraRepository(
             pipe1?.let {
                 FFmpegKitConfig.closeFFmpegPipe(it)
             }
+            process?.waitFor()
             process?.destroy()
             //   FFmpegKit.cancel()
             // process?.outputStream?.flush()
@@ -484,9 +501,43 @@ class CameraRepository(
         } else {
             reader.acquireLatestImage()?.close()
         }
+        /////////////////
 
     }
+    private fun addNVImage(yuvImage:YuvImage) {
+        val width = 3840
+        val height = 2160
+        val nv21ByteArray = yuvImage.yuvData
 
+        val yuvData = ByteArray(width * height * 3 / 2)
+
+        val yLength = width * height
+        val yStride = yuvImage.strides[0]
+        val yPixelStride = 1 // assuming pixel stride is 1 for Y plane
+        System.arraycopy(nv21ByteArray, 0, yuvData, 0, yLength)
+
+        val uvLength = yLength / 2
+        val uvOffset = yLength
+        val uvData = nv21ByteArray.copyOfRange(uvOffset, uvOffset + uvLength)
+
+        val uStride = yuvImage.strides[1]
+        val uPixelStride = 1 // assuming pixel stride is 1 for U plane
+
+        val uData = ByteArray(uvLength / 2)
+        val vData = ByteArray(uvLength / 2)
+
+        for (i in 0 until height / 2) {
+            for (j in 0 until width / 2) {
+                uData[i * width / 2 + j] = uvData[i * uStride + j * uPixelStride]
+                vData[i * width / 2 + j] = uvData[i * uStride + j * uPixelStride + 1]
+            }
+        }
+
+        System.arraycopy(uData, 0, yuvData, yLength, uvLength / 2)
+        System.arraycopy(vData, 0, yuvData, yLength + uvLength / 2, uvLength / 2)
+
+        process?.outputStream?.write(yuvData)
+    }
     private fun addImage(image: Image) {
         /*val yBuffer = image.planes[0].buffer
         val uBuffer = image.planes[1].buffer
@@ -619,10 +670,14 @@ class CameraRepository(
         //////////////////
         // image.close()
     }
-
+    private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+        priority = Thread.MAX_PRIORITY
+        start()
+    }
+    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
     private val imageReader =
-        ImageReader.newInstance(4096,3072, ImageFormat.YUV_420_888, 1).apply {
-            setOnImageAvailableListener(imageAvailableListener, null)
+        ImageReader.newInstance(3840,2160, ImageFormat.YUV_420_888, 30).apply {
+            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
     private var process: Process? = null
@@ -632,7 +687,7 @@ class CameraRepository(
         process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
         val outputFilePath = createFile("mp4")
         val command =
-            "-f rawvideo  -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+            "-f rawvideo  -vcodec rawvideo -pix_fmt yuv420p   -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
                   "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
                   "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
@@ -796,7 +851,7 @@ class CameraRepository(
               setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
           }*/
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-      //  enableSurfaceSharing()
+       enableSurfaceSharing()
     }
 
     private fun createCaptureSession() {
@@ -827,8 +882,8 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 400)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 4_000_000L)
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 800)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 16_000_000L)
         ////////preview
 
         captureRequest?.addTarget(surface)
@@ -1227,8 +1282,8 @@ class CameraRepository(
 
     private fun saveImage(
         image: Image,
-        cameraCharacteristics: CameraCharacteristics,
-        captureResult: CaptureResult
+       // cameraCharacteristics: CameraCharacteristics,
+      //  captureResult: CaptureResult
     ) {
         // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
         //////////////////////////
