@@ -349,25 +349,25 @@ class CameraRepository(
             val currentTime = System.currentTimeMillis()
             if (lastFrameTime != 0L) {
                 val fps = 1000.0 / (currentTime - lastFrameTime)
-                //    println("FPS: $fps")
+                    println("FPS: $fps")
             }
             lastFrameTime = currentTime
         }
     }
 
 
-    val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+  /*  val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
         priority = Thread.MAX_PRIORITY
         start()
     }
-    val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    val imageReaderHandler = Handler(imageReaderHandlerThread.looper)*/
 
     private val surface by lazy {
         Surface(glSurfaceTexture)
     }
     private val surfaceConfiguration by lazy {
         OutputConfiguration(surface).apply {
-            enableSurfaceSharing()
+          //  enableSurfaceSharing()
         }
     }
     private var lastFrameTime: Long = 0
@@ -427,7 +427,7 @@ class CameraRepository(
            //  println("render")*/
        }*/
     init {
-        startFFmpeg()
+      //  startFFmpeg()
     }
 
     private var pipe1: String? = null
@@ -458,13 +458,14 @@ class CameraRepository(
             image?.let {
                 val currentTime = System.nanoTime()
                 val timeDiff = currentTime - previousFrameTime
-                if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
+                if(true){
+               // if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
                     frameCount++
 
 
                     val fps: Double = 1 / (timeDiff / 1e9)
                     Log.e("FPS", "FPS: $fps")
-                    addImage(image)
+                 //   addImage(image)
                     previousFrameTime = currentTime
                 }
 
@@ -620,8 +621,9 @@ class CameraRepository(
     }
 
     private val imageReader =
-        ImageReader.newInstance(3840, 2160, ImageFormat.YUV_420_888, 3).apply {
-            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+        ImageReader.newInstance(4096,3072, ImageFormat.YUV_420_888, 1).apply {
+            setOnImageAvailableListener(imageAvailableListener, null)
+
         }
     private var process: Process? = null
     private fun startFFmpeg() {
@@ -774,17 +776,7 @@ class CameraRepository(
 
           image.close()
       }*/
-    private lateinit var sink: PipedOutputStream
-    private lateinit var source: PipedInputStream
-    val thread = Thread {
-        while (running) {
-            // Ждем события ImageReader.OnImageAvailableListener
-            Thread.sleep(10)
-        }
-        sink.close()
-        source.close()
-        FFmpegKit.cancel()
-    }
+
 
     /* init {
          thread.start()
@@ -804,7 +796,7 @@ class CameraRepository(
               setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
           }*/
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-        enableSurfaceSharing()
+      //  enableSurfaceSharing()
     }
 
     private fun createCaptureSession() {
@@ -836,7 +828,7 @@ class CameraRepository(
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
         captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 400)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 4_000_000L)
         ////////preview
 
         captureRequest?.addTarget(surface)
