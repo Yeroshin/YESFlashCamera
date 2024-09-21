@@ -41,6 +41,7 @@ import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +55,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.locks.ReentrantLock
 
 
 class CameraRepository(
@@ -88,83 +90,83 @@ class CameraRepository(
     var prevImage: YuvImage? = null
 
     //enable this comparator!!
-   /* init {
-        /* CoroutineScope(Dispatchers.IO).launch {
-             event.collect {image->
-                 image?.let {
-                     prevImage?.let {
-                         val dif=comparator.compareImageValues(it,image)
-                         if (dif>36){//1/15s worked;1/8s relible(1/15s )
-                             println("capturd")
-                             // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
-                         }
-                         Log.e("","dif:${
-                             dif
-                         }")
-                         prevImage=image
-                     }?:run{
-                         prevImage=image
-                     }
-                 }
-             }
-
-         }*/
-        /* CoroutineScope(Dispatchers.IO).launch {
-             event.collect { yuvImage ->
-                 yuvImage?.let {
-                     /* val yuvBytes = ByteArrayOutputStream()
-                       val bytes=it.getJpegDataWithQuality(100)
-                      val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                      prevImage?.let {prev->
-                          val dif=comparator.compareImageValues(prev,bitmap)
+    /* init {
+         /* CoroutineScope(Dispatchers.IO).launch {
+              event.collect {image->
+                  image?.let {
+                      prevImage?.let {
+                          val dif=comparator.compareImageValues(it,image)
                           if (dif>36){//1/15s worked;1/8s relible(1/15s )
-                              println("capture")
+                              println("capturd")
                               // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
                           }
                           Log.e("","dif:${
                               dif
                           }")
-                          prevImage=bitmap
+                          prevImage=image
                       }?:run{
-                          prevImage=bitmap
-                      }*/
-                     prevImage?.let { prev ->
-                         val dif = comparator.compareImageValues(prev, yuvImage)
-                         if (dif > 36) {//1/15s worked;1/8s relible(1/15s )
-                             println("capture")
-                             // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
-                         }
-                         Log.e(
-                             "", "dif:${
-                                 dif
-                             }"
-                         )
-                         //   prevImage=bitmap
-                     } ?: run {
-                         //  prevImage=bitmap
-                     }
-                 }
-                 /*    byteArray?.let {
-                    YuvImage(it, NV21, yuv420_888.width, yuv420_888.height, null) }
-                }
+                          prevImage=image
+                      }
+                  }
+              }
 
-                     .getJpegDataWithQuality(100)
-                     prevImage?.let {
-                         val dif=comparator.compareImageValues(it,image)
-                         if (dif>36){//1/15s worked;1/8s relible(1/15s )
-                             println("capturd")
-                             // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
-                         }
-                         Log.e("","dif:${
-                             dif
-                         }")
-                         prevImage=image
-                     }?:run{
-                         prevImage=image
-                     }*/
-             }
-         }*/
-    }*/
+          }*/
+         /* CoroutineScope(Dispatchers.IO).launch {
+              event.collect { yuvImage ->
+                  yuvImage?.let {
+                      /* val yuvBytes = ByteArrayOutputStream()
+                        val bytes=it.getJpegDataWithQuality(100)
+                       val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                       prevImage?.let {prev->
+                           val dif=comparator.compareImageValues(prev,bitmap)
+                           if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                               println("capture")
+                               // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                           }
+                           Log.e("","dif:${
+                               dif
+                           }")
+                           prevImage=bitmap
+                       }?:run{
+                           prevImage=bitmap
+                       }*/
+                      prevImage?.let { prev ->
+                          val dif = comparator.compareImageValues(prev, yuvImage)
+                          if (dif > 36) {//1/15s worked;1/8s relible(1/15s )
+                              println("capture")
+                              // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                          }
+                          Log.e(
+                              "", "dif:${
+                                  dif
+                              }"
+                          )
+                          //   prevImage=bitmap
+                      } ?: run {
+                          //  prevImage=bitmap
+                      }
+                  }
+                  /*    byteArray?.let {
+                     YuvImage(it, NV21, yuv420_888.width, yuv420_888.height, null) }
+                 }
+
+                      .getJpegDataWithQuality(100)
+                      prevImage?.let {
+                          val dif=comparator.compareImageValues(it,image)
+                          if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                              println("capturd")
+                              // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                          }
+                          Log.e("","dif:${
+                              dif
+                          }")
+                          prevImage=image
+                      }?:run{
+                          prevImage=image
+                      }*/
+              }
+          }*/
+     }*/
 
     fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
@@ -331,20 +333,32 @@ class CameraRepository(
         }
 
     }
+
+    var job: Job
+    val imageBuffer=ImageBuffer(500000000)
+    val writerThread = WriterThread(imageBuffer)
+    private var outputStream: BufferedOutputStream? = null
     init {
         startFFmpeg()
-        CoroutineScope(Dispatchers.IO).launch {
+        val scope = CoroutineScope(Dispatchers.IO)
+        job = CoroutineScope(Dispatchers.IO).launch {
             event.collect { yuvImage ->
                 yuvImage?.let {
-                    addNVImage(it)
+                    imageBuffer.addImage(it)
+                    //addNVImage(it)
                 }
             }
         }
+
+
+
+
+
     }
 
     var sessio: CameraCaptureSession? = null
     private var captureResult: CaptureResult? = null
-    var frameTime:Long=0
+    var frameTime: Long = 0
     val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -357,15 +371,13 @@ class CameraRepository(
             val currentTime = System.currentTimeMillis()
             if (frameTime != 0L) {
                 val fps = 1000.0 / (currentTime - frameTime)
-             //   Log.e("CaptureSession", "FPS: $fps")
+                //   Log.e("CaptureSession", "FPS: $fps")
                 //  println("FPS: $fps")
             }
             frameTime = currentTime
             /////////////////////////
         }
     }
-
-
 
 
     private val surface by lazy {
@@ -376,7 +388,6 @@ class CameraRepository(
             enableSurfaceSharing()
         }
     }
-    private var lastFrameTime: Long = 0
 
 
     /*   private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
@@ -438,17 +449,56 @@ class CameraRepository(
     var running = false
     var finished = false
     var frameCount = 0
+    class ImageBuffer(private val bufferSize: Int) {
+        private val buffer: MutableList<YuvImage> = mutableListOf()
+        private val lock = ReentrantLock()
+        private val condition = lock.newCondition()
+
+        fun addImage(image: YuvImage) {
+            lock.lock()
+            try {
+                while (buffer.size >= bufferSize) {
+                    condition.await() // wait until buffer has space
+                }
+                buffer.add(image)
+                condition.signalAll() // notify that buffer has new image
+            } finally {
+                lock.unlock()
+            }
+        }
+
+        fun getImage(): YuvImage {
+            lock.lock()
+            try {
+                while (buffer.isEmpty()) {
+                    condition.await() // wait until buffer has image
+                }
+                return buffer.removeAt(0)
+            } finally {
+                lock.unlock()
+            }
+        }
+    }
+    inner class WriterThread(private val imageBuffer: ImageBuffer) : Thread() {
+        override fun run() {
+            while (true) {
+                val image = imageBuffer.getImage()
+                if (image != null) {
+                    try {
+                        addNVImage(image)
+                    } catch (e: IOException) {
+                        Log.e("WriterThread", "Error writing to output stream: $e")
+                    }
+                } else {
+                    // buffer is empty, exit thread
+                    break
+                }
+            }
+        }
+    }
     private var previousFrameTime = 0L
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        ////////////////////////
-        val currentTime = System.currentTimeMillis()
-        if (lastFrameTime != 0L) {
-            val fps = 1000.0 / (currentTime - lastFrameTime)
-            Log.e("ImageReader", "FPS: $fps")
-            //  println("FPS: $fps")
-        }
-        lastFrameTime = currentTime
-        /////////////////////////
+
         /* if (running){
              val image = reader.acquireNextImage()
              if (image!= null) {
@@ -472,26 +522,32 @@ class CameraRepository(
                 val currentTime = System.nanoTime()
                 val timeDiff = currentTime - previousFrameTime
 
-                if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
-                    frameCount++
+                // if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
+                frameCount++
 
 
-                    val fps: Double = 1 / (timeDiff / 1e9)
-                    Log.e("FPS", "captured")
-                    saveImage(image)
-                  //  addNVImage(image)
-                    previousFrameTime = currentTime
-                }
+                val fps: Double = 1 / (timeDiff / 1e9)
+                Log.e("FPS", "captured")
+                saveImage(image)
+                //  addNVImage(image)
+                previousFrameTime = currentTime
+                //  }
 
                 //processImage(it.planes[0].buffer)
                 it.close()
             }
         } else if (finished) {
-            pipe1?.let {
-                FFmpegKitConfig.closeFFmpegPipe(it)
-            }
-          //  process?.waitFor()
-            process?.destroy()
+            /////////////////
+            job.cancel()
+              process?.destroy()
+              process?.waitFor()
+              FFmpegKitConfig.closeFFmpegPipe(pipe1)
+            ///////////////////
+            /*  pipe1?.let {
+                  FFmpegKitConfig.closeFFmpegPipe(it)
+              }
+            //  process?.waitFor()
+              process?.destroy()*/
             //   FFmpegKit.cancel()
             // process?.outputStream?.flush()
             //  process?.outputStream?.close()
@@ -502,7 +558,12 @@ class CameraRepository(
         /////////////////
 
     }
+    val fps1=Fps()
+
+    private var process: Process? = null
+    val bufferedOutputStream = BufferedOutputStream(process?.outputStream)
     private fun addNVImage(yuvImage: YuvImage) {
+        fps1.get("beforeConvert")
         val nv21Data = yuvImage.yuvData
 
         var output: ByteArray? = null
@@ -521,7 +582,8 @@ class CameraRepository(
             for (j in 0 until yuvImage.width / 2) {
                 val uvIndex = size + 2 * (i * yuvImage.width / 2 + j)
                 output[v0 + i * yuvImage.width / 2 + j] = nv21Data[uvIndex] // For NV21, V first
-                output[u0 + i * yuvImage.width / 2 + j] = nv21Data[uvIndex + 1] // For NV21, U second
+                output[u0 + i * yuvImage.width / 2 + j] =
+                    nv21Data[uvIndex + 1] // For NV21, U second
             }
         }
 
@@ -531,9 +593,14 @@ class CameraRepository(
             output[i] = output[i + quarter]
             output[i + quarter] = temp
         }
+        fps1.get("afterConvert")
+        bufferedOutputStream.write(output)
+        bufferedOutputStream.flush()
+       // process?.outputStream?.write(output)
+        fps1.get("afterWrite")
 
-        process?.outputStream?.write(output)
     }
+
     private fun addImage(image: Image) {
         /*val yBuffer = image.planes[0].buffer
         val uBuffer = image.planes[1].buffer
@@ -666,37 +733,38 @@ class CameraRepository(
         //////////////////
         // image.close()
     }
+
     private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
         priority = Thread.MAX_PRIORITY
         start()
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
     private val imageReader =
-        ImageReader.newInstance(3840,2160, ImageFormat.YUV_420_888, 30).apply {
+        ImageReader.newInstance(3840, 2160, ImageFormat.JPEG, 30).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
-    private var process: Process? = null
+
     private fun startFFmpeg() {
 
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
         process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
         val outputFilePath = createFile("mp4")
-        val framerate=24//23.976
+        val framerate = 24//23.976
         val command =
-            "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+            "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
                    "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
                    "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
-      /*  FFmpegKit.executeAsync(command) { session ->
+        /*  FFmpegKit.executeAsync(command) { session ->
 
-            val returnCode = session.returnCode
-            if (returnCode.isValueSuccess) {
-                println("sucess")
-            } else {
-                println("error")
-            }
-        }*/
+              val returnCode = session.returnCode
+              if (returnCode.isValueSuccess) {
+                  println("sucess")
+              } else {
+                  println("error")
+              }
+          }*/
         FFmpegKit.executeAsync(command,
             { session ->
                 val state = session.state
@@ -707,13 +775,14 @@ class CameraRepository(
                 } else {
                     println("error")
                 }
-            }, {log->
+            }, { log ->
                 println(log.message)
                 // CALLED WHEN SESSION PRINTS LOGS
-            }, {statistics->
-                println("frame number:"+statistics.videoFrameNumber)
+            }, { statistics ->
+                println("frame number:" + statistics.videoFrameNumber)
                 // CALLED WHEN SESSION GENERATES STATISTICS
             })
+
 
     }
 
@@ -865,7 +934,7 @@ class CameraRepository(
               setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
           }*/
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-       enableSurfaceSharing()
+        enableSurfaceSharing()
     }
 
     private fun createCaptureSession() {
@@ -930,7 +999,7 @@ class CameraRepository(
             imageReaderSurfaceConfiguration
         )
 
-        captureRequest?.addTarget(imageReader.surface)
+     //   captureRequest?.addTarget(imageReader.surface)
 
         /////////////////media codec
         /*   prepareMediaCodec()
@@ -1231,7 +1300,7 @@ class CameraRepository(
 
     private var mCodec: MediaCodec? = null // кодер
     var mEncoderSurface: Surface? = null // Surface как вход данных для кодера
-    private var outputStream: BufferedOutputStream? = null
+
     private var outPutByteBuffer: ByteBuffer? = null
 
     class EncoderCallback(
@@ -1286,6 +1355,11 @@ class CameraRepository(
 
         running = enable
         finished = !enable
+        if (enable){
+            writerThread.start()
+        }else{
+            writerThread.interrupt()
+        }
 
     }
 
@@ -1296,8 +1370,8 @@ class CameraRepository(
 
     private fun saveImage(
         image: Image,
-       // cameraCharacteristics: CameraCharacteristics,
-      //  captureResult: CaptureResult
+        // cameraCharacteristics: CameraCharacteristics,
+        //  captureResult: CaptureResult
     ) {
         // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
         //////////////////////////
@@ -1453,5 +1527,18 @@ class CameraRepository(
         val isOutputFormatSupported = isCodecSupported(type)
         //  val isVideoEncoderSupported = isCodecSupported("video/avc")
         return isOutputFormatSupported //&& isVideoEncoderSupported
+    }
+    class Fps{
+        private var lastFrameTime: Long = 0
+        fun get(tag:String) {
+            ////////////////////////
+            val currentTime = System.currentTimeMillis()
+            if (lastFrameTime != 0L) {
+                val fps = 1000.0 / (currentTime - lastFrameTime)
+                Log.e("FPS", "$tag: $fps")
+            }
+            lastFrameTime = currentTime
+            /////////////////////////
+        }
     }
 }
