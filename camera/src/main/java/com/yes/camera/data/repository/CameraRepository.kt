@@ -36,6 +36,7 @@ import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
+import com.arthenica.ffmpegkit.FFmpegSession
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
@@ -737,11 +738,18 @@ class CameraRepository(
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
     private val imageReader =
-        ImageReader.newInstance(3840,2160, ImageFormat.JPEG, 30).apply {
+        ImageReader.newInstance(640,480, ImageFormat.JPEG, 30).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
 
+    val mpegSurfaceTexture: SurfaceTexture = SurfaceTexture(0)
+    val mpegSurface: Surface = Surface(mpegSurfaceTexture)
+    private val mpegSurfaceConfiguration = OutputConfiguration(mpegSurface).apply {
+        enableSurfaceSharing()
+    }
+    val mpegSurfaceTextureName=mpegSurfaceTexture.toString()
+    var ses:FFmpegSession?=null
     private fun startFFmpeg() {
 
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
@@ -749,7 +757,7 @@ class CameraRepository(
         val outputFilePath = createFile("mp4")
         val framerate = 24//23.976
         val command =
-            "-f image2pipe -s 3840,2160 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 1m -bufsize 100m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+            "-f android_camera -i $mpegSurfaceTexture -s 640x480  -c:v libx264 -preset ultrafast  -r 24 -b:v 1m -bufsize 100m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
 
       //  val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
@@ -766,6 +774,7 @@ class CameraRepository(
           }*/
         FFmpegKit.executeAsync(command,
             { session ->
+                ses=session
                 val state = session.state
                 val returnCode = session.returnCode
 
@@ -1005,6 +1014,7 @@ class CameraRepository(
         enableSurfaceSharing()
     }
 
+
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
@@ -1067,7 +1077,14 @@ class CameraRepository(
             imageReaderSurfaceConfiguration
         )
 
-        captureRequest?.addTarget(imageReader.surface)
+      //  captureRequest?.addTarget(imageReader.surface)
+        /////////////mpeg
+        mpegSurfaceTexture.setDefaultBufferSize(640,480)//(1920,1080)//4096,3072//3840,2160
+
+        configs.add(
+            mpegSurfaceConfiguration
+        )
+        captureRequest?.addTarget(mpegSurface)
 
         /////////////////media codec
         /*   prepareMediaCodec()
