@@ -50,8 +50,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
 import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
@@ -492,7 +490,7 @@ class CameraRepository(
             pipe1?.let {
                 FFmpegKitConfig.closeFFmpegPipe(it)
             }
-            process?.waitFor()
+          //  process?.waitFor()
             process?.destroy()
             //   FFmpegKit.cancel()
             // process?.outputStream?.flush()
@@ -504,39 +502,37 @@ class CameraRepository(
         /////////////////
 
     }
-    private fun addNVImage(yuvImage:YuvImage) {
-        val width = 3840
-        val height = 2160
-        val nv21ByteArray = yuvImage.yuvData
+    private fun addNVImage(yuvImage: YuvImage) {
+        val nv21Data = yuvImage.yuvData
 
-        val yuvData = ByteArray(width * height * 3 / 2)
+        var output: ByteArray? = null
+        if (output == null) {
+            output = ByteArray(nv21Data.size)
+        }
 
-        val yLength = width * height
-        val yStride = yuvImage.strides[0]
-        val yPixelStride = 1 // assuming pixel stride is 1 for Y plane
-        System.arraycopy(nv21ByteArray, 0, yuvData, 0, yLength)
+        val size = yuvImage.width * yuvImage.height
+        val quarter = size / 4
+        val v0 = size
+        val u0 = v0 + quarter
 
-        val uvLength = yLength / 2
-        val uvOffset = yLength
-        val uvData = nv21ByteArray.copyOfRange(uvOffset, uvOffset + uvLength)
+        System.arraycopy(nv21Data, 0, output, 0, size) // Y is same
 
-        val uStride = yuvImage.strides[1]
-        val uPixelStride = 1 // assuming pixel stride is 1 for U plane
-
-        val uData = ByteArray(uvLength / 2)
-        val vData = ByteArray(uvLength / 2)
-
-        for (i in 0 until height / 2) {
-            for (j in 0 until width / 2) {
-                uData[i * width / 2 + j] = uvData[i * uStride + j * uPixelStride]
-                vData[i * width / 2 + j] = uvData[i * uStride + j * uPixelStride + 1]
+        for (i in 0 until yuvImage.height / 2) {
+            for (j in 0 until yuvImage.width / 2) {
+                val uvIndex = size + 2 * (i * yuvImage.width / 2 + j)
+                output[v0 + i * yuvImage.width / 2 + j] = nv21Data[uvIndex] // For NV21, V first
+                output[u0 + i * yuvImage.width / 2 + j] = nv21Data[uvIndex + 1] // For NV21, U second
             }
         }
 
-        System.arraycopy(uData, 0, yuvData, yLength, uvLength / 2)
-        System.arraycopy(vData, 0, yuvData, yLength + uvLength / 2, uvLength / 2)
+        // Swap U and V planes
+        for (i in v0 until u0) {
+            val temp = output[i]
+            output[i] = output[i + quarter]
+            output[i + quarter] = temp
+        }
 
-        process?.outputStream?.write(yuvData)
+        process?.outputStream?.write(output)
     }
     private fun addImage(image: Image) {
         /*val yBuffer = image.planes[0].buffer
@@ -686,12 +682,13 @@ class CameraRepository(
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
         process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
         val outputFilePath = createFile("mp4")
+        val framerate=24//23.976
         val command =
-            "-f rawvideo  -vcodec rawvideo -pix_fmt yuv420p   -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+            "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
-                  "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
-                  "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
-        FFmpegKit.executeAsync(command) { session ->
+                   "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
+                   "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
+      /*  FFmpegKit.executeAsync(command) { session ->
 
             val returnCode = session.returnCode
             if (returnCode.isValueSuccess) {
@@ -699,7 +696,24 @@ class CameraRepository(
             } else {
                 println("error")
             }
-        }
+        }*/
+        FFmpegKit.executeAsync(command,
+            { session ->
+                val state = session.state
+                val returnCode = session.returnCode
+
+                if (returnCode.isValueSuccess) {
+                    println("sucess")
+                } else {
+                    println("error")
+                }
+            }, {log->
+                println(log.message)
+                // CALLED WHEN SESSION PRINTS LOGS
+            }, {statistics->
+                println("frame number:"+statistics.videoFrameNumber)
+                // CALLED WHEN SESSION GENERATES STATISTICS
+            })
 
     }
 
@@ -882,8 +896,8 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 800)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 16_000_000L)
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 100)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 8_000_000L)
         ////////preview
 
         captureRequest?.addTarget(surface)
@@ -1135,7 +1149,7 @@ class CameraRepository(
         return Pair(maxWidth, maxHeight)
     }
 
-    fun main() {
+    fun getCodecs() {
         val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
         val codecs = codecList.codecInfos.filter { it.isEncoder }
         for (codec in codecs) {
@@ -1153,7 +1167,7 @@ class CameraRepository(
 
 
     private fun prepareMediaCodec() {
-        main()
+        getCodecs()
         val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
         val codecInfos = codecList.codecInfos
         val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_HEVC)
