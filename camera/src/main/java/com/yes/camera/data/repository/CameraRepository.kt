@@ -755,7 +755,7 @@ class CameraRepository(
         val outputFilePath = createFile("mp4")
         val framerate = 24//23.976
         val command =
-            "-f android_camera -i $mpegSurfaceTexture -s 640x480  -c:v libx264 -preset ultrafast  -r 24 -b:v 1m -bufsize 100m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+            "-f android_camera -i $mpegSurfaceTexture -s 3840x2160  -c:v libx264 -preset ultrafast  -r 24 -b:v 1m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
 
       //  val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
@@ -1076,7 +1076,7 @@ class CameraRepository(
 
       //  captureRequest?.addTarget(imageReader.surface)
         /////////////mpeg
-        mpegSurfaceTexture.setDefaultBufferSize(640,480)//(1920,1080)//4096,3072//3840,2160
+        mpegSurfaceTexture.setDefaultBufferSize(3840,2160)//(1920,1080)//4096,3072//3840,2160
 
         configs.add(
             mpegSurfaceConfiguration
