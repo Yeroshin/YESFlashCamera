@@ -36,7 +36,6 @@ import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
-import com.arthenica.ffmpegkit.FFmpegSession
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
@@ -749,7 +748,6 @@ class CameraRepository(
         enableSurfaceSharing()
     }
     val mpegSurfaceTextureName=mpegSurfaceTexture.toString()
-    var ses:FFmpegSession?=null
     private fun startFFmpeg() {
 
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
@@ -774,7 +772,6 @@ class CameraRepository(
           }*/
         FFmpegKit.executeAsync(command,
             { session ->
-                ses=session
                 val state = session.state
                 val returnCode = session.returnCode
 
