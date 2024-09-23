@@ -36,13 +36,16 @@ import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
+import com.arthenica.ffmpegkit.FFmpegSession
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -53,6 +56,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
+
 
 
 class CameraRepository(
@@ -79,6 +83,8 @@ class CameraRepository(
 
     /*  private val _event: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
       private val event = _event*/
+  /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
+    private val event = _event*/
     private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
     private val event = _event
     val comparator = ImageComparator()
@@ -331,22 +337,45 @@ class CameraRepository(
 
     }
 
-  //  var job: Job
+    //  var job: Job
 
 
     private var outputStream: BufferedOutputStream? = null
+    val queue = LinkedBlockingQueue<ByteArray>()
     init {
-        startFFmpeg()
-      /*  val scope = CoroutineScope(Dispatchers.IO)
-        job = CoroutineScope(Dispatchers.IO).launch {
-            event.collect { jpegImage ->
-                jpegImage?.let {
-                   // imageBuffer.addImage(it)
-                   // addNVImage(it)
-                    addJpegImage(it)
+        // startFFmpeg()
+        /*  val scope = CoroutineScope(Dispatchers.IO)
+          job = CoroutineScope(Dispatchers.IO).launch {
+              event.collect { jpegImage ->
+                  jpegImage?.let {
+                     // imageBuffer.addImage(it)
+                     // addNVImage(it)
+                      addJpegImage(it)
+                  }
+              }
+          }*/
+
+
+        CoroutineScope(Dispatchers.IO).launch {
+            while (true) {
+                val bytes = queue.take()
+                bytes?.let {
+                    bufferedOutputStream?.write(it)
+                    bufferedOutputStream?.flush()
                 }
             }
-        }*/
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            event.collect { bytes ->
+                bytes?.let {
+                    bufferedOutputStream?.write(it)
+                    bufferedOutputStream?.flush()
+                   // queue.put(it)
+                }
+            }
+        }
+
     }
 
     var sessio: CameraCaptureSession? = null
@@ -378,7 +407,7 @@ class CameraRepository(
     }
     private val surfaceConfiguration by lazy {
         OutputConfiguration(surface).apply {
-            enableSurfaceSharing()
+            // enableSurfaceSharing()
         }
     }
 
@@ -442,6 +471,7 @@ class CameraRepository(
     var running = false
     var finished = false
     var frameCount = 0
+
     class ImageBuffer(private val bufferSize: Int) {
         private val buffer: MutableList<YuvImage> = mutableListOf()
         private val lock = ReentrantLock()
@@ -472,13 +502,14 @@ class CameraRepository(
             }
         }
     }
+
     inner class WriterThread(private val imageBuffer: ImageBuffer) : Thread() {
         override fun run() {
             while (true) {
                 val image = imageBuffer.getImage()
                 if (image != null) {
                     try {
-                        addNVImage(image)
+                        convertNV21toyuv420(image)
                     } catch (e: IOException) {
                         Log.e("WriterThread", "Error writing to output stream: $e")
                     }
@@ -489,77 +520,134 @@ class CameraRepository(
             }
         }
     }
+
     private var previousFrameTime = 0L
-    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        fps1.get("fps")
-        /* if (running){
-             val image = reader.acquireNextImage()
-             if (image!= null) {
-                 val buffer = image.planes[0].buffer
-                 val bytes = ByteArray(buffer.remaining())
-                 buffer.get(bytes)
 
-                 try {
-                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
-                     sink.write(byteBuffer.array())
-                 } catch (e: IOException) {
-                     println()
-                 } finally {
-                     image.close() // Освобождаем изображение
-                 }
-             }
-         }*/
-        if (running) {
-            val image = reader.acquireNextImage()
-            image?.let {
-                val currentTime = System.nanoTime()
-                val timeDiff = currentTime - previousFrameTime
-
-                // if (timeDiff > 1_000_000_000 / 30) { // 1/30 second in nanoseconds
-                frameCount++
-
-
-                val fps: Double = 1 / (timeDiff / 1e9)
-                Log.e("FPS", "captured")
-                saveImage(image)
-                //  addNVImage(image)
-                previousFrameTime = currentTime
-                //  }
-
-                //processImage(it.planes[0].buffer)
-                it.close()
-            }
-        } else if (finished) {
-            /////////////////
-            //job.cancel()
-              process?.destroy()
-              process?.waitFor()
-              FFmpegKitConfig.closeFFmpegPipe(pipe1)
-            ///////////////////
-            /*  pipe1?.let {
-                  FFmpegKitConfig.closeFFmpegPipe(it)
-              }
-            //  process?.waitFor()
-              process?.destroy()*/
-            //   FFmpegKit.cancel()
-            // process?.outputStream?.flush()
-            //  process?.outputStream?.close()
-            finished = false
-        } else {
-            reader.acquireLatestImage()?.close()
-        }
-        /////////////////
-
-    }
-    val fps1=Fps()
+    private val fps1 = Fps()
 
     private var process: Process? = null
-    val bufferedOutputStream = BufferedOutputStream(process?.outputStream)
-    private fun addJpegImage(byteArray: ByteArray){
-        bufferedOutputStream.write(byteArray)
-        bufferedOutputStream.flush()
+    private var bufferedOutputStream :BufferedOutputStream?=null
+    private fun addJpegImage(byteArray: ByteArray) {
+        bufferedOutputStream?.write(byteArray)
+        bufferedOutputStream?.flush()
     }
-    private fun addNVImage(yuvImage: YuvImage) {
+    private fun copyImageToYuvImage(image: Image): YuvImage {
+        val planes = image.planes
+        val yBuffer = planes[0].buffer
+        val uBuffer = planes[1].buffer
+        val vBuffer = planes[2].buffer
+
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+
+        val yData = ByteArray(ySize)
+        val uData = ByteArray(uSize)
+        val vData = ByteArray(vSize)
+
+        yBuffer.get(yData)
+        uBuffer.get(uData)
+        vBuffer.get(vData)
+
+        val yuvByteArray = ByteArray(ySize + uSize + vSize)
+        System.arraycopy(yData, 0, yuvByteArray, 0, ySize)
+        System.arraycopy(uData, 0, yuvByteArray, ySize, uSize)
+        System.arraycopy(vData, 0, yuvByteArray, ySize + uSize, vSize)
+
+        val yuvImage = YuvImage(
+            yuvByteArray,
+            ImageFormat.NV21,
+            image.width,
+            image.height,
+            null
+        )
+
+        return yuvImage
+    }
+    fun convertYUV420888ToByteArray(image: Image): ByteArray {
+        // Get the planes of the YUV_420_888 image
+        val planes = image.planes
+
+        // Check that the image has three planes (Y, U, and V)
+        if (planes.size != 3) {
+            throw RuntimeException("Expected 3 planes in YUV_420_888 image")
+        }
+
+        // Get the planes and their row strides and pixel strides
+        val yPlane = planes[0]
+        val uPlane = planes[1]
+        val vPlane = planes[2]
+
+        val yRowStride = yPlane.rowStride
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+
+        val yPixelStride = yPlane.pixelStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
+
+        // Get the buffer sizes for each plane
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+
+        // Calculate the height of each plane
+        val yHeight = yBuffer.limit() / yRowStride
+        val uHeight = uBuffer.limit() / uRowStride
+
+        // Calculate the total size of the YUV420p byte array
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+        val totalSize = ySize + (uSize / uPixelStride) + (vSize / vPixelStride)
+
+        // Create a byte array to store the YUV420p data
+        val yuvByteArray = ByteArray(totalSize)
+
+        // Copy the Y plane data
+        var offset = 0
+        for (i in 0 until yHeight) {
+            yBuffer.position(i * yRowStride)
+            yBuffer.get(yuvByteArray, offset, yRowStride)
+            offset += yRowStride
+        }
+
+        // Copy the U and V plane data, interleaved
+        for (i in 0 until uHeight) {
+            uBuffer.position(i * uRowStride)
+            vBuffer.position(i * vRowStride)
+            for (j in 0 until uRowStride / uPixelStride) {
+                yuvByteArray[offset++] = uBuffer.get()
+                yuvByteArray[offset++] = vBuffer.get()
+            }
+        }
+
+        // Convert YUV to RGB
+        val rgbByteArray = ByteArray(ySize * 3)
+        var rgbOffset = 0
+        for (i in 0 until yHeight) {
+            for (j in 0 until yRowStride) {
+                val y = yuvByteArray[i * yRowStride + j].toInt() and 0xFF
+                val u = yuvByteArray[ySize + (i / 2) * uRowStride + (j / 2)].toInt() and 0xFF
+                val v = yuvByteArray[ySize + (i / 2) * uRowStride + (j / 2) + 1].toInt() and 0xFF
+
+                val r = (y + 1.13983 * (v - 128)).toInt()
+                val g = (y - 0.39465 * (u - 128) - 0.58060 * (v - 128)).toInt()
+                val b = (y + 2.03211 * (u - 128)).toInt()
+
+                rgbByteArray[rgbOffset++] = r.toByte()
+                rgbByteArray[rgbOffset++] = g.toByte()
+                rgbByteArray[rgbOffset++] = b.toByte()
+            }
+        }
+
+        return rgbByteArray
+    }
+
+
+
+
+    private fun convertNV21toyuv420(yuvImage: YuvImage) {
         fps1.get("beforeConvert")
         val nv21Data = yuvImage.yuvData
 
@@ -591,9 +679,9 @@ class CameraRepository(
             output[i + quarter] = temp
         }
         fps1.get("afterConvert")
-        bufferedOutputStream.write(output)
-        bufferedOutputStream.flush()
-       // process?.outputStream?.write(output)
+        bufferedOutputStream?.write(output)
+        bufferedOutputStream?.flush()
+        // process?.outputStream?.write(output)
         fps1.get("afterWrite")
 
     }
@@ -736,8 +824,55 @@ class CameraRepository(
         start()
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        fps1.get("fps")
+        /* if (running){
+             val image = reader.acquireNextImage()
+             if (image!= null) {
+                 val buffer = image.planes[0].buffer
+                 val bytes = ByteArray(buffer.remaining())
+                 buffer.get(bytes)
+
+                 try {
+                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                     sink.write(byteBuffer.array())
+                 } catch (e: IOException) {
+                     println()
+                 } finally {
+                     image.close() // Освобождаем изображение
+                 }
+             }
+         }*/
+        if (running) {
+            val image = reader.acquireNextImage()
+            image?.let {
+                _event.value = convertYUV420888ToByteArray(it)
+                it.close()
+            }
+        } else if (finished) {
+            /////////////////
+            //job.cancel()
+            process?.destroy()
+            process?.waitFor()
+            FFmpegKitConfig.closeFFmpegPipe(pipe1)
+            ///////////////////
+            /*  pipe1?.let {
+                  FFmpegKitConfig.closeFFmpegPipe(it)
+              }
+            //  process?.waitFor()
+              process?.destroy()*/
+            //   FFmpegKit.cancel()
+            // process?.outputStream?.flush()
+            //  process?.outputStream?.close()
+            finished = false
+        } else {
+            reader.acquireLatestImage()?.close()
+        }
+        /////////////////
+
+    }
     private val imageReader =
-        ImageReader.newInstance(640,480, ImageFormat.JPEG, 30).apply {
+        ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 30).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
@@ -745,19 +880,19 @@ class CameraRepository(
     val mpegSurfaceTexture: SurfaceTexture = SurfaceTexture(0)
     val mpegSurface: Surface = Surface(mpegSurfaceTexture)
     private val mpegSurfaceConfiguration = OutputConfiguration(mpegSurface).apply {
-        enableSurfaceSharing()
+        //  enableSurfaceSharing()
     }
-    val mpegSurfaceTextureName=mpegSurfaceTexture.toString()
-    private fun startFFmpeg() {
+    val mpegSurfaceTextureName = mpegSurfaceTexture.toString()
+    private fun startFFmpeg(): FFmpegSession {
 
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
         process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
+        bufferedOutputStream = BufferedOutputStream(process?.outputStream)
         val outputFilePath = createFile("mp4")
         val framerate = 24//23.976
-        val command =
-            "-f android_camera -i $mpegSurfaceTexture -s 3840x2160  -c:v libx264 -preset ultrafast  -r 24 -b:v 1m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+       // val command = "-f rawvideo  -i $mpegSurfaceTexture -s 640x480 -input_queue_size 120  -c:v libx264 -preset superfast   -b:v 5m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
 
-      //  val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+          val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
                    "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
                    "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
@@ -770,7 +905,7 @@ class CameraRepository(
                   println("error")
               }
           }*/
-        FFmpegKit.executeAsync(command,
+        val ses = FFmpegKit.executeAsync(command,
             { session ->
                 val state = session.state
                 val returnCode = session.returnCode
@@ -788,20 +923,23 @@ class CameraRepository(
                 // CALLED WHEN SESSION GENERATES STATISTICS
             })
 
-
+        return ses
     }
+
     private fun saveImage(
-        image: Image,
+        image: YuvImage,
         // cameraCharacteristics: CameraCharacteristics,
         //  captureResult: CaptureResult
     ) {
+     //   _event.value = image
+
         // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
         //////////////////////////
-        val jpegBytes = ByteArray(image.planes[0].buffer.remaining())
+      /*  val jpegBytes = ByteArray(image.planes[0].buffer.remaining())
         image.planes[0].buffer.get(jpegBytes)
 
         process?.outputStream?.write(jpegBytes)
-        process?.outputStream?.flush()
+        process?.outputStream?.flush()*/
         //  bufferedOutputStream.write(jpegBytes)
         //  bufferedOutputStream.flush()
         // _event.value = YuvImage(image.nv21ByteArray, NV21, image.width, image.height, null)
@@ -1041,7 +1179,7 @@ class CameraRepository(
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
         captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 800)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 16_000_000L )
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 16_000_000L)
         ////////preview
 
         captureRequest?.addTarget(surface)
@@ -1074,14 +1212,14 @@ class CameraRepository(
             imageReaderSurfaceConfiguration
         )
 
-      //  captureRequest?.addTarget(imageReader.surface)
+          captureRequest?.addTarget(imageReader.surface)
         /////////////mpeg
-        mpegSurfaceTexture.setDefaultBufferSize(3840,2160)//(1920,1080)//4096,3072//3840,2160
+      /*  mpegSurfaceTexture.setDefaultBufferSize(1920, 1080)//(1920,1080)//4096,3072//3840,2160
 
         configs.add(
             mpegSurfaceConfiguration
         )
-        captureRequest?.addTarget(mpegSurface)
+        captureRequest?.addTarget(mpegSurface)*/
 
         /////////////////media codec
         /*   prepareMediaCodec()
@@ -1425,7 +1563,7 @@ class CameraRepository(
     private var repeatingCapture = false
 
     // private var imageReader:ImageReader? = null
-
+    var mpses: FFmpegSession? = null
     fun singleCapture(enable: Boolean) {
         //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
@@ -1437,7 +1575,11 @@ class CameraRepository(
 
         running = enable
         finished = !enable
-
+        if (enable) {
+            mpses = startFFmpeg()
+        } else {
+            mpses?.cancel()
+        }
 
     }
 
@@ -1446,12 +1588,11 @@ class CameraRepository(
     }
 
 
-
-
     fun jpegByteArrayFrom(yuv420_888: Image): ByteArray {
         return YuvImage(yuv420_888.nv21ByteArray, NV21, yuv420_888.width, yuv420_888.height, null)
             .getJpegDataWithQuality(100)
     }
+
 
     private val Image.nv21ByteArray
         get() = ByteArray(width * height * 3 / 2).also {
@@ -1546,9 +1687,10 @@ class CameraRepository(
         //  val isVideoEncoderSupported = isCodecSupported("video/avc")
         return isOutputFormatSupported //&& isVideoEncoderSupported
     }
-    class Fps{
+
+    class Fps {
         private var lastFrameTime: Long = 0
-        fun get(tag:String) {
+        fun get(tag: String) {
             ////////////////////////
             val currentTime = System.currentTimeMillis()
             if (lastFrameTime != 0L) {
