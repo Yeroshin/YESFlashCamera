@@ -58,7 +58,6 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
 
 
-
 class CameraRepository(
     val context: Context,
     private val cameraManager: CameraManager,
@@ -83,8 +82,8 @@ class CameraRepository(
 
     /*  private val _event: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
       private val event = _event*/
-  /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
-    private val event = _event*/
+    /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
+      private val event = _event*/
     private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
     private val event = _event
     val comparator = ImageComparator()
@@ -342,6 +341,7 @@ class CameraRepository(
 
     private var outputStream: BufferedOutputStream? = null
     val queue = LinkedBlockingQueue<ByteArray>()
+
     init {
         // startFFmpeg()
         /*  val scope = CoroutineScope(Dispatchers.IO)
@@ -371,7 +371,7 @@ class CameraRepository(
                 bytes?.let {
                     bufferedOutputStream?.write(it)
                     bufferedOutputStream?.flush()
-                   // queue.put(it)
+                    // queue.put(it)
                 }
             }
         }
@@ -526,11 +526,12 @@ class CameraRepository(
     private val fps1 = Fps()
 
     private var process: Process? = null
-    private var bufferedOutputStream :BufferedOutputStream?=null
+    private var bufferedOutputStream: BufferedOutputStream? = null
     private fun addJpegImage(byteArray: ByteArray) {
         bufferedOutputStream?.write(byteArray)
         bufferedOutputStream?.flush()
     }
+
     private fun copyImageToYuvImage(image: Image): YuvImage {
         val planes = image.planes
         val yBuffer = planes[0].buffer
@@ -564,6 +565,85 @@ class CameraRepository(
 
         return yuvImage
     }
+
+    fun convertYUV420_888to420p(image: Image): ByteArray {
+        val planes = image.planes
+        val yPlane = planes[0]
+        val uPlane = planes[1]
+        val vPlane = planes[2]
+
+        val yRowStride = image.planes[0].rowStride
+        val yPixelStride = image.planes[0].pixelStride
+        val uvRowStride = image.planes[1].rowStride
+        val uvPixelStride = image.planes[1].pixelStride
+
+        val uvRowStride2 = image.planes[2].rowStride
+        val uvPixelStride2 = image.planes[2].pixelStride
+
+        val ySize = yPlane.buffer.remaining()
+        val uSize = uPlane.buffer.remaining()
+        val vSize = vPlane.buffer.remaining()
+        val totalSize = ySize + uSize + vSize
+        val yuvByteArray = ByteArray(totalSize)
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+        var offset = 0
+        for (i in 0 until image.height) {
+            yBuffer.position(i * yRowStride)
+            yBuffer.get(yuvByteArray, offset, image.width)
+            offset += image.width
+        }
+        /*   for (i in 0 until image.height / 2) {
+               for (j in 0 until image.width ) {
+                   uBuffer.position(j + i * uvRowStride)
+                   uBuffer.get(yuvByteArray, offset, 1)
+                   offset++
+
+                   vBuffer.position(j + i * uvRowStride)
+                   vBuffer.get(yuvByteArray, offset, 1)
+                   offset++
+               }
+           }*/
+
+        ////
+        /* for (i in 0 until image.height / 2) {
+             for (j in 0 until image.width/2 step uvPixelStride){
+                 uBuffer.position(j+i * uvRowStride)
+                 uBuffer.get(yuvByteArray, offset, 1)
+                 offset++
+             }
+
+
+         }
+         for (i in 0 until image.height / 2) {
+             for (j in 0 until image.width/2 step uvPixelStride) {
+                 vBuffer.position(j+i * uvRowStride)
+                 vBuffer.get(yuvByteArray, offset, 1)
+                 offset++
+             }
+         }*/
+        for (i in 0 until image.height / 2) {
+            uBuffer.position(i * uvRowStride)
+            for (j in 0 until image.width/2 step uvPixelStride){
+                uBuffer.get(yuvByteArray, offset, 1)
+                offset ++
+            }
+
+        }
+
+        for (i in 0 until image.height / 2) {
+            vBuffer.position(i * uvRowStride)
+            for (j in 0 until image.width/2 step uvPixelStride){
+                vBuffer.get(yuvByteArray, offset, 1)
+                offset ++
+            }
+        }
+
+        return yuvByteArray
+    }
+
+
     fun convertYUV420888ToByteArray(image: Image): ByteArray {
         // Get the planes of the YUV_420_888 image
         val planes = image.planes
@@ -643,8 +723,6 @@ class CameraRepository(
 
         return rgbByteArray
     }
-
-
 
 
     private fun convertNV21toyuv420(yuvImage: YuvImage) {
@@ -846,7 +924,7 @@ class CameraRepository(
         if (running) {
             val image = reader.acquireNextImage()
             image?.let {
-                _event.value = convertYUV420888ToByteArray(it)
+                _event.value = convertYUV420_888to420p(it)
                 it.close()
             }
         } else if (finished) {
@@ -890,9 +968,10 @@ class CameraRepository(
         bufferedOutputStream = BufferedOutputStream(process?.outputStream)
         val outputFilePath = createFile("mp4")
         val framerate = 24//23.976
-       // val command = "-f rawvideo  -i $mpegSurfaceTexture -s 640x480 -input_queue_size 120  -c:v libx264 -preset superfast   -b:v 5m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+        // val command = "-f rawvideo  -i $mpegSurfaceTexture -s 640x480 -input_queue_size 120  -c:v libx264 -preset superfast   -b:v 5m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
 
-          val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+        val command =
+            "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
                    "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
                    "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
@@ -931,15 +1010,15 @@ class CameraRepository(
         // cameraCharacteristics: CameraCharacteristics,
         //  captureResult: CaptureResult
     ) {
-     //   _event.value = image
+        //   _event.value = image
 
         // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
         //////////////////////////
-      /*  val jpegBytes = ByteArray(image.planes[0].buffer.remaining())
-        image.planes[0].buffer.get(jpegBytes)
+        /*  val jpegBytes = ByteArray(image.planes[0].buffer.remaining())
+          image.planes[0].buffer.get(jpegBytes)
 
-        process?.outputStream?.write(jpegBytes)
-        process?.outputStream?.flush()*/
+          process?.outputStream?.write(jpegBytes)
+          process?.outputStream?.flush()*/
         //  bufferedOutputStream.write(jpegBytes)
         //  bufferedOutputStream.flush()
         // _event.value = YuvImage(image.nv21ByteArray, NV21, image.width, image.height, null)
@@ -1212,14 +1291,14 @@ class CameraRepository(
             imageReaderSurfaceConfiguration
         )
 
-          captureRequest?.addTarget(imageReader.surface)
+        captureRequest?.addTarget(imageReader.surface)
         /////////////mpeg
-      /*  mpegSurfaceTexture.setDefaultBufferSize(1920, 1080)//(1920,1080)//4096,3072//3840,2160
+        /*  mpegSurfaceTexture.setDefaultBufferSize(1920, 1080)//(1920,1080)//4096,3072//3840,2160
 
-        configs.add(
-            mpegSurfaceConfiguration
-        )
-        captureRequest?.addTarget(mpegSurface)*/
+          configs.add(
+              mpegSurfaceConfiguration
+          )
+          captureRequest?.addTarget(mpegSurface)*/
 
         /////////////////media codec
         /*   prepareMediaCodec()
