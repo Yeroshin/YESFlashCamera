@@ -86,7 +86,7 @@ class CameraRepository(
       private val event = _event*/
     /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
       private val event = _event*/
-    private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
+    private val _event: MutableStateFlow<YUVPlanes?> = MutableStateFlow(null)
     private val event = _event
     val comparator = ImageComparator()
 
@@ -342,7 +342,7 @@ class CameraRepository(
 
 
     private var outputStream: BufferedOutputStream? = null
-    val queue = LinkedBlockingQueue<ByteArray>()
+    val queue = LinkedBlockingQueue<YUVPlanes>()
 
     init {
         // startFFmpeg()
@@ -362,7 +362,10 @@ class CameraRepository(
             while (true) {
                 val bytes = queue.take()
                 bytes?.let {
-                    bufferedOutputStream?.write(it)
+
+                    bufferedOutputStream?.write(
+                        combineYUVPlanes(it)
+                    )
                     bufferedOutputStream?.flush()
                 }
             }
@@ -373,7 +376,11 @@ class CameraRepository(
                 bytes?.let {
                   /*  bufferedOutputStream?.write(it)
                     bufferedOutputStream?.flush()*/
-                     queue.put(it)
+                   //  queue.put(it)
+                    bufferedOutputStream?.write(
+                        combineYUVPlanes(it)
+                    )
+                    bufferedOutputStream?.flush()
                 }
             }
         }
@@ -592,7 +599,7 @@ class CameraRepository(
         val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
         return bitmap
     }
-    fun run(image:Image): ByteArray {
+    fun getYUVPlanes(image:Image): YUVPlanes {
         val width = image.width
         val height =image.height
         val (y, u, v) = extractYUVPlanes(image)
@@ -601,7 +608,8 @@ class CameraRepository(
         val vRowStride = image.planes[2].rowStride
         val uPixelStride = image.planes[1].pixelStride
         val vPixelStride = image.planes[2].pixelStride
-        return  combineYUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride)
+        return YUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride)
+        //return  combineYUVPlanes(YUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride))
 
     }
     fun extractYUVPlanes(image: Image): Triple<ByteArray, ByteArray, ByteArray> {
@@ -609,13 +617,13 @@ class CameraRepository(
         val uPlane = image.planes[1]
         val vPlane = image.planes[2]
 
-        val ySize = yPlane.rowStride * image.height
+       /* val ySize = yPlane.rowStride * image.height
         val uSize = uPlane.rowStride * (image.height / 2)-1
-        val vSize = vPlane.rowStride * (image.height / 2)-1
+        val vSize = vPlane.rowStride * (image.height / 2)-1*/
 
-        val ySizerem = yPlane.buffer.remaining()
-        val uSizerem = uPlane.buffer.remaining()
-        val vSizerem = vPlane.buffer.remaining()
+        val ySize = yPlane.buffer.remaining()
+        val uSize = uPlane.buffer.remaining()
+        val vSize = vPlane.buffer.remaining()
 
         val yBuffer = ByteArray(ySize)
         val uBuffer = ByteArray(uSize)
@@ -627,26 +635,38 @@ class CameraRepository(
 
         return Triple(yBuffer, uBuffer, vBuffer)
     }
-    fun combineYUVPlanes(y: ByteArray, u: ByteArray, v: ByteArray, width: Int, height: Int, yRowStride: Int, uRowStride: Int, vRowStride: Int, uPixelStride: Int, vPixelStride: Int): ByteArray {
-        val yuv = ByteArray(width * height * 3 / 2)
+    data class YUVPlanes(
+        val y: ByteArray,
+        val u: ByteArray,
+        val v: ByteArray,
+        val width: Int,
+        val height: Int,
+        val yRowStride: Int,
+        val uRowStride: Int,
+        val vRowStride: Int,
+        val uPixelStride: Int,
+        val vPixelStride: Int
+    )
+    fun combineYUVPlanes(yuvPlanes:YUVPlanes): ByteArray {
+        val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
         var yPos = 0
-        var uvPos = width * height
+        var uvPos = yuvPlanes.width * yuvPlanes.height
 
         // Копирование Y плоскости
-        for (i in 0 until height) {
-            System.arraycopy(y, i * yRowStride, yuv, yPos, width)
-            yPos += width
+        for (i in 0 until yuvPlanes.height) {
+            System.arraycopy(yuvPlanes.y, i * yuvPlanes.yRowStride, yuv, yPos, yuvPlanes.width)
+            yPos += yuvPlanes.width
         }
         ///////////////////////
-        for (i in 0 until height / 2) {
-            for (j in 0 until width / 2) {
-                yuv[uvPos] = u[i * uRowStride + j * uPixelStride]
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                yuv[uvPos] = yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
                 uvPos++
             }
         }
-        for (i in 0 until height / 2) {
-            for (j in 0 until width / 2) {
-                yuv[uvPos] = v[i * uRowStride + j * uPixelStride]
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
                 uvPos++
             }
         }
@@ -1039,7 +1059,7 @@ class CameraRepository(
             image?.let {
                // val tmp =yuv420ToBitmap(it)
               //  _event.value = convertYUV420_888to420p(it)
-                _event.value=run(it)
+                _event.value=getYUVPlanes(it)
                 it.close()
             }
         } else if (finished) {
@@ -1065,7 +1085,7 @@ class CameraRepository(
 
     }
     private val imageReader =
-        ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 30).apply {
+        ImageReader.newInstance(640,480, ImageFormat.YUV_420_888, 30).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
@@ -1084,9 +1104,21 @@ class CameraRepository(
         val outputFilePath = createFile("mp4")
         val framerate = 24//23.976
         // val command = "-f rawvideo  -i $mpegSurfaceTexture -s 640x480 -input_queue_size 120  -c:v libx264 -preset superfast   -b:v 5m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+        ////logs
+       /* val session = FFmpegKit.execute("-hwaccels")
+        val output: String = session.getOutput()
 
-        val command =
-            "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
+        val command2 = "-hwaccel_list"
+        val session2 = FFmpegKit.execute(command2)
+        val logs = session.getLogs()
+
+        val command3 = "-c:v h264_mediacodec -i input.mp4 -f null -"
+        val session3 = FFmpegKit.execute(command3)
+        val output3 = session.getOutput()*/
+        ////////////////
+        val command = "-hwaccel mediacodec -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v h264_mediacodec  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
+       // val command = "-hwaccel auto -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v h264_mediacodec -gop_size 30 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"
+      //  val command = "-hwaccel auto -gop_size 48 -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v h264_mediacodec -crf 18 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
         /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
                    "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
                    "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
@@ -1340,7 +1372,7 @@ class CameraRepository(
               setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
           }*/
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-        enableSurfaceSharing()
+      //  enableSurfaceSharing()
     }
 
 
