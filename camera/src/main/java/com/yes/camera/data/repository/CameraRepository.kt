@@ -637,14 +637,28 @@ class CameraRepository(
             System.arraycopy(y, i * yRowStride, yuv, yPos, width)
             yPos += width
         }
+        ///////////////////////
+        for (i in 0 until height / 2) {
+            for (j in 0 until width / 2) {
+                yuv[uvPos] = u[i * uRowStride + j * uPixelStride]
+                uvPos++
+            }
+        }
+        for (i in 0 until height / 2) {
+            for (j in 0 until width / 2) {
+                yuv[uvPos] = v[i * uRowStride + j * uPixelStride]
+                uvPos++
+            }
+        }
+        ///////////////////////
 
-        // Копирование U и V плоскостей с учетом pixel stride
+      /*  // Копирование U и V плоскостей с учетом pixel stride
         for (i in 0 until height / 2) {
             for (j in 0 until width / 2) {
                 yuv[uvPos++] = u[i * uRowStride + j * uPixelStride]
                 yuv[uvPos++] = v[i * vRowStride + j * vPixelStride]
             }
-        }
+        }*/
 
         return yuv
     }
