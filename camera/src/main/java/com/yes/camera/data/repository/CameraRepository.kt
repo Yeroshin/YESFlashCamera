@@ -1,5 +1,7 @@
 package com.yes.camera.data.repository
 
+import android.R.attr.height
+import android.R.attr.width
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
@@ -51,8 +53,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -355,6 +355,7 @@ class CameraRepository(
     var imageSaved=0
     var job: Job?=null
     var first=true
+    var frames=0
     init {
         // startFFmpeg()
         /*  val scope = CoroutineScope(Dispatchers.IO)
@@ -385,7 +386,14 @@ class CameraRepository(
         job=CoroutineScope(Dispatchers.IO).launch {
             queue = LinkedBlockingQueue()
             event.collect { bytes ->
-                    if (coded){
+               /* bufferedOutputStream?.write(
+                    bytes?.let {
+                        combineYUVPlanes(bytes)
+                    }
+
+                )
+                bufferedOutputStream?.flush()*/
+                    if (coded&&frames<120){
                         bufferedOutputStream?.write(
                             bytes?.let {
                                 combineYUVPlanes(bytes)
@@ -393,8 +401,12 @@ class CameraRepository(
 
                         )
                         bufferedOutputStream?.flush()
+                      //  coded=false
+                        frames++
                     }else{
-                        queue.put(bytes)
+
+                        coded=false
+                      //  queue.put(bytes)
                     }
 
                   /*  bytes?.let {
@@ -1227,9 +1239,11 @@ class CameraRepository(
          val command3 = "-c:v h264_mediacodec -i input.mp4 -f null -"
          val session3 = FFmpegKit.execute(command3)
          val output3 = session.getOutput()*/
+
         ////////////////
-        val command =
-            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
+        val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -bufsize 3 -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
+
+        //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
 
         //  val command = "-hwaccel mediacodec -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v h264_mediacodec  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "//worked
         // val command = "-hwaccel auto -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v h264_mediacodec -gop_size 30 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"
@@ -1260,24 +1274,11 @@ class CameraRepository(
                 println(log.message)
                 // CALLED WHEN SESSION PRINTS LOGS
             }, { statistics ->
-
-                    queue.poll()?.let{
-                        bufferedOutputStream?.write(
-                            combineYUVPlanes(it)
-                        )
-                        bufferedOutputStream?.flush()
-                        coded=false
-                    }?:run{
-                        coded=true
-                       // FFmpegKit.cancel(statistics.sessionId)
-                    }
-               // coded=true
-
-
+                coded=true
+             //   frames=0
                 println("frame number:" + statistics.videoFrameNumber)
                 // CALLED WHEN SESSION GENERATES STATISTICS
             })
-
         return ses
     }
 
@@ -1933,8 +1934,10 @@ class CameraRepository(
 
         Handler(Looper.getMainLooper()).postDelayed({
             // Call your function here
-         //   running = false
+            running = false
+            finished=true
          //   _event.tryEmit(null)
+
 
         }, 3000) // 1000 milliseconds = 1 second
     }
@@ -1967,6 +1970,7 @@ class CameraRepository(
 
         } else {
             running = false
+            finished=true
         }
 
     }
