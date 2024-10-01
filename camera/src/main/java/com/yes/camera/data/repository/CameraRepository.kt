@@ -1,7 +1,5 @@
 package com.yes.camera.data.repository
 
-import android.R.attr.height
-import android.R.attr.width
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
@@ -62,7 +60,6 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
 
 
@@ -385,19 +382,55 @@ class CameraRepository(
           }*/
 
         job = CoroutineScope(Dispatchers.IO).launch {
-            val queue = ArrayDeque<ByteArray>()
+            /////////////////////////////
+
             event.collect { bytes ->
-                /////////////////////////
-                bytes?.let {
-                    queue.add(combineYUVPlanes(it))
-                }
-                if (queue.size>=24){
-                    while (!queue.isEmpty()){
+                if (running){
+                    bytes?.let {
                         bufferedOutputStream?.write(
-                            queue.removeFirst()
+                            combineYUVPlanes(bytes)
                         )
                     }
+                    bufferedOutputStream?.flush()
+                }else{
+                    process?.destroy()
+                    process?.waitFor()
+                    FFmpegKitConfig.closeFFmpegPipe(pipe1)
                 }
+
+                /* event.collect { bytes ->
+                     bytes?.let {
+                         buffer.position(frameIndex * frameSize)
+                         buffer.put(
+                             combineYUVPlanes(it)
+                         )
+                         frameIndex = (frameIndex + 1) % 24
+
+                         if (frameIndex == 0) {
+                             // считываем все фреймы из буфера
+                             buffer.position(0)
+                             while (buffer.hasRemaining()) {
+                                 bufferedOutputStream?.write(buffer.array(), buffer.position(), buffer.remaining())
+                                 buffer.position(buffer.position() + buffer.remaining())
+                             }
+                             buffer.clear()
+                         }
+                     }*/
+
+                ////////////////////////////////
+
+                /* event.collect { bytes ->
+                     /////////////////////////
+                     bytes?.let {
+                         queue.add(combineYUVPlanes(it))
+                     }
+                     if (queue.size>=24){
+                         while (!queue.isEmpty()){
+                             bufferedOutputStream?.write(
+                                 queue.removeFirst()
+                             )
+                         }
+                     }*/
                 ///////////////////////////
                 /* bufferedOutputStream?.write(
                      bytes?.let {
@@ -406,21 +439,21 @@ class CameraRepository(
 
                  )
                  bufferedOutputStream?.flush()*/
-               /* if (frames < 30) {
-                    bufferedOutputStream?.write(
-                        bytes?.let {
-                            combineYUVPlanes(bytes)
-                        }
+                /* if (frames < 30) {
+                     bufferedOutputStream?.write(
+                         bytes?.let {
+                             combineYUVPlanes(bytes)
+                         }
 
-                    )
-                    bufferedOutputStream?.flush()
-                    //  coded=false
-                    frames++
-                } else {
+                     )
+                     bufferedOutputStream?.flush()
+                     //  coded=false
+                     frames++
+                 } else {
 
-                    coded = false
-                    //  queue.put(bytes)
-                }*/
+                     coded = false
+                     //  queue.put(bytes)
+                 }*/
 
                 /*  bytes?.let {
                       /*  bufferedOutputStream?.write(it)
@@ -490,7 +523,7 @@ class CameraRepository(
     }
     private val surfaceConfiguration by lazy {
         OutputConfiguration(surface).apply {
-            // enableSurfaceSharing()
+          //   enableSurfaceSharing()
         }
     }
 
@@ -641,8 +674,14 @@ class CameraRepository(
             image?.let {
                 // val tmp =yuv420ToBitmap(it)
                 //  _event.value = convertYUV420_888to420p(it)
-
-                _event.tryEmit(getYUVPlanes(it))
+                ///////////////////
+                _event.tryEmit(getByteBufferYUVPlanes(image))
+              /*  bufferedOutputStream?.write(
+                    imageToYUVPlanes(image)
+                )
+                bufferedOutputStream?.flush()*/
+                ///////////////////////
+                // _event.tryEmit(getYUVPlanes(it))
                 it.close()
                 imageAquired++
 
@@ -650,9 +689,9 @@ class CameraRepository(
         } else if (finished) {
             /////////////////
             //job.cancel()
-            process?.destroy()
+         /*   process?.destroy()
             process?.waitFor()
-            FFmpegKitConfig.closeFFmpegPipe(pipe1)
+            FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
             ///////////////////
             /*  pipe1?.let {
                   FFmpegKitConfig.closeFFmpegPipe(it)
@@ -666,12 +705,12 @@ class CameraRepository(
         } else {
             reader.acquireLatestImage()?.close()
         }
-      //  fps1.get("fps")
+          fps1.get("fps")
         /////////////////
 
     }
     private val imageReader =
-        ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 30).apply {
+        ImageReader.newInstance(3840,2160, ImageFormat.YUV_420_888, 30).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
@@ -743,7 +782,8 @@ class CameraRepository(
 
         ////////////////
         val command =
-            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -r 25  -s 640x480 -i $pipe1 -bufsize 3 -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
+            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s 3840x2160 -i $pipe1 -bufsize 1G -c:v libx264 -b:v 5m -maxrate 150M -f mp4 -loglevel debug -y $outputFilePath -v debug "
+        //val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p   -s 3840x2160 -i $pipe1 -bufsize 390M -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
 
         //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
 
@@ -1014,8 +1054,8 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 800)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 16_000_000L)
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 100)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME,  33_333_333L)
         ////////preview
 
         captureRequest?.addTarget(surface)
@@ -1108,8 +1148,8 @@ class CameraRepository(
 
         Handler(Looper.getMainLooper()).postDelayed(
             {
-              /*  running = false
-                finished = true*/
+                /*  running = false
+                  finished = true*/
             },
             3000
         ) // 1000 milliseconds = 1 second
@@ -1143,24 +1183,6 @@ class CameraRepository(
 
     }
 
-    /*  val ffmpegThread = Thread {
-
-          processImages()
-      }*/
-
-
-    private val imageQueue = LinkedBlockingQueue<ByteArray>()
-    private fun processImages() {
-        while (running) {
-            imageQueue?.let {
-                val imageData = it.take()
-                process?.outputStream?.write(imageData)
-            }
-        }
-
-        process?.outputStream?.flush()
-        process?.outputStream?.close()
-    }
 
 
     /* fun ffmpeg() {
@@ -1224,6 +1246,7 @@ class CameraRepository(
         bufferedOutputStream?.write(byteArray)
         bufferedOutputStream?.flush()
     }
+
     private fun copyImageToYuvImage(image: Image): YuvImage {
         val planes = image.planes
         val yBuffer = planes[0].buffer
@@ -1257,6 +1280,7 @@ class CameraRepository(
 
         return yuvImage
     }
+
     fun yuv420ToBitmap(image: Image): Bitmap {
         val width = image.width
         val height = image.height
@@ -1281,6 +1305,7 @@ class CameraRepository(
         val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
         return bitmap
     }
+
     fun getYUVPlanes(image: Image): YUVPlanes {
         val width = image.width
         val height = image.height
@@ -1305,6 +1330,46 @@ class CameraRepository(
         //return  combineYUVPlanes(YUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride))
 
     }
+    //8294400
+    //4147199
+    //4147199
+    val capacity=9_000_000
+    var yBuffer: ByteBuffer = ByteBuffer.allocate(capacity)
+    val uBuffer: ByteBuffer = ByteBuffer.allocate(capacity/2)
+    val vBuffer: ByteBuffer = ByteBuffer.allocate(capacity/2)
+    fun copyYUVPlanes(image: Image){
+        yBuffer.clear()
+        yBuffer.put(image.planes[0].buffer)
+        uBuffer.clear()
+        uBuffer.put(image.planes[1].buffer)
+        vBuffer.clear()
+        vBuffer.put(image.planes[2].buffer)
+    }
+    fun getByteBufferYUVPlanes(image: Image): YUVPlanes {
+        val width = image.width
+        val height = image.height
+        copyYUVPlanes(image)
+        val yRowStride = image.planes[0].rowStride
+        val uRowStride = image.planes[1].rowStride
+        val vRowStride = image.planes[2].rowStride
+        val uPixelStride = image.planes[1].pixelStride
+        val vPixelStride = image.planes[2].pixelStride
+        return YUVPlanes(
+            yBuffer.array(),
+            uBuffer.array(),
+            vBuffer.array(),
+            width,
+            height,
+            yRowStride,
+            uRowStride,
+            vRowStride,
+            uPixelStride,
+            vPixelStride
+        )
+        //return  combineYUVPlanes(YUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride))
+
+    }
+
     fun extractYUVPlanes(image: Image): Triple<ByteArray, ByteArray, ByteArray> {
         val yPlane = image.planes[0]
         val uPlane = image.planes[1]
@@ -1328,6 +1393,7 @@ class CameraRepository(
 
         return Triple(yBuffer, uBuffer, vBuffer)
     }
+
     data class YUVPlanes(
         val y: ByteArray,
         val u: ByteArray,
@@ -1340,55 +1406,56 @@ class CameraRepository(
         val uPixelStride: Int,
         val vPixelStride: Int
     )
+
     fun combineYUVPlanes(yuvPlanes: YUVPlanes): ByteArray {
         fps1.get("before")
-      /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
-        var yPos = 0
-        var uvPos = yuvPlanes.width * yuvPlanes.height
+        /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+          var yPos = 0
+          var uvPos = yuvPlanes.width * yuvPlanes.height
 
-        // Копирование Y плоскости
-        for (i in 0 until yuvPlanes.height) {
-            System.arraycopy(yuvPlanes.y, i * yuvPlanes.yRowStride, yuv, yPos, yuvPlanes.width)
-            yPos += yuvPlanes.width
-        }
-        ///////////////////////
-        for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2) {
-                yuv[uvPos] = yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
-                uvPos++
-            }
-        }
-        for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2) {
-                yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
-                uvPos++
-            }
-        }*/
+          // Копирование Y плоскости
+          for (i in 0 until yuvPlanes.height) {
+              System.arraycopy(yuvPlanes.y, i * yuvPlanes.yRowStride, yuv, yPos, yuvPlanes.width)
+              yPos += yuvPlanes.width
+          }
+          ///////////////////////
+          for (i in 0 until yuvPlanes.height / 2) {
+              for (j in 0 until yuvPlanes.width / 2) {
+                  yuv[uvPos] = yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
+                  uvPos++
+              }
+          }
+          for (i in 0 until yuvPlanes.height / 2) {
+              for (j in 0 until yuvPlanes.width / 2) {
+                  yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
+                  uvPos++
+              }
+          }*/
         //////////////////////////////fast
-     /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
-        val yuvBuffer = ByteBuffer.wrap(yuv)
-        var yPos = 0
-        var uvPos = yuvPlanes.width * yuvPlanes.height
+        /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+           val yuvBuffer = ByteBuffer.wrap(yuv)
+           var yPos = 0
+           var uvPos = yuvPlanes.width * yuvPlanes.height
 
-        // Копирование Y плоскости
+           // Копирование Y плоскости
 
-            yuvBuffer.put(yuvPlanes.y, 0, yuvPlanes.width*yuvPlanes.height)
+               yuvBuffer.put(yuvPlanes.y, 0, yuvPlanes.width*yuvPlanes.height)
 
-            yPos += yuvPlanes.width*yuvPlanes.height
+               yPos += yuvPlanes.width*yuvPlanes.height
 
-        ///////////////////////
-        for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2 ) {
-                yuvBuffer.put(yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
-                uvPos++
-            }
-        }
-        for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2 ) {
-                yuvBuffer.put(yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
-                uvPos++
-            }
-        }*/
+           ///////////////////////
+           for (i in 0 until yuvPlanes.height / 2) {
+               for (j in 0 until yuvPlanes.width / 2 ) {
+                   yuvBuffer.put(yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
+                   uvPos++
+               }
+           }
+           for (i in 0 until yuvPlanes.height / 2) {
+               for (j in 0 until yuvPlanes.width / 2 ) {
+                   yuvBuffer.put(yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
+                   uvPos++
+               }
+           }*/
         ///////////////////////////////
         val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
         var yPos = 0
@@ -1399,15 +1466,27 @@ class CameraRepository(
 
 // Копирование UV плоскости
 
-        for (i in 0 until yuvPlanes.height/2) {
-            for (j in 0 until yuvPlanes.width/2) {
-                System.arraycopy(yuvPlanes.u, i * yuvPlanes.uRowStride+j*yuvPlanes.uPixelStride, yuv, uvPos, 1)
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                System.arraycopy(
+                    yuvPlanes.u,
+                    i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride,
+                    yuv,
+                    uvPos,
+                    1
+                )
                 uvPos++
             }
         }
-        for (i in 0 until yuvPlanes.height/2) {
-            for (j in 0 until yuvPlanes.width/2) {
-                System.arraycopy(yuvPlanes.v, i * yuvPlanes.uRowStride+j*yuvPlanes.uPixelStride, yuv, uvPos, 1)
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                System.arraycopy(
+                    yuvPlanes.v,
+                    i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride,
+                    yuv,
+                    uvPos,
+                    1
+                )
                 uvPos++
             }
         }
@@ -1416,6 +1495,48 @@ class CameraRepository(
         ///////////////////////
         return yuv
     }
+
+    fun imageToYUVPlanes(image: Image): ByteArray {
+        fps1.get("before")
+
+        val yuv = ByteArray(image.width * image.height * 3 / 2)
+        var yPos = 0
+        var uvPos = image.width * image.height
+
+// Копирование Y плоскости
+        image.planes[0].buffer.get(yuv, 0, uvPos)
+       // System.arraycopy(image.planes[0].buffer, 0, yuv, 0, image.planes[0].buffer.remaining())
+
+// Копирование UV плоскости
+
+        for (i in 0 until image.height / 2) {
+            for (j in 0 until image.width / 2) {
+                image.planes[1].buffer.position(i * image.planes[1].rowStride + j * image.planes[1].pixelStride)
+                image.planes[1].buffer.get(
+                    yuv,
+                    uvPos,
+                    1
+                )
+                uvPos++
+            }
+        }
+        for (i in 0 until image.height / 2) {
+            for (j in 0 until image.width / 2) {
+                image.planes[2].buffer.position(i * image.planes[2].rowStride + j * image.planes[2].pixelStride)
+                image.planes[2].buffer.get(
+                    yuv,
+                    uvPos,
+                    1
+                )
+                uvPos++
+            }
+        }
+        ///////////////////////////////
+        fps1.get("after")
+        ///////////////////////
+        return yuv
+    }
+
     fun convertYUV420_888to420p(image: Image): ByteArray {
 
         ///////////////////////////
@@ -1507,6 +1628,7 @@ class CameraRepository(
 ///////////////////////////////////
         return yuvByteArray
     }
+
     fun convertYUV420888ToByteArray(image: Image): ByteArray {
         // Get the planes of the YUV_420_888 image
         val planes = image.planes
@@ -1586,6 +1708,7 @@ class CameraRepository(
 
         return rgbByteArray
     }
+
     private fun convertNV21toyuv420(yuvImage: YuvImage) {
         fps1.get("beforeConvert")
         val nv21Data = yuvImage.yuvData
@@ -1624,6 +1747,7 @@ class CameraRepository(
         fps1.get("afterWrite")
 
     }
+
     private fun addImage(image: Image) {
         /*val yBuffer = image.planes[0].buffer
         val uBuffer = image.planes[1].buffer
@@ -2090,13 +2214,18 @@ class CameraRepository(
 
     class Fps {
         private var lastFrameTime: Long = 0
-        fun get(tag: String) {
+        fun get(type: String) {
             ////////////////////////
             val currentTime = System.currentTimeMillis()
-            val dif=currentTime - lastFrameTime
+            val dif = currentTime - lastFrameTime
             if (lastFrameTime != 0L) {
                 val fps = 1000.0 / (currentTime - lastFrameTime)
-                Log.e("FPS", "$tag: $dif")
+                val value=if(type.equals("fps")){
+                    fps
+                }else{
+                    dif
+                }
+                Log.e("FPS", "$type: $value")
             }
             lastFrameTime = currentTime
             /////////////////////////
