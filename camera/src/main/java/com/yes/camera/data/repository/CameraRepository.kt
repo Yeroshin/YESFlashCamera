@@ -1330,7 +1330,7 @@ class CameraRepository(
     )
     fun combineYUVPlanes(yuvPlanes: YUVPlanes): ByteArray {
         fps1.get("before")
-       /* val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+      /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
         var yPos = 0
         var uvPos = yuvPlanes.width * yuvPlanes.height
 
@@ -1353,7 +1353,7 @@ class CameraRepository(
             }
         }*/
         //////////////////////////////fast
-        val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+     /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
         val yuvBuffer = ByteBuffer.wrap(yuv)
         var yPos = 0
         var uvPos = yuvPlanes.width * yuvPlanes.height
@@ -1376,13 +1376,29 @@ class CameraRepository(
                 yuvBuffer.put(yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
                 uvPos++
             }
-        }
-       /* for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2) {
-                yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
+        }*/
+        ///////////////////////////////
+        val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+        var yPos = 0
+        var uvPos = yuvPlanes.width * yuvPlanes.height
+
+// Копирование Y плоскости
+        System.arraycopy(yuvPlanes.y, 0, yuv, 0, yuvPlanes.y.size)
+
+// Копирование UV плоскости
+
+        for (i in 0 until yuvPlanes.height/2) {
+            for (j in 0 until yuvPlanes.width/2) {
+                System.arraycopy(yuvPlanes.u, i * yuvPlanes.uRowStride+j*yuvPlanes.uPixelStride, yuv, uvPos, 1)
                 uvPos++
             }
-        }*/
+        }
+        for (i in 0 until yuvPlanes.height/2) {
+            for (j in 0 until yuvPlanes.width/2) {
+                System.arraycopy(yuvPlanes.v, i * yuvPlanes.uRowStride+j*yuvPlanes.uPixelStride, yuv, uvPos, 1)
+                uvPos++
+            }
+        }
         ///////////////////////////////
         fps1.get("after")
         ///////////////////////
