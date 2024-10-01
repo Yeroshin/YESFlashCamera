@@ -351,7 +351,7 @@ class CameraRepository(
 
 
     private var outputStream: BufferedOutputStream? = null
-    lateinit var queue: LinkedBlockingQueue<YUVPlanes?>
+    lateinit var queue: ArrayDeque<YUVPlanes?>
     var imageSaved = 0
     var job: Job? = null
     var first = true
@@ -385,8 +385,20 @@ class CameraRepository(
           }*/
 
         job = CoroutineScope(Dispatchers.IO).launch {
-            queue = LinkedBlockingQueue()
+            val queue = ArrayDeque<ByteArray>()
             event.collect { bytes ->
+                /////////////////////////
+                bytes?.let {
+                    queue.add(combineYUVPlanes(it))
+                }
+                if (queue.size>=24){
+                    while (!queue.isEmpty()){
+                        bufferedOutputStream?.write(
+                            queue.removeFirst()
+                        )
+                    }
+                }
+                ///////////////////////////
                 /* bufferedOutputStream?.write(
                      bytes?.let {
                          combineYUVPlanes(bytes)
@@ -394,7 +406,7 @@ class CameraRepository(
 
                  )
                  bufferedOutputStream?.flush()*/
-                if (frames < 30) {
+               /* if (frames < 30) {
                     bufferedOutputStream?.write(
                         bytes?.let {
                             combineYUVPlanes(bytes)
@@ -408,7 +420,7 @@ class CameraRepository(
 
                     coded = false
                     //  queue.put(bytes)
-                }
+                }*/
 
                 /*  bytes?.let {
                       /*  bufferedOutputStream?.write(it)
