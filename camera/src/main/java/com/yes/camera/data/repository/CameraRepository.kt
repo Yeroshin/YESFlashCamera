@@ -352,10 +352,11 @@ class CameraRepository(
 
     private var outputStream: BufferedOutputStream? = null
     lateinit var queue: LinkedBlockingQueue<YUVPlanes?>
-    var imageSaved=0
-    var job: Job?=null
-    var first=true
-    var frames=0
+    var imageSaved = 0
+    var job: Job? = null
+    var first = true
+    var frames = 0
+
     init {
         // startFFmpeg()
         /*  val scope = CoroutineScope(Dispatchers.IO)
@@ -370,66 +371,66 @@ class CameraRepository(
           }*/
 
 
-      /*  CoroutineScope(Dispatchers.IO).launch {
-            while (coded) {
-                val bytes =
+        /*  CoroutineScope(Dispatchers.IO).launch {
+              while (coded) {
+                  val bytes =
 
-                    bufferedOutputStream?.write(
-                        combineYUVPlanes(queue.take())
-                    )
-                    bufferedOutputStream?.flush()
-                    coded=false
+                      bufferedOutputStream?.write(
+                          combineYUVPlanes(queue.take())
+                      )
+                      bufferedOutputStream?.flush()
+                      coded=false
 
-            }
-        }*/
+              }
+          }*/
 
-        job=CoroutineScope(Dispatchers.IO).launch {
+        job = CoroutineScope(Dispatchers.IO).launch {
             queue = LinkedBlockingQueue()
             event.collect { bytes ->
-               /* bufferedOutputStream?.write(
-                    bytes?.let {
-                        combineYUVPlanes(bytes)
-                    }
+                /* bufferedOutputStream?.write(
+                     bytes?.let {
+                         combineYUVPlanes(bytes)
+                     }
 
-                )
-                bufferedOutputStream?.flush()*/
-                    if (coded&&frames<120){
-                        bufferedOutputStream?.write(
-                            bytes?.let {
-                                combineYUVPlanes(bytes)
-                            }
+                 )
+                 bufferedOutputStream?.flush()*/
+                if (frames < 30) {
+                    bufferedOutputStream?.write(
+                        bytes?.let {
+                            combineYUVPlanes(bytes)
+                        }
 
-                        )
-                        bufferedOutputStream?.flush()
-                      //  coded=false
-                        frames++
-                    }else{
+                    )
+                    bufferedOutputStream?.flush()
+                    //  coded=false
+                    frames++
+                } else {
 
-                        coded=false
-                      //  queue.put(bytes)
-                    }
-
-                  /*  bytes?.let {
-                        /*  bufferedOutputStream?.write(it)
-                      bufferedOutputStream?.flush()*/
-                        //    queue.put(it)
-                        /////////////////////
-                        /*   bufferedOutputStream?.write(
-                          combineYUVPlanes(it)
-                      )
-                      bufferedOutputStream?.flush()*/
-                        ///////////////////////
-                        /*  withContext(Dispatchers.IO){
-                        writeByteArrayToFile(combineYUVPlanes(it))
-                    }*/
-
-                        imageSaved++
-                    } ?: run {
-                        //   FFmpegKitConfig.closeFFmpegPipe(pipe1)
-                        // ffmpegCodeFiles()
-                        println("Completed successfully")
-                    }*/
+                    coded = false
+                    //  queue.put(bytes)
                 }
+
+                /*  bytes?.let {
+                      /*  bufferedOutputStream?.write(it)
+                    bufferedOutputStream?.flush()*/
+                      //    queue.put(it)
+                      /////////////////////
+                      /*   bufferedOutputStream?.write(
+                        combineYUVPlanes(it)
+                    )
+                    bufferedOutputStream?.flush()*/
+                      ///////////////////////
+                      /*  withContext(Dispatchers.IO){
+                      writeByteArrayToFile(combineYUVPlanes(it))
+                  }*/
+
+                      imageSaved++
+                  } ?: run {
+                      //   FFmpegKitConfig.closeFFmpegPipe(pipe1)
+                      // ffmpegCodeFiles()
+                      println("Completed successfully")
+                  }*/
+            }
 
         }
     }
@@ -442,7 +443,7 @@ class CameraRepository(
                 bos.flush()
                 bos.close()
             }
-        }catch (error:Exception){
+        } catch (error: Exception) {
             println()
         }
 
@@ -597,520 +598,13 @@ class CameraRepository(
 
     private var process: Process? = null
     private var bufferedOutputStream: BufferedOutputStream? = null
-    private fun addJpegImage(byteArray: ByteArray) {
-        bufferedOutputStream?.write(byteArray)
-        bufferedOutputStream?.flush()
-    }
-
-    private fun copyImageToYuvImage(image: Image): YuvImage {
-        val planes = image.planes
-        val yBuffer = planes[0].buffer
-        val uBuffer = planes[1].buffer
-        val vBuffer = planes[2].buffer
-
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-
-        val yData = ByteArray(ySize)
-        val uData = ByteArray(uSize)
-        val vData = ByteArray(vSize)
-
-        yBuffer.get(yData)
-        uBuffer.get(uData)
-        vBuffer.get(vData)
-
-        val yuvByteArray = ByteArray(ySize + uSize + vSize)
-        System.arraycopy(yData, 0, yuvByteArray, 0, ySize)
-        System.arraycopy(uData, 0, yuvByteArray, ySize, uSize)
-        System.arraycopy(vData, 0, yuvByteArray, ySize + uSize, vSize)
-
-        val yuvImage = YuvImage(
-            yuvByteArray,
-            ImageFormat.NV21,
-            image.width,
-            image.height,
-            null
-        )
-
-        return yuvImage
-    }
-
-    fun yuv420ToBitmap(image: Image): Bitmap {
-        val width = image.width
-        val height = image.height
-        val yBuffer = image.planes[0].buffer
-        val uBuffer = image.planes[1].buffer
-        val vBuffer = image.planes[2].buffer
-
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-
-        val nv21 = ByteArray(ySize + uSize + vSize)
-
-        yBuffer[nv21, 0, ySize]
-        vBuffer[nv21, ySize, vSize]
-        uBuffer[nv21, ySize + vSize, uSize]
-
-        val yuvImage = YuvImage(nv21, NV21, width, height, null)
-        val out = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, out)
-        val imageBytes = out.toByteArray()
-        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-        return bitmap
-    }
-
-    fun getYUVPlanes(image: Image): YUVPlanes {
-        val width = image.width
-        val height = image.height
-        val (y, u, v) = extractYUVPlanes(image)
-        val yRowStride = image.planes[0].rowStride
-        val uRowStride = image.planes[1].rowStride
-        val vRowStride = image.planes[2].rowStride
-        val uPixelStride = image.planes[1].pixelStride
-        val vPixelStride = image.planes[2].pixelStride
-        return YUVPlanes(
-            y,
-            u,
-            v,
-            width,
-            height,
-            yRowStride,
-            uRowStride,
-            vRowStride,
-            uPixelStride,
-            vPixelStride
-        )
-        //return  combineYUVPlanes(YUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride))
-
-    }
-
-    fun extractYUVPlanes(image: Image): Triple<ByteArray, ByteArray, ByteArray> {
-        val yPlane = image.planes[0]
-        val uPlane = image.planes[1]
-        val vPlane = image.planes[2]
-
-        /* val ySize = yPlane.rowStride * image.height
-         val uSize = uPlane.rowStride * (image.height / 2)-1
-         val vSize = vPlane.rowStride * (image.height / 2)-1*/
-
-        val ySize = yPlane.buffer.remaining()
-        val uSize = uPlane.buffer.remaining()
-        val vSize = vPlane.buffer.remaining()
-
-        val yBuffer = ByteArray(ySize)
-        val uBuffer = ByteArray(uSize)
-        val vBuffer = ByteArray(vSize)
-
-        yPlane.buffer.get(yBuffer)
-        uPlane.buffer.get(uBuffer)
-        vPlane.buffer.get(vBuffer)
-
-        return Triple(yBuffer, uBuffer, vBuffer)
-    }
-
-    data class YUVPlanes(
-        val y: ByteArray,
-        val u: ByteArray,
-        val v: ByteArray,
-        val width: Int,
-        val height: Int,
-        val yRowStride: Int,
-        val uRowStride: Int,
-        val vRowStride: Int,
-        val uPixelStride: Int,
-        val vPixelStride: Int
-    )
-
-    fun combineYUVPlanes(yuvPlanes: YUVPlanes): ByteArray {
-        val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
-        var yPos = 0
-        var uvPos = yuvPlanes.width * yuvPlanes.height
-
-        // Копирование Y плоскости
-        for (i in 0 until yuvPlanes.height) {
-            System.arraycopy(yuvPlanes.y, i * yuvPlanes.yRowStride, yuv, yPos, yuvPlanes.width)
-            yPos += yuvPlanes.width
-        }
-        ///////////////////////
-        for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2) {
-                yuv[uvPos] = yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
-                uvPos++
-            }
-        }
-        for (i in 0 until yuvPlanes.height / 2) {
-            for (j in 0 until yuvPlanes.width / 2) {
-                yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
-                uvPos++
-            }
-        }
-        ///////////////////////
-
-        /*  // Копирование U и V плоскостей с учетом pixel stride
-          for (i in 0 until height / 2) {
-              for (j in 0 until width / 2) {
-                  yuv[uvPos++] = u[i * uRowStride + j * uPixelStride]
-                  yuv[uvPos++] = v[i * vRowStride + j * vPixelStride]
-              }
-          }*/
-
-        return yuv
-    }
-
-    fun convertYUV420_888to420p(image: Image): ByteArray {
-
-        ///////////////////////////
-        val planes = image.planes
-        val yPlane = planes[0]
-        val uPlane = planes[1]
-        val vPlane = planes[2]
-
-        val yRowStride = image.planes[0].rowStride
-        val yPixelStride = image.planes[0].pixelStride
-        val uvRowStride = image.planes[1].rowStride
-        val uvPixelStride = image.planes[1].pixelStride
-
-
-        val ySize = yPlane.buffer.remaining()
-        val uSize = uPlane.buffer.remaining()
-        val vSize = vPlane.buffer.remaining()
-        val totalSize = ySize + uSize + vSize
-
-
-        val yuvByteArray = ByteArray(totalSize)
-        val yBuffer = yPlane.buffer
-        val uBuffer = uPlane.buffer
-        val vBuffer = vPlane.buffer
-
-        ////////////////////nv21
-        /*  val nv21 = ByteArray(ySize + uSize + vSize)
-
-          yBuffer.get(nv21, 0, ySize)
-          vBuffer.get(nv21, ySize, vSize)
-          uBuffer.get(nv21, ySize + vSize, uSize)*/
-        ////////////////////
-        var offset = 0
-        for (i in 0 until image.height) {
-            yBuffer.position(i * yRowStride)
-            yBuffer.get(yuvByteArray, offset, image.width)
-            offset += image.width
-        }
-        /*   for (i in 0 until image.height / 2) {
-               for (j in 0 until image.width ) {
-                   uBuffer.position(j + i * uvRowStride)
-                   uBuffer.get(yuvByteArray, offset, 1)
-                   offset++
-
-                   vBuffer.position(j + i * uvRowStride)
-                   vBuffer.get(yuvByteArray, offset, 1)
-                   offset++
-               }
-           }*/
-        ////
-        /* for (i in 0 until image.height / 2) {
-             for (j in 0 until image.width/2 step uvPixelStride){
-                 uBuffer.position(j+i * uvRowStride)
-                 uBuffer.get(yuvByteArray, offset, 1)
-                 offset++
-             }
-
-
-         }
-         for (i in 0 until image.height / 2) {
-             for (j in 0 until image.width/2 step uvPixelStride) {
-                 vBuffer.position(j+i * uvRowStride)
-                 vBuffer.get(yuvByteArray, offset, 1)
-                 offset++
-             }
-         }*/
-        for (i in 0 until image.height / 2) {
-            vBuffer.position(i * uvRowStride)
-            for (j in 0..image.width step uvPixelStride) {
-                vBuffer.get(yuvByteArray, offset, 1)
-                offset++
-            }
-        }
-        for (i in 0 until image.height / 2) {
-            uBuffer.position(i * uvRowStride)
-            for (j in 0..image.width step uvPixelStride) {
-                uBuffer.get(yuvByteArray, offset, 1)
-                offset++
-            }
-        }
-
-        ///////////////////////
-        val yuvImage = YuvImage(yuvByteArray, ImageFormat.NV21, image.width, image.height, null)
-        val outputStream = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, outputStream)
-        val jpegByteArray = outputStream.toByteArray()
-        val bitmap = BitmapFactory.decodeByteArray(jpegByteArray, 0, jpegByteArray.size)
-
-///////////////////////////////////
-        return yuvByteArray
-    }
-
-
-    fun convertYUV420888ToByteArray(image: Image): ByteArray {
-        // Get the planes of the YUV_420_888 image
-        val planes = image.planes
-
-        // Check that the image has three planes (Y, U, and V)
-        if (planes.size != 3) {
-            throw RuntimeException("Expected 3 planes in YUV_420_888 image")
-        }
-
-        // Get the planes and their row strides and pixel strides
-        val yPlane = planes[0]
-        val uPlane = planes[1]
-        val vPlane = planes[2]
-
-        val yRowStride = yPlane.rowStride
-        val uRowStride = uPlane.rowStride
-        val vRowStride = vPlane.rowStride
-
-        val yPixelStride = yPlane.pixelStride
-        val uPixelStride = uPlane.pixelStride
-        val vPixelStride = vPlane.pixelStride
-
-        // Get the buffer sizes for each plane
-        val yBuffer = yPlane.buffer
-        val uBuffer = uPlane.buffer
-        val vBuffer = vPlane.buffer
-
-        // Calculate the height of each plane
-        val yHeight = yBuffer.limit() / yRowStride
-        val uHeight = uBuffer.limit() / uRowStride
-
-        // Calculate the total size of the YUV420p byte array
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-        val totalSize = ySize + (uSize / uPixelStride) + (vSize / vPixelStride)
-
-        // Create a byte array to store the YUV420p data
-        val yuvByteArray = ByteArray(totalSize)
-
-        // Copy the Y plane data
-        var offset = 0
-        for (i in 0 until yHeight) {
-            yBuffer.position(i * yRowStride)
-            yBuffer.get(yuvByteArray, offset, yRowStride)
-            offset += yRowStride
-        }
-
-        // Copy the U and V plane data, interleaved
-        for (i in 0 until uHeight) {
-            uBuffer.position(i * uRowStride)
-            vBuffer.position(i * vRowStride)
-            for (j in 0 until uRowStride / uPixelStride) {
-                yuvByteArray[offset++] = uBuffer.get()
-                yuvByteArray[offset++] = vBuffer.get()
-            }
-        }
-
-        // Convert YUV to RGB
-        val rgbByteArray = ByteArray(ySize * 3)
-        var rgbOffset = 0
-        for (i in 0 until yHeight) {
-            for (j in 0 until yRowStride) {
-                val y = yuvByteArray[i * yRowStride + j].toInt() and 0xFF
-                val u = yuvByteArray[ySize + (i / 2) * uRowStride + (j / 2)].toInt() and 0xFF
-                val v = yuvByteArray[ySize + (i / 2) * uRowStride + (j / 2) + 1].toInt() and 0xFF
-
-                val r = (y + 1.13983 * (v - 128)).toInt()
-                val g = (y - 0.39465 * (u - 128) - 0.58060 * (v - 128)).toInt()
-                val b = (y + 2.03211 * (u - 128)).toInt()
-
-                rgbByteArray[rgbOffset++] = r.toByte()
-                rgbByteArray[rgbOffset++] = g.toByte()
-                rgbByteArray[rgbOffset++] = b.toByte()
-            }
-        }
-
-        return rgbByteArray
-    }
-
-
-    private fun convertNV21toyuv420(yuvImage: YuvImage) {
-        fps1.get("beforeConvert")
-        val nv21Data = yuvImage.yuvData
-
-        var output: ByteArray? = null
-        if (output == null) {
-            output = ByteArray(nv21Data.size)
-        }
-
-        val size = yuvImage.width * yuvImage.height
-        val quarter = size / 4
-        val v0 = size
-        val u0 = v0 + quarter
-
-        System.arraycopy(nv21Data, 0, output, 0, size) // Y is same
-
-        for (i in 0 until yuvImage.height / 2) {
-            for (j in 0 until yuvImage.width / 2) {
-                val uvIndex = size + 2 * (i * yuvImage.width / 2 + j)
-                output[v0 + i * yuvImage.width / 2 + j] = nv21Data[uvIndex] // For NV21, V first
-                output[u0 + i * yuvImage.width / 2 + j] =
-                    nv21Data[uvIndex + 1] // For NV21, U second
-            }
-        }
-
-        // Swap U and V planes
-        for (i in v0 until u0) {
-            val temp = output[i]
-            output[i] = output[i + quarter]
-            output[i + quarter] = temp
-        }
-        fps1.get("afterConvert")
-        bufferedOutputStream?.write(output)
-        bufferedOutputStream?.flush()
-        // process?.outputStream?.write(output)
-        fps1.get("afterWrite")
-
-    }
-
-    private fun addImage(image: Image) {
-        /*val yBuffer = image.planes[0].buffer
-        val uBuffer = image.planes[1].buffer
-        val vBuffer = image.planes[2].buffer
-
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-
-        val nv21 = ByteArray(ySize + uSize + vSize)
-        yBuffer.get(nv21, 0, ySize)
-        vBuffer.get(nv21, ySize, vSize)
-        uBuffer.get(nv21, ySize + vSize, uSize)
-
-        val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
-        val outputStream = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, outputStream)
-
-        val jpegArray = outputStream.toByteArray()
-        val bitmap = BitmapFactory.decodeByteArray(jpegArray, 0, jpegArray.size)
-
-        // Now you have the Bitmap, you can use it as needed
-        // ...
-
-
-        process?.outputStream?.write(jpegArray) // Write the JPEG data to the output stream*/
-        /////////////////
-        /////////////////awesome working
-        /*  val planes = image.planes
-          val yuvData = ByteArray(image.width * image.height * 3 / 2)
-
-          // Get the Y plane
-          val yBuffer = planes[0].buffer
-          val yStride = planes[0].rowStride
-          val yPixelStride = planes[0].pixelStride // always 1 for Y plane
-
-          // Get the U plane
-          val uBuffer = planes[1].buffer
-          val uStride = planes[1].rowStride
-          val uPixelStride = planes[1].pixelStride
-
-          // Get the V plane
-          val vBuffer = planes[2].buffer
-          val vStride = planes[2].rowStride
-          val vPixelStride = planes[2].pixelStride
-
-          // Copy Y plane
-          var yBufferOffset = yBuffer.position()
-          var off= 0
-          while (yBufferOffset < yStride * image.height) {
-              yuvData[off] = yBuffer.get(yBufferOffset)
-              off++
-              yBufferOffset++
-          }
-
-          // Copy U plane
-          // Copy U plane
-          var offset = yStride * image.height
-          val uBufferOffset = uBuffer.position()
-          for (i in 0 until image.height / 2) {
-              for (j in 0 until image.width / 2) {
-                  yuvData[offset] = uBuffer.get(uBufferOffset + i * uStride + j * uPixelStride)
-                  offset++
-              }
-          }
-
-  // Copy V plane
-          for (i in 0 until image.height / 2) {
-              for (j in 0 until image.width / 2) {
-                  yuvData[offset] = vBuffer.get(uBufferOffset + i * vStride + j * vPixelStride)
-                  offset++
-              }
-          }
-              process?.outputStream?.write(yuvData)
-
-
-          image.close()*/
-        /////////////////end of awesome working
-        //////////////////////
-        val planes = image.planes
-        val yuvData = ByteBuffer.allocateDirect(image.width * image.height * 3 / 2)
-// Get the Y plane
-
-        val yStride = planes[0].rowStride
-        val yPixelStride = planes[0].pixelStride // always 1 for Y plane
-
-        // Get the U plane
-        val uStride = planes[1].rowStride
-        val uPixelStride = planes[1].pixelStride
-
-        // Get the V plane
-        val vStride = planes[2].rowStride
-        val vPixelStride = planes[2].pixelStride
-// Copy Y plane
-        val yBuffer = planes[0].buffer
-        yBuffer.rewind()
-        yuvData.put(yBuffer)
-
-// Copy U plane
-        val uBuffer = planes[1].buffer
-        uBuffer.rewind()
-        for (i in 0 until image.height / 2) {
-            for (j in 0 until image.width / 2) {
-                yuvData.put(uBuffer.get(uBuffer.position() + i * uStride + j * uPixelStride))
-            }
-        }
-
-// Copy V plane
-        val vBuffer = planes[2].buffer
-        vBuffer.rewind()
-        for (i in 0 until image.height / 2) {
-            for (j in 0 until image.width / 2) {
-                yuvData.put(vBuffer.get(vBuffer.position() + i * vStride + j * vPixelStride))
-            }
-        }
-
-        process?.outputStream?.write(yuvData.array())
-
-        image.close()
-        ///////////////////////
-        // image.close()
-        ////////worked
-        /* for (i in 0 until 3) {
-             val buffer = image.planes[i].buffer
-             val bytes =
-                 ByteArray(buffer.remaining()) // makes byte array large enough to hold image
-             buffer.get(bytes) // copies image from buffer to byte array
-             process?.outputStream?.write(bytes)
-         }*/
-        //////////////////
-        // image.close()
-    }
 
     private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
         priority = Thread.MAX_PRIORITY
         start()
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
-    var imageAquired=0
+    var imageAquired = 0
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
 
         /* if (running){
@@ -1136,12 +630,9 @@ class CameraRepository(
                 // val tmp =yuv420ToBitmap(it)
                 //  _event.value = convertYUV420_888to420p(it)
 
-                    _event.tryEmit(getYUVPlanes(it))
-                    it.close()
-                    imageAquired++
-
-
-
+                _event.tryEmit(getYUVPlanes(it))
+                it.close()
+                imageAquired++
 
             }
         } else if (finished) {
@@ -1163,7 +654,7 @@ class CameraRepository(
         } else {
             reader.acquireLatestImage()?.close()
         }
-        fps1.get("fps")
+      //  fps1.get("fps")
         /////////////////
 
     }
@@ -1172,13 +663,10 @@ class CameraRepository(
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
-
-    val mpegSurfaceTexture: SurfaceTexture = SurfaceTexture(0)
-    val mpegSurface: Surface = Surface(mpegSurfaceTexture)
-    private val mpegSurfaceConfiguration = OutputConfiguration(mpegSurface).apply {
+    private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         //  enableSurfaceSharing()
     }
-    val mpegSurfaceTextureName = mpegSurfaceTexture.toString()
+
     private fun ffmpegCodeFiles() {
         val pipe = FFmpegKitConfig.registerNewFFmpegPipe(context)
         val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe"))
@@ -1219,7 +707,8 @@ class CameraRepository(
         println()
 
     }
-    var coded=true
+
+    var coded = true
     private fun startFFmpeg(): FFmpegSession {
 
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
@@ -1241,7 +730,8 @@ class CameraRepository(
          val output3 = session.getOutput()*/
 
         ////////////////
-        val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -bufsize 3 -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
+        val command =
+            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -r 25  -s 640x480 -i $pipe1 -bufsize 3 -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
 
         //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
 
@@ -1274,8 +764,8 @@ class CameraRepository(
                 println(log.message)
                 // CALLED WHEN SESSION PRINTS LOGS
             }, { statistics ->
-                coded=true
-             //   frames=0
+                coded = true
+                //   frames=0
                 println("frame number:" + statistics.videoFrameNumber)
                 // CALLED WHEN SESSION GENERATES STATISTICS
             })
@@ -1484,28 +974,6 @@ class CameraRepository(
       }*/
 
 
-    /* init {
-         thread.start()
-
-         // Останавливаем поток через 10 секунд
-         Handler(Looper.getMainLooper()).postDelayed({
-             if (thread.isAlive) {
-                 thread.interrupt()
-                 running = false
-             }
-         }, 10000)
-     }*/
-    val imageFormat = ImageFormat.YUV_420_888//ImageFormat.RAW_SENSOR//
-
-
-    /*  private val imageReader: ImageReader = ImageReader.newInstance(1024, 768, imageFormat, 10).apply {
-              setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
-          }*/
-    private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-        //  enableSurfaceSharing()
-    }
-
-
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
@@ -1622,7 +1090,46 @@ class CameraRepository(
         )
         cameraDevice?.createCaptureSession(config)
     }
+
     /////////////////////////////
+    private fun startTimer() {
+
+        Handler(Looper.getMainLooper()).postDelayed(
+            {
+              /*  running = false
+                finished = true*/
+            },
+            3000
+        ) // 1000 milliseconds = 1 second
+    }
+
+    var mpses: FFmpegSession? = null
+    fun singleCapture(enable: Boolean) {
+        //   singleCapture = true
+        // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+        /*if (enable) {
+            mMediaRecorder.start()
+        } else {
+            mMediaRecorder.stop()
+        }*/
+
+        running = enable
+        finished = !enable
+        /* if (enable) {
+             mpses = startFFmpeg()
+         } else {
+             mpses?.cancel()
+         }*/
+        if (enable) {
+            mpses = startFFmpeg()
+            startTimer()
+
+        } else {
+            running = false
+            finished = true
+        }
+
+    }
 
     /*  val ffmpegThread = Thread {
 
@@ -1636,7 +1143,6 @@ class CameraRepository(
             imageQueue?.let {
                 val imageData = it.take()
                 process?.outputStream?.write(imageData)
-
             }
         }
 
@@ -1701,6 +1207,528 @@ class CameraRepository(
                  println("FFMEPG STATS :${it.speed}")
              })
      }*/
+    //////////////////////////////
+    private fun addJpegImage(byteArray: ByteArray) {
+        bufferedOutputStream?.write(byteArray)
+        bufferedOutputStream?.flush()
+    }
+    private fun copyImageToYuvImage(image: Image): YuvImage {
+        val planes = image.planes
+        val yBuffer = planes[0].buffer
+        val uBuffer = planes[1].buffer
+        val vBuffer = planes[2].buffer
+
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+
+        val yData = ByteArray(ySize)
+        val uData = ByteArray(uSize)
+        val vData = ByteArray(vSize)
+
+        yBuffer.get(yData)
+        uBuffer.get(uData)
+        vBuffer.get(vData)
+
+        val yuvByteArray = ByteArray(ySize + uSize + vSize)
+        System.arraycopy(yData, 0, yuvByteArray, 0, ySize)
+        System.arraycopy(uData, 0, yuvByteArray, ySize, uSize)
+        System.arraycopy(vData, 0, yuvByteArray, ySize + uSize, vSize)
+
+        val yuvImage = YuvImage(
+            yuvByteArray,
+            ImageFormat.NV21,
+            image.width,
+            image.height,
+            null
+        )
+
+        return yuvImage
+    }
+    fun yuv420ToBitmap(image: Image): Bitmap {
+        val width = image.width
+        val height = image.height
+        val yBuffer = image.planes[0].buffer
+        val uBuffer = image.planes[1].buffer
+        val vBuffer = image.planes[2].buffer
+
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+
+        val nv21 = ByteArray(ySize + uSize + vSize)
+
+        yBuffer[nv21, 0, ySize]
+        vBuffer[nv21, ySize, vSize]
+        uBuffer[nv21, ySize + vSize, uSize]
+
+        val yuvImage = YuvImage(nv21, NV21, width, height, null)
+        val out = ByteArrayOutputStream()
+        yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, out)
+        val imageBytes = out.toByteArray()
+        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+        return bitmap
+    }
+    fun getYUVPlanes(image: Image): YUVPlanes {
+        val width = image.width
+        val height = image.height
+        val (y, u, v) = extractYUVPlanes(image)
+        val yRowStride = image.planes[0].rowStride
+        val uRowStride = image.planes[1].rowStride
+        val vRowStride = image.planes[2].rowStride
+        val uPixelStride = image.planes[1].pixelStride
+        val vPixelStride = image.planes[2].pixelStride
+        return YUVPlanes(
+            y,
+            u,
+            v,
+            width,
+            height,
+            yRowStride,
+            uRowStride,
+            vRowStride,
+            uPixelStride,
+            vPixelStride
+        )
+        //return  combineYUVPlanes(YUVPlanes(y, u, v, width, height, yRowStride, uRowStride, vRowStride, uPixelStride, vPixelStride))
+
+    }
+    fun extractYUVPlanes(image: Image): Triple<ByteArray, ByteArray, ByteArray> {
+        val yPlane = image.planes[0]
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+
+        /* val ySize = yPlane.rowStride * image.height
+         val uSize = uPlane.rowStride * (image.height / 2)-1
+         val vSize = vPlane.rowStride * (image.height / 2)-1*/
+
+        val ySize = yPlane.buffer.remaining()
+        val uSize = uPlane.buffer.remaining()
+        val vSize = vPlane.buffer.remaining()
+
+        val yBuffer = ByteArray(ySize)
+        val uBuffer = ByteArray(uSize)
+        val vBuffer = ByteArray(vSize)
+
+        yPlane.buffer.get(yBuffer)
+        uPlane.buffer.get(uBuffer)
+        vPlane.buffer.get(vBuffer)
+
+        return Triple(yBuffer, uBuffer, vBuffer)
+    }
+    data class YUVPlanes(
+        val y: ByteArray,
+        val u: ByteArray,
+        val v: ByteArray,
+        val width: Int,
+        val height: Int,
+        val yRowStride: Int,
+        val uRowStride: Int,
+        val vRowStride: Int,
+        val uPixelStride: Int,
+        val vPixelStride: Int
+    )
+    fun combineYUVPlanes(yuvPlanes: YUVPlanes): ByteArray {
+        fps1.get("before")
+       /* val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+        var yPos = 0
+        var uvPos = yuvPlanes.width * yuvPlanes.height
+
+        // Копирование Y плоскости
+        for (i in 0 until yuvPlanes.height) {
+            System.arraycopy(yuvPlanes.y, i * yuvPlanes.yRowStride, yuv, yPos, yuvPlanes.width)
+            yPos += yuvPlanes.width
+        }
+        ///////////////////////
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                yuv[uvPos] = yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
+                uvPos++
+            }
+        }
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
+                uvPos++
+            }
+        }*/
+        //////////////////////////////fast
+        val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+        val yuvBuffer = ByteBuffer.wrap(yuv)
+        var yPos = 0
+        var uvPos = yuvPlanes.width * yuvPlanes.height
+
+        // Копирование Y плоскости
+
+            yuvBuffer.put(yuvPlanes.y, 0, yuvPlanes.width*yuvPlanes.height)
+
+            yPos += yuvPlanes.width*yuvPlanes.height
+
+        ///////////////////////
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2 ) {
+                yuvBuffer.put(yuvPlanes.u[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
+                uvPos++
+            }
+        }
+        for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2 ) {
+                yuvBuffer.put(yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride])
+                uvPos++
+            }
+        }
+       /* for (i in 0 until yuvPlanes.height / 2) {
+            for (j in 0 until yuvPlanes.width / 2) {
+                yuv[uvPos] = yuvPlanes.v[i * yuvPlanes.uRowStride + j * yuvPlanes.uPixelStride]
+                uvPos++
+            }
+        }*/
+        ///////////////////////////////
+        fps1.get("after")
+        ///////////////////////
+        return yuv
+    }
+    fun convertYUV420_888to420p(image: Image): ByteArray {
+
+        ///////////////////////////
+        val planes = image.planes
+        val yPlane = planes[0]
+        val uPlane = planes[1]
+        val vPlane = planes[2]
+
+        val yRowStride = image.planes[0].rowStride
+        val yPixelStride = image.planes[0].pixelStride
+        val uvRowStride = image.planes[1].rowStride
+        val uvPixelStride = image.planes[1].pixelStride
+
+
+        val ySize = yPlane.buffer.remaining()
+        val uSize = uPlane.buffer.remaining()
+        val vSize = vPlane.buffer.remaining()
+        val totalSize = ySize + uSize + vSize
+
+
+        val yuvByteArray = ByteArray(totalSize)
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+
+        ////////////////////nv21
+        /*  val nv21 = ByteArray(ySize + uSize + vSize)
+
+          yBuffer.get(nv21, 0, ySize)
+          vBuffer.get(nv21, ySize, vSize)
+          uBuffer.get(nv21, ySize + vSize, uSize)*/
+        ////////////////////
+        var offset = 0
+        for (i in 0 until image.height) {
+            yBuffer.position(i * yRowStride)
+            yBuffer.get(yuvByteArray, offset, image.width)
+            offset += image.width
+        }
+        /*   for (i in 0 until image.height / 2) {
+               for (j in 0 until image.width ) {
+                   uBuffer.position(j + i * uvRowStride)
+                   uBuffer.get(yuvByteArray, offset, 1)
+                   offset++
+
+                   vBuffer.position(j + i * uvRowStride)
+                   vBuffer.get(yuvByteArray, offset, 1)
+                   offset++
+               }
+           }*/
+        ////
+        /* for (i in 0 until image.height / 2) {
+             for (j in 0 until image.width/2 step uvPixelStride){
+                 uBuffer.position(j+i * uvRowStride)
+                 uBuffer.get(yuvByteArray, offset, 1)
+                 offset++
+             }
+
+
+         }
+         for (i in 0 until image.height / 2) {
+             for (j in 0 until image.width/2 step uvPixelStride) {
+                 vBuffer.position(j+i * uvRowStride)
+                 vBuffer.get(yuvByteArray, offset, 1)
+                 offset++
+             }
+         }*/
+        for (i in 0 until image.height / 2) {
+            vBuffer.position(i * uvRowStride)
+            for (j in 0..image.width step uvPixelStride) {
+                vBuffer.get(yuvByteArray, offset, 1)
+                offset++
+            }
+        }
+        for (i in 0 until image.height / 2) {
+            uBuffer.position(i * uvRowStride)
+            for (j in 0..image.width step uvPixelStride) {
+                uBuffer.get(yuvByteArray, offset, 1)
+                offset++
+            }
+        }
+
+        ///////////////////////
+        val yuvImage = YuvImage(yuvByteArray, ImageFormat.NV21, image.width, image.height, null)
+        val outputStream = ByteArrayOutputStream()
+        yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, outputStream)
+        val jpegByteArray = outputStream.toByteArray()
+        val bitmap = BitmapFactory.decodeByteArray(jpegByteArray, 0, jpegByteArray.size)
+
+///////////////////////////////////
+        return yuvByteArray
+    }
+    fun convertYUV420888ToByteArray(image: Image): ByteArray {
+        // Get the planes of the YUV_420_888 image
+        val planes = image.planes
+
+        // Check that the image has three planes (Y, U, and V)
+        if (planes.size != 3) {
+            throw RuntimeException("Expected 3 planes in YUV_420_888 image")
+        }
+
+        // Get the planes and their row strides and pixel strides
+        val yPlane = planes[0]
+        val uPlane = planes[1]
+        val vPlane = planes[2]
+
+        val yRowStride = yPlane.rowStride
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+
+        val yPixelStride = yPlane.pixelStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
+
+        // Get the buffer sizes for each plane
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+
+        // Calculate the height of each plane
+        val yHeight = yBuffer.limit() / yRowStride
+        val uHeight = uBuffer.limit() / uRowStride
+
+        // Calculate the total size of the YUV420p byte array
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+        val totalSize = ySize + (uSize / uPixelStride) + (vSize / vPixelStride)
+
+        // Create a byte array to store the YUV420p data
+        val yuvByteArray = ByteArray(totalSize)
+
+        // Copy the Y plane data
+        var offset = 0
+        for (i in 0 until yHeight) {
+            yBuffer.position(i * yRowStride)
+            yBuffer.get(yuvByteArray, offset, yRowStride)
+            offset += yRowStride
+        }
+
+        // Copy the U and V plane data, interleaved
+        for (i in 0 until uHeight) {
+            uBuffer.position(i * uRowStride)
+            vBuffer.position(i * vRowStride)
+            for (j in 0 until uRowStride / uPixelStride) {
+                yuvByteArray[offset++] = uBuffer.get()
+                yuvByteArray[offset++] = vBuffer.get()
+            }
+        }
+
+        // Convert YUV to RGB
+        val rgbByteArray = ByteArray(ySize * 3)
+        var rgbOffset = 0
+        for (i in 0 until yHeight) {
+            for (j in 0 until yRowStride) {
+                val y = yuvByteArray[i * yRowStride + j].toInt() and 0xFF
+                val u = yuvByteArray[ySize + (i / 2) * uRowStride + (j / 2)].toInt() and 0xFF
+                val v = yuvByteArray[ySize + (i / 2) * uRowStride + (j / 2) + 1].toInt() and 0xFF
+
+                val r = (y + 1.13983 * (v - 128)).toInt()
+                val g = (y - 0.39465 * (u - 128) - 0.58060 * (v - 128)).toInt()
+                val b = (y + 2.03211 * (u - 128)).toInt()
+
+                rgbByteArray[rgbOffset++] = r.toByte()
+                rgbByteArray[rgbOffset++] = g.toByte()
+                rgbByteArray[rgbOffset++] = b.toByte()
+            }
+        }
+
+        return rgbByteArray
+    }
+    private fun convertNV21toyuv420(yuvImage: YuvImage) {
+        fps1.get("beforeConvert")
+        val nv21Data = yuvImage.yuvData
+
+        var output: ByteArray? = null
+        if (output == null) {
+            output = ByteArray(nv21Data.size)
+        }
+
+        val size = yuvImage.width * yuvImage.height
+        val quarter = size / 4
+        val v0 = size
+        val u0 = v0 + quarter
+
+        System.arraycopy(nv21Data, 0, output, 0, size) // Y is same
+
+        for (i in 0 until yuvImage.height / 2) {
+            for (j in 0 until yuvImage.width / 2) {
+                val uvIndex = size + 2 * (i * yuvImage.width / 2 + j)
+                output[v0 + i * yuvImage.width / 2 + j] = nv21Data[uvIndex] // For NV21, V first
+                output[u0 + i * yuvImage.width / 2 + j] =
+                    nv21Data[uvIndex + 1] // For NV21, U second
+            }
+        }
+
+        // Swap U and V planes
+        for (i in v0 until u0) {
+            val temp = output[i]
+            output[i] = output[i + quarter]
+            output[i + quarter] = temp
+        }
+        fps1.get("afterConvert")
+        bufferedOutputStream?.write(output)
+        bufferedOutputStream?.flush()
+        // process?.outputStream?.write(output)
+        fps1.get("afterWrite")
+
+    }
+    private fun addImage(image: Image) {
+        /*val yBuffer = image.planes[0].buffer
+        val uBuffer = image.planes[1].buffer
+        val vBuffer = image.planes[2].buffer
+
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+
+        val nv21 = ByteArray(ySize + uSize + vSize)
+        yBuffer.get(nv21, 0, ySize)
+        vBuffer.get(nv21, ySize, vSize)
+        uBuffer.get(nv21, ySize + vSize, uSize)
+
+        val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
+        val outputStream = ByteArrayOutputStream()
+        yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, outputStream)
+
+        val jpegArray = outputStream.toByteArray()
+        val bitmap = BitmapFactory.decodeByteArray(jpegArray, 0, jpegArray.size)
+
+        // Now you have the Bitmap, you can use it as needed
+        // ...
+
+
+        process?.outputStream?.write(jpegArray) // Write the JPEG data to the output stream*/
+        /////////////////
+        /////////////////awesome working
+        /*  val planes = image.planes
+          val yuvData = ByteArray(image.width * image.height * 3 / 2)
+
+          // Get the Y plane
+          val yBuffer = planes[0].buffer
+          val yStride = planes[0].rowStride
+          val yPixelStride = planes[0].pixelStride // always 1 for Y plane
+
+          // Get the U plane
+          val uBuffer = planes[1].buffer
+          val uStride = planes[1].rowStride
+          val uPixelStride = planes[1].pixelStride
+
+          // Get the V plane
+          val vBuffer = planes[2].buffer
+          val vStride = planes[2].rowStride
+          val vPixelStride = planes[2].pixelStride
+
+          // Copy Y plane
+          var yBufferOffset = yBuffer.position()
+          var off= 0
+          while (yBufferOffset < yStride * image.height) {
+              yuvData[off] = yBuffer.get(yBufferOffset)
+              off++
+              yBufferOffset++
+          }
+
+          // Copy U plane
+          // Copy U plane
+          var offset = yStride * image.height
+          val uBufferOffset = uBuffer.position()
+          for (i in 0 until image.height / 2) {
+              for (j in 0 until image.width / 2) {
+                  yuvData[offset] = uBuffer.get(uBufferOffset + i * uStride + j * uPixelStride)
+                  offset++
+              }
+          }
+
+  // Copy V plane
+          for (i in 0 until image.height / 2) {
+              for (j in 0 until image.width / 2) {
+                  yuvData[offset] = vBuffer.get(uBufferOffset + i * vStride + j * vPixelStride)
+                  offset++
+              }
+          }
+              process?.outputStream?.write(yuvData)
+
+
+          image.close()*/
+        /////////////////end of awesome working
+        //////////////////////
+        val planes = image.planes
+        val yuvData = ByteBuffer.allocateDirect(image.width * image.height * 3 / 2)
+// Get the Y plane
+
+        val yStride = planes[0].rowStride
+        val yPixelStride = planes[0].pixelStride // always 1 for Y plane
+
+        // Get the U plane
+        val uStride = planes[1].rowStride
+        val uPixelStride = planes[1].pixelStride
+
+        // Get the V plane
+        val vStride = planes[2].rowStride
+        val vPixelStride = planes[2].pixelStride
+// Copy Y plane
+        val yBuffer = planes[0].buffer
+        yBuffer.rewind()
+        yuvData.put(yBuffer)
+
+// Copy U plane
+        val uBuffer = planes[1].buffer
+        uBuffer.rewind()
+        for (i in 0 until image.height / 2) {
+            for (j in 0 until image.width / 2) {
+                yuvData.put(uBuffer.get(uBuffer.position() + i * uStride + j * uPixelStride))
+            }
+        }
+
+// Copy V plane
+        val vBuffer = planes[2].buffer
+        vBuffer.rewind()
+        for (i in 0 until image.height / 2) {
+            for (j in 0 until image.width / 2) {
+                yuvData.put(vBuffer.get(vBuffer.position() + i * vStride + j * vPixelStride))
+            }
+        }
+
+        process?.outputStream?.write(yuvData.array())
+
+        image.close()
+        ///////////////////////
+        // image.close()
+        ////////worked
+        /* for (i in 0 until 3) {
+             val buffer = image.planes[i].buffer
+             val bytes =
+                 ByteArray(buffer.remaining()) // makes byte array large enough to hold image
+             buffer.get(bytes) // copies image from buffer to byte array
+             process?.outputStream?.write(bytes)
+         }*/
+        //////////////////
+        // image.close()
+    }
+/////////////////////////////////////////////
 
     private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
     private fun setUpMediaRecorder() {
@@ -1926,54 +1954,6 @@ class CameraRepository(
         }
     }
 
-    private var singleCapture = false
-    private var repeatingCapture = false
-
-
-    private fun startTimer() {
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            // Call your function here
-            running = false
-            finished=true
-         //   _event.tryEmit(null)
-
-
-        }, 3000) // 1000 milliseconds = 1 second
-    }
-
-    private fun myFunction() {
-        // Your code here
-        println("Timer triggered!")
-    }
-
-    var mpses: FFmpegSession? = null
-    fun singleCapture(enable: Boolean) {
-        //   singleCapture = true
-        // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
-        /*if (enable) {
-            mMediaRecorder.start()
-        } else {
-            mMediaRecorder.stop()
-        }*/
-
-        running = enable
-        finished = !enable
-        /* if (enable) {
-             mpses = startFFmpeg()
-         } else {
-             mpses?.cancel()
-         }*/
-        if (enable) {
-            mpses = startFFmpeg()
-            startTimer()
-
-        } else {
-            running = false
-            finished=true
-        }
-
-    }
 
     fun repeatingCapture() {
 
@@ -2085,9 +2065,10 @@ class CameraRepository(
         fun get(tag: String) {
             ////////////////////////
             val currentTime = System.currentTimeMillis()
+            val dif=currentTime - lastFrameTime
             if (lastFrameTime != 0L) {
                 val fps = 1000.0 / (currentTime - lastFrameTime)
-                Log.e("FPS", "$tag: $fps")
+                Log.e("FPS", "$tag: $dif")
             }
             lastFrameTime = currentTime
             /////////////////////////
