@@ -58,6 +58,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.channels.Channels
+import java.nio.channels.WritableByteChannel
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
@@ -642,7 +644,8 @@ class CameraRepository(
     private val fps1 = Fps()
 
     private var process: Process? = null
-    private var bufferedOutputStream: BufferedOutputStream? = null
+  //  private var bufferedOutputStream: BufferedOutputStream? = null
+    private var bufferedOutputStream: WritableByteChannel? = null
 
     private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
         priority = Thread.MAX_PRIORITY
@@ -764,7 +767,11 @@ class CameraRepository(
 
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
         process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
-        bufferedOutputStream = BufferedOutputStream(process?.outputStream)
+     //   bufferedOutputStream = BufferedOutputStream(process?.outputStream)
+        /////////////////////
+        bufferedOutputStream = Channels.newChannel(process?.outputStream);
+
+        /////////////////////
         val outputFilePath = createFile("mp4")
         val framerate = 24//23.976
         // val command = "-f rawvideo  -i $mpegSurfaceTexture -s 640x480 -input_queue_size 120  -c:v libx264 -preset superfast   -b:v 5m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
@@ -782,7 +789,8 @@ class CameraRepository(
 
         ////////////////
         val command =
-            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s 3840x2160 -i $pipe1 -bufsize 1G -c:v libx264 -b:v 5m -maxrate 150M -f mp4 -loglevel debug -y $outputFilePath -v debug "
+            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s 3840x2160 -i $pipe1 -bufsize 1G -c:v libx264 -crf 51 -b:v 100k -maxrate 150M -f mp4 -loglevel debug -y $outputFilePath -v debug "
+        //val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s 3840x2160 -i $pipe1 -bufsize 3G -c:v libx264 -b:v 1m -maxrate 150M -f mp4 -loglevel debug -y $outputFilePath -v debug "
         //val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p   -s 3840x2160 -i $pipe1 -bufsize 390M -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
 
         //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
@@ -1242,10 +1250,10 @@ class CameraRepository(
              })
      }*/
     //////////////////////////////
-    private fun addJpegImage(byteArray: ByteArray) {
+  /*  private fun addJpegImage(byteArray: ByteArray) {
         bufferedOutputStream?.write(byteArray)
         bufferedOutputStream?.flush()
-    }
+    }*/
 
     private fun copyImageToYuvImage(image: Image): YuvImage {
         val planes = image.planes
@@ -1462,7 +1470,7 @@ class CameraRepository(
         var uvPos = yuvPlanes.width * yuvPlanes.height
 
 // Копирование Y плоскости
-        System.arraycopy(yuvPlanes.y, 0, yuv, 0, yuvPlanes.y.size)
+        System.arraycopy(yuvPlanes.y, 0, yuv, 0, yuvPlanes.width * yuvPlanes.height)
 
 // Копирование UV плоскости
 
