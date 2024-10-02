@@ -91,7 +91,7 @@ class CameraRepository(
       private val event = _event*/
     /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
       private val event = _event*/
-    private val _event: MutableSharedFlow<YUVPlanes?> = MutableSharedFlow(
+    private val _event: MutableSharedFlow<LightYUVPlanes?> = MutableSharedFlow(
         extraBufferCapacity = 100,
         onBufferOverflow = BufferOverflow.SUSPEND
     )
@@ -388,12 +388,16 @@ class CameraRepository(
 
             event.collect { bytes ->
                 if (running){
+
                     bytes?.let {
+                        combineYUVPlanesToByteBuffer(bytes)
+
+                        yuvPlanesBuffer.limit(bytes.width * bytes.height * 3 / 2)
                         bufferedOutputStream?.write(
-                            combineYUVPlanes(bytes)
+                            yuvPlanesBuffer
                         )
                     }
-                    bufferedOutputStream?.flush()
+                   // bufferedOutputStream?.flush()
                 }else{
                     process?.destroy()
                     process?.waitFor()
@@ -621,7 +625,7 @@ class CameraRepository(
         }
     }
 
-    inner class WriterThread(private val imageBuffer: ImageBuffer) : Thread() {
+  /*  inner class WriterThread(private val imageBuffer: ImageBuffer) : Thread() {
         override fun run() {
             while (true) {
                 val image = imageBuffer.getImage()
@@ -637,7 +641,7 @@ class CameraRepository(
                 }
             }
         }
-    }
+    }*/
 
     private var previousFrameTime = 0L
 
@@ -1353,7 +1357,7 @@ class CameraRepository(
         vBuffer.clear()
         vBuffer.put(image.planes[2].buffer)
     }
-    fun getByteBufferYUVPlanes(image: Image): YUVPlanes {
+    fun getByteBufferYUVPlanes(image: Image): LightYUVPlanes {
         val width = image.width
         val height = image.height
         copyYUVPlanes(image)
@@ -1362,10 +1366,7 @@ class CameraRepository(
         val vRowStride = image.planes[2].rowStride
         val uPixelStride = image.planes[1].pixelStride
         val vPixelStride = image.planes[2].pixelStride
-        return YUVPlanes(
-            yBuffer.array(),
-            uBuffer.array(),
-            vBuffer.array(),
+        return LightYUVPlanes(
             width,
             height,
             yRowStride,
@@ -1401,7 +1402,15 @@ class CameraRepository(
 
         return Triple(yBuffer, uBuffer, vBuffer)
     }
-
+    data class LightYUVPlanes(
+        val width: Int,
+        val height: Int,
+        val yRowStride: Int,
+        val uRowStride: Int,
+        val vRowStride: Int,
+        val uPixelStride: Int,
+        val vPixelStride: Int
+    )
     data class YUVPlanes(
         val y: ByteArray,
         val u: ByteArray,
@@ -1414,7 +1423,38 @@ class CameraRepository(
         val uPixelStride: Int,
         val vPixelStride: Int
     )
+    var yuvPlanesBuffer: ByteBuffer = ByteBuffer.allocate(capacity+capacity/4)
+    fun combineYUVPlanesToByteBuffer(yuvPlanes: LightYUVPlanes){
+        fps1.get("before")
+        var uvPos = yuvPlanes.width * yuvPlanes.height
 
+        // Копирование Y плоскости
+        yuvPlanesBuffer.clear()
+        yuvPlanesBuffer.put(yBuffer.array(), 0, yuvPlanes.width*yuvPlanes.height)
+
+        val uv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
+        val uByteArray = ByteArray(uBuffer.capacity())
+        uBuffer.get(uByteArray, 0, uBuffer.position())
+        val vByteArray = ByteArray(vBuffer.capacity())
+        vBuffer.get(uByteArray, 0, vBuffer.position())
+
+        val uvStride = yuvPlanes.width / 2
+        val uvRowStride = yuvPlanes.uRowStride
+        val uvPixelStride = yuvPlanes.uPixelStride
+
+        for (i in 0 until yuvPlanes.height / 2) {
+            System.arraycopy(uByteArray, i * uvRowStride, uv, uvPos, uvStride * uvPixelStride)
+            uvPos += uvStride * uvPixelStride
+        }
+
+        for (i in 0 until yuvPlanes.height / 2) {
+            System.arraycopy(vByteArray, i * uvRowStride, uv, uvPos, uvStride * uvPixelStride)
+            uvPos += uvStride * uvPixelStride
+        }
+
+        fps1.get("after")
+
+    }
     fun combineYUVPlanes(yuvPlanes: YUVPlanes): ByteArray {
         fps1.get("before")
         /*  val yuv = ByteArray(yuvPlanes.width * yuvPlanes.height * 3 / 2)
@@ -1717,7 +1757,7 @@ class CameraRepository(
         return rgbByteArray
     }
 
-    private fun convertNV21toyuv420(yuvImage: YuvImage) {
+  /*  private fun convertNV21toyuv420(yuvImage: YuvImage) {
         fps1.get("beforeConvert")
         val nv21Data = yuvImage.yuvData
 
@@ -1754,7 +1794,7 @@ class CameraRepository(
         // process?.outputStream?.write(output)
         fps1.get("afterWrite")
 
-    }
+    }*/
 
     private fun addImage(image: Image) {
         /*val yBuffer = image.planes[0].buffer
