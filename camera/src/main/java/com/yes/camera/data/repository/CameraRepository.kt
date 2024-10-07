@@ -422,13 +422,13 @@ class CameraRepository(
         // mpses = startFFmpeg()
         pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
 
-           randomAccessFile = RandomAccessFile(
-               pipe1, "rw"
-           )
-      /*  val file = createInputFile()
-        tmpRandomAccessFile = RandomAccessFile(
-            file, "rw"
-        )*/
+        randomAccessFile = RandomAccessFile(
+            pipe1, "rw"
+        )
+        /*  val file = createInputFile()
+          tmpRandomAccessFile = RandomAccessFile(
+              file, "rw"
+          )*/
         job = CoroutineScope(Dispatchers.IO).launch {
 
             /////////////////////////////
@@ -452,12 +452,12 @@ class CameraRepository(
                         combineYUVPlanesToByteBuffer(bytes)
                         val uvPos = bytes.width * bytes.height
                         val uvSize = bytes.width / 2 * bytes.height / 2
-                      /*  yuvPlanesBuffer.rewind()
-                        yuvPlanesBuffer.limit(uvPos + uvSize * 2)*/
+                        /*  yuvPlanesBuffer.rewind()
+                          yuvPlanesBuffer.limit(uvPos + uvSize * 2)*/
                         //////////////////////////
-                        val a=randomAccessFile?.write(yuvPlanesBuffer.array(),0,uvPos)
-                        val b=randomAccessFile?.write(yuvPlanesBuffer.array(),uvPos,uvSize )
-                        val c=randomAccessFile?.write(yuvPlanesBuffer.array(),uvPos+uvSize,uvPos)
+                     /* val a = randomAccessFile?.write(yuvPlanesBuffer.array())
+                        val b = randomAccessFile?.write(yuvPlanesBuffer.array(), uvPos, uvSize)
+                        val c = randomAccessFile?.write(yuvPlanesBuffer.array(), uvPos + uvSize, uvPos)*/
                         //////////////////////////
                         /*  try {
                               val t = fileOutputStream?.channel?.write(yuvPlanesBuffer)
@@ -469,27 +469,32 @@ class CameraRepository(
                           }*/
 
                         ////////////////////////////
-                      /*  val fileSize = uvPos + uvSize * 2// Размер файла в байтах
+                          val fileSize = uvPos + uvSize * 2// Размер файла в байтах
 
 
-                        val chunkSize = fileSize /// 2L // Размер участка для записи в байтах
-                        fps1.get("before")
-                        tmpRandomAccessFile?.seek(0)
-                        val threads = listOf(
-                            Thread {
-                                writeToFile(
-                                    yuvPlanesBuffer,
-                                    tmpRandomAccessFile!!,
-                                    0,
-                                    chunkSize.toInt()
-                                )
-                            },
-                            //  Thread { writeToFile(yuvPlanesBuffer, tmpRandomAccessFile!!, chunkSize, chunkSize.toInt()) },
-                        )
-                        threads.forEach { it.start() }
-                        threads.forEach { it.join() }
-                        fps1.get("after")
-                        println()*/
+                          val chunkSize = fileSize/2 /// 2L // Размер участка для записи в байтах
+                          fps1.get("before")
+                    //      randomAccessFile?.seek(0)
+                          val threads = listOf(
+                              Thread {
+                                  writeToFile(
+                                      yuvPlanesBuffer,
+                                      randomAccessFile!!,
+                                      0,
+                                      chunkSize
+                                  )
+                              },
+                                Thread {
+                                    writeToFile(yuvPlanesBuffer,
+                                        randomAccessFile!!,
+                                        chunkSize.toLong(),
+                                        chunkSize)
+                                       },
+                          )
+                          threads.forEach { it.start() }
+                          threads.forEach { it.join() }
+                          fps1.get("after")
+                          println()
                         ////////////////////////////
                         //  fps1.start()
 
@@ -807,6 +812,7 @@ class CameraRepository(
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
 
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
 
         /* if (running){
@@ -832,16 +838,43 @@ class CameraRepository(
                 // val tmp =yuv420ToBitmap(it)
                 //  _event.value = convertYUV420_888to420p(it)
                 ///////////////////
-                val uvPos = image.width * image.height
-                val uvSize = image.width / 2 * image.height / 2
+                val uvPos = it.width * image.height
+                val uvSize = it.width / 2 * image.height / 2
 
                 fps1.get("before")
-            //    randomAccessFile?.seek(0)
-               // copyImage(image)
+                /////////////////////////////////
+               /* val yPlane = it.planes[0].buffer
+                val uPlane = it.planes[1].buffer
+                val vPlane = it.planes[2].buffer*/
 
+                //val buffer = image.planes[0].buffer
+                ////////////////
+              /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
+                it.planes[0].buffer.get(randomAccessFile)
+                val ubytes = ByteArray(uvSize)
+                it.planes[1].buffer.get(ubytes,0,uvSize)
+                val vbytes = ByteArray(uvSize)
+                it.planes[2].buffer.get(vbytes,0,uvSize)*/
+                fps1.get("middle")
+                ///////////////////
+
+            /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
+                it.planes[1].buffer.limit(uvSize)
+                val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
+                it.planes[2].buffer.limit(uvSize)
+                val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
+                /////////////////
+               /* val b = randomAccessFile?.write(ubytes)
+                val c = randomAccessFile?.write(vbytes)*/
+               /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
+                val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
+                //////////////////////////////////
+                //    randomAccessFile?.seek(0)
+                // copyImage(image)
+                _event.tryEmit(getByteBufferYUVPlanes(image))
                 fps1.get("after")
                 /////////////////////////
-                _event.tryEmit(getByteBufferYUVPlanes(image))
+
                 /*  bufferedOutputStream?.write(
                       imageToYUVPlanes(image)
                   )
@@ -879,20 +912,27 @@ class CameraRepository(
         /////////////////
 
     }
+
     fun copyImage(image: Image) {
 
         var uvPos = image.width * image.height
         val uvSize = image.width / 2 * image.height / 2
-
+     /*   yBuffer.clear()
+        yBuffer.put(image.planes[0].buffer)
+        uBuffer.clear()
+        uBuffer.put(image.planes[1].buffer)
+        vBuffer.clear()
+        vBuffer.put(image.planes[2].buffer)*/
         image.planes?.let {
             yuvPlanesBuffer.clear()
             yuvPlanesBuffer.put(image.planes[0].buffer)
             yuvPlanesBuffer.put(image.planes[1].buffer)
-            yuvPlanesBuffer.put(image.planes[2].buffer)
+         //   yuvPlanesBuffer.put(image.planes[2].buffer)
 
         }
 
     }
+
     private val surface by lazy {
         Surface(glSurfaceTexture)
     }
@@ -903,15 +943,18 @@ class CameraRepository(
     }
 
     //3840,2160
-    // val rWidth = 640; val rHeight = 480
-     val rWidth=4096; val rHeight= 3072
-    //  val rWidth=1920; val rHeight=1080
-   // val rWidth = 3840; val rHeight = 2160
+   //  val rWidth = 640; val rHeight = 480
+  //  val rWidth = 4096; val rHeight = 3072
+
+   //   val rWidth=1920; val rHeight=1080
+     val rWidth = 3840; val rHeight = 2160
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private val imageReader =
         ImageReader.newInstance(rWidth, rHeight, ImageFormat.YUV_420_888, 30).apply {
             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
 
         }
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         enableSurfaceSharing()
     }
@@ -1013,13 +1056,13 @@ class CameraRepository(
 
         // val command =" -re -f rawvideo -pix_fmt yuv420p -s 640x480 -framerate 24 -t 0.0417 -i $inputFile -c:v libx264  -f mp4 -movflags +faststart $outputFilePath"
         //   val command = "-re -f rawvideo -pix_fmt yuv420p -s 640x480 -framerate 24 -t 0.0417 -i $inputFile -c:v libx264 -segment_time 1 -t 1 -f segment -segment_format mp4 -segment_list_flags +live -segment_start_number ${lastSegmentNumber} $outputFilePath -loglevel debug"
-        val command =
-            "-threads 4 -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G  -y $outputFilePath -loglevel debug"  ///////////////
+       //current
+        val command = "-threads 1 -f rawvideo -vcodec rawvideo -pix_fmt yuv422p -r 20 -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency  -y $outputFilePath -loglevel debug"  ///////////////
         //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264  -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 1"//worked
 
         //  val command = "hwaccel mediacodec -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1  -c:v h264_mediacodec  -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G -f mp4 -r 24 -an -loglevel debug -y $outputFilePath -v debug -vsync 1"
 
-        //worked fast val command = "-f android_camera -input_queue_size 30 -s 640x480 -i 0:0 -r 30  -pix_fmt yuv420p  -c:v libx264 -y $outputFilePath"
+       //camera val command = "-f android_camera -input_queue_size 30 -s ${rWidth}x$rHeight -i 0:0 -r 30  -pix_fmt yuv420p  -c:v libx264 -b:v 1M -crf 51 -preset ultrafast -tune zerolatency -y $outputFilePath -threads 8"
         //  val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1  -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G -f mp4 -r 24 -an -loglevel debug -y $outputFilePath -v debug -threads 8 "
         // val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G -f mp4 -loglevel debug  -v debug -threads 2"
         //worked not bad   //   val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -b:v 5m -bufsize 1G -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"
@@ -1597,18 +1640,17 @@ class CameraRepository(
     }
 
     fun getByteBufferYUVPlanes(image: Image): LightYUVPlanes {
-        val width = image.width
-        val height = image.height
+
         copyImage(image)
-       // copyYUVPlanes(image)
+        // copyYUVPlanes(image)
         val yRowStride = image.planes[0].rowStride
         val uRowStride = image.planes[1].rowStride
         val vRowStride = image.planes[2].rowStride
         val uPixelStride = image.planes[1].pixelStride
         val vPixelStride = image.planes[2].pixelStride
         return LightYUVPlanes(
-            width,
-            height,
+            image.width,
+            image.height,
             yRowStride,
             uRowStride,
             vRowStride,
