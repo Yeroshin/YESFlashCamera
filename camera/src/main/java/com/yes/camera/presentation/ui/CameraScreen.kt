@@ -23,8 +23,8 @@ fun CameraScreen(
         GLRenderer(
             context
         ) { surfaceTexture ->
-          //  surfaceTexture.setDefaultBufferSize(640,480)//(1920,1080)//4096,3072//3840,2160
-            surfaceTexture.setDefaultBufferSize(3840,2160)//(1920,1080)//4096,3072//3840,2160
+            surfaceTexture.setDefaultBufferSize(640,480)//(1920,1080)//4096,3072//3840,2160
+         //   surfaceTexture.setDefaultBufferSize(3840,2160)//(1920,1080)//4096,3072//3840,2160
         //    surfaceTexture.setDefaultBufferSize(1920,1080)
           //  surfaceTexture.setDefaultBufferSize(4096,3072)
             cameraViewModel.setEvent(
