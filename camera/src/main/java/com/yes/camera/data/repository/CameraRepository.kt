@@ -44,7 +44,6 @@ import com.arthenica.ffmpegkit.FFmpegSession
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asExecutor
@@ -52,7 +51,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -1486,8 +1484,10 @@ class CameraRepository(
         if (enable) {
 
             mCodec?.start()
+            muxer?.start()
         } else {
             mCodec?.stop()
+            muxer?.stop()
         }
 
     }
@@ -2364,6 +2364,8 @@ class CameraRepository(
 
     var mEncoderSurface: Surface? = null // Surface как вход данных для кодера
     private var outPutByteBuffer: ByteBuffer? = null
+    var muxer: MediaMuxer?=null
+    var trackIndex = -1
     private fun prepareMediaCodec(): MediaCodec {
         getCodecs()
         val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
@@ -2371,15 +2373,13 @@ class CameraRepository(
         val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_HEVC)
         val mFile = createFile("mp4")
 
-        val  outputStream = BufferedOutputStream(FileOutputStream(mFile))
-         val muxer = MediaMuxer(mFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-
+     //   val  outputStream = BufferedOutputStream(FileOutputStream(mFile))
 
 
         val width = 640 // ширина видео 4096,3072// 3840 x2160//max 1920x1080
         val height =480
 
-         val  codec = MediaCodec.createEncoderByType("video/avc")
+
 
         val format = MediaFormat.createVideoFormat("video/avc", width, height)
         /////////////////////////////
@@ -2397,7 +2397,7 @@ class CameraRepository(
               codec.start()
           }*/
         ////////////////////////////
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 500000) // битрейт видео в bps (бит в секунду)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, 3000000) // битрейт видео в bps (бит в секунду)
         format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
@@ -2405,38 +2405,46 @@ class CameraRepository(
         )
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
 
+        val  codec = MediaCodec.createEncoderByType("video/avc")
         codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
       //  mEncoderSurface = codec.createInputSurface()
-
+        val newFormat: MediaFormat = codec.getOutputFormat()
+        muxer = MediaMuxer(mFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM)
+      //  muxer?.start()
         codec.setCallback(
             EncoderCallback(
-                outputStream,
-                muxer
+               // outputStream,
+                muxer!!,
+                trackIndex
             )
         )
 
         return codec
     }
-    var trackIndex = -1
+
+
+
     class EncoderCallback(
-        private val outputStream: BufferedOutputStream,
-        val muxer:MediaMuxer
+       // private val outputStream: BufferedOutputStream,
+        val muxer:MediaMuxer,
+        val trackIndex:Int,
+        val  mBufferInfo: MediaCodec.BufferInfo = MediaCodec.BufferInfo()
     ) : MediaCodec.Callback() {
-        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-        }
+        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {}
 
         override fun onOutputBufferAvailable(
             codec: MediaCodec,
             index: Int,
             info: MediaCodec.BufferInfo
         ) {
-            val outPutByteBuffer = codec.getOutputBuffer(index)
-            val outDate = ByteArray(info.size)
-            outPutByteBuffer?.get(outDate)
+            val encoderOutputBuffers = codec.getOutputBuffer(index)
+            val data = ByteBuffer.allocate(info.size)
+            encoderOutputBuffers?.get(data.array())
 
-            outputStream.write(outDate, 0, outDate.size) // гоним байты в поток
-            muxer.writeSampleData(trackIndex, outPutByteBuffer, outPutByteBuffer.presentationTimeUs)
+           // outputStream.write(outDate, 0, outDate.size) // гоним байты в поток
+
+            muxer.writeSampleData(trackIndex, data,info)
 
             codec.releaseOutputBuffer(index, false)
         }
@@ -2446,7 +2454,7 @@ class CameraRepository(
         }
 
         override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-            println()
+
         }
     }
 
