@@ -59,17 +59,19 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
+import java.util.Base64.Encoder
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
 
 
 class CameraRepository(
-    val context: Context,
+    private val context: Context,
     private val cameraManager: CameraManager,
-    private val mBackgroundHandler: Handler,
+    private val encoder:MediaEncoder
 ) {
-
+    private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
+    private val mBackgroundHandler: Handler= Handler(mBackgroundThread.looper)
     private var cameraDevice: CameraDevice? = null
     private fun getCameraByFacing(facing: Int): String? {
         cameraManager.cameraIdList.forEach {
@@ -1390,7 +1392,7 @@ class CameraRepository(
           captureRequest?.addTarget(mpegSurface)*/
 
         /////////////////media codec
-        mCodec=prepareMediaCodec()
+        mCodec=encoder.prepareMediaCodec()
       //  val mEncoderSurface = MediaCodec.createPersistentInputSurface()
         val mEncoderSurface=mCodec?.createInputSurface()
       //  mCodec!!.setInputSurface(mEncoderSurface)
@@ -2335,128 +2337,14 @@ class CameraRepository(
     }
 
 
-    private fun getMaxResolution(codecInfo: MediaCodecInfo, mimeType: String): Pair<Int, Int> {
-        val capabilities = codecInfo.getCapabilitiesForType(mimeType)
 
-        val videoCapabilities = capabilities.videoCapabilities
-        val maxWidth = videoCapabilities.supportedWidths.upper
-        val maxHeight = videoCapabilities.supportedHeights.upper
-        return Pair(maxWidth, maxHeight)
-    }
-
-    private fun getCodecs() {
-        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-        val codecs = codecList.codecInfos.filter { it.isEncoder }
-        for (codec in codecs) {
-            val mimeTypes = codec.supportedTypes
-            for (mimeType in mimeTypes) {
-                if (mimeType.startsWith("video/")) {
-                    val (maxWidth, maxHeight) = getMaxResolution(codec, mimeType)
-                    println("Codec: ${codec.name}, MIME Type: $mimeType, Max Resolution: ${maxWidth}x${maxHeight}")
-                } else {
-                    println("Codec: ${codec.name}, MIME Type: $mimeType")
-                }
-            }
-        }
-    }
 
 
 
     var mEncoderSurface: Surface? = null // Surface как вход данных для кодера
     private var outPutByteBuffer: ByteBuffer? = null
-    var muxer: MediaMuxer?=null
-    var trackIndex = -1
-    private fun prepareMediaCodec(): MediaCodec {
-        getCodecs()
-        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-        val codecInfos = codecList.codecInfos
-        val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_HEVC)
-        val mFile = createFile("mp4")
-
-     //   val  outputStream = BufferedOutputStream(FileOutputStream(mFile))
 
 
-        val width = 640 // ширина видео 4096,3072// 3840 x2160//max 1920x1080
-        val height =480
-
-
-
-        val format = MediaFormat.createVideoFormat("video/avc", width, height)
-        /////////////////////////////
-        /*  var softwareCodec: MediaCodecInfo? = null
-          for (codecInfo in codecInfos) {
-              if (!codecInfo.isHardwareAccelerated && codecInfo.isEncoder && codecInfo.supportedTypes.contains(MediaFormat.MIMETYPE_VIDEO_HEVC)) {
-                  softwareCodec = codecInfo
-                  break
-              }
-          }
-
-          softwareCodec?.let {
-              val codec = MediaCodec.createByCodecName(it.name)
-              codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-              codec.start()
-          }*/
-        ////////////////////////////
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 3000000) // битрейт видео в bps (бит в секунду)
-        format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
-        format.setInteger(
-            MediaFormat.KEY_COLOR_FORMAT,
-            MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
-        )
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-
-        val  codec = MediaCodec.createEncoderByType("video/avc")
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-
-      //  mEncoderSurface = codec.createInputSurface()
-        val newFormat: MediaFormat = codec.getOutputFormat()
-        muxer = MediaMuxer(mFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM)
-      //  muxer?.start()
-        codec.setCallback(
-            EncoderCallback(
-               // outputStream,
-                muxer!!,
-                trackIndex
-            )
-        )
-
-        return codec
-    }
-
-
-
-    class EncoderCallback(
-       // private val outputStream: BufferedOutputStream,
-        val muxer:MediaMuxer,
-        val trackIndex:Int,
-        val  mBufferInfo: MediaCodec.BufferInfo = MediaCodec.BufferInfo()
-    ) : MediaCodec.Callback() {
-        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {}
-
-        override fun onOutputBufferAvailable(
-            codec: MediaCodec,
-            index: Int,
-            info: MediaCodec.BufferInfo
-        ) {
-            val encoderOutputBuffers = codec.getOutputBuffer(index)
-            val data = ByteBuffer.allocate(info.size)
-            encoderOutputBuffers?.get(data.array())
-
-           // outputStream.write(outDate, 0, outDate.size) // гоним байты в поток
-
-            muxer.writeSampleData(trackIndex, data,info)
-
-            codec.releaseOutputBuffer(index, false)
-        }
-
-        override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
-            println()
-        }
-
-        override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-
-        }
-    }
 
 
     fun repeatingCapture() {
@@ -2541,28 +2429,7 @@ class CameraRepository(
          }
 
      }*/
-    private fun isCodecSupported(mimeType: String?): Boolean {
-        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-        val codecInfos = codecList.codecInfos
-        for (codecInfo in codecInfos) {
-            if (!codecInfo.isEncoder) {
-                continue
-            }
-            val supportedTypes = codecInfo.supportedTypes
-            for (type in supportedTypes) {
-                if (type.equals(mimeType, ignoreCase = true)) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
 
-    private fun isSupported(type: String): Boolean {
-        val isOutputFormatSupported = isCodecSupported(type)
-        //  val isVideoEncoderSupported = isCodecSupported("video/avc")
-        return isOutputFormatSupported //&& isVideoEncoderSupported
-    }
 
     class Fps {
         private var lastFrameTime: Long = 0
