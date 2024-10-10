@@ -45,7 +45,7 @@ android {
 dependencies {
     implementation(project(":shared"))
    // implementation (libs.material)
-    implementation ("com.arthenica:ffmpeg-kit-full-gpl:6.0-2")
+
 
 
     implementation(libs.androidx.core.ktx)
@@ -64,7 +64,7 @@ dependencies {
     implementation ("com.google.dagger:dagger:2.48")
     ksp ("com.google.dagger:dagger-compiler:2.48")
 
-    // CameraX
+    // Camera2
     implementation("androidx.camera:camera-core:1.2.2")
     implementation("androidx.camera:camera-camera2:1.2.2")
     implementation("androidx.camera:camera-lifecycle:1.2.2")

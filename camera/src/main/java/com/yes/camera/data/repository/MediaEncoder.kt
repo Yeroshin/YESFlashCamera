@@ -5,82 +5,148 @@ import android.media.MediaCodecInfo
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.util.Log
+import android.view.Surface
 import java.io.File
 import java.nio.ByteBuffer
 
-class MediaEncoder: MediaCodec.Callback() {
-    var muxer: MediaMuxer?=null
+class MediaEncoder : MediaCodec.Callback() {
+    var codec: MediaCodec? = null
+    var muxer: MediaMuxer? = null
     var trackIndex = -1
-    fun prepareMediaCodec(file: File): MediaCodec {
+    private var eosSent = false
+    fun configure(file: File): Surface {
         getCodecs()
         val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
         val codecInfos = codecList.codecInfos
+      /*  for (codecInfo in codecInfos) {
+            if (codecInfo.isEncoder) {
+                val capabilities = codecInfo.getCapabilitiesForType("video/avc")
+                if (capabilities != null) {
+                    val colorFormats = capabilities.colorFormats
+                    if (colorFormats.contains(MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)) {
+                        Log.d("CodecSupport", "Codec supports COLOR_FormatSurface")
+                    }
+                    val bitrateRange = capabilities.videoCapabilities.bitrateRange
+                    if (bitrateRange.contains(300000)) {
+                        Log.d("CodecSupport", "Codec supports bitrate 300000")
+                    }
+                    val frameRateRange = capabilities.videoCapabilities.supportedFrameRates
+                    if (frameRateRange.contains(30)) {
+                        Log.d("CodecSupport", "Codec supports frame rate 30")
+                    }
+                }
+            }
+        }*/
+
         val supported = isSupported(MediaFormat.MIMETYPE_VIDEO_HEVC)
-        val file = createFile("mp4")
-
-        //   val  outputStream = BufferedOutputStream(FileOutputStream(mFile))
-
 
         val width = 640 // ширина видео 4096,3072// 3840 x2160//max 1920x1080
-        val height =480
-
-
+        val height = 480
 
         val format = MediaFormat.createVideoFormat("video/avc", width, height)
 
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 3000000) // битрейт видео в bps (бит в секунду)
-        format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, 300000) // битрейт видео в bps (бит в секунду)
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, 5)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
 
-        val  codec = MediaCodec.createEncoderByType("video/avc")
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        codec = MediaCodec.createEncoderByType("video/avc")
 
+        codec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+      //  val inputSurface: Surface = codec?.createInputSurface()!!
+
+      //  codec?.setInputSurface(inputSurface)
         //  mEncoderSurface = codec.createInputSurface()
-        val newFormat: MediaFormat = codec.outputFormat
-
-        val muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        val newFormat: MediaFormat = codec?.outputFormat!!
 
 
-        trackIndex = muxer?.addTrack(newFormat)!!
+        muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+
+
+     //   trackIndex = muxer?.addTrack(format)!!
+
         //  muxer?.start()
-        codec.setCallback(
+
+        codec?.setCallback(
             this
         )
-
-        return codec
+        return codec?.createInputSurface()!!
     }
 
+    fun start() {
+        codec?.start()
+
+      //  muxer?.start()
+    }
+
+    fun stop() {
+        eosSent = true
+        codec?.signalEndOfInputStream()
+       // codec?.setCallback(null)
+
+        // Drain output buffers
+     /*   val bufferInfo = MediaCodec.BufferInfo()
+        var bufferIndex: Int
+        do {
+            bufferIndex = codec!!.dequeueOutputBuffer(bufferInfo, 0)
+            if (bufferIndex >= 0) {
+                codec!!.releaseOutputBuffer(bufferIndex, false)
+            }
+        } while (bufferIndex != MediaCodec.INFO_TRY_AGAIN_LATER && bufferIndex != MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
+*/
+        // Stop and release MediaMuxer
+     /*   muxer?.stop()
+        muxer?.release()
+        muxer = null*/
+
+        // Stop and release MediaCodec
+       /* codec?.stop()
+        codec?.release()
+        codec = null*/
+    }
+
+   /* fun getSurface(): Surface {
+        return inputSurface
+
+    }*/
 
     override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-        TODO("Not yet implemented")
+        println()
     }
+
 
     override fun onOutputBufferAvailable(
         codec: MediaCodec,
         index: Int,
         info: MediaCodec.BufferInfo
     ) {
-        val encoderOutputBuffers = codec.getOutputBuffer(index)
-        val data = ByteBuffer.allocate(info.size)
-        encoderOutputBuffers?.get(data.array())
-
-        // outputStream.write(outDate, 0, outDate.size) // гоним байты в поток
-
-        muxer?.writeSampleData(trackIndex, data,info)
-
-        codec.releaseOutputBuffer(index, false)
+        if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+            codec.stop()
+            muxer?.stop()
+            return
+        }
+        val buffer = codec.getOutputBuffer(index)
+        if (buffer != null) {
+            if (muxer != null) {
+                muxer!!.writeSampleData(trackIndex, buffer, info)
+            }
+            codec.releaseOutputBuffer(index, false)
+        }
     }
 
     override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
-        TODO("Not yet implemented")
+        println()
     }
 
     override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-        TODO("Not yet implemented")
+        if (muxer != null) {
+            trackIndex = muxer!!.addTrack(format)
+            muxer!!.start()
+        }
     }
 
     private fun getCodecs() {
@@ -98,6 +164,7 @@ class MediaEncoder: MediaCodec.Callback() {
             }
         }
     }
+
     private fun getMaxResolution(codecInfo: MediaCodecInfo, mimeType: String): Pair<Int, Int> {
         val capabilities = codecInfo.getCapabilitiesForType(mimeType)
 

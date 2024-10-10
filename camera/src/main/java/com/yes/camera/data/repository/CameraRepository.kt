@@ -20,14 +20,8 @@ import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.icu.text.SimpleDateFormat
-import android.media.CamcorderProfile
 import android.media.Image
 import android.media.ImageReader
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaCodecList
-import android.media.MediaFormat
-import android.media.MediaMuxer
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.Environment
@@ -38,14 +32,10 @@ import android.util.Log
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegKitConfig
-import com.arthenica.ffmpegkit.FFmpegSession
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -55,11 +45,8 @@ import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
-import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
-import java.util.Base64.Encoder
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
@@ -220,6 +207,7 @@ class CameraRepository(
                     //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
                     // setCharacteristics(51200)
                     createCaptureSession()
+
                     onCameraOpened(
                         getCameraCharacteristics(camera.id)
                     )
@@ -295,6 +283,39 @@ class CameraRepository(
     private var captureRequest: CaptureRequest.Builder? = null
     private var glSurfaceTexture: SurfaceTexture? = null
 
+    fun tmpStartDefaultCaptureRequest(){
+
+        //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        captureRequest?.set(
+            CaptureRequest.CONTROL_AE_MODE,
+            CaptureRequest.CONTROL_AE_MODE_OFF
+        )
+        //////////settings
+        captureRequest?.set(
+            CaptureRequest.EDGE_MODE,
+            CaptureRequest.EDGE_MODE_OFF
+        )
+        captureRequest?.set(
+            CaptureRequest.NOISE_REDUCTION_MODE,
+            CaptureRequest.NOISE_REDUCTION_MODE_OFF
+        )
+        captureRequest?.set(
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+        )
+
+
+        // previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.2f)
+        //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+
+        // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 100)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
+        captureRequest?.let {
+            sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+        }
+    }
+
     fun setCharacteristics(characteristics: Characteristics) {
         /* previewCaptureBuilder =
              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
@@ -343,327 +364,6 @@ class CameraRepository(
         captureRequest?.let {
             // sessio?.stopRepeating()
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-        }
-
-    }
-
-    //  var job: Job
-
-
-
-    lateinit var queue: ArrayDeque<YUVPlanes?>
-    var imageSaved = 0
-    var job: Job? = null
-    var first = true
-    var frames = 0
-    fun createInputFile(): File? {
-        val dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
-        val fcDir = File(dcimDir, "FC")
-        if (fcDir.exists() || fcDir.mkdirs()) {
-            val file = File(fcDir, "tmp.jpg")
-            try {
-                if (file.createNewFile()) {
-                    // Файл успешно создан
-                    return file
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
-        return null
-    }
-
-    fun writeByteBufferToFile(byteBuffer: ByteBuffer, file: File) {
-
-        // file.createNewFile()
-
-        //  val file = File(filePath)
-        var fileOutputStream: FileOutputStream? = null
-
-        try {
-            fileOutputStream = FileOutputStream(file)
-            //  byteBuffer.flip() // Prepare the buffer for writing
-            fileOutputStream.channel.write(byteBuffer)
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            if (fileOutputStream != null) {
-                try {
-                    fileOutputStream.close()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
-            }
-        }
-
-    }
-
-    private var pipe1: String? = null
-
-    var mpses: FFmpegSession? = null
-    var randomAccessFile: RandomAccessFile? = null
-    var tmpRandomAccessFile: RandomAccessFile? = null
-    var stream: BufferedOutputStream? = null
-
-    init {
-        // startFFmpeg()
-        /*  val scope = CoroutineScope(Dispatchers.IO)
-          job = CoroutineScope(Dispatchers.IO).launch {
-              event.collect { jpegImage ->
-                  jpegImage?.let {
-                     // imageBuffer.addImage(it)
-                     // addNVImage(it)
-                      addJpegImage(it)
-                  }
-              }
-          }*/
-        /*  val inputFilePath = createFile("raw")
-          val outputFilePath = createFile("mp4")*/
-
-        // mpses = startFFmpeg()
-      /*  pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
-
-        randomAccessFile = RandomAccessFile(
-            pipe1, "rw"
-        )
-          val file = createInputFile()
-          tmpRandomAccessFile = RandomAccessFile(
-              file, "rw"
-          )
-        job = CoroutineScope(Dispatchers.IO).launch {
-
-            /////////////////////////////
-            /* bytes?.let {
-                 combineYUVPlanesToByteBuffer(bytes)
-                 val yuv = ByteArray(bytes.width * bytes.height * 3 / 2)
-                 System.arraycopy(yuvPlanesBuffer.array(), 0, yuv, 0, bytes.width * bytes.height * 3 / 2)
-                 //   yuvPlanesBuffer.limit(bytes.width * bytes.height * 3 / 2)
-                 output?.write(
-                     yuv
-                 )
-             }
-             output?.flush()*/
-            //////////////////////////////
-            event.collect { bytes ->
-                fps1.get("fps")
-                if (running) {
-
-                    bytes?.let {
-                        // fps1.get("before")
-                        combineYUVPlanesToByteBuffer(bytes)
-                        val uvPos = bytes.width * bytes.height
-                        val uvSize = bytes.width / 2 * bytes.height / 2
-                        /*  yuvPlanesBuffer.rewind()
-                          yuvPlanesBuffer.limit(uvPos + uvSize * 2)*/
-                        //////////////////////////
-                     /* val a = randomAccessFile?.write(yuvPlanesBuffer.array())
-                        val b = randomAccessFile?.write(yuvPlanesBuffer.array(), uvPos, uvSize)
-                        val c = randomAccessFile?.write(yuvPlanesBuffer.array(), uvPos + uvSize, uvPos)*/
-                        //////////////////////////
-                        /*  try {
-                              val t = fileOutputStream?.channel?.write(yuvPlanesBuffer)
-                              //  val t=fileOutputStream?.channel?.write(yuvPlanesBuffer)
-                              // val t=fileOutputStream?.write(yuvPlanesBuffer.array())
-                              println()
-                          } catch (e: java.lang.Exception) {
-                              e.printStackTrace()
-                          }*/
-
-                        ////////////////////////////
-                          val fileSize = uvPos + uvSize * 2// Размер файла в байтах
-
-
-                          val chunkSize = fileSize/// 2L // Размер участка для записи в байтах
-                        //  fps1.get("before")
-                    //      randomAccessFile?.seek(0)
-                          val threads = listOf(
-                              Thread {
-                                  writeToFile(
-                                      yuvPlanesBuffer,
-                                      randomAccessFile!!,
-                                      0,
-                                      chunkSize
-                                  )
-                              },
-                              /*  Thread {
-                                    writeToFile(yuvPlanesBuffer,
-                                        randomAccessFile!!,
-                                        chunkSize.toLong(),
-                                        chunkSize)
-                                       },*/
-                          )
-                          threads.forEach { it.start() }
-                          threads.forEach { it.join() }
-                        //  fps1.get("after")
-                          println()
-                        ////////////////////////////
-                        //  fps1.start()
-
-                        //  tmpRandomAccessFile?.seek(0)
-                        //  val t=tmpRandomAccessFile?.channel?.write(yuvPlanesBuffer)
-                        /*   randomAccessFile?.seek(0)
-                           val t=randomAccessFile?.channel?.write(yuvPlanesBuffer)*/
-
-                        /*  writeByteBufferToFile(
-                              yuvPlanesBuffer,
-                              inputFilePath!!
-                          )
-                          startFFmpeg(
-                              inputFilePath!!,
-                              outputFilePath
-                          )*/
-                        //  process?.outputStream?.write(yuvPlanesBuffer.array())
-                        //  output?.write(yuvPlanesBuffer.array())
-                        //  val t=channel?.write(yuvPlanesBuffer)
-                        //  fps1.get("write")
-                        /*  output?.write(
-                               yuvPlanesBuffer.array(),
-                               0,
-                              uvPos+uvSize*2
-                           )
-                           output?.flush()*/
-                    }
-
-                } else if (finished) {
-                    /* process?.destroy()
-                     process?.waitFor()*/
-                    randomAccessFile?.close()
-                    //  output?.close()
-                    //  FFmpegKit.cancel()
-                    FFmpegKitConfig.closeFFmpegPipe(pipe1)
-
-                    //  mpses?.cancel()
-                    finished = false
-                }
-                /*  event.collect { bytes ->
-                      if (running){
-
-                          bytes?.let {
-                             // fps1.get("before")
-                              combineYUVPlanesToByteBuffer(bytes)
-                              val uvPos = bytes.width * bytes.height
-                              val uvSize=bytes.width / 2*bytes.height/2
-                              yuvPlanesBuffer.rewind()
-                              yuvPlanesBuffer.limit( uvPos+uvSize*2)
-
-
-                              val t=channel?.write(yuvPlanesBuffer)
-                              fps1.get("fps")
-                           /*  output?.write(
-                                  yuvPlanesBuffer.array(),
-                                  0,
-                                 uvPos+uvSize*2
-                              )
-                              output?.flush()*/
-                          }
-
-                      }else{
-                         /* process?.destroy()
-                          process?.waitFor()*/
-                          FFmpegKitConfig.closeFFmpegPipe(pipe1)
-
-                      }*/
-
-                /* event.collect { bytes ->
-                     bytes?.let {
-                         buffer.position(frameIndex * frameSize)
-                         buffer.put(
-                             combineYUVPlanes(it)
-                         )
-                         frameIndex = (frameIndex + 1) % 24
-
-                         if (frameIndex == 0) {
-                             // считываем все фреймы из буфера
-                             buffer.position(0)
-                             while (buffer.hasRemaining()) {
-                                 bufferedOutputStream?.write(buffer.array(), buffer.position(), buffer.remaining())
-                                 buffer.position(buffer.position() + buffer.remaining())
-                             }
-                             buffer.clear()
-                         }
-                     }*/
-
-                ////////////////////////////////
-
-                /* event.collect { bytes ->
-                     /////////////////////////
-                     bytes?.let {
-                         queue.add(combineYUVPlanes(it))
-                     }
-                     if (queue.size>=24){
-                         while (!queue.isEmpty()){
-                             bufferedOutputStream?.write(
-                                 queue.removeFirst()
-                             )
-                         }
-                     }*/
-                ///////////////////////////
-                /* bufferedOutputStream?.write(
-                     bytes?.let {
-                         combineYUVPlanes(bytes)
-                     }
-
-                 )
-                 bufferedOutputStream?.flush()*/
-                /* if (frames < 30) {
-                     bufferedOutputStream?.write(
-                         bytes?.let {
-                             combineYUVPlanes(bytes)
-                         }
-
-                     )
-                     bufferedOutputStream?.flush()
-                     //  coded=false
-                     frames++
-                 } else {
-
-                     coded = false
-                     //  queue.put(bytes)
-                 }*/
-
-                /*  bytes?.let {
-                      /*  bufferedOutputStream?.write(it)
-                    bufferedOutputStream?.flush()*/
-                      //    queue.put(it)
-                      /////////////////////
-                      /*   bufferedOutputStream?.write(
-                        combineYUVPlanes(it)
-                    )
-                    bufferedOutputStream?.flush()*/
-                      ///////////////////////
-                      /*  withContext(Dispatchers.IO){
-                      writeByteArrayToFile(combineYUVPlanes(it))
-                  }*/
-
-                      imageSaved++
-                  } ?: run {
-                      //   FFmpegKitConfig.closeFFmpegPipe(pipe1)
-                      // ffmpegCodeFiles()
-                      println("Completed successfully")
-                  }*/
-            }
-
-        }*/
-    }
-
-    fun writeToFile(buffer: ByteBuffer, file: RandomAccessFile, offset: Long, chunkSize: Int) {
-        fps1.get("before")
-        file.write(
-            buffer.array(), offset.toInt(), chunkSize
-        )
-        fps1.get("after")
-    }
-
-    private suspend fun writeByteArrayToFile(byteArray: ByteArray) {
-        try {
-            val outputFile = createFile("jpg")
-            BufferedOutputStream(FileOutputStream(outputFile)).use { bos ->
-                bos.write(byteArray)
-                bos.flush()
-                bos.close()
-            }
-        } catch (error: Exception) {
-            println()
         }
 
     }
@@ -936,12 +636,20 @@ class CameraRepository(
 
     }
 
-    private val surface by lazy {
+    private val previewSurface by lazy {
         Surface(glSurfaceTexture)
     }
-    private val surfaceConfiguration by lazy {
-        OutputConfiguration(surface).apply {
-            enableSurfaceSharing()
+    private val previewSurfaceConfiguration by lazy {
+        OutputConfiguration(previewSurface).apply {
+          //  enableSurfaceSharing()
+        }
+    }
+    private val videoSurface by lazy {
+        encoder.configure(  createFile("mp4"))
+    }
+    private val videoSurfaceConfiguration by lazy {
+        OutputConfiguration(videoSurface).apply {
+           // enableSurfaceSharing()
         }
     }
 
@@ -962,161 +670,12 @@ class CameraRepository(
         enableSurfaceSharing()
     }
 
-    private fun ffmpegCodeFiles() {
-        val pipe = FFmpegKitConfig.registerNewFFmpegPipe(context)
-        val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe"))
-        val bufferedOutputStream = BufferedOutputStream(process?.outputStream)
-        val outputFilePath = createFile("mp4")
-        val command =
-            " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
-        FFmpegKit.executeAsync(command,
-            { session ->
-                val state = session.state
-                val returnCode = session.returnCode
-
-                if (returnCode.isValueSuccess) {
-                    println("sucess")
-                } else {
-                    println("error")
-                }
-            }, { log ->
-                println(log.message)
-                // CALLED WHEN SESSION PRINTS LOGS
-            }, { statistics ->
-                println("frame number:" + statistics.videoFrameNumber)
-                // CALLED WHEN SESSION GENERATES STATISTICS
-            })
-        val directory = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).path + "/FC/"
-        )
-        val files = directory.listFiles()
-        val fileQueue = ArrayDeque(files.toList())
-        files?.map { file ->
-            if (file.path.endsWith(".jpg", true)) {
-                val bytes = file.readBytes()
-                bufferedOutputStream.write(bytes)
-                bufferedOutputStream.flush()
-            }
-        }
-        bufferedOutputStream.close()
-        println()
-
-    }
-
 
     var channel: WritableByteChannel? = null
     var lastSegmentNumber = 0
     var fileOutputStream: FileOutputStream? = null
 
-    private fun startFFmpeg(): FFmpegSession {
-        /* try {
-             pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
 
-           /*  val fileOutputStream = FileOutputStream(pipe1)
-             fileOutputStream.close()*/
-             randomAccessFile = RandomAccessFile(
-                 pipe1, "rw"
-             )
-             println()
-         } catch (e: IOException) {
-             e.printStackTrace()
-         }*/
-
-        /*   pipe1 = FFmpegKitConfig.registerNewFFmpegPipe(context)
-
-            process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat > $pipe1"))
-            output = BufferedOutputStream(process?.outputStream)
-            channel = Channels.newChannel(output)*/
-        //   channel = FileOutputStream(pipe1).channel
-        //////////////////////////
-        //  fileOutputStream=FileOutputStream(pipe1)
-        ///////////////////////
-        /*  val codec = MediaCodec.createByCodecName("h264_mediacodec")
-          val info = codec.codecInfo*/
-        // val supportedResolutions: IntArray = info.getSupportedResolutions()
-
-        /////////////////////
-        val outputFilePath = createFile("mp4")
-        val framerate = 24//23.976
-        // val command = "-f rawvideo  -i $mpegSurfaceTexture -s 640x480 -input_queue_size 120  -c:v libx264 -preset superfast   -b:v 5m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
-        ////logs
-        /*  val session = FFmpegKit.execute("-hwaccels")
-          val output: String = session.getOutput()
-
-          val command2 = "-hwaccel mediacodec -codecs"
-          val session2 = FFmpegKit.execute(command2)
-          val logs = session.getLogs()
-
-          val command3 = "-threads ?"
-          val session3 = FFmpegKit.execute(command3)
-          val output3 = session.getOutput()
-
-         val command4 = "-codecs -v"
-         val session4 = FFmpegKit.execute(command4)*/
-
-        ////////////////
-        //worked  val command = "-input_queue_size 10 -threads 4 -f android_camera -i 0:0 -camera_index 1 -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight  -c:v libx264 -crf 21 -preset ultrafast -tune zerolatency -g 200 -bf 30 -refs 1 -b:v 5m -bufsize 1G  -y $outputFilePath -loglevel debug"  ///////////////
-
-        // val command =" -re -f rawvideo -pix_fmt yuv420p -s 640x480 -framerate 24 -t 0.0417 -i $inputFile -c:v libx264  -f mp4 -movflags +faststart $outputFilePath"
-        //   val command = "-re -f rawvideo -pix_fmt yuv420p -s 640x480 -framerate 24 -t 0.0417 -i $inputFile -c:v libx264 -segment_time 1 -t 1 -f segment -segment_format mp4 -segment_list_flags +live -segment_start_number ${lastSegmentNumber} $outputFilePath -loglevel debug"
-       //current
-        val command = "-threads 1 -f rawvideo -vcodec rawvideo -pix_fmt yuv422p -r 20 -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency  -y $outputFilePath -loglevel debug"  ///////////////
-        //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264  -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 1"//worked
-
-        //  val command = "hwaccel mediacodec -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1  -c:v h264_mediacodec  -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G -f mp4 -r 24 -an -loglevel debug -y $outputFilePath -v debug -vsync 1"
-
-       //camera val command = "-f android_camera -input_queue_size 30 -s ${rWidth}x$rHeight -i 0:0 -r 30  -pix_fmt yuv420p  -c:v libx264 -b:v 1M -crf 51 -preset ultrafast -tune zerolatency -y $outputFilePath -threads 8"
-        //  val command = "-f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1  -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G -f mp4 -r 24 -an -loglevel debug -y $outputFilePath -v debug -threads 8 "
-        // val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -g 1 -bf 0 -refs 1 -b:v 5m -bufsize 1G -f mp4 -loglevel debug  -v debug -threads 2"
-        //worked not bad   //   val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264 -crf 51 -preset ultrafast -tune zerolatency -b:v 5m -bufsize 1G -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"
-        // val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s ${rWidth}x$rHeight -i $pipe1 -c:v libx264  -b:v 5m -bufsize 1G -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"
-        //val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p  -s 3840x2160 -i $pipe1 -bufsize 3G -c:v libx264 -b:v 1m -maxrate 150M -f mp4 -loglevel debug -y $outputFilePath -v debug "
-        //val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p   -s 3840x2160 -i $pipe1 -bufsize 390M -c:v libx264 -b:v 50m   -f mp4 -loglevel debug -y $outputFilePath -v debug "
-
-        //  val command = " -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v libx264  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "
-
-        //  val command = "-hwaccel mediacodec -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v h264_mediacodec  -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug "//worked
-        // val command = "-hwaccel auto -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 3840x2160 -i $pipe1 -c:v h264_mediacodec -gop_size 30 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"
-        //  val command = "-hwaccel auto -gop_size 48 -f rawvideo -vcodec rawvideo -pix_fmt yuv420p -s 640x480 -i $pipe1 -c:v h264_mediacodec -crf 18 -preset ultrafast  -r 24 -b:v 50m -bufsize 500m -f mp4 -loglevel debug -y $outputFilePath -v debug -threads 2"//-loglevel info or -v warning
-        /*  val command = "-f rawvideo -pix_fmt yuv420p -s 1920x1080 -i $pipe1 -r 30 " +
-                   "-vf yadif,minterpolate,fps=30,hqdn3d,scale=w=1920:h=1080,crop=w=1920:h=1080:x=0:y=0,format=yuv420p " +
-                   "-c:v libx264 -crf 18 -y $outputFilePath -v error"*/
-        /*  FFmpegKit.executeAsync(command) { session ->
-
-              val returnCode = session.returnCode
-              if (returnCode.isValueSuccess) {
-                  println("sucess")
-              } else {
-                  println("error")
-              }
-          }*/
-        val ses = FFmpegKit.executeAsync(
-            command,
-            { session ->
-                val state = session.state
-                val returnCode = session.returnCode
-
-                if (returnCode.isValueSuccess) {
-                    lastSegmentNumber++
-                    println("sucess")
-                } else {
-                    println("error")
-                }
-            },
-            { log ->
-                println(log.message)
-                // CALLED WHEN SESSION PRINTS LOGS
-            },
-            { statistics ->
-
-                //   frames=0
-                println("frame number:" + statistics.videoFrameNumber)
-                // CALLED WHEN SESSION GENERATES STATISTICS
-            },
-            //   Executors.newSingleThreadExecutor()
-        )
-        return ses
-    }
 
     private fun saveImage(
         image: YuvImage,
@@ -1319,43 +878,17 @@ class CameraRepository(
           image.close()
       }*/
 
-    private var mCodec: MediaCodec? = null // кодер
+
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
-        //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        captureRequest?.set(
-            CaptureRequest.CONTROL_AE_MODE,
-            CaptureRequest.CONTROL_AE_MODE_OFF
-        )
-        //////////settings
-        captureRequest?.set(
-            CaptureRequest.EDGE_MODE,
-            CaptureRequest.EDGE_MODE_OFF
-        )
-        captureRequest?.set(
-            CaptureRequest.NOISE_REDUCTION_MODE,
-            CaptureRequest.NOISE_REDUCTION_MODE_OFF
-        )
-        captureRequest?.set(
-            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
-            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-        )
-
-
-        // previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.2f)
-        //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
-
-        // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 100)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
         ////////preview
 
-        captureRequest?.addTarget(surface)
+        captureRequest?.addTarget(previewSurface)
 
         configs.add(
-            surfaceConfiguration
+            previewSurfaceConfiguration
         )
         ////////////////
         // ffmpeg()
@@ -1383,23 +916,18 @@ class CameraRepository(
         )*/
 
       //  captureRequest?.addTarget(imageReader.surface)
-        /////////////mpeg
-        /*  mpegSurfaceTexture.setDefaultBufferSize(1920, 1080)//(1920,1080)//4096,3072//3840,2160
-
-          configs.add(
-              mpegSurfaceConfiguration
-          )
-          captureRequest?.addTarget(mpegSurface)*/
 
         /////////////////media codec
-        mCodec=encoder.prepareMediaCodec()
+       /* val mEncoderSurface=encoder.start(
+            createFile("mp4")
+        )*/
       //  val mEncoderSurface = MediaCodec.createPersistentInputSurface()
-        val mEncoderSurface=mCodec?.createInputSurface()
+
       //  mCodec!!.setInputSurface(mEncoderSurface)
         configs.add(
-            OutputConfiguration(mEncoderSurface!!)
+            videoSurfaceConfiguration
         )
-        captureRequest?.addTarget(mEncoderSurface)
+      //  captureRequest?.addTarget(videoSurface)
         /*   prepareMediaCodec()
            try {
                val mEncoderSurface = mCodec!!.createInputSurface()
@@ -1426,13 +954,8 @@ class CameraRepository(
                     try {
                         sessio = session
                         //session.stopRepeating()
-                        captureRequest?.let {
-                            sessio?.setRepeatingRequest(
-                                it.build(),
-                                captureCallback,
-                                mBackgroundHandler
-                            )
-                        }
+                        tmpStartDefaultCaptureRequest()
+
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
                     }
@@ -1485,11 +1008,19 @@ class CameraRepository(
         }*/
         if (enable) {
 
-            mCodec?.start()
-            muxer?.start()
+            encoder.start()
+            captureRequest?.addTarget(videoSurface)
+            captureRequest?.let {
+                // sessio?.stopRepeating()
+                sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+            }
         } else {
-            mCodec?.stop()
-            muxer?.stop()
+            encoder.stop()
+          /*  captureRequest?.removeTarget(videoSurface)
+            captureRequest?.let {
+                // sessio?.stopRepeating()
+                sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+            }*/
         }
 
     }
@@ -2243,78 +1774,7 @@ class CameraRepository(
     }
 /////////////////////////////////////////////
 
-    private var mMediaRecorder: MediaRecorder = MediaRecorder(context)
-    private fun setUpMediaRecorder() {
-        // mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
-        /*   mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-           mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-           val mCurrentFile = File(
-               Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-               "test.mp4"
-           )
-           mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
-           val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P)
-           mMediaRecorder.setVideoSize(640, 480)
-           mMediaRecorder.setVideoFrameRate(profile.videoFrameRate)
-           mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight)
-           mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate)
-           mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)*/
-        //  mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-        //  mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate)
-        //   mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate)
-        ///////////tmp
 
-        //////////////////////
-        val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-        val codecs = codecList.codecInfos
-        for (codecInfo in codecs) {
-            if (!codecInfo.isEncoder) continue
-            val types = codecInfo.supportedTypes
-            for (type in types) {
-                Log.d("CodecInfo", "Encoder: ${codecInfo.name}, Type: $type")
-            }
-        }
-        //////////////////////
-        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
-        val t = sdf.format(Date())
-        val mCurrentFile = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-            "test${t}.mp4"
-        )
-        if (isSupported("video/avc")) {
-            //////////////////
-
-            val profiles: CamcorderProfile = CamcorderProfile.get(
-                0,
-                CamcorderProfile.QUALITY_HIGH
-            )
-            var highQualityProfile: CamcorderProfile? = null
-
-            /* for (profile in profiles!!) {
-                 if (profile.quality == CamcorderProfile.QUALITY_HIGH) {
-                     highQualityProfile = profile
-                     break
-                 }
-             }*/
-            /////////////////
-            val profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
-            //   mMediaRecorder.setProfile(profile)
-            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            mMediaRecorder.setVideoSize(1920, 1080) // 480p
-            mMediaRecorder.setVideoFrameRate(10)
-            mMediaRecorder.setOutputFile(mCurrentFile.absolutePath)
-            try {
-                mMediaRecorder.prepare()
-            } catch (e: Exception) {
-                println()
-            }
-        }
-        println()
-
-        //  mMediaRecorder.prepare()
-    }
 
     private fun createFile(extension: String): File {
         val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.US)
@@ -2336,21 +1796,7 @@ class CameraRepository(
         return file
     }
 
-
-
-
-
-
-    var mEncoderSurface: Surface? = null // Surface как вход данных для кодера
     private var outPutByteBuffer: ByteBuffer? = null
-
-
-
-
-    fun repeatingCapture() {
-
-    }
-
 
     fun jpegByteArrayFrom(yuv420_888: Image): ByteArray {
         return YuvImage(yuv420_888.nv21ByteArray, NV21, yuv420_888.width, yuv420_888.height, null)
@@ -2409,27 +1855,8 @@ class CameraRepository(
     }
 
     fun recordVideo(enable: Boolean) {
-      //  setUpMediaRecorder()
-        //   mMediaRecorder.prepare()
-        if (enable) {
-            mCodec!!.start()
-        } else {
-            mCodec!!.stop()
-        }
 
     }
-
-    /* fun recordVideo(enable:Boolean){
-        // setUpMediaRecorder()
-      //   mMediaRecorder.prepare()
-         if (enable){
-             mMediaRecorder.start()
-         }else{
-             mMediaRecorder.stop()
-         }
-
-     }*/
-
 
     class Fps {
         private var lastFrameTime: Long = 0

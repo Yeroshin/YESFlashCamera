@@ -6,6 +6,7 @@ import android.hardware.camera2.CameraManager
 import android.os.Handler
 import android.os.HandlerThread
 import com.yes.camera.data.repository.CameraRepository
+import com.yes.camera.data.repository.MediaEncoder
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetCharacteristicsUsCase
@@ -26,15 +27,21 @@ class CameraModule {
     ): MapperUI {
         return MapperUI()
     }
+    @Provides
+    fun providesMediaEncoder(
+    ): MediaEncoder {
+        return MediaEncoder()
+    }
 @Singleton
     @Provides
     fun providesCameraRepository(
-        context: Context
+        context: Context,
+        encoder:MediaEncoder
     ): CameraRepository {
         return CameraRepository(
             context,
             context.getSystemService(CAMERA_SERVICE) as CameraManager,
-
+            encoder
         )
     }
 
