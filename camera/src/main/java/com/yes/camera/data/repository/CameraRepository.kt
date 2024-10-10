@@ -371,7 +371,7 @@ class CameraRepository(
     var sessio: CameraCaptureSession? = null
     private var captureResult: CaptureResult? = null
     var frameTime: Long = 0
-    val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
             request: CaptureRequest,
@@ -645,7 +645,7 @@ class CameraRepository(
         }
     }
     private val videoSurface by lazy {
-        encoder.configure(  createFile("mp4"))
+        encoder.configure(640,480)
     }
     private val videoSurfaceConfiguration by lazy {
         OutputConfiguration(videoSurface).apply {
@@ -669,12 +669,6 @@ class CameraRepository(
     private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
         enableSurfaceSharing()
     }
-
-
-    var channel: WritableByteChannel? = null
-    var lastSegmentNumber = 0
-    var fileOutputStream: FileOutputStream? = null
-
 
 
     private fun saveImage(
@@ -878,7 +872,9 @@ class CameraRepository(
           image.close()
       }*/
 
+    private fun createVideoCaptureSession(){
 
+    }
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
@@ -966,20 +962,9 @@ class CameraRepository(
         )
         cameraDevice?.createCaptureSession(config)
     }
-
-    /////////////////////////////
-    private fun startTimer() {
-
-        Handler(Looper.getMainLooper()).postDelayed(
-            {
-                /*  running = false
-                  finished = true*/
-            },
-            3000
-        ) // 1000 milliseconds = 1 second
-    }
-
-
+    ////////////////////////////////////////////////
+    ////////////////////////////////////////////////
+    ////////////////////////////////////////////////
     fun singleCapture(enable: Boolean) {
         //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
@@ -995,20 +980,20 @@ class CameraRepository(
          } else {
              mpses?.cancel()
          }*/
-       /* if (enable) {
-            running = enable
-            finished = !enable
-            mpses = startFFmpeg()
-            //startTimer()
+        /* if (enable) {
+             running = enable
+             finished = !enable
+             mpses = startFFmpeg()
+             //startTimer()
 
-        } else {
-            running = false
-            finished = true
-            mpses?.cancel()
-        }*/
+         } else {
+             running = false
+             finished = true
+             mpses?.cancel()
+         }*/
         if (enable) {
 
-            encoder.start()
+            encoder.start(createFile("mp4"))
             captureRequest?.addTarget(videoSurface)
             captureRequest?.let {
                 // sessio?.stopRepeating()
@@ -1016,13 +1001,24 @@ class CameraRepository(
             }
         } else {
             encoder.stop()
-          /*  captureRequest?.removeTarget(videoSurface)
+            captureRequest?.removeTarget(videoSurface)
             captureRequest?.let {
                 // sessio?.stopRepeating()
                 sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-            }*/
+            }
         }
 
+    }
+    /////////////////////////////
+    private fun startTimer() {
+
+        Handler(Looper.getMainLooper()).postDelayed(
+            {
+                /*  running = false
+                  finished = true*/
+            },
+            3000
+        ) // 1000 milliseconds = 1 second
     }
 
 
