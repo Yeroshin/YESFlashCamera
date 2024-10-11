@@ -3,16 +3,13 @@ package com.yes.camera.di.module
 import android.content.Context
 import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraManager
-import android.os.Handler
-import android.os.HandlerThread
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.MediaEncoder
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
-import com.yes.camera.domain.usecase.SetCharacteristicsUsCase
+import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
-import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
@@ -59,8 +56,8 @@ class CameraModule {
     fun providesSetCharacteristicsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository
-    ): SetCharacteristicsUsCase {
-        return SetCharacteristicsUsCase(
+    ): SetInputCharacteristicsUseCase {
+        return SetInputCharacteristicsUseCase(
             dispatcher,
             cameraRepository
         )
@@ -80,13 +77,13 @@ class CameraModule {
     fun providesMainViewModelFactory(
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
-        setCharacteristicsUsCase: SetCharacteristicsUsCase,
+        setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         recordVideoUseCase: RecordVideoUseCase
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
             openCameraUseCase,
-            setCharacteristicsUsCase,
+            setInputCharacteristicsUseCase,
             recordVideoUseCase
         )
     }

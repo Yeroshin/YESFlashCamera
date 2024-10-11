@@ -44,9 +44,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
 import java.nio.ByteBuffer
-import java.nio.channels.WritableByteChannel
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
@@ -225,11 +223,11 @@ class CameraRepository(
         )
     }
 
-    var characteristics: CameraCharacteristics? = null
-    private fun getCameraCharacteristics(id: String): Characteristics {
-        characteristics = cameraManager.getCameraCharacteristics(id)
 
-        val config = characteristics?.get(
+    private fun getCameraCharacteristics(id: String): Characteristics {
+        val characteristics = cameraManager.getCameraCharacteristics(id)
+
+        val config = characteristics.get(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
         )
 
@@ -239,20 +237,20 @@ class CameraRepository(
         val t = config?.getOutputSizes(ImageFormat.RAW_SENSOR)
         val allSizes = config?.getOutputSizes(ImageFormat.JPEG)
         allSizes?.maxBy { it.height * it.width }
-        val iso = characteristics?.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-        val exposure = characteristics?.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val iso = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocusDistance =
-            characteristics?.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
-        val minFocus = characteristics?.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+            characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val minFocus = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         /////////////////
         val g =
-            characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
-        val map = characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
+        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(MediaRecorder::class.java)
         /////////////////
         try {
 
-            val map = characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             val sizes: Array<Size> = map!!.getOutputSizes(MediaRecorder::class.java)
             for (size in sizes) {
                 Log.d(
@@ -316,7 +314,47 @@ class CameraRepository(
         }
     }
 
-    fun setCharacteristics(characteristics: Characteristics) {
+
+    fun startVideoSession(){
+        createCaptureSession(
+            listOf(
+                Surface(glSurfaceTexture)
+            )
+        )
+    }
+
+    fun createCaptureSession(surfaces:List<Surface>) {
+        val configs = mutableListOf<OutputConfiguration>()
+        captureRequest =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+        ////////preview
+        for (surface in surfaces){
+            captureRequest?.addTarget(surface)
+            configs.add(
+                OutputConfiguration(surface)
+            )
+        }
+
+        val config = SessionConfiguration(
+            SessionConfiguration.SESSION_REGULAR,
+            configs,
+            Dispatchers.IO.asExecutor(),
+            object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    try {
+                        sessio = session
+
+                    } catch (e: CameraAccessException) {
+                        e.printStackTrace()
+                    }
+                }
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {}
+            }
+        )
+        cameraDevice?.createCaptureSession(config)
+    }
+    fun setInputCharacteristics(characteristics: Characteristics) {
         /* previewCaptureBuilder =
              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
         /*  captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -872,9 +910,7 @@ class CameraRepository(
           image.close()
       }*/
 
-    private fun createVideoCaptureSession(){
 
-    }
     private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
