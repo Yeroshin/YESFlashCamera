@@ -1034,7 +1034,7 @@ class CameraRepository(
             encoder.start(createFile("mp4"))
             captureRequest?.addTarget(videoSurface)
             captureRequest?.let {
-                 sessio?.stopRepeating()
+                 //sessio?.stopRepeating()
                 sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
             }
         } else {

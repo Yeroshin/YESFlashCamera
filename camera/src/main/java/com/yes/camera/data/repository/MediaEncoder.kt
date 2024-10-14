@@ -62,33 +62,38 @@ class MediaEncoder : MediaCodec.Callback() {
         )
         codec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
         codec?.setInputSurface(inputSurface)
-         // val inputSurface = codec!!.createInputSurface()
+        // val inputSurface = codec!!.createInputSurface()
         /*  val surface=MediaCodec.createPersistentInputSurface()
             codec?.setInputSurface(surface)*/
-          codec?.start()
+        codec?.start()
 
         return inputSurface
 
     }
-    var started=false
+
+    var started = false
     fun start(file: File) {
         //  codec?.setInputSurface(inputSurface)
-        configure(640,480)
+
         muxer = MediaMuxer(file.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         muxer?.let {
             trackIndex = it.addTrack(format!!)
         }
         muxer?.start()
-        started=true
-      //  codec?.start()
+        started = true
+        //  codec?.start()
     }
 
     fun stop() {
         /* muxer?.stop()
          muxer?.release()
          muxer = null*/
-        codec?.signalEndOfInputStream()
-        //  codec?.flush()
+        //  codec?.signalEndOfInputStream()
+        started = false
+        muxer?.stop()
+        muxer?.release()
+        muxer = null
+
     }
 
     override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
@@ -100,37 +105,18 @@ class MediaEncoder : MediaCodec.Callback() {
         index: Int,
         info: MediaCodec.BufferInfo
     ) {
-        if (info.flags == MediaCodec.BUFFER_FLAG_END_OF_STREAM) {
-            /*  val buffer = codec.getOutputBuffer(index)
-              buffer?.let {
-                  muxer?.writeSampleData(trackIndex, it, info)
-              }
-              codec.releaseOutputBuffer(index, false)*/
-            //////////////////////
-            //   info.flags = info.flags and (MediaCodec.BUFFER_FLAG_END_OF_STREAM.inv())
-
-            codec.stop()
-            codec.release()
-            muxer?.stop()
-            muxer?.release()
-            muxer = null
-            started=false
-            // this.codec?.flush()
-            //   codec.start()
-        } else {
-            val buffer = codec.getOutputBuffer(index)
-            if (started){
-                buffer?.let {
-                    muxer?.writeSampleData(trackIndex, it, info)
-                }
+        val buffer = codec.getOutputBuffer(index)
+        if (started) {
+            buffer?.let {
+                muxer?.writeSampleData(trackIndex, it, info)
             }
-
-            codec.releaseOutputBuffer(index, false)
         }
+        codec.releaseOutputBuffer(index, false)
     }
 
     override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
-        println()
+        val t = e.diagnosticInfo
+
     }
 
     override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
