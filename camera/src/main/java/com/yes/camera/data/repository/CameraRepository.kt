@@ -204,7 +204,7 @@ class CameraRepository(
                     cameraDevice = camera
                     //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
                     // setCharacteristics(51200)
-                    createCaptureSession()
+                    startVideoSession()
 
                     onCameraOpened(
                         getCameraCharacteristics(camera.id)
@@ -316,14 +316,16 @@ class CameraRepository(
 
 
     fun startVideoSession(){
-        createCaptureSession(
+        createVideoCaptureSession(
             listOf(
-                Surface(glSurfaceTexture)
+                Surface(glSurfaceTexture),
+                videoSurface
             )
         )
+        tmpStartDefaultCaptureRequest()
     }
 
-    fun createCaptureSession(surfaces:List<Surface>) {
+    private fun createVideoCaptureSession(surfaces:List<Surface>) {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
@@ -1032,7 +1034,7 @@ class CameraRepository(
             encoder.start(createFile("mp4"))
             captureRequest?.addTarget(videoSurface)
             captureRequest?.let {
-                // sessio?.stopRepeating()
+                 sessio?.stopRepeating()
                 sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
             }
         } else {
