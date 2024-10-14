@@ -157,9 +157,6 @@ fun CameraScreenSuccess(
                 //visible = true
             })
 
-
-
-
             AnimatedVisibility(
                 visible = visibleRadioGroup,
                 enter = scaleIn() + expandHorizontally(),

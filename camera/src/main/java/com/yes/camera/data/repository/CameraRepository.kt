@@ -22,6 +22,7 @@ import android.hardware.camera2.params.SessionConfiguration
 import android.icu.text.SimpleDateFormat
 import android.media.Image
 import android.media.ImageReader
+import android.media.MediaCodec
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.Environment
@@ -233,6 +234,7 @@ class CameraRepository(
 
         // If image format is provided, use it to determine supported sizes; or else use target class
         // val allSizes = config?.getOutputSizes(ImageReader::class.java)
+        val e = config?.getOutputSizes(MediaCodec::class.java)
         val v = config?.getOutputSizes(ImageFormat.YUV_420_888)
         val t = config?.getOutputSizes(ImageFormat.RAW_SENSOR)
         val allSizes = config?.getOutputSizes(ImageFormat.JPEG)
@@ -248,19 +250,6 @@ class CameraRepository(
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(MediaRecorder::class.java)
         /////////////////
-        try {
-
-            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            val sizes: Array<Size> = map!!.getOutputSizes(MediaRecorder::class.java)
-            for (size in sizes) {
-                Log.d(
-                    "Camera2",
-                    ("Supported resolution: " + size.getWidth()).toString() + "x" + size.getHeight()
-                )
-            }
-        } catch (e: CameraAccessException) {
-            e.printStackTrace()
-        }
         return Characteristics(
             isoValue = 0,
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
@@ -319,7 +308,7 @@ class CameraRepository(
         createVideoCaptureSession(
             listOf(
                 Surface(glSurfaceTexture),
-                videoSurface
+                encoder.configure(640,480)
             )
         )
         tmpStartDefaultCaptureRequest()
