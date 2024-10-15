@@ -57,9 +57,9 @@ fun RadioGroup(
     }
     Row(
         modifier
-            .background(
+          /*  .background(
                 Color.LightGray.copy(alpha = 0.5f)
-            )
+            )*/
             .selectableGroup()
             .wrapContentHeight()
             .padding(4.dp)

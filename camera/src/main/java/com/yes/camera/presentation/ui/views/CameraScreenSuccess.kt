@@ -8,10 +8,17 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,9 +33,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
@@ -40,9 +51,11 @@ import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
+import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.delay
+import kotlin.math.absoluteValue
 
 @Composable
 fun CameraScreenSuccess(
@@ -53,9 +66,13 @@ fun CameraScreenSuccess(
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
-    var characteristics = characteristicsInitial
+  //  var characteristics = characteristicsInitial
 
-    var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
+    var characteristics by remember(key1 = characteristicsInitial) {
+         mutableStateOf(characteristicsInitial)
+     }
+
+    //  var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
     /* val renderer = GLRenderer(
          context
      ) { surfaceTexture ->
@@ -72,14 +89,14 @@ fun CameraScreenSuccess(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-       // AndroidView(factory = {SurfacePanel(context)})
+        // AndroidView(factory = {SurfacePanel(context)})
         AndroidView(
             factory = {
                 AutoFitSurfaceView(
                     context,
                     null
                 ).also {
-                    autoFitSurfaceView = it
+                    // autoFitSurfaceView = it
                     it.setEGLContextClientVersion(2)
                     it.setRenderer(
                         renderer
@@ -116,7 +133,6 @@ fun CameraScreenSuccess(
                     }
                 }
             }
-
         )
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -127,7 +143,7 @@ fun CameraScreenSuccess(
             var visibleSelector by remember {
                 mutableStateOf(true)
             }
-            val position = remember {
+            var position by remember {
                 mutableIntStateOf(0)
             }
             var selectedCharacteristic: MutableState<Item?> = remember {
@@ -144,18 +160,18 @@ fun CameraScreenSuccess(
                     null
                 )
             }
-            Button(onClick = {
-                // onSettingsClick()
-                visibleRadioGroup = !visibleRadioGroup
-                //  autoFitSurfaceView?.setFullscreen(false)
-            }) {
-                Text(text = "Go to screen B", fontSize = 40.sp)
-            }
+            /*   Button(onClick = {
+                   // onSettingsClick()
+                   visibleRadioGroup = !visibleRadioGroup
+                   //  autoFitSurfaceView?.setFullscreen(false)
+               }) {
+                   Text(text = "Go to screen B", fontSize = 40.sp)
+               }*/
 
-            LaunchedEffect(key1 = Unit, block = {
-                delay(1000L)
-                //visible = true
-            })
+            /*  LaunchedEffect(key1 = Unit, block = {
+                  delay(1000L)
+                  //visible = true
+              })*/
 
             AnimatedVisibility(
                 visible = visibleRadioGroup,
@@ -168,9 +184,9 @@ fun CameraScreenSuccess(
                     onOptionSelected = { value ->
                         println(value.toString())
                         selectedCharacteristic.value = value
-                        characteristics.characteristics[value]
+                        // characteristics.characteristics[value]
                         valueSelectorItems = characteristics.characteristics[value]?.items
-                        position.intValue = when (value) {
+                        position = when (value) {
                             Item.SHUTTER -> characteristics.shutterValue
                             Item.ISO -> characteristics.isoValue
                             Item.FOCUS -> characteristics.focusValue
@@ -206,8 +222,37 @@ fun CameraScreenSuccess(
                 enter = scaleIn() + expandHorizontally(),
                 exit = scaleOut() + shrinkHorizontally()
             ) {
+                val t = when (selectedCharacteristic.value) {
+                    Item.SHUTTER -> {
+                        characteristics.shutterValue
+                    }
+
+                    Item.ISO -> {
+                        characteristics.isoValue
+                    }
+
+                    Item.FOCUS -> {
+                        characteristics.focusValue
+                    }
+
+                    null -> 0
+                }
                 ValueSelector(
-                    position = position,
+                    position = when (selectedCharacteristic.value) {
+                        Item.SHUTTER -> {
+                            characteristics.shutterValue
+                        }
+
+                        Item.ISO -> {
+                            characteristics.isoValue
+                        }
+
+                        Item.FOCUS -> {
+                            characteristics.focusValue
+                        }
+
+                        null -> 0
+                    },
                     modifier = Modifier
                         .fillMaxWidth(),
                     items = valueSelectorItems,
@@ -268,13 +313,6 @@ fun CameraScreenSuccess(
             var visibleSelectorMagnifier by remember {
                 mutableStateOf(true)
             }
-            Button(onClick = {
-                // onSettingsClick()
-                visibleSelectorMagnifier = !visibleSelectorMagnifier
-                //  autoFitSurfaceView?.setFullscreen(false)
-            }) {
-                Text(text = "Magnifier", fontSize = 40.sp)
-            }
             var magnifierSelectorItems: List<SettingsItemUI> by remember {
                 mutableStateOf(
                     listOf(
@@ -291,58 +329,118 @@ fun CameraScreenSuccess(
                     )
                 )
             }
-            AnimatedVisibility(
-                visible = visibleSelectorMagnifier,
-                enter = scaleIn() + expandHorizontally(),
-                exit = scaleOut() + shrinkHorizontally()
-            ) {
-                ValueSelector(
-                    position = position,
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    items = magnifierSelectorItems,
-                    adapter = adapter,
-                    onSelectedItemChanged = { index ->
-                        renderer.configureMagnifier(
-                            magnifierSelectorItems[index].text.toFloat(),
-                            0.2f,
-                            0.4f
+            var magnifierSelectedItem by remember {
+                mutableIntStateOf(0)
+            }
+            Row {
+                Column {
+                    VectorShadow(
+                        Modifier
+                            .padding(8.dp)
+                            .size(32.dp)
+                            .clickable {
+                                visibleSelectorMagnifier = !visibleSelectorMagnifier
+                            },
+                        vectorColor = Color.White,
+                        shadowColor = Color.DarkGray,
+                        resId = R.drawable.loupe,
+                    )
+                    Text(
+                        text = magnifierSelectorItems[magnifierSelectedItem].text,
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            shadow = Shadow(
+                                color = Color.DarkGray,
+                                offset = Offset(5.0f, 5.0f),
+                                blurRadius = 5f
+                            )
                         )
-                        valueSelectorItems?.let {
-                            for (i in it.indices) {
-                                it[i].passed = i <= index
+                    )
+                }
+                AnimatedVisibility(
+                    visible = visibleSelectorMagnifier,
+                    enter = scaleIn() + expandHorizontally(),
+                    exit = scaleOut() + shrinkHorizontally()
+                ) {
+                    ValueSelector(
+                        position = magnifierSelectedItem,
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        items = magnifierSelectorItems,
+                        adapter = adapter,
+                        onSelectedItemChanged = { index ->
+                            magnifierSelectedItem = index
+                            renderer.configureMagnifier(
+                                magnifierSelectorItems[index].text.toFloat(),
+                                0.2f,
+                                0.4f
+                            )
+                            valueSelectorItems?.let {
+                                for (i in it.indices) {
+                                    it[i].passed = i <= index
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
+
 
         }
         var isCheck by remember { mutableStateOf(false) }
-        Button(
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .toggleable(
-                    value = isCheck,
-                    onValueChange = {
-                        isCheck = it
-                        onStartVideoRecord(isCheck)
-                    },
-                    role = Role.Checkbox,
-                ),
-            onClick = {
-                isCheck=!isCheck
-                onStartVideoRecord(isCheck)
-            },
-            colors = if (isCheck){
-                ButtonDefaults.buttonColors(containerColor = Color.Red)
-            }else{
-                ButtonDefaults.buttonColors(containerColor = Color.Yellow)
-            }
-
         ) {
-            Text(text = "Capture", fontSize = 40.sp)
+            VectorShadow(
+                Modifier
+                    .padding(8.dp)
+                    .size(32.dp)
+                    .clickable {
+                        onSettingsClick()
+                    },
+                vectorColor = Color.White,
+                shadowColor = Color.DarkGray,
+                resId = R.drawable.settings,
+            )
+            Button(
+                modifier = Modifier
+                    // .align(Alignment.BottomCenter)
+                    .toggleable(
+                        value = isCheck,
+                        onValueChange = {
+                            isCheck = it
+                            onStartVideoRecord(isCheck)
+                        },
+                        role = Role.Checkbox,
+                    ),
+                onClick = {
+                    isCheck = !isCheck
+                    onStartVideoRecord(isCheck)
+                },
+                colors = if (isCheck) {
+                    ButtonDefaults.buttonColors(containerColor = Color.Red)
+                } else {
+                    ButtonDefaults.buttonColors(containerColor = Color.Blue)
+                }
+
+            ) {
+                Text(text = "Capture", fontSize = 40.sp)
+            }
+            VectorShadow(
+                Modifier
+                    .padding(8.dp)
+                    .size(32.dp)
+                    .clickable {
+
+                    },
+                vectorColor = Color.White,
+                shadowColor = Color.DarkGray,
+                resId = R.drawable.flip_camera_android,
+            )
         }
+
 
     }
 

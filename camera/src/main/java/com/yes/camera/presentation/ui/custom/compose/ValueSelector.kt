@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ValueSelector(
     modifier: Modifier,
-    position: MutableIntState,
+    position: Int,
     items: List<Any>?,
     adapter: CompositeAdapter,
     onSelectedItemChanged: (Int) -> Unit
@@ -49,33 +49,44 @@ fun ValueSelector(
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
 
-    LaunchedEffect(firstVisibleItem) {
 
+   /* LaunchedEffect(firstVisibleItem) {
         snapshotFlow { firstVisibleItem }
             .distinctUntilChanged()
             .collect { newIndex ->
                 onSelectedItemChanged(newIndex)
             }
 
-    }
+    }*/
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(items) {
         snapshotFlow { items }
             .collect {
-                coroutineScope.launch {
+             //   coroutineScope.launch {
                     listState.animateScrollToItem(
-                        position.value,
+                        position,
                         scrollOffset = itemWidthPx/2
                     )
-                }
+                    snapshotFlow { listState.firstVisibleItemIndex }
+                        .collect { index ->
+                            onSelectedItemChanged(index)
+                        }
+
+            //    }
             }
     }
+  /*  LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { index ->
+                onSelectedItemChanged(index)
+            }
+    }*/
     Column(
         modifier = modifier
-            .background(
+         /*   .background(
                 Color.LightGray.copy(alpha = 0.5f)
-            )
+            )*/
             // .height(80.dp)
             .wrapContentHeight()
             .padding(4.dp),
@@ -106,6 +117,9 @@ fun ValueSelector(
             }
 
         }
+
+
+
         VectorShadow(
             Modifier
                 .size(24.dp),
