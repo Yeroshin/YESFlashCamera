@@ -80,7 +80,7 @@ fun RadioGroup(
                     visible = visibleStates[index].value,
                     enter = fadeIn() + scaleIn()
                 ) {
-                    Column(
+                    Row(
                         Modifier
                             .alpha(
                                 if (item.id == selectedOption.value) {
@@ -103,7 +103,7 @@ fun RadioGroup(
                                 role = Role.RadioButton
                             )
                             .padding(horizontal = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                      //  horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         item.item()
                     }

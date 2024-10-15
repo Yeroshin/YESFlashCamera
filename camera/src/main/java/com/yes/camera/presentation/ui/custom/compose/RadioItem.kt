@@ -14,23 +14,22 @@ import com.yes.camera.presentation.model.Item
 
 class RadioItem(
     id: Item,
-    private val title: String,
-    private var resId: Int,
+    var title: String,
+    private var resId: Int?,
 ) : RadioButton(id) {
     @Composable
     override fun item() {
+        resId?.let {
+            VectorShadow(
+                Modifier
+                    .size(24.dp),
+                vectorColor = Color.White,
+                shadowColor = Color.DarkGray,
+                resId = it
+            )
+        }
 
-        /*  Image(
-              modifier = Modifier
-                  .size(50.dp)
-                  ,
-              painter = painterResource(
-                  id = R.drawable.camera
-              ),
-              contentDescription = null,
-          )*/
         Text(
-
             text = title,
             style = TextStyle(
                 color = Color.White,
@@ -41,16 +40,8 @@ class RadioItem(
                     blurRadius = 5f
                 )
             )
-            // style = MaterialTheme.typography.body1.merge(),
-            //  modifier = Modifier.padding(start = 16.dp)
         )
-        VectorShadow(
-            Modifier
-                .size(24.dp),
-            vectorColor = Color.White,
-            shadowColor = Color.DarkGray,
-            resId = resId
-        )
+
 
     }
 

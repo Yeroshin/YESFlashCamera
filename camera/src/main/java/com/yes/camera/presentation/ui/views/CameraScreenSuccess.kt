@@ -66,11 +66,11 @@ fun CameraScreenSuccess(
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
-  //  var characteristics = characteristicsInitial
+    //  var characteristics = characteristicsInitial
 
     var characteristics by remember(key1 = characteristicsInitial) {
-         mutableStateOf(characteristicsInitial)
-     }
+        mutableStateOf(characteristicsInitial)
+    }
 
     //  var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
     /* val renderer = GLRenderer(
@@ -149,11 +149,15 @@ fun CameraScreenSuccess(
             var selectedCharacteristic: MutableState<Item?> = remember {
                 mutableStateOf(null)
             }
-            val radioGroupItems = listOf(
-                RadioItem(Item.SHUTTER, "SHUTTER", R.drawable.camera),
-                RadioItem(Item.ISO, "ISO", R.drawable.iso),
-                RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
-            )
+            val radioGroupItems = remember {
+
+                    mutableListOf(
+                        RadioItem(Item.SHUTTER, characteristics.characteristics[Item.SHUTTER]?.value.toString(), null),
+                        RadioItem(Item.ISO, "ISO", R.drawable.iso),
+                        RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
+                    )
+
+            }
 
             var valueSelectorItems: List<SettingsItemUI>? by remember {
                 mutableStateOf(
@@ -222,21 +226,6 @@ fun CameraScreenSuccess(
                 enter = scaleIn() + expandHorizontally(),
                 exit = scaleOut() + shrinkHorizontally()
             ) {
-                val t = when (selectedCharacteristic.value) {
-                    Item.SHUTTER -> {
-                        characteristics.shutterValue
-                    }
-
-                    Item.ISO -> {
-                        characteristics.isoValue
-                    }
-
-                    Item.FOCUS -> {
-                        characteristics.focusValue
-                    }
-
-                    null -> 0
-                }
                 ValueSelector(
                     position = when (selectedCharacteristic.value) {
                         Item.SHUTTER -> {
@@ -260,9 +249,15 @@ fun CameraScreenSuccess(
                     onSelectedItemChanged = { index ->
 
                         characteristics = when (selectedCharacteristic.value) {
-                            Item.SHUTTER -> characteristics.copy(
-                                shutterValue = index
-                            )
+                            Item.SHUTTER -> {
+
+                                 valueSelectorItems?.get(index)?.text?.let {
+                                     radioGroupItems[0].title=it
+                                }
+                                characteristics.copy(
+                                    shutterValue = index
+                                )
+                            }
 
                             Item.ISO -> characteristics.copy(
                                 isoValue = index
