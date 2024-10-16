@@ -2,9 +2,9 @@ package com.yes.camera.presentation.model
 
 data class CharacteristicsUI (
     val backCamera:Boolean=true,
-    var shutterValue:Int=0,
-    val isoValue:Int = 0,
-    val focusValue:Int=0,
+    var shutterPosition:Int=0,
+    val isoPosition:Int = 0,
+    val focusPosition:Int=0,
     val characteristics:Map<Item,Characteristic> = emptyMap()
 
 )

@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.custom.compose
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -14,7 +15,7 @@ import com.yes.camera.presentation.model.Item
 
 class RadioItem(
     id: Item,
-    var title: String,
+    var title:MutableState< String>,
     private var resId: Int?,
 ) : RadioButton(id) {
     @Composable
@@ -30,7 +31,7 @@ class RadioItem(
         }
 
         Text(
-            text = title,
+            text = title.value,
             style = TextStyle(
                 color = Color.White,
                 fontSize = 14.sp,

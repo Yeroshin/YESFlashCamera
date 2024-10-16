@@ -1,8 +1,6 @@
 package com.yes.camera.presentation.mapper
 
-import android.util.Range
 import com.yes.camera.domain.model.Characteristics
-import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.presentation.model.Characteristic
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
@@ -151,12 +149,12 @@ class MapperUI {
         )
     }
     fun map(characteristics:CharacteristicsUI):Characteristics{
-       val iso= characteristics.characteristics[Item.ISO]?.items?.get(characteristics.isoValue)?.text?.toInt()
+       val iso= characteristics.characteristics[Item.ISO]?.items?.get(characteristics.isoPosition)?.text?.toInt()
 
-        val shutterString= characteristics.characteristics[Item.SHUTTER]?.items?.get(characteristics.shutterValue)?.text
+        val shutterString= characteristics.characteristics[Item.SHUTTER]?.items?.get(characteristics.shutterPosition)?.text
         val shutter=standardShutterSpeeds.entries.firstOrNull { it.value == shutterString }?.key
 
-        val focus= characteristics.characteristics[Item.FOCUS]?.items?.get(characteristics.focusValue)?.text?.toFloat()
+        val focus= characteristics.characteristics[Item.FOCUS]?.items?.get(characteristics.focusPosition)?.text?.toFloat()
 
         return Characteristics(
             isoValue= iso?:100,

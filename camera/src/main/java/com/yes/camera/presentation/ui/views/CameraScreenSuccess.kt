@@ -1,7 +1,6 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
-import android.graphics.SurfaceTexture
 import android.view.MotionEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
@@ -14,17 +13,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,12 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -54,8 +45,6 @@ import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
-import kotlinx.coroutines.delay
-import kotlin.math.absoluteValue
 
 @Composable
 fun CameraScreenSuccess(
@@ -137,45 +126,48 @@ fun CameraScreenSuccess(
         Column(
             modifier = Modifier.fillMaxSize(),
         ) {
+            /*  LaunchedEffect(key1 = Unit, block = {
+                 delay(1000L)
+                 //visible = true
+             })*/
+
             var visibleRadioGroup by remember {
                 mutableStateOf(true)
             }
             var visibleSelector by remember {
                 mutableStateOf(true)
             }
-            var position by remember {
+            var positionRadioGroup by remember {
                 mutableIntStateOf(0)
             }
             var selectedCharacteristic: MutableState<Item?> = remember {
                 mutableStateOf(null)
             }
-            val radioGroupItems = remember {
-
-                    mutableListOf(
-                        RadioItem(Item.SHUTTER, characteristics.characteristics[Item.SHUTTER]?.value.toString(), null),
-                        RadioItem(Item.ISO, "ISO", R.drawable.iso),
-                        RadioItem(Item.FOCUS, "FOCUS", R.drawable.metering)
+            var shutter = remember {
+                mutableStateOf("-")
+            }
+            var iso = remember {
+                mutableStateOf("-")
+            }
+            var focus = remember {
+                mutableStateOf("-")
+            }
+            var radioGroupItems =
+                    listOf(
+                        RadioItem(Item.SHUTTER, shutter, null),
+                        RadioItem(Item.ISO, iso, R.drawable.iso),
+                        RadioItem(Item.FOCUS, focus, R.drawable.metering)
                     )
 
-            }
+
 
             var valueSelectorItems: List<SettingsItemUI>? by remember {
                 mutableStateOf(
                     null
                 )
             }
-            /*   Button(onClick = {
-                   // onSettingsClick()
-                   visibleRadioGroup = !visibleRadioGroup
-                   //  autoFitSurfaceView?.setFullscreen(false)
-               }) {
-                   Text(text = "Go to screen B", fontSize = 40.sp)
-               }*/
 
-            /*  LaunchedEffect(key1 = Unit, block = {
-                  delay(1000L)
-                  //visible = true
-              })*/
+
 
             AnimatedVisibility(
                 visible = visibleRadioGroup,
@@ -190,10 +182,10 @@ fun CameraScreenSuccess(
                         selectedCharacteristic.value = value
                         // characteristics.characteristics[value]
                         valueSelectorItems = characteristics.characteristics[value]?.items
-                        position = when (value) {
-                            Item.SHUTTER -> characteristics.shutterValue
-                            Item.ISO -> characteristics.isoValue
-                            Item.FOCUS -> characteristics.focusValue
+                        positionRadioGroup = when (value) {
+                            Item.SHUTTER -> characteristics.shutterPosition
+                            Item.ISO -> characteristics.isoPosition
+                            Item.FOCUS -> characteristics.focusPosition
                             null -> 0
                         }
                         value?.let { visibleSelector = true } ?: run { visibleSelector = false }
@@ -229,15 +221,15 @@ fun CameraScreenSuccess(
                 ValueSelector(
                     position = when (selectedCharacteristic.value) {
                         Item.SHUTTER -> {
-                            characteristics.shutterValue
+                            characteristics.shutterPosition
                         }
 
                         Item.ISO -> {
-                            characteristics.isoValue
+                            characteristics.isoPosition
                         }
 
                         Item.FOCUS -> {
-                            characteristics.focusValue
+                            characteristics.focusPosition
                         }
 
                         null -> 0
@@ -252,20 +244,30 @@ fun CameraScreenSuccess(
                             Item.SHUTTER -> {
 
                                  valueSelectorItems?.get(index)?.text?.let {
-                                     radioGroupItems[0].title=it
+                                  shutter.value=it
                                 }
                                 characteristics.copy(
-                                    shutterValue = index
+                                    shutterPosition = index
                                 )
                             }
 
-                            Item.ISO -> characteristics.copy(
-                                isoValue = index
-                            )
+                            Item.ISO ->{
+                                valueSelectorItems?.get(index)?.text?.let {
+                                    iso.value=it
+                                }
+                                characteristics.copy(
+                                    isoPosition = index
+                                )
+                            }
 
-                            Item.FOCUS -> characteristics.copy(
-                                focusValue = index
-                            )
+                            Item.FOCUS -> {
+                                valueSelectorItems?.get(index)?.text?.let {
+                                    focus.value=it
+                                }
+                                characteristics.copy(
+                                    focusPosition = index
+                                )
+                            }
 
                             null -> characteristics.copy()
                         }
@@ -328,7 +330,7 @@ fun CameraScreenSuccess(
                 mutableIntStateOf(0)
             }
             Row {
-                Column {
+              /*  Column {*/
                     VectorShadow(
                         Modifier
                             .padding(8.dp)
@@ -340,7 +342,7 @@ fun CameraScreenSuccess(
                         shadowColor = Color.DarkGray,
                         resId = R.drawable.loupe,
                     )
-                    Text(
+                  /*  Text(
                         text = magnifierSelectorItems[magnifierSelectedItem].text,
                         style = TextStyle(
                             color = Color.White,
@@ -352,7 +354,7 @@ fun CameraScreenSuccess(
                             )
                         )
                     )
-                }
+                }*/
                 AnimatedVisibility(
                     visible = visibleSelectorMagnifier,
                     enter = scaleIn() + expandHorizontally(),
