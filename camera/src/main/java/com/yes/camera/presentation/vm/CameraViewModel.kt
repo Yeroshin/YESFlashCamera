@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
+import com.yes.camera.domain.usecase.SubscribeHistogramUseCase
 import com.yes.camera.presentation.contract.CameraContract.*
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.model.CharacteristicsUI
@@ -17,12 +18,41 @@ class CameraViewModel(
     private val mapper:MapperUI,
     private val openCameraUseCase: OpenCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-    private val recordVideoUseCase: RecordVideoUseCase
+    private val recordVideoUseCase: RecordVideoUseCase,
+    private val subscribeHistogramUseCase: SubscribeHistogramUseCase
 ): BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
     }
+    init {
+        withUseCaseScope(
+            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
+            onError = { println(it.message) },
+            block = {
+                subscribeHistogramUseCase()
+                    .collect{ histogramData->
+                        histogramData?.let {
+                            setState {
+                                copy(
+                                    state=uiState.value.copy(
+                                        uiState.value.state.
+                                    )
+                                    )
+                                  /*  state = CameraState.Success(
+                                        characteristics = mapper.map(it)
+                                    )*/
 
+                                )
+                            }
+                        }
+
+                    }
+
+
+            }
+        )
+
+    }
     override fun createInitialState(): State {
         return State(
             CameraState.Success(
@@ -103,7 +133,8 @@ class CameraViewModel(
         private val mapper:MapperUI,
         private val openCameraUseCase: OpenCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-        private val recordVideoUseCase: RecordVideoUseCase
+        private val recordVideoUseCase: RecordVideoUseCase,
+        private val subscribeHistogramUseCase: SubscribeHistogramUseCase
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
@@ -111,7 +142,8 @@ class CameraViewModel(
                 mapper,
                 openCameraUseCase,
                 setInputCharacteristicsUseCase,
-                recordVideoUseCase
+                recordVideoUseCase,
+                subscribeHistogramUseCase
             ) as T
         }
     }

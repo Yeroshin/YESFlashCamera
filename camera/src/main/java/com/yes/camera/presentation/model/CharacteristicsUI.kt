@@ -5,6 +5,7 @@ data class CharacteristicsUI (
     var shutterPosition:Int=0,
     val isoPosition:Int = 0,
     val focusPosition:Int=0,
+    val histogramData:ByteArray=ByteArray(0),
     val characteristics:Map<Item,Characteristic> = emptyMap()
 
 )

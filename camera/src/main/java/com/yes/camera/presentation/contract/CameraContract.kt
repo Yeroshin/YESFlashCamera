@@ -19,6 +19,7 @@ class CameraContract {
     }
     data class State(
         val state:CameraState,
+        val
     ) : UiState
 
     sealed class CameraState {

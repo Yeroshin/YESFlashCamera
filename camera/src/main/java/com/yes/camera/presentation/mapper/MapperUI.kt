@@ -125,7 +125,7 @@ class MapperUI {
                     title = "Focus",
                     items= listOf(
                         SettingsItemUI("0.2"),
-                    SettingsItemUI("1"),
+                        SettingsItemUI("1"),
                         SettingsItemUI("2"),
                         SettingsItemUI("3"),
                         SettingsItemUI("4"),
@@ -135,7 +135,7 @@ class MapperUI {
                         SettingsItemUI("8"),
                         SettingsItemUI("9"),
                         SettingsItemUI("9.5"),
-                    SettingsItemUI("10"),
+                        SettingsItemUI("10"),
                         SettingsItemUI("11"),
                         SettingsItemUI("12"),
                         SettingsItemUI("13"),
@@ -164,6 +164,11 @@ class MapperUI {
             minFocusValue = 0f,
         shutterRange= LongRange(0,0),
         resolutions= emptyList()
+        )
+    }
+    fun map(histogramData:ByteArray):CharacteristicsUI{
+        return CharacteristicsUI(
+            histogramData = histogramData
         )
     }
 }

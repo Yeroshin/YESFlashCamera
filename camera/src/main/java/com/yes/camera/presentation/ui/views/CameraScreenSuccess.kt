@@ -39,6 +39,7 @@ import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
+import com.yes.camera.presentation.ui.custom.compose.Histogram
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
@@ -55,18 +56,11 @@ fun CameraScreenSuccess(
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
 ) {
-    //  var characteristics = characteristicsInitial
 
     var characteristics by remember(key1 = characteristicsInitial) {
         mutableStateOf(characteristicsInitial)
     }
 
-    //  var autoFitSurfaceView by remember { mutableStateOf<AutoFitSurfaceView?>(null) }
-    /* val renderer = GLRenderer(
-         context
-     ) { surfaceTexture ->
-         onGetSurface(surfaceTexture)
-     }*/
     val adapter = CompositeAdapter(
         mapOf(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
@@ -385,6 +379,16 @@ fun CameraScreenSuccess(
 
 
         }
+        ////////////////////////
+        val v= listOf(6,2,3,4,1,2,3,7)
+        Histogram(
+            Modifier,
+            v,
+            300.dp,
+            100.dp
+        )
+        //////////////////////////
+
         var isCheck by remember { mutableStateOf(false) }
         Row(
             modifier = Modifier

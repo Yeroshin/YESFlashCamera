@@ -7,6 +7,10 @@ import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.util.Log
 import android.view.Surface
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -99,7 +103,11 @@ class MediaEncoder : MediaCodec.Callback() {
     override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
         println()
     }
-
+    private val _outputBuffer: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
+    val outputBuffer = _outputBuffer.asStateFlow()
+    fun subscribeOutputBuffer(): StateFlow<ByteArray?> {
+        return outputBuffer
+    }
     override fun onOutputBufferAvailable(
         codec: MediaCodec,
         index: Int,
@@ -107,7 +115,8 @@ class MediaEncoder : MediaCodec.Callback() {
     ) {
         val buffer = codec.getOutputBuffer(index)
         if (started) {
-            buffer?.let {
+            buffer?.let { it ->
+                _outputBuffer.update { it }
                 muxer?.writeSampleData(trackIndex, it, info)
             }
         }

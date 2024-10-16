@@ -8,6 +8,7 @@ import com.yes.camera.data.repository.MediaEncoder
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
+import com.yes.camera.domain.usecase.SubscribeHistogramUseCase
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.shared.di.module.IoDispatcher
@@ -24,16 +25,28 @@ class CameraModule {
     ): MapperUI {
         return MapperUI()
     }
+
     @Provides
     fun providesMediaEncoder(
     ): MediaEncoder {
         return MediaEncoder()
     }
-@Singleton
+
+    @Provides
+    fun providesSubscribeHistogramUseCase(
+        @IoDispatcher dispatcher: CoroutineDispatcher,
+        mediaEncoder: MediaEncoder
+    ): SubscribeHistogramUseCase {
+        return SubscribeHistogramUseCase(
+            dispatcher,
+            mediaEncoder
+        )
+    }
+    @Singleton
     @Provides
     fun providesCameraRepository(
         context: Context,
-        encoder:MediaEncoder
+        encoder: MediaEncoder
     ): CameraRepository {
         return CameraRepository(
             context,
@@ -52,6 +65,7 @@ class CameraModule {
             cameraRepository
         )
     }
+
     @Provides
     fun providesSetCharacteristicsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
@@ -62,6 +76,7 @@ class CameraModule {
             cameraRepository
         )
     }
+
     @Provides
     fun providesSetRecordVideoUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
@@ -78,13 +93,15 @@ class CameraModule {
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-        recordVideoUseCase: RecordVideoUseCase
+        recordVideoUseCase: RecordVideoUseCase,
+        subscribeHistogramUseCase:SubscribeHistogramUseCase
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
             openCameraUseCase,
             setInputCharacteristicsUseCase,
-            recordVideoUseCase
+            recordVideoUseCase,
+            subscribeHistogramUseCase
         )
     }
 
