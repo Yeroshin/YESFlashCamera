@@ -19,7 +19,7 @@ class CameraContract {
     }
     data class State(
         val state:CameraState,
-        val
+        val histogram:MutableMap<Int,Int>?=null
     ) : UiState
 
     sealed class CameraState {

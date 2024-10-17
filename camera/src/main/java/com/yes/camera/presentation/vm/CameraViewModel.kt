@@ -3,6 +3,7 @@ package com.yes.camera.presentation.vm
 import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
@@ -12,47 +13,36 @@ import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class CameraViewModel(
-    private val mapper:MapperUI,
+    private val mapper: MapperUI,
     private val openCameraUseCase: OpenCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
     private val recordVideoUseCase: RecordVideoUseCase,
     private val subscribeHistogramUseCase: SubscribeHistogramUseCase
-): BaseViewModel<Event, State, Effect>() {
+) : BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
     }
+
     init {
-        withUseCaseScope(
-            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
-            block = {
-                subscribeHistogramUseCase()
-                    .collect{ histogramData->
-                        histogramData?.let {
-                            setState {
-                                copy(
-                                    state=uiState.value.copy(
-                                        uiState.value.state.
-                                    )
-                                    )
-                                  /*  state = CameraState.Success(
-                                        characteristics = mapper.map(it)
-                                    )*/
+        viewModelScope.launch {
+            subscribeHistogramUseCase()
+                .collect { histogramData ->
+                    setState {
+                        copy(
+                            histogram = histogramData
 
-                                )
-                            }
-                        }
-
+                        )
                     }
-
-
-            }
-        )
-
+                }
+        }
     }
+
     override fun createInitialState(): State {
         return State(
             CameraState.Success(
@@ -65,7 +55,7 @@ class CameraViewModel(
         when (event) {
             Event.OnGetOffers -> {}
             is Event.OnOpenCamera -> {
-                openCamera(event.backCamera,event.surfaceTexture)
+                openCamera(event.backCamera, event.surfaceTexture)
             }
 
             is Event.OnSetCharacteristics -> {
@@ -78,7 +68,8 @@ class CameraViewModel(
 
         }
     }
-    private fun startVideoRecord (enabled:Boolean){
+
+    private fun startVideoRecord(enabled: Boolean) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
@@ -89,34 +80,36 @@ class CameraViewModel(
             }
         )
     }
-    private fun setCharacteristics(characteristics:CharacteristicsUI){
+
+    private fun setCharacteristics(characteristics: CharacteristicsUI) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-                val camera=setInputCharacteristicsUseCase(
+                val camera = setInputCharacteristicsUseCase(
                     SetInputCharacteristicsUseCase.Params(
                         mapper.map(characteristics)
                     )
                 )
-               /* setState {
-                    copy(
-                        state = CameraState.Success(
-                            characteristics = mapper.map(camera)
-                        )
+                /* setState {
+                     copy(
+                         state = CameraState.Success(
+                             characteristics = mapper.map(camera)
+                         )
 
-                    )
-                }*/
+                     )
+                 }*/
             }
         )
     }
-    private fun openCamera(backCamera:Boolean,surfaceTexture: SurfaceTexture){
+
+    private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-                val characteristics=openCameraUseCase(
-                    OpenCameraUseCase.Params(backCamera,surfaceTexture)
+                val characteristics = openCameraUseCase(
+                    OpenCameraUseCase.Params(backCamera, surfaceTexture)
                 )
                 setState {
                     copy(
@@ -129,8 +122,9 @@ class CameraViewModel(
             }
         )
     }
+
     class Factory(
-        private val mapper:MapperUI,
+        private val mapper: MapperUI,
         private val openCameraUseCase: OpenCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         private val recordVideoUseCase: RecordVideoUseCase,

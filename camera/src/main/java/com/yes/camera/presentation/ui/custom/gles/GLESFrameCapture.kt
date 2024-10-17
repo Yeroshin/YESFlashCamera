@@ -17,13 +17,12 @@ import java.nio.ByteOrder
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-
+@Deprecated("used for learning purpose")
 class GLESFrameCapture(
     private val width: Int,
     private val height: Int,
 
-) :
-    GLSurfaceView.Renderer {
+) : GLSurfaceView.Renderer {
         init {
 
         }

@@ -15,7 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-@Composable
+/*@Composable
 @Preview
 fun hist(){
     val v= listOf(1,2,3,4,1,2,3,4)
@@ -25,35 +25,37 @@ fun hist(){
     300.dp,
     100.dp
     )
-}
+}*/
 
 @Composable
 fun Histogram(
     modifier: Modifier,
-    values: List<Int>,
+    values: MutableMap<Int, Int>?,
     widthDp: Dp,
     heightDp: Dp
 ) {
     val widthPx = with(LocalDensity.current) { widthDp.toPx() }
     val heightPx = with(LocalDensity.current) { heightDp.toPx() }
+    val maxValu = values?.values
+    val maxValue = values?.values?.maxOrNull() ?: 0
+    values?.let {
+        val barWidth = widthPx / values.size.toFloat()
 
-    val maxValue = values.maxOrNull() ?: 0
-    val barWidth = widthPx / values.size
-
-    Canvas(modifier = modifier) {
-        drawRect(
-            color = Color.Green,
-            topLeft = Offset(0f, 0f),
-            size = Size(widthPx, heightPx),
-            style = Stroke(width = 10f)
-        )
-        values.forEachIndexed { index, value ->
-            val barHeight = (value  * heightPx/ maxValue)
+        Canvas(modifier = modifier) {
             drawRect(
-                color = Color.Red,
-                topLeft = Offset(index * barWidth, heightPx - barHeight),
-                size = Size(barWidth, barHeight)
+                color = Color.Green,
+                topLeft = Offset(0f, 0f),
+                size = Size(widthPx, heightPx),
+                style = Stroke(width = 10f)
             )
+            values.forEach { (key, value) ->
+                val barHeight = (value.toFloat() * heightPx / maxValue)
+                drawRect(
+                    color = Color.Red,
+                    topLeft = Offset(key.toFloat() * barWidth, heightPx - barHeight),
+                    size = Size(barWidth, barHeight)
+                )
+            }
         }
     }
 }

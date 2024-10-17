@@ -50,7 +50,8 @@ fun CameraScreen(
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnSetCharacteristics(characteristics)
                 )
-            }
+            },
+            histogram = viewState.value.histogram
         )
     }
 

@@ -28,7 +28,7 @@ class ShutterValueItemAdapterDelegate : CompositeAdapter.AdapterDelegate<Setting
         item: SettingsItemUI,
         modifier: Modifier,
     ) {
-        var rowWidthPx by remember { mutableIntStateOf(0) }
+      //  var rowWidthPx by remember { mutableIntStateOf(0) }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = modifier
@@ -36,9 +36,9 @@ class ShutterValueItemAdapterDelegate : CompositeAdapter.AdapterDelegate<Setting
                // .size(48.dp)
                // .width(48.dp)
                   .wrapContentHeight()
-                .onGloballyPositioned { coordinates ->
+             /*   .onGloballyPositioned { coordinates ->
                     rowWidthPx = coordinates.size.width
-                },
+                },*/
                 /* .background(
                      if (item.text.toInt() % 2 == 0) {
                          Color.LightGray

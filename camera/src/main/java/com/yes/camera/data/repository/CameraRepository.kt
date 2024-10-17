@@ -304,11 +304,13 @@ class CameraRepository(
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun startVideoSession(){
         createVideoCaptureSession(
             listOf(
                 Surface(glSurfaceTexture),
-                encoder.configure(640,480)
+                encoder.configure(640,480),
+                imageReader.surface
             )
         )
         tmpStartDefaultCaptureRequest()
@@ -544,6 +546,14 @@ class CameraRepository(
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
 
+    val byteArray = ByteArray(120000)
+
+    private val _outputBuffer: MutableStateFlow<ByteArray> = MutableStateFlow(byteArray)
+    val outputBuffer:StateFlow<ByteArray> = _outputBuffer
+    fun subscribeOutputBuffer(): StateFlow<ByteArray> {
+        return outputBuffer
+    }
+
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
 
@@ -564,7 +574,14 @@ class CameraRepository(
                  }
              }
          }*/
-        if (running) {
+        val image = reader.acquireNextImage()
+        image?.let {
+            val ybytes = ByteArray(it.planes[0].buffer.capacity())
+            it.planes[0].buffer.get(ybytes)
+            _outputBuffer.value= ybytes
+        }
+        image?.close()
+       /* if (running) {
             val image = reader.acquireNextImage()
             image?.let {
                 // val tmp =yuv420ToBitmap(it)
@@ -639,7 +656,7 @@ class CameraRepository(
         } else {
             reader.acquireLatestImage()?.close()
             // fps1.get("fps")
-        }
+        }*/
         //  fps1.get("fps")
         /////////////////
 

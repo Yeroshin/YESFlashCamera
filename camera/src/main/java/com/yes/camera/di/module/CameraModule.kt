@@ -25,7 +25,7 @@ class CameraModule {
     ): MapperUI {
         return MapperUI()
     }
-
+    @Singleton
     @Provides
     fun providesMediaEncoder(
     ): MediaEncoder {
@@ -35,11 +35,11 @@ class CameraModule {
     @Provides
     fun providesSubscribeHistogramUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
-        mediaEncoder: MediaEncoder
+        cameraRepository: CameraRepository
     ): SubscribeHistogramUseCase {
         return SubscribeHistogramUseCase(
             dispatcher,
-            mediaEncoder
+            cameraRepository
         )
     }
     @Singleton

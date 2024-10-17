@@ -54,7 +54,8 @@ fun CameraScreenSuccess(
     characteristicsInitial: CharacteristicsUI,
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
-    onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit
+    onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
+    histogram:MutableMap<Int,Int>?
 ) {
 
     var characteristics by remember(key1 = characteristicsInitial) {
@@ -162,7 +163,7 @@ fun CameraScreenSuccess(
             }
 
 
-
+            ////////////////radio group
             AnimatedVisibility(
                 visible = visibleRadioGroup,
                 enter = scaleIn() + expandHorizontally(),
@@ -207,11 +208,12 @@ fun CameraScreenSuccess(
                     }
                 )
             }
-            AnimatedVisibility(
+            ///////////value selector
+          /*  AnimatedVisibility(
                 visible = visibleSelector,
                 enter = scaleIn() + expandHorizontally(),
                 exit = scaleOut() + shrinkHorizontally()
-            ) {
+            ) {*/
                 ValueSelector(
                     position = when (selectedCharacteristic.value) {
                         Item.SHUTTER -> {
@@ -277,7 +279,7 @@ fun CameraScreenSuccess(
                         }
                     }
                 )
-            }
+         //   }
             /*   DropDown(
                    isOpen,
                    modifier = Modifier
@@ -379,15 +381,15 @@ fun CameraScreenSuccess(
 
 
         }
-        ////////////////////////
+        ////////////////////////histogram
         val v= listOf(6,2,3,4,1,2,3,7)
         Histogram(
             Modifier,
-            v,
+            histogram,
             300.dp,
             100.dp
         )
-        //////////////////////////
+        //////////////////////////capture
 
         var isCheck by remember { mutableStateOf(false) }
         Row(

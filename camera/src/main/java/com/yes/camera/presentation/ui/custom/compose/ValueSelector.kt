@@ -1,5 +1,8 @@
 package com.yes.camera.presentation.ui.custom.compose
 
+import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -27,6 +30,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.yes.camera.R
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -101,7 +107,8 @@ fun ValueSelector(
                     rowWidthPx = coordinates.size.width
                 },
             contentPadding = PaddingValues(
-                horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
+                horizontal = pixelsToDp(rowWidthPx/2)
+               // horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
             ),
             flingBehavior = flingBehavior
         ) {
@@ -117,9 +124,6 @@ fun ValueSelector(
             }
 
         }
-
-
-
         VectorShadow(
             Modifier
                 .size(24.dp),
@@ -127,15 +131,8 @@ fun ValueSelector(
             shadowColor = Color.DarkGray,
             resId = R.drawable.arrow_drop_up
         )
-        /*  Image(
-              modifier = Modifier
-                  .size(24.dp),
-
-              painter = painterResource(R.drawable.arrow_drop_up),
-              contentDescription = "icon",
-               colorFilter = ColorFilter.tint(color = Color.Green)
-          )*/
-
     }
 
 }
+@Composable
+private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
