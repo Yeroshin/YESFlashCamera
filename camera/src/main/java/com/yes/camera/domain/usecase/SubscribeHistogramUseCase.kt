@@ -37,16 +37,4 @@ class SubscribeHistogramUseCase(
             .stateIn(scope)
 
     }
-    private fun filterOutliers(values: MutableMap<Int, Int>, threshold: Double = 100.0): MutableMap<Int, Int> {
-        val mean = values.values.average()
-        val stdDev = values.values.stdDev()
-
-        return values.filter { abs((it.value - mean) / stdDev) < threshold }.toMutableMap()
-    }
-
-    fun Collection<Int>.stdDev(): Double {
-        val mean = average()
-        val variance = map { (it - mean).toDouble().pow(2) }.average()
-        return sqrt(variance)
-    }
 }

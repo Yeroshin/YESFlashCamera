@@ -5,9 +5,9 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Context.ACTIVITY_SERVICE
 import android.graphics.SurfaceTexture
-import android.opengl.GLES10.GL_NEAREST
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
+import android.opengl.GLES20
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.GL_FLOAT
 import android.opengl.GLES20.GL_TRIANGLES
@@ -19,6 +19,7 @@ import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
 import android.opengl.GLES20.glTexParameterf
+import android.opengl.GLES20.glUniform1i
 import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLSurfaceView
@@ -55,8 +56,18 @@ class GLRenderer(
             GlShaderProgram(
                 context,
                 R.raw.vertex,
-                R.raw.scaled_fragment
+                R.raw.fragment
             )
+        )
+    }
+    private val glFocus by lazy {
+        GlFocus(
+            GlShaderProgram(
+                context,
+                R.raw.vertex,
+                R.raw.fragment,
+            ),
+            context
         )
     }
     private val glObjects = mutableListOf<GLObject>()
@@ -172,7 +183,8 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                    glMagnifier
+                    glMagnifier,
+               //     glFocus
                 )
             )
         }
@@ -237,9 +249,9 @@ class GLRenderer(
     }
 
     private fun createOESTextureObject(): Int {
-        val tex = IntArray(1)
-        glGenTextures(1, tex, 0)
-        glBindTexture(GL_TEXTURE_EXTERNAL_OES, tex[0])
+        val textureHandle = IntArray(2)
+        glGenTextures(2, textureHandle, 0)
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureHandle[0])
         glTexParameterf(
             GL_TEXTURE_EXTERNAL_OES,
             GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_NEAREST.toFloat()
@@ -257,7 +269,7 @@ class GLRenderer(
             GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat()
         )
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
-        return tex[0]
+        return textureHandle[0]
         //////////////////
         /*  val textureObjectIds = IntArray(1)
           glGenTextures(1, textureObjectIds, 0)
@@ -301,7 +313,7 @@ class GLRenderer(
           return textureObjectIds[0];*/
     }
 
-    abstract class GLObject(private val textureProgram: GlShaderProgram) {
+    abstract class GLObject(protected val textureProgram: GlShaderProgram) {
         var selected = false
         private val BYTES_PER_FLOAT: Int = 4
         private val vertexDataSize: Int = 12
@@ -360,7 +372,7 @@ class GLRenderer(
         }
 
         abstract fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float)
-        private fun bindData() {
+        protected fun bindData() {
 
             vertexBuffer.position(0)
             glVertexAttribPointer(
@@ -392,7 +404,12 @@ class GLRenderer(
         var centerPosition = Triple(0f, 0f, 0f)
         abstract fun translate(draggedPointX: Float, draggedPointY: Float)
 
-        fun draw(modelViewProjectionMatrix: FloatArray) {
+        open fun draw(modelViewProjectionMatrix: FloatArray) {
+            val  mTextureUniformHandle = glGetUniformLocation( textureProgram.program, "u_TextureUnit")
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            glBindTexture(GLES20.GL_TEXTURE_2D, 1)
+        //    glUniform1i(mTextureUniformHandle, 0)
+
             bindData()
             textureProgram.useProgram()
             textureProgram.setUniforms(modelViewProjectionMatrix)

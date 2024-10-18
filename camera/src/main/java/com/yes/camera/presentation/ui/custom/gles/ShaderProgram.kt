@@ -27,7 +27,7 @@ abstract class ShaderProgram protected constructor(
     protected  val A_POSITION: String = "a_Position"
     protected val U_MATRIX: String = "u_Matrix"
 
-    protected val program: Int = ShaderHelper.buildProgram(
+     val program: Int = ShaderHelper.buildProgram(
         createShader(
             context, GL_VERTEX_SHADER, vertexShaderResourceId
         ),
