@@ -20,12 +20,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +48,7 @@ import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
+import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 
 @Composable
 fun CameraScreenSuccess(
@@ -60,6 +63,16 @@ fun CameraScreenSuccess(
 
     var characteristics by remember(key1 = characteristicsInitial) {
         mutableStateOf(characteristicsInitial)
+    }
+    var shutter = remember {
+        mutableStateOf("-")
+    }
+    LaunchedEffect(characteristicsInitial) {
+        snapshotFlow { characteristicsInitial }
+            .collect {ch->
+                characteristics=ch
+                shutter.value=characteristics.characteristics[Item.SHUTTER]?.value.toString()
+            }
     }
 
     val adapter = CompositeAdapter(
@@ -138,9 +151,7 @@ fun CameraScreenSuccess(
             var selectedCharacteristic: MutableState<Item?> = remember {
                 mutableStateOf(null)
             }
-            var shutter = remember {
-                mutableStateOf("-")
-            }
+
             var iso = remember {
                 mutableStateOf("-")
             }
@@ -381,68 +392,76 @@ fun CameraScreenSuccess(
 
 
         }
-        ////////////////////////histogram
-        val v= listOf(6,2,3,4,1,2,3,7)
-        Histogram(
-            Modifier,
-            histogram,
-            300.dp,
-            100.dp
-        )
+
         //////////////////////////capture
 
         var isCheck by remember { mutableStateOf(false) }
-        Row(
+        Column(
             modifier = Modifier
+                .fillMaxWidth()
                 .align(Alignment.BottomCenter)
         ) {
-            VectorShadow(
+            ////////////////////////histogram
+            Histogram(
                 Modifier
-                    .padding(8.dp)
-                    .size(32.dp)
-                    .clickable {
-                        onSettingsClick()
-                    },
-                vectorColor = Color.White,
-                shadowColor = Color.DarkGray,
-                resId = R.drawable.settings,
+                    .align(Alignment.Start),
+                histogram,
+                150.dp,
+                80.dp
             )
-            Button(
+            Row(
                 modifier = Modifier
-                    // .align(Alignment.BottomCenter)
-                    .toggleable(
-                        value = isCheck,
-                        onValueChange = {
-                            isCheck = it
-                            onStartVideoRecord(isCheck)
-                        },
-                        role = Role.Checkbox,
-                    ),
-                onClick = {
-                    isCheck = !isCheck
-                    onStartVideoRecord(isCheck)
-                },
-                colors = if (isCheck) {
-                    ButtonDefaults.buttonColors(containerColor = Color.Red)
-                } else {
-                    ButtonDefaults.buttonColors(containerColor = Color.Blue)
-                }
-
+                    .align(Alignment.CenterHorizontally),
             ) {
-                Text(text = "Capture", fontSize = 40.sp)
-            }
-            VectorShadow(
-                Modifier
-                    .padding(8.dp)
-                    .size(32.dp)
-                    .clickable {
-
+                VectorShadow(
+                    Modifier
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .clickable {
+                            onSettingsClick()
+                        },
+                    vectorColor = Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.settings,
+                )
+                Button(
+                    modifier = Modifier
+                        // .align(Alignment.BottomCenter)
+                        .toggleable(
+                            value = isCheck,
+                            onValueChange = {
+                                isCheck = it
+                                onStartVideoRecord(isCheck)
+                            },
+                            role = Role.Checkbox,
+                        ),
+                    onClick = {
+                        isCheck = !isCheck
+                        onStartVideoRecord(isCheck)
                     },
-                vectorColor = Color.White,
-                shadowColor = Color.DarkGray,
-                resId = R.drawable.flip_camera_android,
-            )
+                    colors = if (isCheck) {
+                        ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    } else {
+                        ButtonDefaults.buttonColors(containerColor = Color.Blue)
+                    }
+
+                ) {
+                    Text(text = "Capture", fontSize = 40.sp)
+                }
+                VectorShadow(
+                    Modifier
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .clickable {
+
+                        },
+                    vectorColor = Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.flip_camera_android,
+                )
+            }
         }
+
 
 
     }

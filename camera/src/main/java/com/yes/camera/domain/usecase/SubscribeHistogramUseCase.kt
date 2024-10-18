@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 class SubscribeHistogramUseCase(
     dispatcher: CoroutineDispatcher,
@@ -20,25 +23,30 @@ class SubscribeHistogramUseCase(
 ) : UseCase<Unit, StateFlow<MutableMap<Int, Int>?>>(dispatcher) {
     private val scope = CoroutineScope(dispatcher)
     override suspend fun run(): StateFlow<MutableMap<Int, Int>?> {
-        var index = 0
         return cameraRepository.subscribeOutputBuffer()
             .map { buffer ->
+
                 val myMap: MutableMap<Int, Int> = (0..255).associateWith { 0 }.toMutableMap()
                 for(i in buffer.indices step 600){
                     val keyValue= buffer[i].toInt() and 0xFF
                     myMap[keyValue] = myMap.getOrDefault(keyValue, 0) + 1
                 }
-               /* for (byte in buffer) {
-                    if (index % 150 == 0) {
-                        val keyValue =
-                            byte.toInt() and 0xFF // convert byte to int and mask with 0xFF to get a value between 0 and 255
-                        myMap[keyValue] = myMap.getOrDefault(keyValue, 0) + 1
-                    }
-                    index++
-                }*/
+               // filterOutliers(myMap)
                 myMap
             }
             .stateIn(scope)
 
+    }
+    private fun filterOutliers(values: MutableMap<Int, Int>, threshold: Double = 100.0): MutableMap<Int, Int> {
+        val mean = values.values.average()
+        val stdDev = values.values.stdDev()
+
+        return values.filter { abs((it.value - mean) / stdDev) < threshold }.toMutableMap()
+    }
+
+    fun Collection<Int>.stdDev(): Double {
+        val mean = average()
+        val variance = map { (it - mean).toDouble().pow(2) }.average()
+        return sqrt(variance)
     }
 }

@@ -1,6 +1,9 @@
 package com.yes.camera.presentation.ui.custom.compose
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,12 +39,15 @@ fun Histogram(
 ) {
     val widthPx = with(LocalDensity.current) { widthDp.toPx() }
     val heightPx = with(LocalDensity.current) { heightDp.toPx() }
-    val maxValu = values?.values
     val maxValue = values?.values?.maxOrNull() ?: 0
     values?.let {
         val barWidth = widthPx / values.size.toFloat()
 
-        Canvas(modifier = modifier) {
+        Canvas(
+            modifier = modifier
+            .width(widthDp)
+            .height(heightDp)
+        ) {
             drawRect(
                 color = Color.Green,
                 topLeft = Offset(0f, 0f),
