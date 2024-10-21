@@ -1,25 +1,32 @@
 package com.yes.camera.presentation.ui.custom.gles
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.opengl.GLES10.glDrawArrays
-import android.opengl.GLES10.glTexImage2D
+import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
 import android.opengl.GLES20.GL_BLEND
-import android.opengl.GLES20.GL_ONE
+import android.opengl.GLES20.GL_CLAMP_TO_EDGE
+import android.opengl.GLES20.GL_NEAREST
 import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
-import android.opengl.GLES20.GL_RGBA
+import android.opengl.GLES20.GL_REPEAT
 import android.opengl.GLES20.GL_SRC_ALPHA
 import android.opengl.GLES20.GL_TEXTURE_2D
+import android.opengl.GLES20.GL_TEXTURE_MAG_FILTER
+import android.opengl.GLES20.GL_TEXTURE_MIN_FILTER
+import android.opengl.GLES20.GL_TEXTURE_WRAP_S
+import android.opengl.GLES20.GL_TEXTURE_WRAP_T
 import android.opengl.GLES20.GL_TRIANGLES
-import android.opengl.GLES20.GL_UNSIGNED_BYTE
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glBlendFunc
 import android.opengl.GLES20.glDisable
 import android.opengl.GLES20.glEnable
+import android.opengl.GLES20.glTexParameterfv
+import android.opengl.GLES20.glTexParameteri
 import android.opengl.GLES20.glUniform1i
+import android.opengl.GLES32.GL_CLAMP_TO_BORDER
+import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
 import android.opengl.GLUtils
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
@@ -67,7 +74,7 @@ class GlFocus(
     private var texturePosition = Pair(0f, 0f)
 
     override fun translate(draggedPointX: Float, draggedPointY: Float) {
-      /*  val touchedPoint = Geometry.Point(
+        val touchedPoint = Geometry.Point(
             draggedPointX - posXcorrection,
             draggedPointY - posYcorrection,
             0f
@@ -86,7 +93,7 @@ class GlFocus(
             ),
             0f// mallet.radius,
         )
-        texturePosition = mapVertexToTextureCords(
+     /*   texturePosition = mapVertexToTextureCords(
             centerPosition.first / ratio,
             centerPosition.second
         )
@@ -100,36 +107,37 @@ class GlFocus(
             texturePosition.second,
             textureWidth,
             textureHeight,
-        )
+        )*/
         ////////////////////
         setIdentityM(modelMatrix, 0)
         translateM(modelMatrix, 0, centerPosition.first, centerPosition.second, 0f)
         /////////////////////
-        */
+
     }
 
 
-    var vertexWidth = 0f
-    var vertexHeight = 0f
+
 
     private var textureWidth = 0f
     private var textureHeight = 0f
 
     fun configure(
-        magnification: Float,
-        magnifierSizeW: Float,
-        magnifierSizeH: Float,
+        textureScale: Float,
+        sizeW: Float,
+        sizeH: Float,
     ) {
-        this.magnification = magnification
-        this.magnifierSizeW = magnifierSizeW
-        this.magnifierSizeH = magnifierSizeH
+        this.magnification = textureScale
+        this.magnifierSizeW = sizeW
+        this.magnifierSizeH = sizeH
 
-        vertexWidth = maxOf(width, height) * magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
-        vertexHeight = minOf(width, height) * magnifierSizeH//1.0f// he*magnifierSizeW
-
+        vertexWidth = maxOf(width, height) * sizeW//1.0f/ratio// wid*magnifierSizeW
+        vertexHeight = minOf(width, height) * sizeH//1.0f// he*magnifierSizeW
+/*
         textureWidth = 1f * (magnifierSizeW / magnification) // 0.0625fratio
         textureHeight = 1f * (magnifierSizeH / magnification) // 0.0625f
-
+*/
+        textureWidth = 1f/textureScale
+        textureHeight = 1f/textureScale
 
         updateVertexBuffer(
             vertexWidth,
@@ -148,6 +156,33 @@ class GlFocus(
         setIdentityM(modelMatrix, 0)
         translateM(modelMatrix, 0, 0f, 0f, 0f)
 
+    }
+    override fun updateTextureBuffer(
+        positionX: Float,
+        positionY: Float,
+        width: Float,
+        height: Float
+    ) {
+        val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            0.5f-width/2, 0.5f+height/2,
+            0.5f+width/2, 0.5f+height/2,
+            0.5f+width/2, 0.5f-height/2,
+            0.5f+width/2, 0.5f-height/2,
+            0.5f-width/2, 0.5f-height/2,
+            0.5f-width/2, 0.5f+height/2,
+
+        )
+      /*  val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            0.0f - width / 2, 0.0f + height / 2,
+            0.0f + width / 2, 0.0f + height / 2,
+            0.0f + width / 2, 0.0f - height / 2,
+            0.0f + width / 2, 0.0f - height / 2,
+            0.0f - width / 2, 0.0f - height / 2,
+            0.0f - width / 2, 0.0f + height / 2
+        )*/
+        textureBuffer.position(0)
+        textureBuffer.put(textureData, 0, vertexDataSize)
+        textureBuffer.position(0)
     }
 
     private var width: Float = 0f
@@ -174,7 +209,7 @@ class GlFocus(
         // Read in the resource
         val bitmap = BitmapFactory.decodeResource(
             context.resources,
-            R.drawable.center_focus_weak_24dp_copy_2,
+            R.drawable.tmp,
             options
         )
 
@@ -182,22 +217,39 @@ class GlFocus(
         glActiveTexture(GLES20.GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, textureHandle)
 
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_WRAP_S,
+            GL_CLAMP_TO_BORDER
+        );
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_WRAP_T,
+            GL_CLAMP_TO_BORDER
+        );
+        val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
+        glTexParameterfv(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_BORDER_COLOR,
+            borderColor,
+            0)
+
 
         // Set filtering
-        GLES20.glTexParameteri(
-            GLES20.GL_TEXTURE_2D,
-            GLES20.GL_TEXTURE_MIN_FILTER,
-            GLES20.GL_NEAREST
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MIN_FILTER,
+            GL_NEAREST
         )
-        GLES20.glTexParameteri(
-            GLES20.GL_TEXTURE_2D,
-            GLES20.GL_TEXTURE_MAG_FILTER,
-            GLES20.GL_NEAREST
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MAG_FILTER,
+            GL_NEAREST
         )
 
         // Load the bitmap into the bound texture.
         GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
-        glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+        glBindTexture(GL_TEXTURE_2D, 0)
         // Recycle the bitmap, since its data has been loaded into OpenGL.
         bitmap.recycle()
     }
@@ -210,7 +262,7 @@ class GlFocus(
         glActiveTexture(GLES20.GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, textureHandle)
 
-        glEnable(GL_BLEND)
+     //   glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
           glUniform1i(mTextureUniformHandle, 1)
 
@@ -221,7 +273,7 @@ class GlFocus(
         textureProgram.useProgram()
         textureProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
-        glDisable(GL_BLEND)
+      //  glDisable(GL_BLEND)
         glBindTexture(GL_TEXTURE_2D, 0)
 
     }

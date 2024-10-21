@@ -88,8 +88,7 @@ class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
     }
 
 
-    var vertexWidth = 0f
-    var vertexHeight = 0f
+
 
     private var textureWidth = 0f
     private var textureHeight = 0f

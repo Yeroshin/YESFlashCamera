@@ -11,8 +11,14 @@ import android.opengl.GLES20
 import android.opengl.GLES20.GL_BLEND
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.GL_FLOAT
+import android.opengl.GLES20.GL_NEAREST
 import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
 import android.opengl.GLES20.GL_SRC_ALPHA
+import android.opengl.GLES20.GL_TEXTURE_2D
+import android.opengl.GLES20.GL_TEXTURE_MAG_FILTER
+import android.opengl.GLES20.GL_TEXTURE_MIN_FILTER
+import android.opengl.GLES20.GL_TEXTURE_WRAP_S
+import android.opengl.GLES20.GL_TEXTURE_WRAP_T
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
@@ -25,9 +31,13 @@ import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
 import android.opengl.GLES20.glTexParameterf
+import android.opengl.GLES20.glTexParameterfv
+import android.opengl.GLES20.glTexParameteri
 import android.opengl.GLES20.glUniform1i
 import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES20.glVertexAttribPointer
+import android.opengl.GLES32.GL_CLAMP_TO_BORDER
+import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMV
@@ -140,8 +150,8 @@ class GLRenderer(
                     it.centerPosition.second,
                     it.centerPosition.third,
                 ),
-                glMagnifier.vertexWidth,
-                glMagnifier.vertexHeight
+                it.vertexWidth,
+                it.vertexHeight
             )
             it.setSelected(
                 Geometry.intersects(
@@ -206,7 +216,7 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                   glMagnifier,
+                  // glMagnifier,
                     glFocus
                 )
             )
@@ -254,7 +264,7 @@ class GLRenderer(
         }
         glObjects.find { it is GlFocus  }?.let { it as GlFocus
             it.configure(
-                1f, 1.2f, 1.2f
+                0.1f, 0.5f, 0.5f
             )
         }
       /*  (glObjects.find { it is GlMagnifier  } as GlMagnifier)?.let {
@@ -300,22 +310,38 @@ class GLRenderer(
         glGenTextures(2, textureHandle, 0)
         glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureHandle[0])
-        glTexParameterf(
+        glTexParameteri(
             GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_NEAREST.toFloat()
+            GL_TEXTURE_MIN_FILTER, GL_NEAREST
         )
-        glTexParameterf(
+        glTexParameteri(
             GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_NEAREST.toFloat()
+            GL_TEXTURE_MAG_FILTER, GL_NEAREST
         )
-        glTexParameterf(
+       /* glTexParameterf(
             GL_TEXTURE_EXTERNAL_OES,
             GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE.toFloat()
         )
         glTexParameterf(
             GL_TEXTURE_EXTERNAL_OES,
             GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat()
-        )
+        )*/
+        glTexParameteri(
+            GL_TEXTURE_EXTERNAL_OES,
+            GL_TEXTURE_WRAP_S,
+            GL_CLAMP_TO_BORDER
+        );
+        glTexParameteri(
+            GL_TEXTURE_EXTERNAL_OES,
+            GL_TEXTURE_WRAP_T,
+            GL_CLAMP_TO_BORDER
+        );
+        val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
+        glTexParameterfv(
+            GL_TEXTURE_EXTERNAL_OES,
+            GL_TEXTURE_BORDER_COLOR,
+            borderColor,
+            0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
         return textureHandle[0]
         //////////////////
@@ -364,7 +390,7 @@ class GLRenderer(
     abstract class GLObject(protected val textureProgram: GlShaderProgram) {
         var selected = false
         private val BYTES_PER_FLOAT: Int = 4
-        private val vertexDataSize: Int = 12
+        protected val vertexDataSize: Int = 12
         private val POSITION_COMPONENT_COUNT = 2
         private val TEXTURE_COORDINATES_COMPONENT_COUNT = 2
         private val STRIDE: Int = (POSITION_COMPONENT_COUNT
@@ -378,7 +404,7 @@ class GLRenderer(
                 .asFloatBuffer()
                 .put(vertexData)
         }
-        private val textureBuffer by lazy {
+        protected val textureBuffer by lazy {
             ByteBuffer
                 .allocateDirect(vertexDataSize * BYTES_PER_FLOAT)
                 .order(ByteOrder.nativeOrder())
@@ -386,7 +412,9 @@ class GLRenderer(
                 .put(textureData)
         }
         val modelMatrix = FloatArray(16)
-        protected fun updateVertexBuffer(width: Float, height: Float) {
+        var vertexWidth = 0f
+        var vertexHeight = 0f
+        protected  fun updateVertexBuffer(width: Float, height: Float) {
             val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
                 0.0f - width / 2, 0.0f + height / 2,
                 0.0f + width / 2, 0.0f + height / 2,
@@ -400,7 +428,7 @@ class GLRenderer(
             vertexBuffer.position(0)
         }
 
-        protected fun updateTextureBuffer(
+        protected open fun updateTextureBuffer(
             positionX: Float,
             positionY: Float,
             width: Float,
