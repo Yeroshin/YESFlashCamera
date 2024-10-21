@@ -1,20 +1,25 @@
 package com.yes.camera.presentation.ui.custom.gles
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES10.glTexImage2D
 import android.opengl.GLES20
 import android.opengl.GLES20.GL_BLEND
+import android.opengl.GLES20.GL_ONE
 import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
 import android.opengl.GLES20.GL_RGBA
 import android.opengl.GLES20.GL_SRC_ALPHA
 import android.opengl.GLES20.GL_TEXTURE_2D
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.GL_UNSIGNED_BYTE
+import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glBlendFunc
+import android.opengl.GLES20.glDisable
 import android.opengl.GLES20.glEnable
+import android.opengl.GLES20.glUniform1i
 import android.opengl.GLUtils
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
@@ -26,8 +31,7 @@ import com.yes.camera.utils.Geometry
 class GlFocus(
     val glShaderProgram: GLRenderer.GlShaderProgram,
     val context: Context
-) :
-GLRenderer.GLObject(glShaderProgram) {
+) : GLRenderer.GLObject(glShaderProgram) {
     private var magnification = 4.0f
     private var magnifierSizeW = 0.5f
     private var magnifierSizeH = 0.5f
@@ -39,7 +43,10 @@ GLRenderer.GLObject(glShaderProgram) {
     private var posXcorrection = 0f
     private var posYcorrection = 0f
 
+    init {
+        loadTexture(context)
 
+    }
     override fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float) {
         this.selected = pressed
         posXcorrection = touchedPointX - centerPosition.first
@@ -60,7 +67,7 @@ GLRenderer.GLObject(glShaderProgram) {
     private var texturePosition = Pair(0f, 0f)
 
     override fun translate(draggedPointX: Float, draggedPointY: Float) {
-        val touchedPoint = Geometry.Point(
+      /*  val touchedPoint = Geometry.Point(
             draggedPointX - posXcorrection,
             draggedPointY - posYcorrection,
             0f
@@ -98,6 +105,7 @@ GLRenderer.GLObject(glShaderProgram) {
         setIdentityM(modelMatrix, 0)
         translateM(modelMatrix, 0, centerPosition.first, centerPosition.second, 0f)
         /////////////////////
+        */
     }
 
 
@@ -148,60 +156,73 @@ GLRenderer.GLObject(glShaderProgram) {
         this.ratio = ratio
         this.height = 2f
         this.width = ratio * height
+
     }
-    init {
-        loadTexture(context)
-    }
-    val textureHandle =2
+
+
+
+    val textureHandle = 2
     fun loadTexture(context: Context) {
 
 
+        val options = BitmapFactory.Options().apply {
+          /*  inPreferredConfig = Bitmap.Config.RGBA_F16
+            inScaled = true*/
+        }
+        // options.inScaled = false // No pre-scaling
 
-            val options = BitmapFactory.Options()
-            options.inScaled = false // No pre-scaling
+        // Read in the resource
+        val bitmap = BitmapFactory.decodeResource(
+            context.resources,
+            R.drawable.center_focus_weak_24dp_copy_2,
+            options
+        )
 
-            // Read in the resource
-            val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.center_focus_weak_24dp, options)
-
-            // Bind to the texture in OpenGL
-
-            glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle)
+        // Bind to the texture in OpenGL
+        glActiveTexture(GLES20.GL_TEXTURE1)
+        glBindTexture(GL_TEXTURE_2D, textureHandle)
 
 
-            // Set filtering
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MIN_FILTER,
-                GLES20.GL_NEAREST
-            )
-            GLES20.glTexParameteri(
-                GLES20.GL_TEXTURE_2D,
-                GLES20.GL_TEXTURE_MAG_FILTER,
-                GLES20.GL_NEAREST
-            )
+        // Set filtering
+        GLES20.glTexParameteri(
+            GLES20.GL_TEXTURE_2D,
+            GLES20.GL_TEXTURE_MIN_FILTER,
+            GLES20.GL_NEAREST
+        )
+        GLES20.glTexParameteri(
+            GLES20.GL_TEXTURE_2D,
+            GLES20.GL_TEXTURE_MAG_FILTER,
+            GLES20.GL_NEAREST
+        )
 
-            // Load the bitmap into the bound texture.
-            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-
-            // Recycle the bitmap, since its data has been loaded into OpenGL.
-            bitmap.recycle()
+        // Load the bitmap into the bound texture.
+        GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
+        glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+        // Recycle the bitmap, since its data has been loaded into OpenGL.
+        bitmap.recycle()
     }
 
     override fun draw(modelViewProjectionMatrix: FloatArray) {
 
 
-
-       val  mTextureUniformHandle = GLES20.glGetUniformLocation( textureProgram.program, "u_TextureUnit")
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+        val mTextureUniformHandle =
+            GLES20.glGetUniformLocation(textureProgram.program, "u_TextureUnit")
+        glActiveTexture(GLES20.GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, textureHandle)
-        GLES20.glUniform1i(mTextureUniformHandle, 1)
 
         glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+          glUniform1i(mTextureUniformHandle, 1)
+
+        /* glEnable(GL_BLEND)
+         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/
 
         bindData()
         textureProgram.useProgram()
         textureProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
+        glDisable(GL_BLEND)
+        glBindTexture(GL_TEXTURE_2D, 0)
+
     }
 }

@@ -1,5 +1,13 @@
 package com.yes.camera.presentation.ui.custom.gles
 
+import android.opengl.GLES10.glDrawArrays
+import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
+import android.opengl.GLES20
+import android.opengl.GLES20.GL_TEXTURE_2D
+import android.opengl.GLES20.GL_TRIANGLES
+import android.opengl.GLES20.glActiveTexture
+import android.opengl.GLES20.glBindTexture
+import android.opengl.GLES20.glUniform1i
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
 import androidx.core.math.MathUtils.clamp
@@ -127,6 +135,29 @@ class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
         this.ratio = ratio
         this.height = 2f
         this.width = ratio * height
+    }
+    override fun draw(modelViewProjectionMatrix: FloatArray) {
+
+
+        val mTextureUniformHandle =
+            GLES20.glGetUniformLocation(textureProgram.program, "u_TextureUnit")
+        glActiveTexture(GLES20.GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, 1)
+
+        /*  glEnable(GL_BLEND)
+          glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)*/
+        glUniform1i(mTextureUniformHandle, 0)
+
+        /* glEnable(GL_BLEND)
+         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/
+
+        bindData()
+        textureProgram.useProgram()
+        textureProgram.setUniforms(modelViewProjectionMatrix)
+        glDrawArrays(GL_TRIANGLES, 0, 6)
+        // glDisable(GL_BLEND)
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
+
     }
 
 }

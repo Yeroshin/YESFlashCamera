@@ -8,12 +8,18 @@ import android.graphics.SurfaceTexture
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
+import android.opengl.GLES20.GL_BLEND
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.GL_FLOAT
+import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
+import android.opengl.GLES20.GL_SRC_ALPHA
 import android.opengl.GLES20.GL_TRIANGLES
+import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
+import android.opengl.GLES20.glBlendFunc
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glClearColor
+import android.opengl.GLES20.glEnable
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetAttribLocation
@@ -152,13 +158,30 @@ class GLRenderer(
         magnifierSizeW: Float,
         magnifierSizeH: Float,
     ) {
-        if(glObjects.size>1){
-            (glObjects[1] as GlMagnifier).configure(
+       // val foundDog: GlMagnifier? = glObjects.fi{ glObjects is GlMagnifier  } as Dog?
+        glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
+            it.configure(
                 magnification,
                 magnifierSizeW,
                 magnifierSizeH,
             )
         }
+       /* (glObjects.find { it is GlMagnifier  } as GlMagnifier)?.let {
+            it.configure(
+                magnification,
+                magnifierSizeW,
+                magnifierSizeH,
+            )
+        }*/
+
+      /*  val dogs: List<GlMagnifier> = glObjects.filterIsInstance<GlMagnifier>()
+        if(glObjects.size>1){
+           /* (glObjects[1] as GlMagnifier).configure(
+                magnification,
+                magnifierSizeW,
+                magnifierSizeH,
+            )*/
+        }*/
 
     }
 
@@ -183,8 +206,8 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                    glMagnifier,
-               //     glFocus
+                   glMagnifier,
+                    glFocus
                 )
             )
         }
@@ -224,7 +247,28 @@ class GLRenderer(
         glObjects.forEach {
             it.onRatioChanged(ratio)
         }
-        (glObjects[1] as GlMagnifier).configure(2f, 0.5f, 0.5f)
+        glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
+            it.configure(
+                2f, 0.5f, 0.5f
+            )
+        }
+        glObjects.find { it is GlFocus  }?.let { it as GlFocus
+            it.configure(
+                1f, 1.2f, 1.2f
+            )
+        }
+      /*  (glObjects.find { it is GlMagnifier  } as GlMagnifier)?.let {
+            it.configure(
+                2f, 0.5f, 0.5f
+            )
+        }
+        (glObjects.find { it is GlFocus  } as GlFocus)?.let {
+            it.configure(
+                2f, 0.5f, 0.5f
+            )
+        }*/
+      /*  (glObjects[2] as GlFocus).configure(2f, 0.5f, 0.5f)
+        (glObjects[1] as GlMagnifier).configure(2f, 0.5f, 0.5f)*/
 
     }
 
@@ -250,7 +294,11 @@ class GLRenderer(
 
     private fun createOESTextureObject(): Int {
         val textureHandle = IntArray(2)
+
+
+
         glGenTextures(2, textureHandle, 0)
+        glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureHandle[0])
         glTexParameterf(
             GL_TEXTURE_EXTERNAL_OES,
@@ -404,17 +452,22 @@ class GLRenderer(
         var centerPosition = Triple(0f, 0f, 0f)
         abstract fun translate(draggedPointX: Float, draggedPointY: Float)
 
-        open fun draw(modelViewProjectionMatrix: FloatArray) {
-            val  mTextureUniformHandle = glGetUniformLocation( textureProgram.program, "u_TextureUnit")
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+      /*  open fun draw(modelViewProjectionMatrix: FloatArray) {
+         /*   val  mTextureUniformHandle = glGetUniformLocation( textureProgram.program, "u_TextureUnit")
+            glActiveTexture(GLES20.GL_TEXTURE0)
             glBindTexture(GLES20.GL_TEXTURE_2D, 1)
-        //    glUniform1i(mTextureUniformHandle, 0)
+            glUniform1i(mTextureUniformHandle, 0)
+
+
 
             bindData()
             textureProgram.useProgram()
             textureProgram.setUniforms(modelViewProjectionMatrix)
             glDrawArrays(GL_TRIANGLES, 0, 6)
-        }
+
+            glBindTexture(GLES20.GL_TEXTURE_2D, 0)*/
+        }*/
+        abstract fun draw(modelViewProjectionMatrix: FloatArray)
 
         abstract fun onRatioChanged(ratio: Float)
 
