@@ -20,14 +20,13 @@ import com.yes.camera.utils.FileUtils
 import com.yes.camera.presentation.ui.custom.gles.ShaderProgram.ShaderHelper.createShader
 
 
-abstract class ShaderProgram protected constructor(
+class ShaderProgram (
     context: Context, vertexShaderResourceId: Int,
     fragmentShaderResourceId: Int
 ) {
-    protected  val A_POSITION: String = "a_Position"
-    protected val U_MATRIX: String = "u_Matrix"
 
-     val program: Int = ShaderHelper.buildProgram(
+
+     val programId: Int = ShaderHelper.buildProgram(
         createShader(
             context, GL_VERTEX_SHADER, vertexShaderResourceId
         ),
@@ -37,7 +36,7 @@ abstract class ShaderProgram protected constructor(
     )
 
     fun useProgram() {
-        glUseProgram(program)
+        glUseProgram(programId)
     }
 
     object ShaderHelper {

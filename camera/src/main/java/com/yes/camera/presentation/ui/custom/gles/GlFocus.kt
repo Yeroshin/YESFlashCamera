@@ -3,13 +3,9 @@ package com.yes.camera.presentation.ui.custom.gles
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.opengl.GLES10.glDrawArrays
-import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
-import android.opengl.GLES20.GL_BLEND
-import android.opengl.GLES20.GL_CLAMP_TO_EDGE
 import android.opengl.GLES20.GL_NEAREST
 import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
-import android.opengl.GLES20.GL_REPEAT
 import android.opengl.GLES20.GL_SRC_ALPHA
 import android.opengl.GLES20.GL_TEXTURE_2D
 import android.opengl.GLES20.GL_TEXTURE_MAG_FILTER
@@ -20,11 +16,10 @@ import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glBlendFunc
-import android.opengl.GLES20.glDisable
-import android.opengl.GLES20.glEnable
 import android.opengl.GLES20.glTexParameterfv
 import android.opengl.GLES20.glTexParameteri
 import android.opengl.GLES20.glUniform1i
+import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES32.GL_CLAMP_TO_BORDER
 import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
 import android.opengl.GLUtils
@@ -36,7 +31,7 @@ import com.yes.camera.utils.Geometry
 
 
 class GlFocus(
-    val glShaderProgram: GLRenderer.GlShaderProgram,
+    val glShaderProgram: ShaderProgram,
     val context: Context
 ) : GLRenderer.GLObject(glShaderProgram) {
     private var magnification = 4.0f
@@ -258,7 +253,7 @@ class GlFocus(
 
 
         val mTextureUniformHandle =
-            GLES20.glGetUniformLocation(textureProgram.program, "u_TextureUnit")
+            GLES20.glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
         glActiveTexture(GLES20.GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, textureHandle)
 
@@ -270,8 +265,9 @@ class GlFocus(
          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/
 
         bindData()
-        textureProgram.useProgram()
-        textureProgram.setUniforms(modelViewProjectionMatrix)
+        shaderProgram.useProgram()
+        glUniformMatrix4fv(uMatrixLocation, 1, false, modelViewProjectionMatrix, 0)
+      //  shaderProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
       //  glDisable(GL_BLEND)
         glBindTexture(GL_TEXTURE_2D, 0)

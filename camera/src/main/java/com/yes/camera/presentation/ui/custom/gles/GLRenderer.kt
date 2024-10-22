@@ -5,35 +5,25 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Context.ACTIVITY_SERVICE
 import android.graphics.SurfaceTexture
-import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
-import android.opengl.GLES20.GL_BLEND
 import android.opengl.GLES20.GL_COLOR_BUFFER_BIT
 import android.opengl.GLES20.GL_FLOAT
 import android.opengl.GLES20.GL_NEAREST
-import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
-import android.opengl.GLES20.GL_SRC_ALPHA
-import android.opengl.GLES20.GL_TEXTURE_2D
 import android.opengl.GLES20.GL_TEXTURE_MAG_FILTER
 import android.opengl.GLES20.GL_TEXTURE_MIN_FILTER
 import android.opengl.GLES20.GL_TEXTURE_WRAP_S
 import android.opengl.GLES20.GL_TEXTURE_WRAP_T
-import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
-import android.opengl.GLES20.glBlendFunc
 import android.opengl.GLES20.glClear
 import android.opengl.GLES20.glClearColor
-import android.opengl.GLES20.glEnable
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
-import android.opengl.GLES20.glTexParameterf
 import android.opengl.GLES20.glTexParameterfv
 import android.opengl.GLES20.glTexParameteri
-import android.opengl.GLES20.glUniform1i
 import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLES32.GL_CLAMP_TO_BORDER
@@ -60,7 +50,7 @@ class GLRenderer(
     private var surfaceTexture: SurfaceTexture? = null
     private val glScreen by lazy {
         GLScreen(
-            GlShaderProgram(
+            ShaderProgram(
                 context,
                 R.raw.vertex,
                 R.raw.fragment
@@ -69,7 +59,7 @@ class GLRenderer(
     }
     private val glMagnifier by lazy {
         GlMagnifier(
-            GlShaderProgram(
+            ShaderProgram(
                 context,
                 R.raw.vertex,
                 R.raw.fragment
@@ -78,7 +68,7 @@ class GLRenderer(
     }
     private val glFocus by lazy {
         GlFocus(
-            GlShaderProgram(
+            ShaderProgram(
                 context,
                 R.raw.vertex,
                 R.raw.fragment,
@@ -387,7 +377,7 @@ class GLRenderer(
           return textureObjectIds[0];*/
     }
 
-    abstract class GLObject(protected val textureProgram: GlShaderProgram) {
+    abstract class GLObject(protected val shaderProgram: ShaderProgram) {
         var selected = false
         private val BYTES_PER_FLOAT: Int = 4
         protected val vertexDataSize: Int = 12
@@ -414,6 +404,16 @@ class GLRenderer(
         val modelMatrix = FloatArray(16)
         var vertexWidth = 0f
         var vertexHeight = 0f
+        protected val U_TEXTURE_UNIT: String = "u_TextureUnit"
+        private val A_TEXTURE_COORDINATES: String = "a_TextureCoordinates"
+
+        protected  val A_POSITION: String = "a_Position"
+        protected val U_MATRIX: String = "u_Matrix"
+        protected val uMatrixLocation = glGetUniformLocation(shaderProgram.programId, U_MATRIX)
+        private val uTextureUnitLocation = glGetUniformLocation(shaderProgram.programId, U_TEXTURE_UNIT)
+        val positionAttributeLocation = glGetAttribLocation(shaderProgram.programId, "a_Position")
+        val textureCoordinatesAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_TEXTURE_COORDINATES)
+
         protected  fun updateVertexBuffer(width: Float, height: Float) {
             val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
                 0.0f - width / 2, 0.0f + height / 2,
@@ -452,7 +452,8 @@ class GLRenderer(
 
             vertexBuffer.position(0)
             glVertexAttribPointer(
-                textureProgram.positionAttributeLocation,
+                glGetAttribLocation(shaderProgram.programId, "a_Position"),
+              //  shaderProgram.positionAttributeLocation,
                 2,
                 GL_FLOAT,
                 false,
@@ -460,12 +461,14 @@ class GLRenderer(
                 vertexBuffer
             )
             glEnableVertexAttribArray(
-                textureProgram.positionAttributeLocation
+                glGetAttribLocation(shaderProgram.programId, "a_Position")
+                //shaderProgram.positionAttributeLocation
             )
             ////////////////////////
             textureBuffer.position(0)
             glVertexAttribPointer(
-                textureProgram.textureCoordinatesAttributeLocation,
+                glGetAttribLocation(shaderProgram.programId, "a_TextureCoordinates"),
+               // shaderProgram.textureCoordinatesAttributeLocation,
                 2,
                 GL_FLOAT,
                 false,
@@ -473,7 +476,8 @@ class GLRenderer(
                 textureBuffer
             )
             glEnableVertexAttribArray(
-                textureProgram.textureCoordinatesAttributeLocation
+                glGetAttribLocation(shaderProgram.programId, "a_TextureCoordinates")
+                //shaderProgram.textureCoordinatesAttributeLocation
             )
         }
 
@@ -501,7 +505,7 @@ class GLRenderer(
 
     }
 
-    class GlShaderProgram(
+  /*  class GlShaderProgram(
         context: Context,
         vertexShaderResourceId: Int,
         fragmentShaderResourceId: Int
@@ -510,19 +514,12 @@ class GLRenderer(
         vertexShaderResourceId,
         fragmentShaderResourceId
     ) {
-        private val U_TEXTURE_UNIT: String = "u_TextureUnit"
-        private val A_TEXTURE_COORDINATES: String = "a_TextureCoordinates"
-
-        val positionAttributeLocation = glGetAttribLocation(program, A_POSITION)
-        val textureCoordinatesAttributeLocation =
-            glGetAttribLocation(program, A_TEXTURE_COORDINATES)
-        private val uMatrixLocation = glGetUniformLocation(program, U_MATRIX)
-        private val uTextureUnitLocation = glGetUniformLocation(program, U_TEXTURE_UNIT)
 
 
-        fun setUniforms(matrix: FloatArray?) {
-            glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
-        }
-    }
+
+       /* fun setUniforms(matrix: FloatArray?) {
+          //  glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
+        }*/
+    }*/
 
 }

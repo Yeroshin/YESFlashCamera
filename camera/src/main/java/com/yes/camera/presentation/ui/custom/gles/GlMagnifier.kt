@@ -3,17 +3,17 @@ package com.yes.camera.presentation.ui.custom.gles
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
-import android.opengl.GLES20.GL_TEXTURE_2D
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
 import android.opengl.GLES20.glUniform1i
+import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
 import androidx.core.math.MathUtils.clamp
 import com.yes.camera.utils.Geometry
 
-class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
+class GlMagnifier(glShaderProgram: ShaderProgram) :
     GLRenderer.GLObject(glShaderProgram) {
     private var magnification = 4.0f
     private var magnifierSizeW = 0.5f
@@ -139,7 +139,7 @@ class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
 
 
         val mTextureUniformHandle =
-            GLES20.glGetUniformLocation(textureProgram.program, "u_TextureUnit")
+            GLES20.glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
         glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 1)
 
@@ -151,8 +151,10 @@ class GlMagnifier(glShaderProgram: GLRenderer.GlShaderProgram) :
          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/
 
         bindData()
-        textureProgram.useProgram()
-        textureProgram.setUniforms(modelViewProjectionMatrix)
+        shaderProgram.useProgram()
+        glUniformMatrix4fv(uMatrixLocation, 1, false, modelViewProjectionMatrix, 0)
+
+       // shaderProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
         // glDisable(GL_BLEND)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
