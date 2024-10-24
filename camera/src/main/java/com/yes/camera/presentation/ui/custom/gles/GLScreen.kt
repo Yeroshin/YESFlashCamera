@@ -46,12 +46,12 @@ GLRenderer.GLObject(glShaderProgram){
 
         val mTextureUniformHandle =
             GLES20.glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
-        glActiveTexture(GLES20.GL_TEXTURE0)
+      //  glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 1)
 
       /*  glEnable(GL_BLEND)
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)*/
-        glUniform1i(mTextureUniformHandle, 0)
+     //   glUniform1i(mTextureUniformHandle, 0)
 
         /* glEnable(GL_BLEND)
          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/

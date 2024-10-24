@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.ui.custom.gles
 
 import android.content.Context
+import android.opengl.GLES20
 import android.opengl.GLES20.GL_COMPILE_STATUS
 import android.opengl.GLES20.GL_FRAGMENT_SHADER
 import android.opengl.GLES20.GL_LINK_STATUS
@@ -11,13 +12,19 @@ import android.opengl.GLES20.glCreateProgram
 import android.opengl.GLES20.glCreateShader
 import android.opengl.GLES20.glDeleteProgram
 import android.opengl.GLES20.glDeleteShader
+import android.opengl.GLES20.glGetError
 import android.opengl.GLES20.glGetProgramiv
+import android.opengl.GLES20.glGetShaderInfoLog
 import android.opengl.GLES20.glGetShaderiv
 import android.opengl.GLES20.glLinkProgram
 import android.opengl.GLES20.glShaderSource
 import android.opengl.GLES20.glUseProgram
-import com.yes.camera.utils.FileUtils
+import android.opengl.GLES30
+import android.opengl.GLES30.GL_VERSION
+import android.opengl.GLES30.glGetString
+import android.util.Log
 import com.yes.camera.presentation.ui.custom.gles.ShaderProgram.ShaderHelper.createShader
+import com.yes.camera.utils.FileUtils
 
 
 class ShaderProgram (
@@ -36,6 +43,12 @@ class ShaderProgram (
     )
 
     fun useProgram() {
+        val error1 = glGetError()
+        if (error1 != GLES30.GL_NO_ERROR) {
+            Log.e("TextureLoad", "OpenGL Error: $error1")
+        } else {
+            Log.d("TextureLoad", "Texture loaded successfully")
+        }
         glUseProgram(programId)
     }
 
@@ -63,6 +76,8 @@ class ShaderProgram (
         }
 
         private fun createShader(type: Int, shaderText: String?): Int {
+            val version = glGetString(GL_VERSION)
+            Log.d("OpenGL Version", "OpenGL ES version: $version")
 
             val shaderId = glCreateShader(type)
             if (shaderId == 0) {
@@ -73,8 +88,14 @@ class ShaderProgram (
             val compileStatus = IntArray(1)
             glGetShaderiv(shaderId, GL_COMPILE_STATUS, compileStatus, 0)
             if (compileStatus[0] == 0) {
+                val error = glGetShaderInfoLog(shaderId)
+                Log.e("ShaderError", "Error compiling shader: $error")
                 glDeleteShader(shaderId)
                 return 0
+            }
+            val shaderLog = glGetShaderInfoLog(shaderId)
+            if (shaderLog.isNotEmpty()) {
+                Log.e("Shader Error", shaderLog)
             }
             return shaderId
         }

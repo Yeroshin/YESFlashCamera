@@ -1,33 +1,46 @@
 package com.yes.camera.presentation.ui.custom.gles
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.opengl.GLES10.glDrawArrays
-import android.opengl.GLES20
-import android.opengl.GLES20.GL_NEAREST
-import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
-import android.opengl.GLES20.GL_SRC_ALPHA
-import android.opengl.GLES20.GL_TEXTURE_2D
-import android.opengl.GLES20.GL_TEXTURE_MAG_FILTER
-import android.opengl.GLES20.GL_TEXTURE_MIN_FILTER
-import android.opengl.GLES20.GL_TEXTURE_WRAP_S
-import android.opengl.GLES20.GL_TEXTURE_WRAP_T
-import android.opengl.GLES20.GL_TRIANGLES
-import android.opengl.GLES20.glActiveTexture
-import android.opengl.GLES20.glBindTexture
-import android.opengl.GLES20.glBlendFunc
-import android.opengl.GLES20.glTexParameterfv
-import android.opengl.GLES20.glTexParameteri
-import android.opengl.GLES20.glUniform1i
-import android.opengl.GLES20.glUniformMatrix4fv
+import android.opengl.GLES30.GL_CLAMP_TO_EDGE
+import android.opengl.GLES30.GL_LINEAR
+import android.opengl.GLES30.glGetError
+import android.opengl.GLES30.GL_VERSION
+import android.opengl.GLES30.glGetString
+import android.opengl.GLES30
+import android.opengl.GLES30.GL_NEAREST
+import android.opengl.GLES30.GL_ONE_MINUS_SRC_ALPHA
+import android.opengl.GLES30.GL_RGBA
+import android.opengl.GLES30.GL_SRC_ALPHA
+import android.opengl.GLES30.GL_TEXTURE_MAG_FILTER
+import android.opengl.GLES30.GL_TEXTURE_MIN_FILTER
+import android.opengl.GLES30.GL_TEXTURE_WRAP_S
+import android.opengl.GLES30.GL_TEXTURE_WRAP_T
+import android.opengl.GLES30.GL_TRIANGLES
+import android.opengl.GLES30.GL_UNSIGNED_BYTE
+import android.opengl.GLES30.glActiveTexture
+import android.opengl.GLES30.glBindTexture
+import android.opengl.GLES30.glBlendFunc
+import android.opengl.GLES30.glDrawArrays
+import android.opengl.GLES30.glTexParameteri
+import android.opengl.GLES30.glUniform1i
+import android.opengl.GLES30.glUniformMatrix4fv
+import android.opengl.GLES30.GL_TEXTURE0
+import android.opengl.GLES30.glGetUniformLocation
+import android.opengl.GLES30.glTexImage3D
+import android.opengl.GLES30.glTexSubImage3D
 import android.opengl.GLES32.GL_CLAMP_TO_BORDER
-import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
-import android.opengl.GLUtils
+import android.opengl.GLES30.GL_TEXTURE_2D_ARRAY
+import android.opengl.GLES30.glTexStorage3D
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
+import android.util.Log
 import androidx.core.math.MathUtils.clamp
 import com.yes.camera.R
 import com.yes.camera.utils.Geometry
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 
 class GlFocus(
@@ -158,15 +171,16 @@ class GlFocus(
         width: Float,
         height: Float
     ) {
-        val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
-            0.5f-width/2, 0.5f+height/2,
-            0.5f+width/2, 0.5f+height/2,
-            0.5f+width/2, 0.5f-height/2,
-            0.5f+width/2, 0.5f-height/2,
-            0.5f-width/2, 0.5f-height/2,
-            0.5f-width/2, 0.5f+height/2,
+        val textureData = floatArrayOf(
+            // Order of coordinates: X, Y, S, T
+            0.5f - width / 2, 0.5f + height / 2,
+            0.5f + width / 2, 0.5f + height / 2,
+            0.5f + width / 2, 0.5f - height / 2,
+            0.5f + width / 2, 0.5f - height / 2,
+            0.5f - width / 2, 0.5f - height / 2,
+            0.5f - width / 2, 0.5f + height / 2,
 
-        )
+            )
       /*  val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
             0.0f - width / 2, 0.0f + height / 2,
             0.0f + width / 2, 0.0f + height / 2,
@@ -193,11 +207,21 @@ class GlFocus(
 
     val textureHandle = 2
     fun loadTexture(context: Context) {
+       /* val options = BitmapFactory.Options().apply {
+            // Установите inSampleSize для уменьшения размера изображения
+            inSampleSize = 2 // Уменьшает размер изображения в 2 раза
 
+            // Установите предпочитаемый формат
+            inPreferredConfig = Bitmap.Config.ARGB_8888 // 32-битный цвет
+
+            // Убедитесь, что изображение не будет масштабироваться автоматически
+            inScaled = false
+        }*/
 
         val options = BitmapFactory.Options().apply {
-          /*  inPreferredConfig = Bitmap.Config.RGBA_F16
-            inScaled = true*/
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+            /*  inPreferredConfig = Bitmap.Config.RGBA_F16
+              inScaled = true*/
         }
         // options.inScaled = false // No pre-scaling
 
@@ -207,60 +231,138 @@ class GlFocus(
             R.drawable.tmp,
             options
         )
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
+        val buffer = ByteBuffer.allocateDirect(bitmap.width * bitmap.height * 4)
+        buffer.order(ByteOrder.nativeOrder())
+        for (pixel in pixels) {
+            buffer.putInt(pixel)
+        }
+        buffer.position(0)
+
+        ///////////////////
+        val error1 = glGetError()
+        if (error1 != GLES30.GL_NO_ERROR) {
+            Log.e("TextureLoad", "OpenGL Error: $error1")
+        } else {
+            Log.d("TextureLoad", "Texture loaded successfully")
+        }
         // Bind to the texture in OpenGL
-        glActiveTexture(GLES20.GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, textureHandle)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureHandle)
 
-        glTexParameteri(
-            GL_TEXTURE_2D,
+      /*  glTexParameteri(
+            GL_TEXTURE_2D_ARRAY,
             GL_TEXTURE_WRAP_S,
             GL_CLAMP_TO_BORDER
         );
         glTexParameteri(
-            GL_TEXTURE_2D,
+            GL_TEXTURE_2D_ARRAY,
             GL_TEXTURE_WRAP_T,
             GL_CLAMP_TO_BORDER
-        );
-        val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
+        );*/
+     /*   val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
         glTexParameterfv(
-            GL_TEXTURE_2D,
+            GL_TEXTURE_2D_ARRAY,
             GL_TEXTURE_BORDER_COLOR,
             borderColor,
-            0)
+            0)*/
 
 
-        // Set filtering
-        glTexParameteri(
-            GL_TEXTURE_2D,
+
+      /*  glTexParameteri(
+            GL_TEXTURE_2D_ARRAY,
             GL_TEXTURE_MIN_FILTER,
             GL_NEAREST
         )
         glTexParameteri(
-            GL_TEXTURE_2D,
+            GL_TEXTURE_2D_ARRAY,
             GL_TEXTURE_MAG_FILTER,
             GL_NEAREST
-        )
+        )*/
 
         // Load the bitmap into the bound texture.
-        GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
-        glBindTexture(GL_TEXTURE_2D, 0)
+        glTexStorage3D(
+            GL_TEXTURE_2D_ARRAY,
+            1,
+            GL_RGBA,
+            bitmap.width,
+            bitmap.height,
+            2
+        )
+       /* glTexImage3D(
+            GL_TEXTURE_2D_ARRAY,
+            0,
+            GL_RGBA,
+            bitmap.width,
+            bitmap.height,
+            2,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            null
+        )*/
+        glTexSubImage3D(
+            GLES30.GL_TEXTURE_2D_ARRAY,
+            0,
+            0,
+            0,
+            0, // Индекс слоя
+            bitmap.width,
+            bitmap.height,
+            1, // Глубина (1 слой)
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            buffer
+        )
+        glTexSubImage3D(
+            GLES30.GL_TEXTURE_2D_ARRAY,
+            0,
+            0,
+            0,
+            2, // Индекс слоя
+            bitmap.width,
+            bitmap.height,
+            1, // Глубина (1 слой)
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            buffer
+        )
+        // Set filtering
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+
+        //////////////////////
+        val error = glGetError()
+        if (error != GLES30.GL_NO_ERROR) {
+            Log.e("TextureLoad", "OpenGL Error: $error")
+        } else {
+            Log.d("TextureLoad", "Texture loaded successfully")
+        }
+        //  GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
         // Recycle the bitmap, since its data has been loaded into OpenGL.
         bitmap.recycle()
     }
 
     override fun draw(modelViewProjectionMatrix: FloatArray) {
-
+        val version = glGetString(GL_VERSION)
+        Log.d("OpenGL Version", "OpenGL ES version: $version")
 
         val mTextureUniformHandle =
-            GLES20.glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
-        glActiveTexture(GLES20.GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, textureHandle)
+            glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
+        glUniform1i(mTextureUniformHandle, 0)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureHandle)
 
      //   glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-          glUniform1i(mTextureUniformHandle, 1)
-
+      //  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        //  glUniform1i(mTextureUniformHandle, 1)
+        val tmp=glGetUniformLocation(shaderProgram.programId, "selectedLayer")
+        glUniform1i(glGetUniformLocation(shaderProgram.programId, "selectedLayer"), 0);
         /* glEnable(GL_BLEND)
          glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/
 
@@ -269,8 +371,14 @@ class GlFocus(
         glUniformMatrix4fv(uMatrixLocation, 1, false, modelViewProjectionMatrix, 0)
       //  shaderProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
+        val error = glGetError()
+        if (error != GLES30.GL_NO_ERROR) {
+            Log.e("TextureLoad", "OpenGL Error: $error")
+        } else {
+            Log.d("TextureLoad", "Texture loaded successfully")
+        }
       //  glDisable(GL_BLEND)
-        glBindTexture(GL_TEXTURE_2D, 0)
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
 
     }
 }

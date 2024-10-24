@@ -48,31 +48,33 @@ class GLRenderer(
 ) : GLSurfaceView.Renderer {
 
     private var surfaceTexture: SurfaceTexture? = null
-    private val glScreen by lazy {
-        GLScreen(
+    private val plainShaderProgram by lazy {
             ShaderProgram(
                 context,
-                R.raw.vertex,
-                R.raw.fragment
+                R.raw.vertex3,
+                R.raw.fragment3
             )
+    }
+    private val stateShaderProgram by lazy {
+        ShaderProgram(
+            context,
+            R.raw.vertex3,
+            R.raw.state_fragment3
+        )
+    }
+    private val glScreen by lazy {
+        GLScreen(
+            plainShaderProgram
         )
     }
     private val glMagnifier by lazy {
         GlMagnifier(
-            ShaderProgram(
-                context,
-                R.raw.vertex,
-                R.raw.fragment
-            )
+            plainShaderProgram
         )
     }
     private val glFocus by lazy {
         GlFocus(
-            ShaderProgram(
-                context,
-                R.raw.vertex,
-                R.raw.fragment,
-            ),
+            stateShaderProgram,
             context
         )
     }
@@ -218,7 +220,7 @@ class GLRenderer(
     private fun checkSupport(): Boolean {
         val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
-        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
+        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x30000
         return if (supportsEs2) {
             true
             /* binding.viewFinder.setEGLContextClientVersion(2)
@@ -404,14 +406,14 @@ class GLRenderer(
         val modelMatrix = FloatArray(16)
         var vertexWidth = 0f
         var vertexHeight = 0f
-        protected val U_TEXTURE_UNIT: String = "u_TextureUnit"
+        private val U_TEXTURE_UNIT: String = "u_TextureUnit"
         private val A_TEXTURE_COORDINATES: String = "a_TextureCoordinates"
 
-        protected  val A_POSITION: String = "a_Position"
-        protected val U_MATRIX: String = "u_Matrix"
+        private val A_POSITION: String = "a_Position"
+        private val U_MATRIX: String = "u_Matrix"
         protected val uMatrixLocation = glGetUniformLocation(shaderProgram.programId, U_MATRIX)
         private val uTextureUnitLocation = glGetUniformLocation(shaderProgram.programId, U_TEXTURE_UNIT)
-        val positionAttributeLocation = glGetAttribLocation(shaderProgram.programId, "a_Position")
+        val positionAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_POSITION)
         val textureCoordinatesAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_TEXTURE_COORDINATES)
 
         protected  fun updateVertexBuffer(width: Float, height: Float) {
@@ -452,8 +454,7 @@ class GLRenderer(
 
             vertexBuffer.position(0)
             glVertexAttribPointer(
-                glGetAttribLocation(shaderProgram.programId, "a_Position"),
-              //  shaderProgram.positionAttributeLocation,
+                positionAttributeLocation,
                 2,
                 GL_FLOAT,
                 false,
@@ -461,14 +462,12 @@ class GLRenderer(
                 vertexBuffer
             )
             glEnableVertexAttribArray(
-                glGetAttribLocation(shaderProgram.programId, "a_Position")
-                //shaderProgram.positionAttributeLocation
+                positionAttributeLocation
             )
             ////////////////////////
             textureBuffer.position(0)
             glVertexAttribPointer(
-                glGetAttribLocation(shaderProgram.programId, "a_TextureCoordinates"),
-               // shaderProgram.textureCoordinatesAttributeLocation,
+                textureCoordinatesAttributeLocation,
                 2,
                 GL_FLOAT,
                 false,
@@ -476,50 +475,16 @@ class GLRenderer(
                 textureBuffer
             )
             glEnableVertexAttribArray(
-                glGetAttribLocation(shaderProgram.programId, "a_TextureCoordinates")
-                //shaderProgram.textureCoordinatesAttributeLocation
+                textureCoordinatesAttributeLocation
             )
         }
 
         var centerPosition = Triple(0f, 0f, 0f)
         abstract fun translate(draggedPointX: Float, draggedPointY: Float)
 
-      /*  open fun draw(modelViewProjectionMatrix: FloatArray) {
-         /*   val  mTextureUniformHandle = glGetUniformLocation( textureProgram.program, "u_TextureUnit")
-            glActiveTexture(GLES20.GL_TEXTURE0)
-            glBindTexture(GLES20.GL_TEXTURE_2D, 1)
-            glUniform1i(mTextureUniformHandle, 0)
-
-
-
-            bindData()
-            textureProgram.useProgram()
-            textureProgram.setUniforms(modelViewProjectionMatrix)
-            glDrawArrays(GL_TRIANGLES, 0, 6)
-
-            glBindTexture(GLES20.GL_TEXTURE_2D, 0)*/
-        }*/
         abstract fun draw(modelViewProjectionMatrix: FloatArray)
 
         abstract fun onRatioChanged(ratio: Float)
 
     }
-
-  /*  class GlShaderProgram(
-        context: Context,
-        vertexShaderResourceId: Int,
-        fragmentShaderResourceId: Int
-    ) : ShaderProgram(
-        context,
-        vertexShaderResourceId,
-        fragmentShaderResourceId
-    ) {
-
-
-
-       /* fun setUniforms(matrix: FloatArray?) {
-          //  glUniformMatrix4fv(uMatrixLocation, 1, false, matrix, 0)
-        }*/
-    }*/
-
 }
