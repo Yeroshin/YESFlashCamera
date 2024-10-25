@@ -51,15 +51,22 @@ class GLRenderer(
     private val plainShaderProgram by lazy {
             ShaderProgram(
                 context,
-                R.raw.vertex3,
-                R.raw.fragment3
+                R.raw.vertex,
+                R.raw.fragment
             )
     }
     private val stateShaderProgram by lazy {
         ShaderProgram(
             context,
-            R.raw.vertex3,
-            R.raw.state_fragment3
+            R.raw.vertex,
+            R.raw.state_fragment
+        )
+    }
+    private val scaledShaderProgram by lazy {
+        ShaderProgram(
+            context,
+            R.raw.vertex,
+            R.raw.scaled_fragment
         )
     }
     private val glScreen by lazy {
@@ -75,6 +82,12 @@ class GLRenderer(
     private val glFocus by lazy {
         GlFocus(
             stateShaderProgram,
+            context
+        )
+    }
+    private val glTmp by lazy {
+        Gltmp(
+            scaledShaderProgram,
             context
         )
     }
@@ -209,7 +222,8 @@ class GLRenderer(
                 listOf(
                     glScreen,
                   // glMagnifier,
-                    glFocus
+                    glFocus,
+                    glTmp
                 )
             )
         }
@@ -220,7 +234,7 @@ class GLRenderer(
     private fun checkSupport(): Boolean {
         val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
-        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x30000
+        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
         return if (supportsEs2) {
             true
             /* binding.viewFinder.setEGLContextClientVersion(2)
@@ -256,22 +270,14 @@ class GLRenderer(
         }
         glObjects.find { it is GlFocus  }?.let { it as GlFocus
             it.configure(
-                0.1f, 0.5f, 0.5f
+                1f, 0.7f, 0.5f
             )
         }
-      /*  (glObjects.find { it is GlMagnifier  } as GlMagnifier)?.let {
+        glObjects.find { it is Gltmp  }?.let { it as Gltmp
             it.configure(
-                2f, 0.5f, 0.5f
+                1f, 0.5f, 0.5f
             )
         }
-        (glObjects.find { it is GlFocus  } as GlFocus)?.let {
-            it.configure(
-                2f, 0.5f, 0.5f
-            )
-        }*/
-      /*  (glObjects[2] as GlFocus).configure(2f, 0.5f, 0.5f)
-        (glObjects[1] as GlMagnifier).configure(2f, 0.5f, 0.5f)*/
-
     }
 
     override fun onDrawFrame(gl: GL10?) {
@@ -295,11 +301,11 @@ class GLRenderer(
     }
 
     private fun createOESTextureObject(): Int {
-        val textureHandle = IntArray(2)
+        val textureHandle = IntArray(3)
 
 
 
-        glGenTextures(2, textureHandle, 0)
+        glGenTextures(3, textureHandle, 0)
         glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureHandle[0])
         glTexParameteri(
