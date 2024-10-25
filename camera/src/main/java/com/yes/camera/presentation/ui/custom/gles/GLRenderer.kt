@@ -301,11 +301,11 @@ class GLRenderer(
     }
 
     private fun createOESTextureObject(): Int {
-        val textureHandle = IntArray(3)
+        val textureHandle = IntArray(1)
 
 
 
-        glGenTextures(3, textureHandle, 0)
+        glGenTextures(1, textureHandle, 0)
         glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureHandle[0])
         glTexParameteri(

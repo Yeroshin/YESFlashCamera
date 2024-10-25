@@ -29,6 +29,7 @@ import android.opengl.GLES20.GL_TEXTURE_WRAP_T
 import android.opengl.GLES20.glBlendFunc
 import android.opengl.GLES20.glDisable
 import android.opengl.GLES20.glEnable
+import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetUniformLocation
 import android.opengl.GLES20.glTexParameteri
 import android.opengl.GLES32.GL_CLAMP_TO_BORDER
@@ -57,7 +58,7 @@ class GlFocus(
 
     private var posXcorrection = 0f
     private var posYcorrection = 0f
-
+    val textureHandle = IntArray(1)
     init {
         loadTexture(context)
 
@@ -204,9 +205,13 @@ class GlFocus(
     }
 
 
-    val textureHandle = 2
 
     fun loadTexture(context: Context) {
+
+
+
+
+        glGenTextures(1, textureHandle, 0)
         ///////////////////
         /*  val error1 = glGetError()
           if (error1 != GLES30.GL_NO_ERROR) {
@@ -227,7 +232,7 @@ class GlFocus(
          }*/
 
         val options = BitmapFactory.Options().apply {
-          //  inPreferredConfig = Bitmap.Config.ARGB_8888
+            inPreferredConfig = Bitmap.Config.ARGB_8888
             /*  inPreferredConfig = Bitmap.Config.RGBA_F16
               inScaled = true*/
         }
@@ -236,12 +241,12 @@ class GlFocus(
         // Read in the resource
         val bitmap = BitmapFactory.decodeResource(
             context.resources,
-            R.drawable.center_focus_weak_24dp_copy_2,
+            R.drawable.tmp,
             options
         )
 
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, 2)
+        glBindTexture(GL_TEXTURE_2D, textureHandle[0])
 
           glTexParameteri(
               GL_TEXTURE_2D,
@@ -287,7 +292,7 @@ class GlFocus(
             glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
 
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, 2)
+        glBindTexture(GL_TEXTURE_2D, textureHandle[0])
         glUniform1i(mTextureUniformHandle, 0)
         //   glEnable(GL_BLEND)
         //  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -328,7 +333,7 @@ class Gltmp(
 
     private var posXcorrection = 0f
     private var posYcorrection = 0f
-
+    val textureHandle = IntArray(1)
     init {
         loadTexture(context)
 
@@ -436,7 +441,7 @@ class Gltmp(
     }
 
 
-    val textureHandle = 2
+
 
     fun loadTexture(context: Context) {
         ///////////////////
@@ -457,9 +462,9 @@ class Gltmp(
              // Убедитесь, что изображение не будет масштабироваться автоматически
              inScaled = false
          }*/
-
+        glGenTextures(1, textureHandle, 0)
         val options = BitmapFactory.Options().apply {
-            //  inPreferredConfig = Bitmap.Config.ARGB_8888
+              inPreferredConfig = Bitmap.Config.ARGB_8888
             /*  inPreferredConfig = Bitmap.Config.RGBA_F16
               inScaled = true*/
         }
@@ -473,7 +478,7 @@ class Gltmp(
         )
 
           glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, 3)
+        glBindTexture(GL_TEXTURE_2D, textureHandle[0])
 
         glTexParameteri(
             GL_TEXTURE_2D,
@@ -519,7 +524,7 @@ class Gltmp(
             glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
 
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, 3)
+        glBindTexture(GL_TEXTURE_2D, textureHandle[0])
            glUniform1i(mTextureUniformHandle, 0)
            glEnable(GL_BLEND)
           glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
