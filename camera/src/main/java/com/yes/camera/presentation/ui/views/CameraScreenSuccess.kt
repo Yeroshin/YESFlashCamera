@@ -107,21 +107,21 @@ fun CameraScreenSuccess(
                                 -((event.y / v.height.toFloat()) * 2 - 1)
 
                             if (event.action == MotionEvent.ACTION_DOWN) {
-                                //    glSurfaceView!!.queueEvent {
+                                   // it.queueEvent {
 
                                 //   it.setAspectRatio(3, 2)
                                 renderer.handleTouchPress(
                                     normalizedX, normalizedY
                                 )
 
-                                //   }
+                               //    }
                             } else if (event.action == MotionEvent.ACTION_MOVE) {
-                                //   glSurfaceView!!.queueEvent {
+                             //   it.queueEvent {
                                 renderer.handleTouchDrag(
                                     normalizedX, normalizedY
                                 )
-                                //   }
-                            }
+                                   }
+                         //   }
 
                             true
                         } else {

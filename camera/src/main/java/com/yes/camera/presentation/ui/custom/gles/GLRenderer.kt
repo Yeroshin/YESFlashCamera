@@ -85,12 +85,7 @@ class GLRenderer(
             context
         )
     }
-    private val glTmp by lazy {
-        Gltmp(
-            scaledShaderProgram,
-            context
-        )
-    }
+
     private val glObjects = mutableListOf<GLObject>()
     fun addGlObjects(objects: List<GLObject>) {
         glObjects.addAll(objects)
@@ -221,9 +216,8 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                  // glMagnifier,
+                   glMagnifier,
                     glFocus,
-                    glTmp
                 )
             )
         }
@@ -270,14 +264,10 @@ class GLRenderer(
         }
         glObjects.find { it is GlFocus  }?.let { it as GlFocus
             it.configure(
-                1f, 0.7f, 0.5f
+                1f, 0.2f, 0.4f
             )
         }
-        glObjects.find { it is Gltmp  }?.let { it as Gltmp
-            it.configure(
-                1f, 0.5f, 0.5f
-            )
-        }
+
     }
 
     override fun onDrawFrame(gl: GL10?) {
