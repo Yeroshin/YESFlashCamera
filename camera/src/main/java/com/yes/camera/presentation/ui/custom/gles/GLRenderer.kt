@@ -55,6 +55,13 @@ class GLRenderer(
                 R.raw.fragment
             )
     }
+    private val advancedShaderProgram by lazy {
+        ShaderProgram(
+            context,
+            R.raw.vertex_multiple,
+            R.raw.mixed_fragment
+        )
+    }
     private val stateShaderProgram by lazy {
         ShaderProgram(
             context,
@@ -77,6 +84,11 @@ class GLRenderer(
     private val glMagnifier by lazy {
         GlMagnifier(
             plainShaderProgram
+        )
+    }
+    private val glMagnifierAdvanced by lazy {
+        GlMagnifier(
+            advancedShaderProgram
         )
     }
     private val glFocus by lazy {
@@ -188,6 +200,13 @@ class GLRenderer(
                 magnifierSizeH,
             )
         }
+        glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
+            it.configure(
+                magnification,
+                magnifierSizeW,
+                magnifierSizeH,
+            )
+        }
        /* (glObjects.find { it is GlMagnifier  } as GlMagnifier)?.let {
             it.configure(
                 magnification,
@@ -216,7 +235,8 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                  glMagnifier,
+                 // glMagnifier,
+                    glMagnifierAdvanced,
                     glFocus,
                 )
             )
@@ -258,6 +278,11 @@ class GLRenderer(
             it.onRatioChanged(ratio)
         }
         glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
+            it.configure(
+                2f, 0.5f, 0.5f
+            )
+        }
+        glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
             it.configure(
                 2f, 0.5f, 0.5f
             )
@@ -385,7 +410,7 @@ class GLRenderer(
                 + TEXTURE_COORDINATES_COMPONENT_COUNT) * BYTES_PER_FLOAT
         abstract val vertexData: FloatArray
         abstract val textureData: FloatArray
-        private val vertexBuffer by lazy {
+        val vertexBuffer by lazy {
             ByteBuffer
                 .allocateDirect(vertexData.size * BYTES_PER_FLOAT)
                 .order(ByteOrder.nativeOrder())
@@ -446,7 +471,7 @@ class GLRenderer(
         }
 
         abstract fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float)
-        protected fun bindData() {
+        open fun bindData() {
 
             vertexBuffer.position(0)
             glVertexAttribPointer(
