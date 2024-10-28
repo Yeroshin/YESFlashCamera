@@ -123,8 +123,8 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
             textureWidth,
             textureHeight,
         )
-        setIdentityM(modelMatrix, 0)
-        translateM(modelMatrix, 0, 0f, 0f, 0f)
+      /*  setIdentityM(modelMatrix, 0)
+        translateM(modelMatrix, 0, 0f, 0f, 0f)*/
 
     }
 

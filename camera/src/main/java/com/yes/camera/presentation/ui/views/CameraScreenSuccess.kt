@@ -8,13 +8,19 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,8 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -43,12 +55,13 @@ import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.ShutterValueItemAdapterDelegate
 import com.yes.camera.presentation.ui.custom.compose.Histogram
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
+
 import com.yes.camera.presentation.ui.custom.compose.RadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
-import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
+
 
 @Composable
 fun CameraScreenSuccess(
@@ -143,7 +156,7 @@ fun CameraScreenSuccess(
                 mutableStateOf(true)
             }
             var visibleSelector by remember {
-                mutableStateOf(true)
+                mutableStateOf(false)
             }
             var positionRadioGroup by remember {
                 mutableIntStateOf(0)
@@ -220,11 +233,11 @@ fun CameraScreenSuccess(
                 )
             }
             ///////////value selector
-          /*  AnimatedVisibility(
+            AnimatedVisibility(
                 visible = visibleSelector,
                 enter = scaleIn() + expandHorizontally(),
                 exit = scaleOut() + shrinkHorizontally()
-            ) {*/
+            ) {
                 ValueSelector(
                     position = when (selectedCharacteristic.value) {
                         Item.SHUTTER -> {
@@ -290,7 +303,7 @@ fun CameraScreenSuccess(
                         }
                     }
                 )
-         //   }
+            }
             /*   DropDown(
                    isOpen,
                    modifier = Modifier
@@ -314,8 +327,8 @@ fun CameraScreenSuccess(
                    )
                }*/
             /////////////////////magnifier
-            var visibleSelectorMagnifier by remember {
-                mutableStateOf(true)
+           var visibleSelectorMagnifier by remember {
+                mutableStateOf(false)
             }
             var magnifierSelectorItems: List<SettingsItemUI> by remember {
                 mutableStateOf(
@@ -345,7 +358,14 @@ fun CameraScreenSuccess(
                             .clickable {
                                 visibleSelectorMagnifier = !visibleSelectorMagnifier
                             },
-                        vectorColor = Color.White,
+                        vectorColor = Color.White.copy(
+                            alpha = if (visibleSelectorMagnifier) {
+                                    1.0f
+                                } else {
+                                    0.5f
+                                }
+
+                        ),
                         shadowColor = Color.DarkGray,
                         resId = R.drawable.loupe,
                     )
@@ -380,11 +400,11 @@ fun CameraScreenSuccess(
                                 0.2f,
                                 0.4f
                             )
-                            valueSelectorItems?.let {
-                                for (i in it.indices) {
-                                    it[i].passed = i <= index
+
+                                for (i in  magnifierSelectorItems.indices) {
+                                    magnifierSelectorItems[i].passed = i <= index
                                 }
-                            }
+
                         }
                     )
                 }
@@ -398,8 +418,10 @@ fun CameraScreenSuccess(
         var isCheck by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
+                .padding(8.dp)
                 .fillMaxWidth()
-                .align(Alignment.BottomCenter)
+                .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ////////////////////////histogram
             Histogram(

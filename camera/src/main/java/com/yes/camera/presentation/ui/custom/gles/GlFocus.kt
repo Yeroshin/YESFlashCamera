@@ -133,7 +133,7 @@ class GlFocus(
         sizeW: Float,
         sizeH: Float,
         framesNumber:Int=9,
-        frame:Int=3,
+        frame:Int=0,
         stride:Int=3
     ) {
 
@@ -150,16 +150,16 @@ class GlFocus(
         )
         val frameWidth=textureWidth/(framesNumber/stride)
         val frameHeight=textureHeight/(framesNumber/stride)
-        val positionX=frameWidth*(frame/stride)
-        val positionY=frameHeight*(frame%stride)
+        val positionX=frameWidth*(frame%stride)
+        val positionY=frameHeight*(frame/stride)
         updateTextureBuffer(
             positionX,
             positionY,
             frameWidth,
             frameHeight,
         )
-        setIdentityM(modelMatrix, 0)
-        translateM(modelMatrix, 0, 0f, 0f, 0f)
+       /* setIdentityM(modelMatrix, 0)
+        translateM(modelMatrix, 0, 0f, 0f, 0f)*/
 
     }
 
@@ -290,6 +290,8 @@ class GlFocus(
 
         glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, textureHandle[0])
+
+
         glUniform1i(mTextureUniformHandle, 1)
            glEnable(GL_BLEND)
           glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)

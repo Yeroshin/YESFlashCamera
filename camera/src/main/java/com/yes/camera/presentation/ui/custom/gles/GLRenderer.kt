@@ -162,7 +162,19 @@ class GLRenderer(
             )
         }
     }
-
+    fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
+        glObjects.forEach {
+            if (it.selected) {
+                val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
+                val plane = Geometry.Plane(
+                    Geometry.Point(0f, 0f, 0f),
+                    Geometry.Vector(0f, 0f, 1f)
+                )
+                val draggedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
+                it.translate(draggedPoint.x, draggedPoint.y)
+            }
+        }
+    }
     fun configureMagnifier(
         magnification: Float,
         magnifierSizeW: Float,
@@ -195,19 +207,7 @@ class GLRenderer(
 
     }
 
-    fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
-        glObjects.forEach {
-            if (it.selected) {
-                val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
-                val plane = Geometry.Plane(
-                    Geometry.Point(0f, 0f, 0f),
-                    Geometry.Vector(0f, 0f, 1f)
-                )
-                val draggedPoint: Geometry.Point = Geometry.intersectionPoint(ray, plane)
-                it.translate(draggedPoint.x, draggedPoint.y)
-            }
-        }
-    }
+
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
@@ -216,7 +216,7 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                   glMagnifier,
+                  glMagnifier,
                     glFocus,
                 )
             )
@@ -264,7 +264,7 @@ class GLRenderer(
         }
         glObjects.find { it is GlFocus  }?.let { it as GlFocus
             it.configure(
-                1f, 0.5f, 0.5f
+                1f, 0.2f, 0.4f
             )
         }
 

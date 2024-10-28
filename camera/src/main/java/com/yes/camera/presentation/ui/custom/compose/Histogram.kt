@@ -49,15 +49,15 @@ fun Histogram(
             .height(heightDp)
         ) {
             drawRect(
-                color = Color.Green,
+                color = Color.White.copy(alpha = 0.5f),
                 topLeft = Offset(0f, 0f),
                 size = Size(widthPx, heightPx),
-                style = Stroke(width = 10f)
+                style = Stroke(width = 5f)
             )
             values.forEach { (key, value) ->
                 val barHeight = (value.toFloat() * heightPx / maxValue)
                 drawRect(
-                    color = Color.Red,
+                    color = Color.White.copy(alpha = 0.5f),
                     topLeft = Offset(key.toFloat() * barWidth, heightPx - barHeight),
                     size = Size(barWidth, barHeight)
                 )

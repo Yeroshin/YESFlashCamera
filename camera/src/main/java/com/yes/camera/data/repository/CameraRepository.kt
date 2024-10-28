@@ -30,7 +30,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
-import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
@@ -51,14 +50,161 @@ import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
 
 
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class CameraRepository(
     private val context: Context,
     private val cameraManager: CameraManager,
     private val encoder:MediaEncoder
 ) {
+    var sessio: CameraCaptureSession? = null
+    private var captureResult: CaptureResult? = null
+
+    private var captureRequest: CaptureRequest.Builder? = null
+    private var glSurfaceTexture: SurfaceTexture? = null
+
     private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler= Handler(mBackgroundThread.looper)
     private var cameraDevice: CameraDevice? = null
+    private val previewSurface by lazy {
+        Surface(glSurfaceTexture)
+    }
+    private val previewSurfaceConfiguration by lazy {
+        OutputConfiguration(previewSurface).apply {
+            //  enableSurfaceSharing()
+        }
+    }
+    private val videoSurface by lazy {
+        encoder.configure(640,480)
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+
+        /* if (running){
+             val image = reader.acquireNextImage()
+             if (image!= null) {
+                 val buffer = image.planes[0].buffer
+                 val bytes = ByteArray(buffer.remaining())
+                 buffer.get(bytes)
+
+                 try {
+                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                     sink.write(byteBuffer.array())
+                 } catch (e: IOException) {
+                     println()
+                 } finally {
+                     image.close() // Освобождаем изображение
+                 }
+             }
+         }*/
+        val image = reader.acquireNextImage()
+          image?.let {
+              val ybytes = ByteArray(it.planes[0].buffer.capacity())
+              it.planes[0].buffer.get(ybytes)
+              _outputBuffer.value= ybytes
+          }
+        image?.close()
+        /* if (running) {
+             val image = reader.acquireNextImage()
+             image?.let {
+                 // val tmp =yuv420ToBitmap(it)
+                 //  _event.value = convertYUV420_888to420p(it)
+                 ///////////////////
+                 val uvPos = it.width * image.height
+                 val uvSize = it.width / 2 * image.height / 2
+
+              //   fps1.get("before")
+                 /////////////////////////////////
+                /* val yPlane = it.planes[0].buffer
+                 val uPlane = it.planes[1].buffer
+                 val vPlane = it.planes[2].buffer*/
+
+                 //val buffer = image.planes[0].buffer
+                 ////////////////
+               /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
+                 it.planes[0].buffer.get(randomAccessFile)
+                 val ubytes = ByteArray(uvSize)
+                 it.planes[1].buffer.get(ubytes,0,uvSize)
+                 val vbytes = ByteArray(uvSize)
+                 it.planes[2].buffer.get(vbytes,0,uvSize)*/
+               //  fps1.get("middle")
+                 ///////////////////
+
+             /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
+                 it.planes[1].buffer.limit(uvSize)
+                 val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
+                 it.planes[2].buffer.limit(uvSize)
+                 val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
+                 /////////////////
+                /* val b = randomAccessFile?.write(ubytes)
+                 val c = randomAccessFile?.write(vbytes)*/
+                /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
+                 val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
+                 //////////////////////////////////
+                 //    randomAccessFile?.seek(0)
+                 // copyImage(image)
+                 _event.tryEmit(getByteBufferYUVPlanes(image))
+               //  fps1.get("after")
+                 /////////////////////////
+
+                 /*  bufferedOutputStream?.write(
+                       imageToYUVPlanes(image)
+                   )
+                   bufferedOutputStream?.flush()*/
+                 ///////////////////////
+                 // _event.tryEmit(getYUVPlanes(it))
+                 it.close()
+
+             }
+         } else if (finished) {
+             /////////////////
+            /* randomAccessFile?.close()
+             FFmpegKitConfig.closeFFmpegPipe(pipe1)
+             finished = false*/
+             /////////////////
+             //job.cancel()
+             /*   process?.destroy()
+                process?.waitFor()
+                FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
+             ///////////////////
+             /*  pipe1?.let {
+                   FFmpegKitConfig.closeFFmpegPipe(it)
+               }
+             //  process?.waitFor()
+               process?.destroy()*/
+             //   FFmpegKit.cancel()
+             // process?.outputStream?.flush()
+             //  process?.outputStream?.close()
+             //  finished = false
+         } else {
+             reader.acquireLatestImage()?.close()
+             // fps1.get("fps")
+         }*/
+        //  fps1.get("fps")
+        /////////////////
+
+    }
+    private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+        priority = Thread.MAX_PRIORITY
+        start()
+    }
+    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    val rWidth = 4096; val rHeight = 3072
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private val imageReader =
+        ImageReader.newInstance(rWidth, rHeight, ImageFormat.YUV_420_888, 30).apply {
+            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+        }
+    private val photoSurface by lazy {
+        imageReader.surface
+    }
+
+
+
+
+
+
     private fun getCameraByFacing(facing: Int): String? {
         cameraManager.cameraIdList.forEach {
             val characteristics = cameraManager.getCameraCharacteristics(it)
@@ -200,7 +346,7 @@ class CameraRepository(
             id,
             object : CameraDevice.StateCallback() {
 
-                @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+                @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera
                     //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -267,11 +413,59 @@ class CameraRepository(
         )
     }
 
-    private var captureRequest: CaptureRequest.Builder? = null
-    private var glSurfaceTexture: SurfaceTexture? = null
 
-    fun tmpStartDefaultCaptureRequest(){
 
+
+
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    fun startVideoSession(){
+        createCaptureSession(
+            listOf(
+                previewSurface,
+                //   encoder.configure(640,480),
+                photoSurface
+            )
+        )
+
+    }
+
+    private fun createCaptureSession(surfaces:List<Surface>) {
+        val configs = mutableListOf<OutputConfiguration>()
+       /* captureRequest =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
+        ////////preview
+        for (surface in surfaces){
+          //  captureRequest?.addTarget(surface)
+            configs.add(
+                OutputConfiguration(surface)
+            )
+        }
+
+        val config = SessionConfiguration(
+            SessionConfiguration.SESSION_REGULAR,
+            configs,
+            Dispatchers.IO.asExecutor(),
+            object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    try {
+                        sessio = session
+                        startPreviewCaptureRequest()
+                    } catch (e: CameraAccessException) {
+                        e.printStackTrace()
+                    }
+                }
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {}
+            }
+        )
+        cameraDevice?.createCaptureSession(config)
+    }
+    fun startPreviewCaptureRequest(){
+        captureRequest =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        captureRequest?.addTarget(previewSurface)
+        captureRequest?.addTarget(photoSurface)
         //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         captureRequest?.set(
             CaptureRequest.CONTROL_AE_MODE,
@@ -296,58 +490,15 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 100)
+        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
         captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
         captureRequest?.let {
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
         }
     }
-
-
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    fun startVideoSession(){
-        createVideoCaptureSession(
-            listOf(
-                Surface(glSurfaceTexture),
-                encoder.configure(640,480),
-                imageReader.surface
-            )
-        )
-        tmpStartDefaultCaptureRequest()
-    }
-
-    private fun createVideoCaptureSession(surfaces:List<Surface>) {
-        val configs = mutableListOf<OutputConfiguration>()
-        captureRequest =
-            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
-        ////////preview
-        for (surface in surfaces){
-            captureRequest?.addTarget(surface)
-            configs.add(
-                OutputConfiguration(surface)
-            )
-        }
-
-        val config = SessionConfiguration(
-            SessionConfiguration.SESSION_REGULAR,
-            configs,
-            Dispatchers.IO.asExecutor(),
-            object : CameraCaptureSession.StateCallback() {
-                override fun onConfigured(session: CameraCaptureSession) {
-                    try {
-                        sessio = session
-
-                    } catch (e: CameraAccessException) {
-                        e.printStackTrace()
-                    }
-                }
-
-                override fun onConfigureFailed(session: CameraCaptureSession) {}
-            }
-        )
-        cameraDevice?.createCaptureSession(config)
-    }
     fun setInputCharacteristics(characteristics: Characteristics) {
+       /* captureRequest =
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
         /* previewCaptureBuilder =
              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
         /*  captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -362,7 +513,25 @@ class CameraRepository(
               CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
               CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
           )*/
-
+        ///////test
+        captureRequest?.set(
+            CaptureRequest.CONTROL_AE_MODE,
+            CaptureRequest.CONTROL_AE_MODE_OFF
+        )
+        //////////settings
+        captureRequest?.set(
+            CaptureRequest.EDGE_MODE,
+            CaptureRequest.EDGE_MODE_OFF
+        )
+        captureRequest?.set(
+            CaptureRequest.NOISE_REDUCTION_MODE,
+            CaptureRequest.NOISE_REDUCTION_MODE_OFF
+        )
+        captureRequest?.set(
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+        )
+        ///////////////
 
         captureRequest?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
@@ -373,24 +542,6 @@ class CameraRepository(
             CaptureRequest.SENSOR_EXPOSURE_TIME,
             characteristics.shutterValue
         )
-        ////////preview
-        //   val surface = Surface(glSurfaceTexture)
-        // previewCaptureBuilder?.addTarget(surface)
-
-        ////////////////
-
-        ///capture
-        /*  val imageReader=ImageReader.newInstance(4096, 3072, ImageFormat.YUV_420_888, 1)
-         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
-
-          previewCaptureBuilder?.addTarget(imageReader.surface)*/
-
-
-        // captureRequest?.addTarget(imageReader.surface)
-        //////////////
-
-        // cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(), null, backgroundHandler)
-        // createCaptureSession()
 
         captureRequest?.let {
             // sessio?.stopRepeating()
@@ -399,8 +550,7 @@ class CameraRepository(
 
     }
 
-    var sessio: CameraCaptureSession? = null
-    private var captureResult: CaptureResult? = null
+
     var frameTime: Long = 0
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
@@ -540,11 +690,7 @@ class CameraRepository(
     //  private var bufferedOutputStream: BufferedOutputStream? = null
     private var output: BufferedOutputStream? = null
 
-    private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
-        priority = Thread.MAX_PRIORITY
-        start()
-    }
-    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+
 
     val byteArray = ByteArray(120000)
 
@@ -554,113 +700,7 @@ class CameraRepository(
         return outputBuffer
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
 
-        /* if (running){
-             val image = reader.acquireNextImage()
-             if (image!= null) {
-                 val buffer = image.planes[0].buffer
-                 val bytes = ByteArray(buffer.remaining())
-                 buffer.get(bytes)
-
-                 try {
-                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
-                     sink.write(byteBuffer.array())
-                 } catch (e: IOException) {
-                     println()
-                 } finally {
-                     image.close() // Освобождаем изображение
-                 }
-             }
-         }*/
-        val image = reader.acquireNextImage()
-        image?.let {
-            val ybytes = ByteArray(it.planes[0].buffer.capacity())
-            it.planes[0].buffer.get(ybytes)
-            _outputBuffer.value= ybytes
-        }
-        image?.close()
-       /* if (running) {
-            val image = reader.acquireNextImage()
-            image?.let {
-                // val tmp =yuv420ToBitmap(it)
-                //  _event.value = convertYUV420_888to420p(it)
-                ///////////////////
-                val uvPos = it.width * image.height
-                val uvSize = it.width / 2 * image.height / 2
-
-             //   fps1.get("before")
-                /////////////////////////////////
-               /* val yPlane = it.planes[0].buffer
-                val uPlane = it.planes[1].buffer
-                val vPlane = it.planes[2].buffer*/
-
-                //val buffer = image.planes[0].buffer
-                ////////////////
-              /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
-                it.planes[0].buffer.get(randomAccessFile)
-                val ubytes = ByteArray(uvSize)
-                it.planes[1].buffer.get(ubytes,0,uvSize)
-                val vbytes = ByteArray(uvSize)
-                it.planes[2].buffer.get(vbytes,0,uvSize)*/
-              //  fps1.get("middle")
-                ///////////////////
-
-            /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
-                it.planes[1].buffer.limit(uvSize)
-                val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
-                it.planes[2].buffer.limit(uvSize)
-                val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
-                /////////////////
-               /* val b = randomAccessFile?.write(ubytes)
-                val c = randomAccessFile?.write(vbytes)*/
-               /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
-                val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
-                //////////////////////////////////
-                //    randomAccessFile?.seek(0)
-                // copyImage(image)
-                _event.tryEmit(getByteBufferYUVPlanes(image))
-              //  fps1.get("after")
-                /////////////////////////
-
-                /*  bufferedOutputStream?.write(
-                      imageToYUVPlanes(image)
-                  )
-                  bufferedOutputStream?.flush()*/
-                ///////////////////////
-                // _event.tryEmit(getYUVPlanes(it))
-                it.close()
-
-            }
-        } else if (finished) {
-            /////////////////
-           /* randomAccessFile?.close()
-            FFmpegKitConfig.closeFFmpegPipe(pipe1)
-            finished = false*/
-            /////////////////
-            //job.cancel()
-            /*   process?.destroy()
-               process?.waitFor()
-               FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
-            ///////////////////
-            /*  pipe1?.let {
-                  FFmpegKitConfig.closeFFmpegPipe(it)
-              }
-            //  process?.waitFor()
-              process?.destroy()*/
-            //   FFmpegKit.cancel()
-            // process?.outputStream?.flush()
-            //  process?.outputStream?.close()
-            //  finished = false
-        } else {
-            reader.acquireLatestImage()?.close()
-            // fps1.get("fps")
-        }*/
-        //  fps1.get("fps")
-        /////////////////
-
-    }
 
     fun copyImage(image: Image) {
 
@@ -682,39 +722,13 @@ class CameraRepository(
 
     }
 
-    private val previewSurface by lazy {
-        Surface(glSurfaceTexture)
-    }
-    private val previewSurfaceConfiguration by lazy {
-        OutputConfiguration(previewSurface).apply {
-          //  enableSurfaceSharing()
-        }
-    }
-    private val videoSurface by lazy {
-        encoder.configure(640,480)
-    }
-    private val videoSurfaceConfiguration by lazy {
-        OutputConfiguration(videoSurface).apply {
-           // enableSurfaceSharing()
-        }
-    }
+
 
     //3840,2160
    //  val rWidth = 640; val rHeight = 480
   //  val rWidth = 4096; val rHeight = 3072
 
    //   val rWidth=1920; val rHeight=1080
-     val rWidth = 3840; val rHeight = 2160
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private val imageReader =
-        ImageReader.newInstance(rWidth, rHeight, ImageFormat.YUV_420_888, 30).apply {
-            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
-
-        }
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private val imageReaderSurfaceConfiguration = OutputConfiguration(imageReader.surface).apply {
-        enableSurfaceSharing()
-    }
 
 
     private fun saveImage(
@@ -919,7 +933,7 @@ class CameraRepository(
       }*/
 
 
-    private fun createCaptureSession() {
+ /*   private fun createCaptureSession() {
         val configs = mutableListOf<OutputConfiguration>()
         captureRequest =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
@@ -994,7 +1008,7 @@ class CameraRepository(
                     try {
                         sessio = session
                         //session.stopRepeating()
-                        tmpStartDefaultCaptureRequest()
+                        startPreviewCaptureRequest()
 
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
@@ -1005,7 +1019,7 @@ class CameraRepository(
             }
         )
         cameraDevice?.createCaptureSession(config)
-    }
+    }*/
     ////////////////////////////////////////////////
     ////////////////////////////////////////////////
     ////////////////////////////////////////////////
