@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.opengl.GLES20
 import android.opengl.GLES20.GL_BLEND
+import android.opengl.GLES20.GL_CLAMP_TO_EDGE
 import android.opengl.GLES20.GL_NEAREST
 import android.opengl.GLES20.GL_NO_ERROR
 import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
@@ -131,8 +132,9 @@ class GlFocus(
         textureScale: Float,
         sizeW: Float,
         sizeH: Float,
-        framesNumber:Int?=2,
-        frame:Int?=0
+        framesNumber:Int=9,
+        frame:Int=3,
+        stride:Int=3
     ) {
 
 
@@ -146,13 +148,15 @@ class GlFocus(
             vertexWidth,
             vertexHeight
         )
-        textureWidth=textureWidth/framesNumber!!.toFloat()
-        val positionX=textureWidth*frame!!.toFloat()
+        val frameWidth=textureWidth/(framesNumber/stride)
+        val frameHeight=textureHeight/(framesNumber/stride)
+        val positionX=frameWidth*(frame/stride)
+        val positionY=frameHeight*(frame%stride)
         updateTextureBuffer(
             positionX,
-            0f,
-            textureWidth,
-            textureHeight,
+            positionY,
+            frameWidth,
+            frameHeight,
         )
         setIdentityM(modelMatrix, 0)
         translateM(modelMatrix, 0, 0f, 0f, 0f)
@@ -169,13 +173,12 @@ class GlFocus(
         // 6,1 -- 2
         //   5 -- 4,3
         val textureData = floatArrayOf(
-            // Order of coordinates: X, Y, S, T
-            positionX , positionY,
+            positionX ,positionY+height,
+            positionX + width,positionY+height,
             positionX + width, positionY ,
-            positionX + width, positionY - height,
-            positionX + width, positionY - height,
-            positionX , positionY - height,
-            positionX , positionY,
+            positionX + width, positionY ,
+            positionX , positionY ,
+            positionX , positionY+height,
 
             )
         /*  val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
@@ -239,7 +242,7 @@ class GlFocus(
         // Read in the resource
         val bitmap = BitmapFactory.decodeResource(
             context.resources,
-            R.drawable.tmp,
+            R.drawable.focus_test,
             options
         )
 
@@ -249,21 +252,13 @@ class GlFocus(
           glTexParameteri(
               GL_TEXTURE_2D,
               GL_TEXTURE_WRAP_S,
-              GL_CLAMP_TO_BORDER
+              GL_CLAMP_TO_EDGE
           )
           glTexParameteri(
               GL_TEXTURE_2D,
               GL_TEXTURE_WRAP_T,
-              GL_CLAMP_TO_BORDER
+              GL_CLAMP_TO_EDGE
           );
-        /*   val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
-           glTexParameterfv(
-               GL_TEXTURE_2D_ARRAY,
-               GL_TEXTURE_BORDER_COLOR,
-               borderColor,
-               0)*/
-
-
           glTexParameteri(
               GL_TEXTURE_2D,
               GL_TEXTURE_MIN_FILTER,
@@ -274,14 +269,18 @@ class GlFocus(
               GL_TEXTURE_MAG_FILTER,
               GL_NEAREST
           )
-
+        /*   val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
+                  glTexParameterfv(
+                      GL_TEXTURE_2D_ARRAY,
+                      GL_TEXTURE_BORDER_COLOR,
+                      borderColor,
+                      0)*/
         // Загружаем данные из Bitmap
         texImage2D(GL_TEXTURE_2D, 0, bitmap, 0);
         bitmap.recycle(); // Освобождаем память, если больше не нужна
 
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        bitmap.recycle()
     }
 
     override fun draw(modelViewProjectionMatrix: FloatArray) {

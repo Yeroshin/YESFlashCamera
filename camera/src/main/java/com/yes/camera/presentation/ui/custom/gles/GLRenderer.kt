@@ -264,7 +264,7 @@ class GLRenderer(
         }
         glObjects.find { it is GlFocus  }?.let { it as GlFocus
             it.configure(
-                1f, 0.2f, 0.4f
+                1f, 0.5f, 0.5f
             )
         }
 
