@@ -13,8 +13,11 @@ void main()
     vec4 baseColor = texture2D(baseTexture, vTexCoord1);
 
     // Получаем цвет из наложенной текстуры
-    vec4 overlayColor = texture2D(overlayTexture, vTexCoord2);
+    vec4 overlayColor = texture2D(overlayTexture, vTexCoord1);
 
     // Смешиваем цвета с учетом альфа-канала
-    gl_FragColor = mix(baseColor, overlayColor, overlayColor.a * overlayAlpha);
+    //gl_FragColor = mix(baseColor, overlayColor, overlayColor.a * overlayAlpha);
+    gl_FragColor = mix(baseColor,overlayColor,  overlayColor.a);
+ // gl_FragColor =texture2D(baseTexture, vTexCoord1);
+ // gl_FragColor =texture2D(overlayTexture, vTexCoord1);
 }

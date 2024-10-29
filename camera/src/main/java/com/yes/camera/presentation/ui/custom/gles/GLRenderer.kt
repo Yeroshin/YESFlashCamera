@@ -81,14 +81,15 @@ class GLRenderer(
             plainShaderProgram
         )
     }
-    private val glMagnifier by lazy {
+  /*  private val glMagnifier by lazy {
         GlMagnifier(
             plainShaderProgram
         )
-    }
+    }*/
     private val glMagnifierAdvanced by lazy {
-        GlMagnifier(
-            advancedShaderProgram
+        GlMagnifierAdvanced(
+            advancedShaderProgram,
+            context
         )
     }
     private val glFocus by lazy {
@@ -237,7 +238,7 @@ class GLRenderer(
                     glScreen,
                  // glMagnifier,
                     glMagnifierAdvanced,
-                    glFocus,
+                  //  glFocus,
                 )
             )
         }
@@ -402,7 +403,7 @@ class GLRenderer(
 
     abstract class GLObject(protected val shaderProgram: ShaderProgram) {
         var selected = false
-        private val BYTES_PER_FLOAT: Int = 4
+        val BYTES_PER_FLOAT: Int = 4
         protected val vertexDataSize: Int = 12
         private val POSITION_COMPONENT_COUNT = 2
         private val TEXTURE_COORDINATES_COMPONENT_COUNT = 2
@@ -437,7 +438,7 @@ class GLRenderer(
         val positionAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_POSITION)
         val textureCoordinatesAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_TEXTURE_COORDINATES)
 
-        protected  fun updateVertexBuffer(width: Float, height: Float) {
+        open  fun updateVertexBuffer(width: Float, height: Float) {
             val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
                 0.0f - width / 2, 0.0f + height / 2,
                 0.0f + width / 2, 0.0f + height / 2,
