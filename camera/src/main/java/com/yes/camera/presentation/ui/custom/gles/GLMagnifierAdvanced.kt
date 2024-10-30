@@ -6,13 +6,10 @@ import android.graphics.BitmapFactory
 import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
-import android.opengl.GLES20.GL_BLEND
 import android.opengl.GLES20.GL_CLAMP_TO_EDGE
 import android.opengl.GLES20.GL_FLOAT
 import android.opengl.GLES20.GL_NEAREST
 import android.opengl.GLES20.GL_NO_ERROR
-import android.opengl.GLES20.GL_ONE_MINUS_SRC_ALPHA
-import android.opengl.GLES20.GL_SRC_ALPHA
 import android.opengl.GLES20.GL_TEXTURE0
 import android.opengl.GLES20.GL_TEXTURE1
 import android.opengl.GLES20.GL_TEXTURE_2D
@@ -23,21 +20,15 @@ import android.opengl.GLES20.GL_TEXTURE_WRAP_T
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
-import android.opengl.GLES20.glBlendFunc
-import android.opengl.GLES20.glDisable
-import android.opengl.GLES20.glEnable
 import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetError
 import android.opengl.GLES20.glGetUniformLocation
-import android.opengl.GLES20.glTexParameterfv
 import android.opengl.GLES20.glTexParameteri
 import android.opengl.GLES20.glUniform1i
 import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES20.glVertexAttribPointer
-import android.opengl.GLES32.GL_CLAMP_TO_BORDER
-import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
 import android.opengl.GLUtils.texImage2D
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
@@ -72,13 +63,7 @@ class GlMagnifierAdvanced(
             .asFloatBuffer()
             .put(textureData1)
     }
-    protected val vertexBuffer2 by lazy {
-        ByteBuffer
-            .allocateDirect(vertexDataSize * BYTES_PER_FLOAT)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .put(vertexData)
-    }
+
 
     private val textureHandle = IntArray(2)
     init {
@@ -119,10 +104,6 @@ class GlMagnifierAdvanced(
             positionAttributeLocation
         )
         ////////////////////////tex1
-       val tmp1=  glGetAttribLocation(shaderProgram.programId,"a_Position")
-       val tmp2=  glGetAttribLocation(shaderProgram.programId,"aTexCord2")
-       val tmp3=  glGetAttribLocation(shaderProgram.programId,"a_TextureCoordinates")
-
        textureBuffer.position(0)
         glVertexAttribPointer(
             glGetAttribLocation(shaderProgram.programId,"a_TextureCoordinates"),
@@ -136,10 +117,10 @@ class GlMagnifierAdvanced(
             glGetAttribLocation(shaderProgram.programId, "a_TextureCoordinates")
         )
        /////////////////////////////////tex2
-
+        val tmp =glGetAttribLocation(shaderProgram.programId, "aTexCord2")
        textureBuffer2.position(0)
        glVertexAttribPointer(
-           glGetAttribLocation(shaderProgram.programId, "aTexCoord2"),
+           glGetAttribLocation(shaderProgram.programId, "aTexCord2"),
            2,
            GL_FLOAT,
            false,
@@ -147,7 +128,7 @@ class GlMagnifierAdvanced(
            textureBuffer2
        )
        glEnableVertexAttribArray(
-           glGetAttribLocation(shaderProgram.programId, "aTexCoord2")
+           glGetAttribLocation(shaderProgram.programId, "aTexCord2")
        )
     }
 
@@ -202,6 +183,10 @@ class GlMagnifierAdvanced(
         magnification: Float,
         magnifierSizeW: Float,
         magnifierSizeH: Float,
+        textureScale: Float=1f,
+        framesNumber:Int=9,
+        frame:Int=0,
+        stride:Int=3
     ) {
         this.magnification = magnification
         this.magnifierSizeW = magnifierSizeW
@@ -222,11 +207,19 @@ class GlMagnifierAdvanced(
             centerPosition.first / ratio,
             centerPosition.second
         )
+        val frameWidth=(1f / textureScale)/(framesNumber/stride)
+        val frameHeight=(1f / textureScale)/(framesNumber/stride)
+        val positionX=frameWidth*(frame%stride)
+        val positionY=frameHeight*(frame/stride)
         updateTextureBuffer(
             texturePosition.first,
             texturePosition.second,
             textureWidth,
             textureHeight,
+            positionX,
+            positionY,
+            frameWidth,
+            frameHeight,
         )
         /*  setIdentityM(modelMatrix, 0)
           translateM(modelMatrix, 0, 0f, 0f, 0f)*/
@@ -245,32 +238,26 @@ class GlMagnifierAdvanced(
         vertexBuffer.put(vertexData, 0, vertexDataSize)
         vertexBuffer.position(0)
         ////////////////
-        val vertexData2 = floatArrayOf( // Order of coordinates: X, Y, S, T
-            0.0f - width / 2, 0.0f + height / 2,
-            0.0f + width / 2, 0.0f + height / 2,
-            0.0f + width / 2, 0.0f - height / 2,
-            0.0f + width / 2, 0.0f - height / 2,
-            0.0f - width / 2, 0.0f - height / 2,
-            0.0f - width / 2, 0.0f + height / 2
-        )
-        vertexBuffer2.position(0)
-        vertexBuffer2.put(vertexData2, 0, vertexDataSize)
-        vertexBuffer2.position(0)
+
     }
-    override fun updateTextureBuffer(
-        positionX: Float,
-        positionY: Float,
-        width: Float,
-        height: Float
+    fun updateTextureBuffer(
+        texturePositionX: Float,
+        texturePositionY: Float,
+        textureWidth: Float,
+        textureHeight: Float,
+        positionX:Float,
+        positionY:Float,
+        frameWidth:Float,
+        frameHeight:Float,
     ) {
         //////////////////////////////
         val textureData1 = floatArrayOf( // Order of coordinates: X, Y, S, T
-            positionX - width / 2, positionY - height / 2,
-            positionX + width / 2, positionY - height / 2,
-            positionX + width / 2, positionY + height / 2,
-            positionX + width / 2, positionY + height / 2,
-            positionX - width / 2, positionY + height / 2,
-            positionX - width / 2, positionY - height / 2
+            texturePositionX - textureWidth / 2, texturePositionY - textureHeight / 2,
+            texturePositionX + textureWidth / 2, texturePositionY - textureHeight / 2,
+            texturePositionX + textureWidth / 2, texturePositionY + textureHeight / 2,
+            texturePositionX + textureWidth / 2, texturePositionY + textureHeight / 2,
+            texturePositionX - textureWidth / 2, texturePositionY + textureHeight / 2,
+            texturePositionX - textureWidth / 2, texturePositionY - textureHeight / 2
         )
         textureBuffer.position(0)
         textureBuffer.put(textureData1, 0, vertexDataSize)
@@ -279,14 +266,23 @@ class GlMagnifierAdvanced(
         // 6,1 -- 2
         //   5 -- 4,3
         val textureData2 = floatArrayOf(
-            positionX ,positionY+height,
-            positionX + width,positionY+height,
-            positionX + width, positionY ,
-            positionX + width, positionY ,
+            positionX ,positionY+frameHeight,
+            positionX + frameWidth,positionY+frameHeight,
+            positionX + frameWidth, positionY ,
+            positionX + frameWidth, positionY ,
             positionX , positionY ,
-            positionX , positionY+height,
+            positionX , positionY+frameHeight,
 
             )
+      /*  val textureData2 = floatArrayOf(
+            0f ,1f,
+            1f,1f,
+            1f, 0f ,
+            1f, 0f,
+            0f , 0f ,
+            0f , 1f,
+
+            )*/
         textureBuffer2.position(0)
         textureBuffer2.put(textureData2, 0, vertexDataSize)
         textureBuffer2.position(0)
@@ -322,7 +318,7 @@ class GlMagnifierAdvanced(
 
 
        //  glEnable(GL_BLEND)
-         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+      //   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         bindData()
 
