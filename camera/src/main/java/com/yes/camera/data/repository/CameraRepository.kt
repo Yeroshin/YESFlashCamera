@@ -98,13 +98,14 @@ class CameraRepository(
                  }
              }
          }*/
-        val image = reader.acquireNextImage()
-          image?.let {
+       // val image = reader.acquireNextImage()
+        reader.acquireNextImage()?.let {
               val ybytes = ByteArray(it.planes[0].buffer.capacity())
               it.planes[0].buffer.get(ybytes)
               _outputBuffer.value= ybytes
+            it.close()
           }
-        image?.close()
+      //  image?.close()
         /* if (running) {
              val image = reader.acquireNextImage()
              image?.let {

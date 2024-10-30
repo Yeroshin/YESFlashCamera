@@ -107,7 +107,7 @@ fun CameraScreenSuccess(
                     null
                 ).also {
                     // autoFitSurfaceView = it
-                    it.setEGLContextClientVersion(2)
+                    it.setEGLContextClientVersion(3)
                     it.setRenderer(
                         renderer
                     )

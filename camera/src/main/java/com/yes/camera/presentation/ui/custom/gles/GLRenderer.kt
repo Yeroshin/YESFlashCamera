@@ -61,6 +61,11 @@ class GLRenderer(
             R.raw.vertex_multiple,
             R.raw.mixed_fragment
         )
+       /* ShaderProgram(
+            context,
+            R.raw.vertex_mixed3,
+            R.raw.fragment_mixed3
+        )*/
     }
     private val stateShaderProgram by lazy {
         ShaderProgram(
@@ -249,7 +254,7 @@ class GLRenderer(
     private fun checkSupport(): Boolean {
         val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
-        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x20000
+        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x30000
         return if (supportsEs2) {
             true
             /* binding.viewFinder.setEGLContextClientVersion(2)

@@ -1,3 +1,4 @@
+#extension GL_OES_EGL_image_external: require
 precision mediump float; // Устанавливаем точность для float
 
 varying vec2 vTexCoord1; // Получаем координаты текстурирования первой текстуры
@@ -5,7 +6,7 @@ varying vec2 vTexCoord2; // Получаем координаты текстур
 
 uniform samplerExternalOES baseTexture;    // Основная текстура
 uniform sampler2D overlayTexture;  // Наложенная текстура
-uniform float overlayAlpha;         // Альфа-канал наложенной текстуры
+
 
 void main()
 {
