@@ -105,13 +105,14 @@ fun CameraScreenSuccess(
                 AutoFitSurfaceView(
                     context,
                     null
-                ).also {
+                ).apply {
                     // autoFitSurfaceView = it
-                    it.setEGLContextClientVersion(3)
-                    it.setRenderer(
+                    setFullscreen(true)
+                    setEGLContextClientVersion(3)
+                    setRenderer(
                         renderer
                     )
-                    it.setOnTouchListener { v, event ->
+                    setOnTouchListener { v, event ->
                         v.performClick()
                         if (event != null) {
                             val normalizedX =

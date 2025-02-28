@@ -14,9 +14,12 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_TRIGGER_IDLE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.icu.text.SimpleDateFormat
@@ -379,6 +382,10 @@ class CameraRepository(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
         )
 
+        val config2 = characteristics.get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION
+        )
+        val у = config2?.getOutputSizes(ImageFormat.RAW_SENSOR)
         // If image format is provided, use it to determine supported sizes; or else use target class
         // val allSizes = config?.getOutputSizes(ImageReader::class.java)
         val e = config?.getOutputSizes(MediaCodec::class.java)
@@ -392,10 +399,16 @@ class CameraRepository(
             characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val minFocus = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         /////////////////
+        val availablePixelModes = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
         val g =
             characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(MediaRecorder::class.java)
+        // Check AF supported
+        val activeArraySize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        val maxRegionsAf = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
+
+/////////////////
         /////////////////
         return Characteristics(
             isoValue = 0,
@@ -413,11 +426,6 @@ class CameraRepository(
             )
         )
     }
-
-
-
-
-
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun startVideoSession(){
@@ -462,16 +470,90 @@ class CameraRepository(
         )
         cameraDevice?.createCaptureSession(config)
     }
+
+    var frameTime: Long = 0
+    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            super.onCaptureCompleted(session, request, result)
+            captureResult = result
+            //////////////////////////
+            val afState = result[CaptureResult.CONTROL_AF_STATE]!!
+            if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED) {
+                // Здесь вы можете выполнить действие в зависимости от результата фокусировки
+                println("FOCUSED!!!!")
+                captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CONTROL_AF_TRIGGER_IDLE )
+                captureRequest?.let {
+                    //  sessio?.stopRepeating()
+                    sessio?.capture(it.build(), this, mBackgroundHandler)
+                  //  sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                }
+            } else if (afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
+
+                println("not focused")
+                captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+                captureRequest?.let {
+                    //  sessio?.stopRepeating()
+                    sessio?.capture(it.build(), this, mBackgroundHandler)
+                }
+              /*  captureRequest?.set(
+                    CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_START
+                );
+                captureRequest?.let {
+                    sessio?.setRepeatingRequest(it.build(), this, null);
+                }*/
+
+                ////////////////////////
+                val currentTime = System.currentTimeMillis()
+                if (frameTime != 0L) {
+                    val fps = 1000.0 / (currentTime - frameTime)
+                    //   Log.e("CaptureSession", "FPS: $fps")
+                    //  println("FPS: $fps")
+                }
+                frameTime = currentTime
+                /////////////////////////
+            }
+        }
+        override fun onCaptureProgressed(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            partialResult: CaptureResult
+        ) {
+            // Получение состояний фокуса
+            val focusState = partialResult.get(CaptureResult.CONTROL_AF_STATE)
+            if (focusState != null) {
+                when (focusState) {
+                    CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {}
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {}
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {}
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {}
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {}
+                    else -> {}
+                }
+            }
+        }
+    }
+
     fun startPreviewCaptureRequest(){
         captureRequest =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         captureRequest?.addTarget(previewSurface)
         captureRequest?.addTarget(photoSurface)
         //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        captureRequest?.set(
+      /*  ///test
+        captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);*/
+
+        //////////////////
+     /*   captureRequest?.set(
             CaptureRequest.CONTROL_AE_MODE,
             CaptureRequest.CONTROL_AE_MODE_OFF
-        )
+        )*/
         //////////settings
         captureRequest?.set(
             CaptureRequest.EDGE_MODE,
@@ -494,6 +576,7 @@ class CameraRepository(
         captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
         captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
         captureRequest?.let {
+
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
         }
     }
@@ -515,12 +598,54 @@ class CameraRepository(
               CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
           )*/
         ///////test
+       // sessio?.stopRepeating();
+
+        //cancel any existing AF trigger (repeated touches, etc.)
+       // captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+      //  captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+      //  captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+
+      /*  captureRequest?.let {
+            //  sessio?.stopRepeating()
+            sessio?.capture(it.build(), captureCallback, mBackgroundHandler)
+        }*/
+
+        captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+         val focusArea = Rect(0, 0, 500, 500)
         captureRequest?.set(
+            CaptureRequest.CONTROL_AE_REGIONS,
+            arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX - 1))
+        )
+        captureRequest?.set(
+            CaptureRequest.CONTROL_AF_REGIONS,
+            arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX - 1))
+        )
+        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+        captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
+
+        captureRequest?.let {
+          //  sessio?.stopRepeating()
+            sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+        }
+
+      //  captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON); // Включите автоэкспозицию
+       /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+        captureRequest?.set(
+            CaptureRequest.SENSOR_EXPOSURE_TIME,
+            characteristics.shutterValue
+        )*/
+
+      /*  captureRequest?.let {
+            //  sessio?.stopRepeating()
+            sessio?.capture(it.build(), captureCallback, mBackgroundHandler)
+        }*/
+      /*  captureRequest?.set(
             CaptureRequest.CONTROL_AE_MODE,
             CaptureRequest.CONTROL_AE_MODE_OFF
-        )
+        )*/
         //////////settings
-        captureRequest?.set(
+       /* captureRequest?.set(
             CaptureRequest.EDGE_MODE,
             CaptureRequest.EDGE_MODE_OFF
         )
@@ -531,47 +656,32 @@ class CameraRepository(
         captureRequest?.set(
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-        )
-        ///////////////
+        )*/
+        ///////////////focus
 
-        captureRequest?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+      //  captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+     //   captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+        ////////////////////
+       // captureRequest?.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+        ////////////////
+       /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
         captureRequest?.set(
             CaptureRequest.SENSOR_EXPOSURE_TIME,
             characteristics.shutterValue
-        )
+        )*/
 
-        captureRequest?.let {
-            // sessio?.stopRepeating()
+     /*   captureRequest?.let {
+             sessio?.stopRepeating()
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-        }
+        }*/
 
     }
 
 
-    var frameTime: Long = 0
-    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
-        ) {
-            super.onCaptureCompleted(session, request, result)
-            captureResult = result
-            ////////////////////////
-            val currentTime = System.currentTimeMillis()
-            if (frameTime != 0L) {
-                val fps = 1000.0 / (currentTime - frameTime)
-                //   Log.e("CaptureSession", "FPS: $fps")
-                //  println("FPS: $fps")
-            }
-            frameTime = currentTime
-            /////////////////////////
-        }
-    }
+
 
 
     /*   private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->

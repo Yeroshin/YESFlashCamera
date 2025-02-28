@@ -160,6 +160,11 @@ class GLRenderer(
             Geometry.Vector(0f, 0f, 1f)
         )
         touchedPoint = Geometry.intersectionPoint(ray, plane)
+        ////////////////////
+        glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
+            it.translate(touchedPoint.x, touchedPoint.y)
+        }
+        ////////////////////
 
         glObjects.forEach {
             val objectBoundingRectangle = Geometry.Rectangle(
@@ -181,6 +186,9 @@ class GLRenderer(
         }
     }
     fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
+        //////////////////
+
+        ///////////////////
         glObjects.forEach {
             if (it.selected) {
                 val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
@@ -355,12 +363,12 @@ class GLRenderer(
             GL_TEXTURE_WRAP_T,
             GL_CLAMP_TO_BORDER
         );
-        val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
+      /*  val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
         glTexParameterfv(
             GL_TEXTURE_EXTERNAL_OES,
             GL_TEXTURE_BORDER_COLOR,
             borderColor,
-            0)
+            0)*/
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
         return textureHandle[0]
     }

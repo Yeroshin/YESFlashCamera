@@ -305,7 +305,7 @@ class GlMagnifierAdvanced(
             0
         )
         glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, 3)
+        glBindTexture(GL_TEXTURE_2D, textureHandle[0])
         glUniform1i(
             glGetUniformLocation(shaderProgram.programId, "overlayTexture"),
             1
@@ -344,8 +344,8 @@ class GlMagnifierAdvanced(
 
 
 
-        glGenTextures(2, textureHandle, 0)
-        glActiveTexture(GLES20.GL_TEXTURE0)
+        glGenTextures(1, textureHandle, 0)
+      /*  glActiveTexture(GLES20.GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureHandle[0])
         glTexParameteri(
             GL_TEXTURE_EXTERNAL_OES,
@@ -366,7 +366,7 @@ class GlMagnifierAdvanced(
             GL_CLAMP_TO_EDGE
         );
 
-        glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)*/
 
         //////////////////
         val options = BitmapFactory.Options().apply {
@@ -380,7 +380,7 @@ class GlMagnifierAdvanced(
         )
 
         glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, textureHandle[1])
+        glBindTexture(GL_TEXTURE_2D, textureHandle[0])
 
         glTexParameteri(
             GL_TEXTURE_2D,
