@@ -22,7 +22,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     fun setAspectRatio(width: Int, height: Int) {
         require(width > 0 && height > 0) { "Size cannot be negative" }
       //  aspectRatio = width.toFloat() / height.toFloat()
-        aspectRatio = if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+        aspectRatio = if (width < height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
 
         //  holder.setFixedSize(320,400)
         requestLayout()
@@ -43,7 +43,19 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
         val v=suggestedMinimumHeight
-        if (fullscreen){
+
+        if(fullscreen){
+            setMeasuredDimension(
+                (width/aspectRatio).toInt(),
+                height
+            )
+        }else{
+            setMeasuredDimension(
+                width,
+                (height*aspectRatio).toInt(),
+            )
+        }
+      /*  if (fullscreen){
             if((height*aspectRatio).toInt()<height){
                 setMeasuredDimension(
                     (height*aspectRatio).toInt(),
@@ -70,7 +82,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
                 )
             }
 
-        }
+        }*/
 
         /* if (aspectRatio == 0f) {
            //  setMeasuredDimension(width, height)

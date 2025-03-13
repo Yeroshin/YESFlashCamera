@@ -15,7 +15,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
-import android.hardware.camera2.CameraMetadata.CONTROL_AF_TRIGGER_IDLE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -490,6 +489,7 @@ class CameraRepository(
                 // Здесь вы можете выполнить действие в зависимости от результата фокусировки
                 Log.e("f","FOCUSED")
                 println("FOCUSED!!!!")
+                val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
               //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CONTROL_AF_TRIGGER_IDLE )
                 captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
               /*  captureRequest?.let {
@@ -632,20 +632,60 @@ class CameraRepository(
 
       //  captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
        // captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-         val focusArea = Rect(0, 0, 500, 500)
-      /*  captureRequest?.set(
+
+        ///////////////////////////
+        val characteristics = cameraManager.getCameraCharacteristics("0")
+        val sensorArraySize: Rect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
+        val height = sensorArraySize.height()
+        val width = sensorArraySize.width()
+        val centerX = sensorArraySize.centerX()
+        val centerY = sensorArraySize.centerY()
+        println(centerY)
+        println(centerX)
+        val focusArea1:MeteringRectangle =  MeteringRectangle(centerX,
+            centerY + centerY - 30 ,
+            150 * 2,
+            150 * 2,
+            1000)
+        ///////////////////////////
+      /*  captureRequest?.let {
+            sessio?.stopRepeating();
+
+            //cancel any existing AF trigger (repeated touches, etc.)
+            it.set(
+                CaptureRequest.CONTROL_AF_TRIGGER,
+                CameraMetadata.CONTROL_AF_TRIGGER_CANCEL
+            );
+            it.set(
+                CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_OFF
+            );
+            sessio?.capture(
+                it.build(),
+                captureCallback,
+                mBackgroundHandler
+            );
+        }*/
+        ////////////////////////////
+
+         val focusArea = Rect(1, 1, 1000, 1000)
+        captureRequest?.set(
             CaptureRequest.CONTROL_AE_REGIONS,
             arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX - 1))
-        )*/
-        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-        captureRequest?.set(
+        )
+          captureRequest?.set(
             CaptureRequest.CONTROL_AF_REGIONS,
             arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX - 1))
         )
 
-        captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+       // captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+
+      //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
         captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+       // captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+       captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+
+
         captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
        /* captureRequest?.let {
             sessio?.stopRepeating()
@@ -655,7 +695,7 @@ class CameraRepository(
       //  captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
 
         captureRequest?.let {
-          //  sessio?.stopRepeating()
+            sessio?.stopRepeating()
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
         }
 

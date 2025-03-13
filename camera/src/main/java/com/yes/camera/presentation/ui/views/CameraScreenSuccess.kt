@@ -1,12 +1,16 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
+import android.util.DisplayMetrics
 import android.view.MotionEvent
+import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,9 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -93,9 +101,18 @@ fun CameraScreenSuccess(
             SettingsItemUI::class.java to ShutterValueItemAdapterDelegate(),
         )
     )
+    val context = LocalContext.current
 
+    // Получаем WindowManager
+    val rWidth = 4096; val rHeight = 3072
+    val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    val displayMetrics = DisplayMetrics()
+    windowManager.defaultDisplay.getMetrics(displayMetrics)
+    val screenWidth = 1000*displayMetrics.widthPixels/4096
+    val screenHeight = 1000*displayMetrics.heightPixels/3072
+////////////////tmp
 
-
+    /////////////////////
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -107,7 +124,9 @@ fun CameraScreenSuccess(
                     null
                 ).apply {
                     // autoFitSurfaceView = it
-                    setFullscreen(true)
+                   // setFullscreen(true)
+                    setFullscreen(false)
+                    setAspectRatio(4096,3072)
                     setEGLContextClientVersion(3)
                     setRenderer(
                         renderer
@@ -488,5 +507,18 @@ fun CameraScreenSuccess(
 
 
     }
+    Box(
+        modifier = Modifier
+            .width(screenWidth.dp)
+            .height(screenHeight.dp)
+            .background( Color.White.copy(alpha = 0.5f))
 
+    ) {
+        /*  drawRect(
+              color = Color.White.copy(alpha = 0.5f),
+              topLeft = Offset(0f, 0f),
+              size = Size(screenWidth.toFloat(), screenHeight.toFloat()),
+              style = Stroke(width = 5f)
+          )*/
+    }
 }
