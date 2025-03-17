@@ -143,6 +143,22 @@ class MapperUI {
                         SettingsItemUI("15"),
 
                     )
+                ),
+                Item.MAGNIFIER to Characteristic(
+                    value = 0,
+                    title = "Focus",
+                    items = listOf(
+                        SettingsItemUI("1"),
+                        SettingsItemUI("2"),
+                        SettingsItemUI("3"),
+                        SettingsItemUI("4"),
+                        SettingsItemUI("5"),
+                        SettingsItemUI("6"),
+                        SettingsItemUI("7"),
+                        SettingsItemUI("8"),
+                        SettingsItemUI("9"),
+                        SettingsItemUI("10"),
+                    )
                 )
             )
 

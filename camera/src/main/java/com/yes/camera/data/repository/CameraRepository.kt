@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.graphics.YuvImage
@@ -32,6 +33,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
+import android.view.MotionEvent
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
@@ -479,64 +481,116 @@ class CameraRepository(
         ) {
             super.onCaptureCompleted(session, request, result)
             //////////////////////////
+
             val afState = result[CaptureResult.CONTROL_AF_STATE]!!
+            val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+            if (request.tag == "focus"){
+                captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                captureRequest?.addTarget(previewSurface)
+                captureRequest?.addTarget(photoSurface)
+                val focusArea = Rect(1, 1, 920, 1230)
+
+
+                captureRequest?.set(
+                    CaptureRequest.CONTROL_AF_MODE,
+                    CaptureRequest.CONTROL_AF_MODE_AUTO
+                )
+                captureRequest?.set(
+                    CaptureRequest.CONTROL_AF_TRIGGER,
+                    CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                )
+                captureRequest?.set(
+                    CaptureRequest.CONTROL_AF_REGIONS,
+                    arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
+                )
+                captureRequest?.let {
+                    sessio?.stopRepeating()
+                    sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                }
+            }
+            when (afState) {
+
+                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+
+
+                }
+            }
+
+
+
           /*  captureRequest?.let {
                 //  sessio?.stopRepeating()
                 //  sessio?.capture(it.build(), this, mBackgroundHandler)
                   sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
             }*/
-            if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED) {
-                // Здесь вы можете выполнить действие в зависимости от результата фокусировки
-                Log.e("f","FOCUSED")
-                println("FOCUSED!!!!")
-                val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
-              //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CONTROL_AF_TRIGGER_IDLE )
-                captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
-              /*  captureRequest?.let {
-                    //  sessio?.stopRepeating()
-                  //  sessio?.capture(it.build(), this, mBackgroundHandler)
-                    sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
-                }*/
-            } else if (afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
+           /* when (afState) {
+                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                    // Здесь вы можете выполнить действие в зависимости от результата фокусировки
+                    Log.e("f","FOCUSED")
+                    println("FOCUSED!!!!")
+                    val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
 
-                println("not focused")
-                captureRequest?.set(
-                    CaptureRequest.CONTROL_AF_TRIGGER,
-                    CaptureRequest.CONTROL_AF_TRIGGER_START
-                )
-              /*  captureRequest?.let {
-                    //  sessio?.stopRepeating()
-                    sessio?.capture(it.build(), this, mBackgroundHandler)
-                }*/
-            }else if (afState == CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN) {
+                    captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
+                    captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
+
+                    captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
+                    captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                    captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, null);// As documentation says AF_trigger can be null in some device
+
+
+                    captureRequest?.let {
+                        sessio?.stopRepeating()
+                        sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
+                    }
+                    /*  captureRequest?.let {
+                            //  sessio?.stopRepeating()
+                          //  sessio?.capture(it.build(), this, mBackgroundHandler)
+                            sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                        }*/
+                }
+                CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+
+                    println("not focused")
+                    captureRequest?.set(
+                        CaptureRequest.CONTROL_AF_TRIGGER,
+                        CaptureRequest.CONTROL_AF_TRIGGER_START
+                    )
+                    /*  captureRequest?.let {
+                            //  sessio?.stopRepeating()
+                            sessio?.capture(it.build(), this, mBackgroundHandler)
+                        }*/
+                }
+                CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
 
                     println("scan")
-                 //   captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
-                 /*  captureRequest?.let {
-                        //  sessio?.stopRepeating()
-                        sessio?.capture(it.build(), this, mBackgroundHandler)
-                    }*/
-              /*  captureRequest?.set(
-                    CaptureRequest.CONTROL_AF_TRIGGER,
-                    CameraMetadata.CONTROL_AF_TRIGGER_START
-                );
-                captureRequest?.let {
-                    sessio?.setRepeatingRequest(it.build(), this, null);
-                }*/
+                    //   captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+                    /*  captureRequest?.let {
+                                //  sessio?.stopRepeating()
+                                sessio?.capture(it.build(), this, mBackgroundHandler)
+                            }*/
+                    /*  captureRequest?.set(
+                            CaptureRequest.CONTROL_AF_TRIGGER,
+                            CameraMetadata.CONTROL_AF_TRIGGER_START
+                        );
+                        captureRequest?.let {
+                            sessio?.setRepeatingRequest(it.build(), this, null);
+                        }*/
 
-                ////////////////////////
-                val currentTime = System.currentTimeMillis()
-                if (frameTime != 0L) {
-                    val fps = 1000.0 / (currentTime - frameTime)
-                    //   Log.e("CaptureSession", "FPS: $fps")
-                    //  println("FPS: $fps")
+                    ////////////////////////
+                    val currentTime = System.currentTimeMillis()
+                    if (frameTime != 0L) {
+                        val fps = 1000.0 / (currentTime - frameTime)
+                        //   Log.e("CaptureSession", "FPS: $fps")
+                        //  println("FPS: $fps")
+                    }
+                    frameTime = currentTime
+                    /////////////////////////
                 }
-                frameTime = currentTime
-                /////////////////////////
-            } else  {
-                // Обработка других состояний, если необходимо
-                println("Состояние фокуса: $afState")
-            }
+                else -> {
+                    // Обработка других состояний, если необходимо
+                    println("Состояние фокуса: $afState")
+                }
+            }*/
         }
         override fun onCaptureProgressed(
             session: CameraCaptureSession,
@@ -545,7 +599,7 @@ class CameraRepository(
         ) {
             // Получение состояний фокуса
             val focusState = partialResult.get(CaptureResult.CONTROL_AF_STATE)
-            if (focusState != null) {
+            focusState?.let {
                 when (focusState) {
                     CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {}
                     CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {}
@@ -560,7 +614,7 @@ class CameraRepository(
 
     fun startPreviewCaptureRequest(){
         captureRequest =
-            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+            cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         captureRequest?.addTarget(previewSurface)
         captureRequest?.addTarget(photoSurface)
         //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -593,13 +647,44 @@ class CameraRepository(
         //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
-        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)
+       /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
+        captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)*/
         captureRequest?.let {
 
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
         }
     }
+
+
+    private val METERING_RECTANGLE_SIZE = 0.15f
+    private fun meteringRectangle(touchPoint: FloatArray): MeteringRectangle {
+        val characteristics = cameraManager.getCameraCharacteristics("0")
+        val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)!!
+        val sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
+
+        val halfMeteringRectWidth = (METERING_RECTANGLE_SIZE * sensorSize.width()) / 2
+        val halfMeteringRectHeight = (METERING_RECTANGLE_SIZE * sensorSize.height()) / 2
+
+        // Normalize the [x,y] touch point in the view port to values in the range of [0,1]
+     //   val normalizedPoint = floatArrayOf(event.x / previewSize.height, event.y / previewSize.width)
+
+        // Scale and rotate the normalized point such that it maps to the sensor region
+        Matrix().apply {
+            postRotate(-sensorOrientation.toFloat(), 0.5f, 0.5f)
+            postScale(sensorSize.width().toFloat(), sensorSize.height().toFloat())
+            mapPoints(touchPoint)
+        }
+
+        val meteringRegion = Rect(
+            (touchPoint[0] - halfMeteringRectWidth).toInt().coerceIn(0, sensorSize.width()),
+            (touchPoint[1] - halfMeteringRectHeight).toInt().coerceIn(0, sensorSize.height()),
+            (touchPoint[0] + halfMeteringRectWidth).toInt().coerceIn(0, sensorSize.width()),
+            (touchPoint[1] + halfMeteringRectHeight).toInt().coerceIn(0, sensorSize.height())
+        )
+
+        return MeteringRectangle(meteringRegion, MeteringRectangle.METERING_WEIGHT_MAX)
+    }
+
     fun setInputCharacteristics(characteristics: Characteristics) {
        /* captureRequest =
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
@@ -635,71 +720,90 @@ class CameraRepository(
 
         ///////////////////////////
         val characteristics = cameraManager.getCameraCharacteristics("0")
+        val afRegion: Int? = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
+        val aeRegion: Int? = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE)
+        val awbRegion: Int? = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB)
+
+        val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)!!
         val sensorArraySize: Rect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
         val height = sensorArraySize.height()
         val width = sensorArraySize.width()
+        val meteringRectWidth = METERING_RECTANGLE_SIZE * sensorArraySize.width()
+        val meteringRectHeight = METERING_RECTANGLE_SIZE * sensorArraySize.height()
         val centerX = sensorArraySize.centerX()
         val centerY = sensorArraySize.centerY()
         println(centerY)
         println(centerX)
-        val focusArea1:MeteringRectangle =  MeteringRectangle(centerX,
-            centerY + centerY - 30 ,
-            150 * 2,
-            150 * 2,
-            1000)
-        ///////////////////////////
-      /*  captureRequest?.let {
-            sessio?.stopRepeating();
 
-            //cancel any existing AF trigger (repeated touches, etc.)
-            it.set(
-                CaptureRequest.CONTROL_AF_TRIGGER,
-                CameraMetadata.CONTROL_AF_TRIGGER_CANCEL
-            );
-            it.set(
-                CaptureRequest.CONTROL_AF_MODE,
-                CaptureRequest.CONTROL_AF_MODE_OFF
-            );
-            sessio?.capture(
-                it.build(),
-                captureCallback,
-                mBackgroundHandler
-            );
-        }*/
         ////////////////////////////
+        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        captureRequest?.addTarget(previewSurface)
+        captureRequest?.addTarget(photoSurface)
 
-         val focusArea = Rect(1, 1, 1000, 1000)
-        captureRequest?.set(
-            CaptureRequest.CONTROL_AE_REGIONS,
-            arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX - 1))
-        )
-          captureRequest?.set(
+         val focusArea = Rect(1, 1,  920,1230)
+
+
+        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+        captureRequest?.let {
+            captureRequest?.setTag("capture")
+            sessio?.stopRepeating()
+            sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+        }
+        //////////
+        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        captureRequest?.addTarget(previewSurface)
+        captureRequest?.addTarget(photoSurface)
+       /* captureRequest?.set(
             CaptureRequest.CONTROL_AF_REGIONS,
-            arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX - 1))
+            arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX ))
+        )*/
+        captureRequest?.set(
+            CaptureRequest.CONTROL_AF_REGIONS,
+          //  arrayOf(meteringRectangle(characteristics.to ))
         )
+        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+        captureRequest?.setTag("focus")
+        captureRequest?.let {
+            sessio?.capture(it.build(), captureCallback, mBackgroundHandler)
+        }
+       /* captureRequest?.set(
+            CaptureRequest.CONTROL_AE_REGIONS,
+              arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX ))
+        )
+        captureRequest?.set(
+            CaptureRequest.CONTROL_AWB_REGIONS,
+            arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX ))
+        )*/
 
        // captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
 
       //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
+        /////////bad working
+      /*  captureRequest?.set(CaptureRequest.DISTORTION_CORRECTION_MODE, CameraMetadata.DISTORTION_CORRECTION_MODE_OFF)
+        captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
         captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-       // captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-       captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+        captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
 
 
+        captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE)
         captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
-       /* captureRequest?.let {
+        captureRequest?.let {
             sessio?.stopRepeating()
             sessio?.capture(it.build(), captureCallback, mBackgroundHandler)
         }*/
+        ///////////////////////
 
-      //  captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
 
-        captureRequest?.let {
+
+      /*  captureRequest?.let {
             sessio?.stopRepeating()
             sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-        }
+        }*/
 
-      //  captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON); // Включите автоэкспозицию
+
        /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
         captureRequest?.set(
             CaptureRequest.SENSOR_EXPOSURE_TIME,

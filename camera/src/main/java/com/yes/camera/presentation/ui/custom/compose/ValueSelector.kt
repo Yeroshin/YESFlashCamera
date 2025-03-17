@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,7 +43,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
-    modifier: Modifier,
     position: Int,
     items: List<Any>?,
     adapter: CompositeAdapter,
@@ -89,11 +89,12 @@ fun ValueSelector(
             }
     }*/
     Column(
-        modifier = modifier
+        modifier = Modifier
          /*   .background(
                 Color.LightGray.copy(alpha = 0.5f)
             )*/
             // .height(80.dp)
+            .fillMaxWidth()
             .wrapContentHeight()
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
