@@ -1,7 +1,6 @@
 package com.yes.camera.presentation.mapper
 
 import com.yes.camera.domain.model.Characteristics
-import com.yes.camera.presentation.model.Characteristic
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
@@ -48,141 +47,185 @@ class MapperUI {
         3280000,
         4560000
     )
-    fun map(characteristics:Characteristics):CharacteristicsUI{
+
+    fun map(characteristics: Characteristics): CharacteristicsUI {
 
 
-
-        val supportedShutterSpeeds=standardShutterSpeeds
-            .filter { it.key in characteristics.shutterRange.first ..characteristics.shutterRange.last }
-            .map { SettingsItemUI(it.value)}
-        val supportedIsoValues=standardIsoValues
-            .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
-            .map { SettingsItemUI(it.toString() )}
+        val supportedShutterSpeeds = standardShutterSpeeds
+            .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
+            .map { SettingsItemUI(it.value) }
+        val supportedIsoValues = standardIsoValues
+            .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
+            .map { SettingsItemUI(it.toString()) }
 
         return CharacteristicsUI(
-          /*  shutterValues = standardShutterSpeeds
-                .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
-                .map { SettingsItemUI(it.second )},
-            isoValues = standardIsoValues
-                .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
-                .map { SettingsItemUI(it.toString() )},*/
-            characteristics = mapOf(
-                Item.SHUTTER to Characteristic(
-                    value = 0,
-                    title = "Shutter",
-                   /* items= listOf(
-                        SettingsItemUI("1/32000"),
-                        SettingsItemUI("1/16000"),
-                        SettingsItemUI("1/8000"),
-                        SettingsItemUI("1/4000"),
-                        SettingsItemUI("1/2000"),
-                        SettingsItemUI("1/1000"),
-                        SettingsItemUI("1/500"),
-                        SettingsItemUI("1/250"),
-                        SettingsItemUI("1/125"),
-                        SettingsItemUI("1/60"),
-                        SettingsItemUI("1/30"),
-                        SettingsItemUI("1/15"),
-                        SettingsItemUI("1/8"),
-                        SettingsItemUI("1/4"),
-                        SettingsItemUI("1/2"),
-                        SettingsItemUI("1"),
-                        SettingsItemUI("2"),
-                        SettingsItemUI("4"),
-                        SettingsItemUI("8"),
-                    )*/
-                    items = standardShutterSpeeds
-                        .keys // Преобразуем Map в List пар
-                        .sortedDescending()  // Сортируем по ключам (первый элемент пары)
-                        .map { SettingsItemUI(standardShutterSpeeds[it]!!) }
-                ),
-                Item.ISO to Characteristic(
-                    value = 0,
-                    title = "Shutter",
-                    items= listOf(
-                        SettingsItemUI("50"),
-                        SettingsItemUI("100"),
-                        SettingsItemUI("200"),
-                        SettingsItemUI("400"),
-                        SettingsItemUI("800"),
-                        SettingsItemUI("1600"),
-                        SettingsItemUI("3200"),
-                        SettingsItemUI("6400"),
-                        SettingsItemUI("12800"),
-                        SettingsItemUI("25600"),
-                        SettingsItemUI("51200"),
-                        SettingsItemUI("102400"),
-                        SettingsItemUI("204800"),
-                        SettingsItemUI("409600"),
-                        SettingsItemUI("819200"),
-                        SettingsItemUI("1638400"),
-                        SettingsItemUI("3280000"),
-                        SettingsItemUI("4560000"),
-                    )
-                ),
-                Item.FOCUS to Characteristic(
-                    value = 0,
-                    title = "Focus",
-                    items= listOf(
-                        SettingsItemUI("0.2"),
-                        SettingsItemUI("1"),
-                        SettingsItemUI("2"),
-                        SettingsItemUI("3"),
-                        SettingsItemUI("4"),
-                        SettingsItemUI("5"),
-                        SettingsItemUI("6"),
-                        SettingsItemUI("7"),
-                        SettingsItemUI("8"),
-                        SettingsItemUI("9"),
-                        SettingsItemUI("9.5"),
-                        SettingsItemUI("10"),
-                        SettingsItemUI("11"),
-                        SettingsItemUI("12"),
-                        SettingsItemUI("13"),
-                        SettingsItemUI("14"),
-                        SettingsItemUI("15"),
 
-                    )
+            /*  shutterItems= standardShutterSpeeds
+                  .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
+                  .map { SettingsItemUI(it.second )},
+              isoItems = standardIsoValues
+                  .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
+                  .map { SettingsItemUI(it.toString() )},*/
+            shutterItems = standardShutterSpeeds
+                .toSortedMap(compareByDescending { it })
+                .map {
+                    SettingsItemUI(it.value)
+                },
+            isoItems = standardIsoValues.map {
+                SettingsItemUI(it.toString())
+            },
+            focusItems = listOf(
+                SettingsItemUI("0.2"),
+                SettingsItemUI("1"),
+                SettingsItemUI("2"),
+                SettingsItemUI("3"),
+                SettingsItemUI("4"),
+                SettingsItemUI("5"),
+                SettingsItemUI("6"),
+                SettingsItemUI("7"),
+                SettingsItemUI("8"),
+                SettingsItemUI("9"),
+                SettingsItemUI("9.5"),
+                SettingsItemUI("10"),
+                SettingsItemUI("11"),
+                SettingsItemUI("12"),
+                SettingsItemUI("13"),
+                SettingsItemUI("14"),
+                SettingsItemUI("15"),
+
                 ),
-                Item.MAGNIFIER to Characteristic(
-                    value = 0,
-                    title = "Focus",
-                    items = listOf(
-                        SettingsItemUI("1"),
-                        SettingsItemUI("2"),
-                        SettingsItemUI("3"),
-                        SettingsItemUI("4"),
-                        SettingsItemUI("5"),
-                        SettingsItemUI("6"),
-                        SettingsItemUI("7"),
-                        SettingsItemUI("8"),
-                        SettingsItemUI("9"),
-                        SettingsItemUI("10"),
-                    )
-                )
+            magnifierItems = listOf(
+                SettingsItemUI("1"),
+                SettingsItemUI("2"),
+                SettingsItemUI("3"),
+                SettingsItemUI("4"),
+                SettingsItemUI("5"),
+                SettingsItemUI("6"),
+                SettingsItemUI("7"),
+                SettingsItemUI("8"),
+                SettingsItemUI("9"),
+                SettingsItemUI("10"),
             )
+            /*  characteristics = mapOf(
+                  Item.SHUTTER to Characteristic(
+                      value = 0,
+                      title = "Shutter",
+                     /* items= listOf(
+                          SettingsItemUI("1/32000"),
+                          SettingsItemUI("1/16000"),
+                          SettingsItemUI("1/8000"),
+                          SettingsItemUI("1/4000"),
+                          SettingsItemUI("1/2000"),
+                          SettingsItemUI("1/1000"),
+                          SettingsItemUI("1/500"),
+                          SettingsItemUI("1/250"),
+                          SettingsItemUI("1/125"),
+                          SettingsItemUI("1/60"),
+                          SettingsItemUI("1/30"),
+                          SettingsItemUI("1/15"),
+                          SettingsItemUI("1/8"),
+                          SettingsItemUI("1/4"),
+                          SettingsItemUI("1/2"),
+                          SettingsItemUI("1"),
+                          SettingsItemUI("2"),
+                          SettingsItemUI("4"),
+                          SettingsItemUI("8"),
+                      )*/
+                      items = standardShutterSpeeds
+                          .keys // Преобразуем Map в List пар
+                          .sortedDescending()  // Сортируем по ключам (первый элемент пары)
+                          .map { SettingsItemUI(standardShutterSpeeds[it]!!) }
+                  ),
+                  Item.ISO to Characteristic(
+                      value = 0,
+                      title = "Shutter",
+                      items= listOf(
+                          SettingsItemUI("50"),
+                          SettingsItemUI("100"),
+                          SettingsItemUI("200"),
+                          SettingsItemUI("400"),
+                          SettingsItemUI("800"),
+                          SettingsItemUI("1600"),
+                          SettingsItemUI("3200"),
+                          SettingsItemUI("6400"),
+                          SettingsItemUI("12800"),
+                          SettingsItemUI("25600"),
+                          SettingsItemUI("51200"),
+                          SettingsItemUI("102400"),
+                          SettingsItemUI("204800"),
+                          SettingsItemUI("409600"),
+                          SettingsItemUI("819200"),
+                          SettingsItemUI("1638400"),
+                          SettingsItemUI("3280000"),
+                          SettingsItemUI("4560000"),
+                      )
+                  ),
+                  Item.FOCUS to Characteristic(
+                      value = 0,
+                      title = "Focus",
+                      items= listOf(
+                          SettingsItemUI("0.2"),
+                          SettingsItemUI("1"),
+                          SettingsItemUI("2"),
+                          SettingsItemUI("3"),
+                          SettingsItemUI("4"),
+                          SettingsItemUI("5"),
+                          SettingsItemUI("6"),
+                          SettingsItemUI("7"),
+                          SettingsItemUI("8"),
+                          SettingsItemUI("9"),
+                          SettingsItemUI("9.5"),
+                          SettingsItemUI("10"),
+                          SettingsItemUI("11"),
+                          SettingsItemUI("12"),
+                          SettingsItemUI("13"),
+                          SettingsItemUI("14"),
+                          SettingsItemUI("15"),
+
+                      )
+                  ),
+                  Item.MAGNIFIER to Characteristic(
+                      value = 0,
+                      title = "Focus",
+                      items = listOf(
+                          SettingsItemUI("1"),
+                          SettingsItemUI("2"),
+                          SettingsItemUI("3"),
+                          SettingsItemUI("4"),
+                          SettingsItemUI("5"),
+                          SettingsItemUI("6"),
+                          SettingsItemUI("7"),
+                          SettingsItemUI("8"),
+                          SettingsItemUI("9"),
+                          SettingsItemUI("10"),
+                      )
+                  )
+              )*/
 
         )
     }
-    fun map(characteristics:CharacteristicsUI):Characteristics{
-       val iso= characteristics.characteristics[Item.ISO]?.items?.get(characteristics.isoPosition)?.text?.toInt()
 
-        val shutterString= characteristics.characteristics[Item.SHUTTER]?.items?.get(characteristics.shutterPosition)?.text
-        val shutter=standardShutterSpeeds.entries.firstOrNull { it.value == shutterString }?.key
+    fun map(characteristics: CharacteristicsUI): Characteristics {
+        val isoValue = characteristics.isoValue.toInt()
 
-        val focus= characteristics.characteristics[Item.FOCUS]?.items?.get(characteristics.focusPosition)?.text?.toFloat()
+        val shutterValue =
+            standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
+
+
+        val focusValue = characteristics.focusValue.toFloat()
 
         return Characteristics(
-            isoValue= iso?:100,
-        isoRange = IntRange(0,0),
-        shutterValue= shutter?:33_333_333L,
-            focusValue = focus?:0f,
+            isoValue = isoValue ?: 100,
+            isoRange = IntRange(0, 0),
+            shutterValue = shutterValue ?: 33_333_333L,
+            focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
-        shutterRange= LongRange(0,0),
-        resolutions= emptyList()
+            shutterRange = LongRange(0, 0),
+            resolutions = emptyList()
         )
     }
-    fun map(histogramData:ByteArray):CharacteristicsUI{
+
+    fun map(histogramData: ByteArray): CharacteristicsUI {
         return CharacteristicsUI(
             histogramData = histogramData
         )

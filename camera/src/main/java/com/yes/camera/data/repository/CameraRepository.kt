@@ -758,10 +758,10 @@ class CameraRepository(
             CaptureRequest.CONTROL_AF_REGIONS,
             arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX ))
         )*/
-        captureRequest?.set(
+       /* captureRequest?.set(
             CaptureRequest.CONTROL_AF_REGIONS,
           //  arrayOf(meteringRectangle(characteristics.to ))
-        )
+        )*/
         captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
         captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
         captureRequest?.setTag("focus")

@@ -2,22 +2,23 @@ package com.yes.camera.presentation.model
 
 data class CharacteristicsUI(
     val backCamera: Boolean = true,
-    val shutterPosition: Int = 0,
-    val isoPosition: Int = 0,
-    val focusPosition: Int = 0,
-    val magnifierPosition: Int = 0,
+    val shutterValue: String = "0",
+    val shutterItems:List<SettingsItemUI> =emptyList(),
+    val shutterPosition:Int=0,
+    val isoValue: String = "0",
+    val isoItems:List<SettingsItemUI> =emptyList(),
+    val isoPosition:Int=0,
+    val focusValue: String = "0",
+    val focusItems:List<SettingsItemUI> =emptyList(),
+    val focusPosition:Int=0,
+    val magnifierValue: String = "0",
+    val magnifierItems:List<SettingsItemUI> =emptyList(),
+    val magnifierPosition:Int=0,
     val touchPoint: FloatArray = FloatArray(2),
     val histogramData: ByteArray = ByteArray(0),
-    val characteristics: Map<Item, Characteristic> = emptyMap()
 
 )
 
 enum class Item {
     SHUTTER, ISO, FOCUS, MAGNIFIER
 }
-
-data class Characteristic(
-    val value: Int,
-    val items: List<SettingsItemUI>,
-    val title: String,
-)

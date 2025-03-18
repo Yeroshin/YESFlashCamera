@@ -210,7 +210,7 @@ fun CameraScreenSuccess(
             }
 
             var positionRadioGroup by remember {
-                mutableIntStateOf(0)
+                mutableStateOf("")
             }
 
 
@@ -226,13 +226,25 @@ fun CameraScreenSuccess(
                     onOptionSelected = { value ->
                         selectedItem.value = value
                         // characteristics.characteristics[value]
-                        selectorItems = characteristics.characteristics[value]?.items
+
                         positionRadioGroup = when (value) {
-                            Item.SHUTTER -> characteristics.shutterPosition
-                            Item.ISO -> characteristics.isoPosition
-                            Item.FOCUS -> characteristics.focusPosition
-                            Item.MAGNIFIER -> characteristics.magnifierPosition
-                            null -> 0
+                            Item.SHUTTER ->{
+                                selectorItems = characteristics.shutterItems
+                                characteristics.shutterValue
+                            }
+                            Item.ISO ->{
+                                selectorItems = characteristics.isoItems
+                                characteristics.isoValue
+                            }
+                            Item.FOCUS ->{
+                                selectorItems = characteristics.focusItems
+                                characteristics.focusValue
+                            }
+                            Item.MAGNIFIER ->{
+                                selectorItems = characteristics.magnifierItems
+                                characteristics.magnifierValue
+                            }
+                            null -> ""
                         }
                         value?.let { visibleSelector = true } ?: run { visibleSelector = false }
                         /* value?.let {
@@ -348,7 +360,8 @@ fun CameraScreenSuccess(
                                             shutter.value = it
                                         }
                                         characteristics.copy(
-                                            shutterPosition = index
+                                            shutterPosition = index,
+                                            shutterValue = shutter.value
                                         )
                                     }
 
@@ -356,11 +369,12 @@ fun CameraScreenSuccess(
                                         selectorItems?.get(index)?.text?.let {
                                             iso.value = it
                                         }
-                                        characteristics.characteristics[Item.ISO]?.copy(
+                                       /* characteristics.characteristics[Item.ISO]?.copy(
                                             value = index
-                                        )
+                                        )*/
                                         characteristics.copy(
-                                            isoPosition = index
+                                            isoPosition = index,
+                                            isoValue = iso.value
                                         )
                                     }
 
@@ -369,7 +383,8 @@ fun CameraScreenSuccess(
                                             focus.value = it
                                         }
                                         characteristics.copy(
-                                            focusPosition = index
+                                            focusPosition = index,
+                                            focusValue = focus.value
                                         )
                                     }
 
@@ -383,7 +398,7 @@ fun CameraScreenSuccess(
                                         }
 
                                         characteristics.copy(
-                                            magnifierPosition = index
+                                            magnifierPosition = index,
                                         )
                                     }
 
