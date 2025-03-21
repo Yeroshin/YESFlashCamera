@@ -21,8 +21,9 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     fun setAspectRatio(width: Int, height: Int) {
         require(width > 0 && height > 0) { "Size cannot be negative" }
-      //  aspectRatio = width.toFloat() / height.toFloat()
-        aspectRatio = if (width < height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+        //  aspectRatio = width.toFloat() / height.toFloat()
+        aspectRatio =
+            if (width < height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
 
         //  holder.setFixedSize(320,400)
         requestLayout()
@@ -31,6 +32,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     fun setFullscreen(fullScreen: Boolean) {
         this.fullscreen = fullScreen
     }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         // Теперь у вас есть доступные размеры w и h
@@ -42,47 +44,56 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
-        val v=suggestedMinimumHeight
 
-        if(fullscreen){
+        val v = width
+        val h = (width / aspectRatio).toInt()
+        if (fullscreen) {
             setMeasuredDimension(
-                (width/aspectRatio).toInt(),
+                (height / aspectRatio).toInt(),
                 height
             )
-        }else{
-            setMeasuredDimension(
-                width,
-                (height*aspectRatio).toInt(),
-            )
+        } else {
+
+            if (width > height) {
+                setMeasuredDimension(
+                    (height/ aspectRatio).toInt(),
+                    height
+                )
+            } else {
+                setMeasuredDimension(
+                    width,
+                    (width / aspectRatio).toInt()
+                )
+            }
         }
-      /*  if (fullscreen){
-            if((height*aspectRatio).toInt()<height){
-                setMeasuredDimension(
-                    (height*aspectRatio).toInt(),
-                    height
-                )
+        /*  if (fullscreen){
+              if((height*aspectRatio).toInt()<height){
+                  setMeasuredDimension(
+                      (height*aspectRatio).toInt(),
+                      height
+                  )
 
-            }else{
-                setMeasuredDimension(
-                    width,
-                    (height*aspectRatio).toInt(),
-                )
+              }else{
+                  setMeasuredDimension(
+                      width,
+                      (height*aspectRatio).toInt(),
+                  )
 
-            }
-        }else{
-            if((width*aspectRatio).toInt()>height){
-                setMeasuredDimension(
-                    (height*aspectRatio).toInt(),
-                    height
-                )
-            }else{
-                setMeasuredDimension(
-                    width,
-                    (width*aspectRatio).toInt()
-                )
-            }
+              }
+          }else{
+              if((width*aspectRatio).toInt()>height){
+                  setMeasuredDimension(
+                      (height*aspectRatio).toInt(),
+                      height
+                  )
+              }else{
+                  setMeasuredDimension(
+                      width,
+                      (width*aspectRatio).toInt()
+                  )
+              }
 
-        }*/
+          }*/
 
         /* if (aspectRatio == 0f) {
            //  setMeasuredDimension(width, height)

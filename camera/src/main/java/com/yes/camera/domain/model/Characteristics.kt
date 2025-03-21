@@ -8,5 +8,6 @@ data class Characteristics(
     val focusValue:Float,
     val minFocusValue:Float,
     val shutterRange: LongRange,
-    val resolutions:List<Dimensions>
+    val resolutions:List<Dimensions>,
+    val touchPoint: FloatArray = FloatArray(2)
 )

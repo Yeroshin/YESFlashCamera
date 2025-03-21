@@ -221,7 +221,8 @@ class MapperUI {
             focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),
-            resolutions = emptyList()
+            resolutions = emptyList(),
+            touchPoint = characteristics.touchPoint
         )
     }
 

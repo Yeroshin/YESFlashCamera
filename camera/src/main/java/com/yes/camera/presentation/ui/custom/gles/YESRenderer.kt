@@ -31,7 +31,7 @@ import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-
+@Deprecated("not used")
 class YESRenderer(
     private val context: Context,
     private val callback: (surfaceTexture: SurfaceTexture) -> Unit

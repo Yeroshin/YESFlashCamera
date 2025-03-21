@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -138,6 +139,10 @@ fun CameraScreenSuccess(
         )
     Box(
         modifier = Modifier.fillMaxSize()
+     /*   modifier = Modifier
+            .height(960.dp)
+            .width(1280.dp)*/
+
     ) {
         // AndroidView(factory = {SurfacePanel(context)})
         AndroidView(
@@ -151,7 +156,7 @@ fun CameraScreenSuccess(
                     // autoFitSurfaceView = it
                     // setFullscreen(true)
                     setFullscreen(false)
-                    setAspectRatio(4096, 3072)
+                    setAspectRatio(1280, 960)
                     setEGLContextClientVersion(3)
                     setRenderer(
                         renderer
@@ -183,9 +188,17 @@ fun CameraScreenSuccess(
                             }
 
                             MotionEvent.ACTION_UP -> {
-                                characteristics.copy(
-                                    touchPoint= floatArrayOf(normalizedX,normalizedY)
+                                val t= floatArrayOf(event.x / v.width, event.y / v.height)
+                                val x=event.x
+                                val y=event.y
+                                val w=v.width
+                                val h=v.height
+                                onCharacteristicChanged(
+                                    characteristics.copy(
+                                        touchPoint= floatArrayOf(event.x / v.width, event.y / v.height)
+                                    )
                                 )
+
                             }
 
                         }

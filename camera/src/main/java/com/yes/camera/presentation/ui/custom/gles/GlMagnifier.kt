@@ -12,7 +12,7 @@ import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
 import androidx.core.math.MathUtils.clamp
 import com.yes.camera.utils.Geometry
-
+@Deprecated("not used")
 class GlMagnifier(glShaderProgram: ShaderProgram) :
     GLRenderer.GLObject(glShaderProgram) {
     private var magnification = 4.0f
