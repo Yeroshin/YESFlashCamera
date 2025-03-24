@@ -34,6 +34,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
 import android.view.Surface
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
@@ -487,6 +488,7 @@ class CameraRepository(
             if (focus){
                 when(afState){
                     CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                        Toast.makeText(context, "FOCUSED", Toast.LENGTH_SHORT).show()
                         captureRequest?.set(
                             CaptureRequest.CONTROL_AF_TRIGGER,
                             CaptureRequest.CONTROL_AF_TRIGGER_IDLE
@@ -495,6 +497,9 @@ class CameraRepository(
                         captureRequest?.let {
                             sessio?.capture(it.build(), null, null)
                         }
+                    }
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                        Toast.makeText(context, "not focused", Toast.LENGTH_SHORT).show()
                     }
                 }
                val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
@@ -791,10 +796,16 @@ class CameraRepository(
             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
         /* previewCaptureBuilder =
              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
-        /*  captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+       //  captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        captureRequest?.addTarget(previewSurface)
+        captureRequest?.addTarget(captureSurface)
 
-
-          captureRequest?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+          captureRequest?.set(
+              CaptureRequest.EDGE_MODE,
+              CaptureRequest.EDGE_MODE_OFF
+          )
+     //   captureRequest?.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_CONTRAST_CURVE)
           captureRequest?.set(
               CaptureRequest.NOISE_REDUCTION_MODE,
               CaptureRequest.NOISE_REDUCTION_MODE_OFF
@@ -802,7 +813,7 @@ class CameraRepository(
           captureRequest?.set(
               CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
               CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-          )*/
+          )
         ///////test
        // sessio?.stopRepeating();
 
@@ -836,9 +847,7 @@ class CameraRepository(
         println(centerX)*/
 
         ////////////////////////////
-        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        captureRequest?.addTarget(previewSurface)
-        captureRequest?.addTarget(captureSurface)
+
 
         captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
       //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
@@ -865,13 +874,13 @@ class CameraRepository(
             CaptureRequest.CONTROL_AF_REGIONS,
             arrayOf(r)
         )
-      /*  captureRequest?.set(
+     /*  captureRequest?.set(
             CaptureRequest.CONTROL_AE_REGIONS,
             arrayOf(r)
         )
-        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
+        captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
        // captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-     //   captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
        // captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
         captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
         captureRequest?.setTag("focus")
