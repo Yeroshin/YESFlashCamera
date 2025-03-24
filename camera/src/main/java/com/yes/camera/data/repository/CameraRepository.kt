@@ -481,34 +481,62 @@ class CameraRepository(
             //////////////////////////
 
             val afState = result[CaptureResult.CONTROL_AF_STATE]!!
-            val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
-         //   if (request.tag == "focus"){
+
+           if (request.tag == "focus"){
+               val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+               sessio?.stopRepeating()
+               captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+               captureRequest?.addTarget(previewSurface)
+               captureRequest?.addTarget(captureSurface)
+               val focusArea = Rect(1, 1, 920, 1230)
+
+
+                captureRequest?.set(
+                    CaptureRequest.CONTROL_AF_MODE,
+                    CaptureRequest.CONTROL_AF_MODE_AUTO
+                )
+               captureRequest?.set(
+                   CaptureRequest.CONTROL_AF_TRIGGER,
+                   CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+               )
+                captureRequest?.set(
+                    CaptureRequest.CONTROL_AF_REGIONS,
+                    afRegions
+                    // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
+                )
+               captureRequest?.let {
+
+                   sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+               }
+               println()
+           }
                 when (afState) {
 
                     CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                       /* val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
                         captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
                         captureRequest?.addTarget(previewSurface)
                         captureRequest?.addTarget(captureSurface)
                         val focusArea = Rect(1, 1, 920, 1230)
 
 
-                        captureRequest?.set(
+                       /* captureRequest?.set(
                             CaptureRequest.CONTROL_AF_MODE,
                             CaptureRequest.CONTROL_AF_MODE_OFF
-                        )
+                        )*/
                         captureRequest?.set(
                             CaptureRequest.CONTROL_AF_TRIGGER,
                             CaptureRequest.CONTROL_AF_TRIGGER_IDLE
                         )
-                        captureRequest?.set(
+                       /* captureRequest?.set(
                             CaptureRequest.CONTROL_AF_REGIONS,
                             afRegions
                             // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
-                        )
+                        )*/
                         captureRequest?.let {
                             sessio?.stopRepeating()
                             sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
-                        }
+                        }*/
 
                     }
                     CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
@@ -756,7 +784,7 @@ class CameraRepository(
         captureRequest?.addTarget(previewSurface)
         captureRequest?.addTarget(captureSurface)
 
-         val focusArea = Rect(1, 1,  920,1230)
+         //val focusArea = Rect(1, 1,  920,1230)
 
        // captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
        /* captureRequest?.set(
@@ -764,6 +792,7 @@ class CameraRepository(
             arrayOf(meteringRectangle(characteristics.touchPoint ))
         )*/
         captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
         captureRequest?.let {
             captureRequest?.setTag("capture")
             sessio?.stopRepeating()
@@ -777,14 +806,16 @@ class CameraRepository(
             CaptureRequest.CONTROL_AF_REGIONS,
             arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX ))
         )*/
-        captureRequest?.set(
-            CaptureRequest.CONTROL_AF_REGIONS,
-            arrayOf(meteringRectangle(characteristics.touchPoint ))
-        )
-       /* captureRequest?.set(
+        /* captureRequest?.set(
             CaptureRequest.CONTROL_AE_REGIONS,
             arrayOf(meteringRectangle(characteristics.touchPoint ))
         )*/
+        val r=meteringRectangle(characteristics.touchPoint )
+        val focusArea = Rect(1, 1,  300,300)
+        captureRequest?.set(
+            CaptureRequest.CONTROL_AF_REGIONS,
+            arrayOf(r)
+        )
         captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
         captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
         captureRequest?.setTag("focus")
