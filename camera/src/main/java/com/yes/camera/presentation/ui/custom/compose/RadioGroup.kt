@@ -6,17 +6,18 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+
+
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -56,22 +57,28 @@ fun RadioGroup(
         }
     }
     Row(
-        modifier
-          /*  .background(
+        modifier = modifier
+           /* .background(
                 Color.LightGray.copy(alpha = 0.5f)
             )*/
+
             .selectableGroup()
             .wrapContentHeight()
             .padding(4.dp)
             // .height(120.dp)
             .fillMaxWidth(),
          verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.SpaceEvenly
+       // horizontalArrangement = Arrangement.Center,
+               // horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         items.forEachIndexed { index, item ->
             Box(
+
                 modifier = Modifier
-                    .width(100.dp)
+                   // .wrapContentWidth()
+                    .width(72.dp)
+                   // .background(Color.Red)
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center
 
@@ -102,8 +109,8 @@ fun RadioGroup(
                                 },
                                 role = Role.RadioButton
                             )
-                            .padding(horizontal = 16.dp),
-                      //  horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(horizontal = 8.dp),
+                       // horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         item.item()
                     }

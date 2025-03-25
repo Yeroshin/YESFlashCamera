@@ -68,7 +68,7 @@ class CameraRepository(
 
     private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler= Handler(mBackgroundThread.looper)
-    private var cameraDevice: CameraDevice? = null
+    private lateinit var cameraDevice: CameraDevice
     private val previewSurface by lazy {
         Surface(glSurfaceTexture)
     }
@@ -797,7 +797,7 @@ class CameraRepository(
         /* previewCaptureBuilder =
              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)*/
        //  captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         captureRequest?.addTarget(previewSurface)
         captureRequest?.addTarget(captureSurface)
 
@@ -970,7 +970,39 @@ class CameraRepository(
         }*/
 
     }
-
+    private fun submitRequest(
+        templateType: Int,
+        targets: List<Surface>,
+        isRepeating: Boolean,
+        block: (captureRequest: CaptureRequest.Builder) -> CaptureRequest.Builder) {
+        try {
+            val captureBuilder = cameraDevice.createCaptureRequest(templateType)
+                .apply {
+                    targets.forEach {
+                        addTarget(it)
+                    }
+                    block(this)
+                }
+            if (isRepeating) {
+                sessio?.setRepeatingRequest(
+                    captureBuilder.build(),
+                    captureCallback, mBackgroundHandler
+                )
+            } else {
+                sessio?.capture(
+                    captureBuilder.build(),
+                    captureCallback, mBackgroundHandler
+                )
+            }
+        } catch (e: CameraAccessException) {
+            Toast
+                .makeText(
+                    context,
+                    "Camera failed to submit capture request!.",
+                    Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
 
 
 

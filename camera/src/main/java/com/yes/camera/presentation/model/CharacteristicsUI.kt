@@ -8,6 +8,9 @@ data class CharacteristicsUI(
     val isoValue: String = "0",
     val isoItems:List<SettingsItemUI> =emptyList(),
     val isoPosition:Int=0,
+    val wbValue: String = "0",
+    val wbItems:List<SettingsItemUI> =emptyList(),
+    val wbPosition:Int=0,
     val focusValue: String = "0",
     val focusItems:List<SettingsItemUI> =emptyList(),
     val focusPosition:Int=0,
@@ -20,5 +23,5 @@ data class CharacteristicsUI(
 )
 
 enum class Item {
-    SHUTTER, ISO, FOCUS, MAGNIFIER
+    SHUTTER, ISO, FOCUS,WB, MAGNIFIER
 }

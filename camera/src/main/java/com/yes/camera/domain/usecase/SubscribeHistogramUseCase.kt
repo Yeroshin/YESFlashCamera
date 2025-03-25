@@ -28,6 +28,7 @@ class SubscribeHistogramUseCase(
 
                 val myMap: MutableMap<Int, Int> = (0..255).associateWith { 0 }.toMutableMap()
                 for(i in buffer.indices step 600){
+               // for(i in buffer.indices step 250){
                     val keyValue= buffer[i].toInt() and 0xFF
                     myMap[keyValue] = myMap.getOrDefault(keyValue, 0) + 1
                 }

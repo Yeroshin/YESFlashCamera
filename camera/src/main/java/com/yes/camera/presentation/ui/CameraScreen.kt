@@ -51,7 +51,8 @@ fun CameraScreen(
                     CameraContract.Event.OnSetCharacteristics(characteristics)
                 )
             },
-            histogram = viewState.value.histogram
+            histogram = viewState.value.histogram,
+            fullscreen = false
         )
     }
 
