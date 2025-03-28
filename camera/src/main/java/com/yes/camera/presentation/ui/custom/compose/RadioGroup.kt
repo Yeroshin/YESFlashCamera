@@ -58,7 +58,7 @@ fun RadioGroup(
     }
     Row(
         modifier = modifier
-           /* .background(
+            /* .background(
                 Color.LightGray.copy(alpha = 0.5f)
             )*/
 
@@ -76,9 +76,9 @@ fun RadioGroup(
             Box(
 
                 modifier = Modifier
-                   // .wrapContentWidth()
+                    // .wrapContentWidth()
                     .width(72.dp)
-                   // .background(Color.Red)
+                    // .background(Color.Red)
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center
 
@@ -99,13 +99,15 @@ fun RadioGroup(
                             .selectable(
                                 selected = (item.id == selectedOption.value),
                                 onClick = {
-                                    if (item.id == selectedOption.value) {
+                                    /* if (item.id == selectedOption.value) {
                                         selectedOption.value = null
                                         onOptionSelected(null)
                                     } else {
                                         selectedOption.value = item.id
                                         onOptionSelected(item.id)
-                                    }
+                                    }*/
+                                    selectedOption.value = item.id
+                                    onOptionSelected(item.id)
                                 },
                                 role = Role.RadioButton
                             )

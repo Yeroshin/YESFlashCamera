@@ -4,6 +4,7 @@ import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItemUI
+import kotlin.math.abs
 
 class MapperUI {
     private val standardShutterSpeeds = mapOf(
@@ -52,12 +53,24 @@ class MapperUI {
 
 
         val supportedShutterSpeeds = standardShutterSpeeds
+            .entries
             .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
+            .sortedBy { it.key }
             .map { SettingsItemUI(it.value) }
         val supportedIsoValues = standardIsoValues
             .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
             .map { SettingsItemUI(it.toString()) }
-
+        val shutterValue=characteristics.shutterValue?.let {
+            standardShutterSpeeds.entries
+                .minByOrNull { (key, _) ->
+                    abs(key - characteristics.shutterValue)
+                }
+                ?.toPair()
+                ?.second
+                .toString()
+        }?:run {
+            "0"
+        }
         return CharacteristicsUI(
 
             /*  shutterItems= standardShutterSpeeds
@@ -66,6 +79,7 @@ class MapperUI {
               isoItems = standardIsoValues
                   .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
                   .map { SettingsItemUI(it.toString() )},*/
+           shutterValue = shutterValue,
             shutterItems = standardShutterSpeeds
                 .toSortedMap(compareByDescending { it })
                 .map {
@@ -74,6 +88,8 @@ class MapperUI {
             isoItems = standardIsoValues.map {
                 SettingsItemUI(it.toString())
             },
+          /*  shutterItems = supportedShutterSpeeds,
+            isoItems = supportedIsoValues,*/
             focusItems = listOf(
                 SettingsItemUI("0.2"),
                 SettingsItemUI("1"),

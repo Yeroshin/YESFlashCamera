@@ -19,7 +19,7 @@ import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 
 class TextRadioItem (
     id: Item,
-    var value: MutableState<String>,
+    var value: String,
     private val title: String,
     ) : RadioButton(id) {
         @Composable
@@ -44,7 +44,7 @@ class TextRadioItem (
                 )
 
                 Text(
-                    text = value.value,
+                    text = value,
                     style = TextStyle(
                         color = Color.White,
                         fontSize = 16.sp,

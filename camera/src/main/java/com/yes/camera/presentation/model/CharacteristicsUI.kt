@@ -3,7 +3,7 @@ package com.yes.camera.presentation.model
 data class CharacteristicsUI(
     val backCamera: Boolean = true,
     val shutterValue: String = "0",
-    val shutterItems:List<SettingsItemUI> =emptyList(),
+    val shutterItems:List<SettingsItemUI>? =null,
     val shutterPosition:Int=0,
     val isoValue: String = "0",
     val isoItems:List<SettingsItemUI> =emptyList(),

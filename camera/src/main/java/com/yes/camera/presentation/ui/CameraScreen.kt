@@ -39,7 +39,7 @@ fun CameraScreen(
         is CameraContract.CameraState.Success -> CameraScreenSuccess(
             context = context,
             renderer = renderer,
-            characteristicsInitial = state.characteristics ,
+            characteristics = state.characteristics ,
             onSettingsClick = onSettingsClick,
             onStartVideoRecord = {enabled->
                 cameraViewModel.setEvent(

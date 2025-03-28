@@ -5,18 +5,20 @@ import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.domain.UseCase
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
 class OpenCameraUseCase(
     dispatcher: CoroutineDispatcher,
     private val cameraRepository: CameraRepository
-) : UseCase<OpenCameraUseCase.Params, Characteristics>(dispatcher) {
-    override suspend fun run(params: Params): Characteristics {
+) : UseCase<OpenCameraUseCase.Params, Flow<Characteristics>>(dispatcher) {
+    override suspend fun run(params: Params):Flow< Characteristics> {
         return if (params.backCamera) {
-            cameraRepository.openBackCamera(params.glSurfaceTexture).filterNotNull().first()
+            cameraRepository.openBackCamera(params.glSurfaceTexture).filterNotNull()
         } else {
-            cameraRepository.openFrontCamera(params.glSurfaceTexture).filterNotNull().first()
+            cameraRepository.openFrontCamera(params.glSurfaceTexture).filterNotNull()
         }
     }
 

@@ -88,13 +88,14 @@ class CameraModule {
         )
     }
 
+
     @Provides
     fun providesMainViewModelFactory(
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         recordVideoUseCase: RecordVideoUseCase,
-        subscribeHistogramUseCase:SubscribeHistogramUseCase
+        subscribeHistogramUseCase:SubscribeHistogramUseCase,
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,

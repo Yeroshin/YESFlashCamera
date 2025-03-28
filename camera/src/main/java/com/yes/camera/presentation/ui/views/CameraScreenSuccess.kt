@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -52,7 +54,6 @@ import com.yes.camera.presentation.ui.custom.compose.Histogram
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 
-import com.yes.camera.presentation.ui.custom.compose.VectorRadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
@@ -60,10 +61,115 @@ import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 
 
 @Composable
+@Preview
+fun orew(){
+    val standardShutterSpeeds = mapOf(
+        31_250L to "1/32000",
+        62_500L to "1/16000",
+        125_000L to "1/8000",
+        250_000L to "1/4000",
+        500_000L to "1/2000",
+        1_000_000L to "1/1000",
+        2_000_000L to "1/500",
+        4_000_000L to "1/250",
+        8_000_000L to "1/125",
+        16_000_000L to "1/60",
+        33_333_333L to "1/30",
+        66_666_667L to "1/15",
+        125_000_000L to "1/8",
+        250_000_000L to "1/4",
+        500_000_000L to "1/2",
+        1_000_000_000L to "1",
+        2_000_000_000L to "2",
+        4_000_000_000L to "4",
+        8_000_000_000L to "8",
+    )
+    val standardIsoValues = listOf(
+        50,
+        100,
+        200,
+        400,
+        800,
+        1600,
+        3200,
+        6400,
+        12800,
+        25600,
+        51200,
+        102400,
+        204800,
+        409600,
+        819200,
+        1638400,
+        3280000,
+        4560000
+    )
+    val characteristics=CharacteristicsUI(
+        shutterItems = standardShutterSpeeds
+            .toSortedMap(compareByDescending { it })
+            .map {
+                SettingsItemUI(it.value)
+            },
+        isoItems = standardIsoValues.map {
+            SettingsItemUI(it.toString())
+        },
+        focusItems = listOf(
+            SettingsItemUI("0.2"),
+            SettingsItemUI("1"),
+            SettingsItemUI("2"),
+            SettingsItemUI("3"),
+            SettingsItemUI("4"),
+            SettingsItemUI("5"),
+            SettingsItemUI("6"),
+            SettingsItemUI("7"),
+            SettingsItemUI("8"),
+            SettingsItemUI("9"),
+            SettingsItemUI("9.5"),
+            SettingsItemUI("10"),
+            SettingsItemUI("11"),
+            SettingsItemUI("12"),
+            SettingsItemUI("13"),
+            SettingsItemUI("14"),
+            SettingsItemUI("15"),
+
+            ),
+        magnifierItems = listOf(
+            SettingsItemUI("1"),
+            SettingsItemUI("2"),
+            SettingsItemUI("3"),
+            SettingsItemUI("4"),
+            SettingsItemUI("5"),
+            SettingsItemUI("6"),
+            SettingsItemUI("7"),
+            SettingsItemUI("8"),
+            SettingsItemUI("9"),
+            SettingsItemUI("10"),
+        )
+    )
+    val context=LocalContext.current
+    val renderer = remember {
+        GLRenderer(
+            context
+        ) {}
+    }
+    CameraScreenSuccess(
+        context = context,
+        renderer = renderer,
+        characteristics =  characteristics,
+        onSettingsClick = {},
+        onStartVideoRecord = {},
+        onCharacteristicChanged = {},
+        histogram = mutableMapOf(),
+        fullscreen = false
+    )
+}
+
+@Composable
 fun CameraScreenSuccess(
     context: Context,
     renderer: GLRenderer,
-    characteristicsInitial: CharacteristicsUI,
+   // characteristicsInitial: CharacteristicsUI,
+    characteristics: CharacteristicsUI,
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
@@ -71,9 +177,9 @@ fun CameraScreenSuccess(
     fullscreen:Boolean
 ) {
 
-    var characteristics by remember(key1 = characteristicsInitial) {
+    /*var characteristics by remember(key1 = characteristicsInitial) {
         mutableStateOf(characteristicsInitial)
-    }
+    }*/
 
     /*  LaunchedEffect(characteristicsInitial) {
           snapshotFlow { characteristicsInitial }
@@ -106,21 +212,23 @@ fun CameraScreenSuccess(
     val screenWidth2 = configuration.screenWidthDp
     val screenHeight2 = configuration.screenHeightDp
 ////////////////tmp
-
+   /* var characteristicsInitial by remember( characteristics) {
+        mutableStateOf(characteristics)
+    }*/
     /////////////////////
     var selectedItem: MutableState<Item?> = remember {
-        mutableStateOf(null)
+        mutableStateOf(Item.SHUTTER)
     }
     var valueSelectorVisibility by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
     var selectorItems: List<SettingsItemUI>? by remember {
         mutableStateOf(
-            null
+            characteristics.shutterItems
         )
     }
     var shutter = remember {
-        mutableStateOf("-")
+        mutableStateOf( characteristics.shutterValue)
     }
     var iso = remember {
         mutableStateOf("-")
@@ -135,13 +243,15 @@ fun CameraScreenSuccess(
         mutableStateOf("-")
     }
     var radioGroupItems =
+
         listOf(
-            TextRadioItem(Item.SHUTTER, shutter, "SHUTTER"),
-            TextRadioItem(Item.ISO, iso, "ISO"),
-            TextRadioItem(Item.WB, wb, "WB"),
-            TextRadioItem(Item.FOCUS, focus, "FOCUS"),
-            TextRadioItem(Item.MAGNIFIER, magnifier, "MAGNIFIER")
+            TextRadioItem(Item.SHUTTER, characteristics.shutterValue, "SHUTTER"),
+            TextRadioItem(Item.ISO, characteristics.isoValue, "ISO"),
+            TextRadioItem(Item.WB, wb.value, "WB"),
+            TextRadioItem(Item.FOCUS, focus.value, "FOCUS"),
+            TextRadioItem(Item.MAGNIFIER, magnifier.value, "MAGNIFIER")
         )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -231,7 +341,11 @@ fun CameraScreenSuccess(
 
                     .padding(
                         start = 16.dp,
-                        bottom = if (fullscreen){200.dp}else{16.dp}
+                        bottom = if (fullscreen) {
+                            200.dp
+                        } else {
+                            16.dp
+                        }
                     )
                     .align(Alignment.BottomStart),
                 histogram,
@@ -239,7 +353,7 @@ fun CameraScreenSuccess(
                 80.dp
             )
         }
-
+        ////////////////radio group
         Column(
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -252,12 +366,40 @@ fun CameraScreenSuccess(
                 mutableStateOf(true)
             }
 
-            var positionRadioGroup by remember {
+            var valueRadioGroup by remember {
                 mutableStateOf("")
             }
 
+            LaunchedEffect(key1 = characteristics,key2 = selectedItem.value) {
+               /* positionRadioGroup = characteristics.shutterValue
+                selectorItems = characteristics.shutterItems
+                selectedItem.value =Item.SHUTTER*/
 
-            ////////////////radio group
+                selectorItems = when (selectedItem.value) {
+                    Item.SHUTTER -> {
+                         characteristics.shutterItems
+                    }
+
+                    Item.ISO -> {
+                         characteristics.isoItems
+                    }
+                    Item.WB -> {
+                         characteristics.wbItems
+                    }
+                    Item.FOCUS -> {
+                         characteristics.focusItems
+                    }
+
+                    Item.MAGNIFIER -> {
+                         characteristics.magnifierItems
+                    }
+
+                    null -> emptyList()
+
+                }
+            }
+
+
             AnimatedVisibility(
                 visible = visibleRadioGroup,
                 enter = scaleIn() + expandHorizontally(),
@@ -274,7 +416,7 @@ fun CameraScreenSuccess(
                         selectedItem.value = value
                         // characteristics.characteristics[value]
 
-                        positionRadioGroup = when (value) {
+                      /*  valueRadioGroup = when (value) {
                             Item.SHUTTER -> {
                                 selectorItems = characteristics.shutterItems
                                 characteristics.shutterValue
@@ -300,7 +442,7 @@ fun CameraScreenSuccess(
 
                             null -> ""
 
-                        }
+                        }*/
                         value?.let { valueSelectorVisibility = true }
                             ?: run { valueSelectorVisibility = false }
                         /* value?.let {
@@ -401,7 +543,7 @@ fun CameraScreenSuccess(
                                 .padding(bottom = 16.dp)
                                 .height(50.dp)
                         ) {
-                            AnimatedContent(
+                           /* AnimatedContent(
                                 targetState = autoChecked,
                                 transitionSpec = {
                                     (scaleIn() + expandHorizontally()) togetherWith
@@ -411,7 +553,7 @@ fun CameraScreenSuccess(
                                 /* enter = scaleIn() + expandHorizontally(),
                              exit = scaleOut() + shrinkHorizontally()*/
                             ) { isVisible ->
-                                if (isVisible) {
+                                if (isVisible) {*/
                                     ValueSelector(
                                         position = when (selectedItem.value) {
                                             Item.SHUTTER -> {
@@ -438,7 +580,7 @@ fun CameraScreenSuccess(
                                         adapter = adapter,
                                         onSelectedItemChanged = { index ->
 
-                                            characteristics = when (selectedItem.value) {
+                                         /*   characteristics = when (selectedItem.value) {
                                                 Item.SHUTTER -> {
                                                     selectorItems?.get(index)?.text?.let {
                                                         shutter.value = it
@@ -497,7 +639,7 @@ fun CameraScreenSuccess(
 
                                                 null -> characteristics.copy()
 
-                                            }
+                                            }*/
                                             onCharacteristicChanged(
                                                 characteristics
                                             )
@@ -508,8 +650,8 @@ fun CameraScreenSuccess(
                                             }
                                         }
                                     )
-                                }
-                            }
+                              //  }
+                           // }
                         }
                     }
                 }

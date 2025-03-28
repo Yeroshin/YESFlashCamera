@@ -49,7 +49,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         val h = (width / aspectRatio).toInt()
         if (fullscreen) {
             setMeasuredDimension(
-                (height / aspectRatio).toInt(),
+                (height * aspectRatio).toInt(),
                 height
             )
         } else {

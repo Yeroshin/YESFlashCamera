@@ -23,7 +23,7 @@ class CameraViewModel(
     private val openCameraUseCase: OpenCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
     private val recordVideoUseCase: RecordVideoUseCase,
-    private val subscribeHistogramUseCase: SubscribeHistogramUseCase
+    private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
 ) : BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
@@ -41,6 +41,18 @@ class CameraViewModel(
                     }
                 }
         }
+        /*viewModelScope.launch {
+            subscribeCharacteristicsUseCase()
+                .collect { characteristics ->
+                    setState {
+                        copy(
+                            state = CameraState.Success(
+                                characteristics = mapper.map(characteristics)
+                            )
+                        )
+                    }
+                }
+        }*/
     }
 
     override fun createInitialState(): State {
@@ -108,17 +120,18 @@ class CameraViewModel(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-                val characteristics = openCameraUseCase(
+                openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
-                )
-                setState {
-                    copy(
-                        state = CameraState.Success(
-                            characteristics = mapper.map(characteristics)
-                        )
+                ).collect { characteristics ->
+                        setState {
+                            copy(
+                                state = CameraState.Success(
+                                    characteristics = mapper.map(characteristics)
+                                )
 
-                    )
-                }
+                            )
+                        }
+                    }
             }
         )
     }
@@ -128,7 +141,7 @@ class CameraViewModel(
         private val openCameraUseCase: OpenCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         private val recordVideoUseCase: RecordVideoUseCase,
-        private val subscribeHistogramUseCase: SubscribeHistogramUseCase
+        private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
