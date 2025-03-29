@@ -54,6 +54,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.random.Random
 
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -483,23 +484,24 @@ class CameraRepository(
         ) {
             super.onCaptureCompleted(session, request, result)
             //////////////////////////
-            val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
+            val iso1 = request.get(CaptureRequest.SENSOR_SENSITIVITY)
+            val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+            //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
             val iso2 = result.get(CaptureResult.SENSOR_SENSITIVITY)
-            if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
-                val iso = result.get(CaptureResult.SENSOR_SENSITIVITY)
-                val exposureTimeNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-                val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
-                _characteristicsFlow.update { current ->
-                    current?.copy(
-                        shutterValue = exposureTimeNs,
-                        isoValue = iso
-                    ) ?: Characteristics(shutterValue = exposureTimeNs, isoValue = iso)
-                }
-              /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
-                    shutterValue = exposureTimeNs,
-                    isoValue = iso
-                )*/
-            }
+            val exposureTimeNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+            val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+              _characteristicsFlow.update { current ->
+                  current?.copy(
+                      shutterValue = exposureTime,
+                     // shutterValue = Random.nextLong(8_000_000_000L),
+                      isoValue = iso1
+                  )
+              }
+            /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
+                  shutterValue = exposureTimeNs,
+                  isoValue = iso
+              )*/
+            //  }
             ///////////////////focus
             val afState = result[CaptureResult.CONTROL_AF_STATE]!!
 
@@ -733,10 +735,10 @@ class CameraRepository(
     }
 
     fun startPreviewCaptureRequest() {
-        captureRequest =
-            cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        captureRequest?.addTarget(previewSurface)
-        captureRequest?.addTarget(captureSurface)
+        /*  captureRequest =
+              cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+          captureRequest?.addTarget(previewSurface)
+          captureRequest?.addTarget(captureSurface)*/
         //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         /*  ///test
           captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
@@ -749,18 +751,18 @@ class CameraRepository(
                CaptureRequest.CONTROL_AE_MODE_OFF
            )*/
         //////////settings
-        captureRequest?.set(
-            CaptureRequest.EDGE_MODE,
-            CaptureRequest.EDGE_MODE_OFF
-        )
-        captureRequest?.set(
-            CaptureRequest.NOISE_REDUCTION_MODE,
-            CaptureRequest.NOISE_REDUCTION_MODE_OFF
-        )
-        captureRequest?.set(
-            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
-            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-        )
+        /* captureRequest?.set(
+             CaptureRequest.EDGE_MODE,
+             CaptureRequest.EDGE_MODE_OFF
+         )
+         captureRequest?.set(
+             CaptureRequest.NOISE_REDUCTION_MODE,
+             CaptureRequest.NOISE_REDUCTION_MODE_OFF
+         )
+         captureRequest?.set(
+             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+         )*/
 
 
         // previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.2f)
@@ -769,9 +771,34 @@ class CameraRepository(
         // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
         /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
          captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)*/
-        captureRequest?.let {
+        /*  captureRequest?.let {
 
-            sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+              sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+          }*/
+
+        ////////////////////
+        submitRequest(
+            CameraDevice.TEMPLATE_PREVIEW,
+            listOf(
+                previewSurface,
+                // captureSurface
+            ),
+            true
+        ) { builder ->
+            builder.apply {
+                set(
+                    CaptureRequest.EDGE_MODE,
+                    CaptureRequest.EDGE_MODE_OFF
+                )
+                set(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                )
+                set(
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+                )
+            }
         }
     }
 
@@ -1050,27 +1077,29 @@ class CameraRepository(
             CameraDevice.TEMPLATE_PREVIEW,
             listOf(
                 previewSurface,
-                captureSurface
+                // captureSurface
             ),
             true
         ) { builder ->
             builder.apply {
-                if (characteristics.isoValue!=null && characteristics.shutterValue!=null){
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                    set(
-                        CaptureRequest.SENSOR_EXPOSURE_TIME,
-                        characteristics.shutterValue
-                    )
-                    set(
-                        CaptureRequest.SENSOR_SENSITIVITY,
-                        characteristics.isoValue
-                    )
-                }else if (characteristics.isoValue==null && characteristics.shutterValue==null){
+                if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+                   /*  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)*/
+                     set(
+                         CaptureRequest.SENSOR_EXPOSURE_TIME,
+                         characteristics.shutterValue
+                     )
+                     set(
+                         CaptureRequest.SENSOR_SENSITIVITY,
+                         characteristics.isoValue
+                     )
+                   /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
+                } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                }else{
-
+                } else {
+                    println()
                 }
 
             }
@@ -1093,6 +1122,7 @@ class CameraRepository(
                     block(this)
                 }
             if (isRepeating) {
+                sessio?.stopRepeating()
                 sessio?.setRepeatingRequest(
                     captureBuilder.build(),
                     captureCallback, mBackgroundHandler

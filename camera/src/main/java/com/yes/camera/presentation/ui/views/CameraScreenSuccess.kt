@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +61,7 @@ import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 
 @Composable
 @Preview
-fun orew(){
+fun orew() {
     val standardShutterSpeeds = mapOf(
         31_250L to "1/32000",
         62_500L to "1/16000",
@@ -104,7 +103,7 @@ fun orew(){
         3280000,
         4560000
     )
-    val characteristics=CharacteristicsUI(
+    val characteristics = CharacteristicsUI(
         shutterItems = standardShutterSpeeds
             .toSortedMap(compareByDescending { it })
             .map {
@@ -146,7 +145,7 @@ fun orew(){
             SettingsItemUI("10"),
         )
     )
-    val context=LocalContext.current
+    val context = LocalContext.current
     val renderer = remember {
         GLRenderer(
             context
@@ -155,7 +154,7 @@ fun orew(){
     CameraScreenSuccess(
         context = context,
         renderer = renderer,
-        characteristics =  characteristics,
+        characteristics = characteristics,
         onSettingsClick = {},
         onStartVideoRecord = {},
         onCharacteristicChanged = {},
@@ -168,13 +167,13 @@ fun orew(){
 fun CameraScreenSuccess(
     context: Context,
     renderer: GLRenderer,
-   // characteristicsInitial: CharacteristicsUI,
-    characteristics: CharacteristicsUI,
+    // characteristicsInitial: CharacteristicsUI,
+     characteristics: CharacteristicsUI,
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
     histogram: MutableMap<Int, Int>?,
-    fullscreen:Boolean
+    fullscreen: Boolean
 ) {
 
     /*var characteristics by remember(key1 = characteristicsInitial) {
@@ -212,11 +211,11 @@ fun CameraScreenSuccess(
     val screenWidth2 = configuration.screenWidthDp
     val screenHeight2 = configuration.screenHeightDp
 ////////////////tmp
-   /* var characteristicsInitial by remember( characteristics) {
-        mutableStateOf(characteristics)
-    }*/
+    /* var characteristicsInitial by remember( characteristics) {
+         mutableStateOf(characteristics)
+     }*/
     /////////////////////
-    var selectedItem: MutableState<Item?> = remember {
+    var radioGroupSelectedItem: Item? by remember {
         mutableStateOf(Item.SHUTTER)
     }
     var valueSelectorVisibility by remember {
@@ -224,12 +223,16 @@ fun CameraScreenSuccess(
     }
     var selectorItems: List<SettingsItemUI>? by remember {
         mutableStateOf(
-            characteristics.shutterItems
+            null
         )
     }
-    var shutter = remember {
-        mutableStateOf( characteristics.shutterValue)
+    var car by remember(characteristics) {
+        mutableStateOf(characteristics)
     }
+    var shutter by remember(characteristics) {
+        mutableStateOf(characteristics.shutterValue)
+    }
+
     var iso = remember {
         mutableStateOf("-")
     }
@@ -245,7 +248,7 @@ fun CameraScreenSuccess(
     var radioGroupItems =
 
         listOf(
-            TextRadioItem(Item.SHUTTER, characteristics.shutterValue, "SHUTTER"),
+            TextRadioItem(Item.SHUTTER, shutter, "SHUTTER"),
             TextRadioItem(Item.ISO, characteristics.isoValue, "ISO"),
             TextRadioItem(Item.WB, wb.value, "WB"),
             TextRadioItem(Item.FOCUS, focus.value, "FOCUS"),
@@ -267,7 +270,11 @@ fun CameraScreenSuccess(
             AndroidView(
                 modifier = Modifier
                     .padding(
-                        top = if (fullscreen){0.dp}else{ 84.dp}
+                        top = if (fullscreen) {
+                            0.dp
+                        } else {
+                            84.dp
+                        }
                     ),
                 //  .align(Alignment.Center),
                 factory = {
@@ -370,34 +377,36 @@ fun CameraScreenSuccess(
                 mutableStateOf("")
             }
 
-            LaunchedEffect(key1 = characteristics,key2 = selectedItem.value) {
-               /* positionRadioGroup = characteristics.shutterValue
-                selectorItems = characteristics.shutterItems
-                selectedItem.value =Item.SHUTTER*/
+           /* LaunchedEffect( key1 = selectedItem.value) {
+                /* positionRadioGroup = characteristics.shutterValue
+                 selectorItems = characteristics.shutterItems
+                 selectedItem.value =Item.SHUTTER*/
 
                 selectorItems = when (selectedItem.value) {
                     Item.SHUTTER -> {
-                         characteristics.shutterItems
+                        car.shutterItems
                     }
 
                     Item.ISO -> {
-                         characteristics.isoItems
+                        characteristics.isoItems
                     }
+
                     Item.WB -> {
-                         characteristics.wbItems
+                        characteristics.wbItems
                     }
+
                     Item.FOCUS -> {
-                         characteristics.focusItems
+                        characteristics.focusItems
                     }
 
                     Item.MAGNIFIER -> {
-                         characteristics.magnifierItems
+                        characteristics.magnifierItems
                     }
 
                     null -> emptyList()
 
                 }
-            }
+            }*/
 
 
             AnimatedVisibility(
@@ -413,36 +422,36 @@ fun CameraScreenSuccess(
                         ),
                     items = radioGroupItems,
                     onOptionSelected = { value ->
-                        selectedItem.value = value
+                        radioGroupSelectedItem = value
                         // characteristics.characteristics[value]
 
-                      /*  valueRadioGroup = when (value) {
-                            Item.SHUTTER -> {
-                                selectorItems = characteristics.shutterItems
-                                characteristics.shutterValue
-                            }
+                          valueRadioGroup = when (value) {
+                              Item.SHUTTER -> {
+                                  selectorItems = characteristics.shutterItems
+                                  characteristics.shutterValue
+                              }
 
-                            Item.ISO -> {
-                                selectorItems = characteristics.isoItems
-                                characteristics.isoValue
-                            }
-                            Item.WB -> {
-                                selectorItems = characteristics.wbItems
-                                characteristics.wbValue
-                            }
-                            Item.FOCUS -> {
-                                selectorItems = characteristics.focusItems
-                                characteristics.focusValue
-                            }
+                              Item.ISO -> {
+                                  selectorItems = characteristics.isoItems
+                                  characteristics.isoValue
+                              }
+                              Item.WB -> {
+                                  selectorItems = characteristics.wbItems
+                                  characteristics.wbValue
+                              }
+                              Item.FOCUS -> {
+                                  selectorItems = characteristics.focusItems
+                                  characteristics.focusValue
+                              }
 
-                            Item.MAGNIFIER -> {
-                                selectorItems = characteristics.magnifierItems
-                                characteristics.magnifierValue
-                            }
+                              Item.MAGNIFIER -> {
+                                  selectorItems = characteristics.magnifierItems
+                                  characteristics.magnifierValue
+                              }
 
-                            null -> ""
+                              null -> ""
 
-                        }*/
+                          }
                         value?.let { valueSelectorVisibility = true }
                             ?: run { valueSelectorVisibility = false }
                         /* value?.let {
@@ -543,115 +552,121 @@ fun CameraScreenSuccess(
                                 .padding(bottom = 16.dp)
                                 .height(50.dp)
                         ) {
-                           /* AnimatedContent(
-                                targetState = autoChecked,
-                                transitionSpec = {
-                                    (scaleIn() + expandHorizontally()) togetherWith
-                                            // Комбинируем анимации для исчезновения
-                                            (scaleOut() + shrinkHorizontally())
-                                }
-                                /* enter = scaleIn() + expandHorizontally(),
-                             exit = scaleOut() + shrinkHorizontally()*/
-                            ) { isVisible ->
-                                if (isVisible) {*/
-                                    ValueSelector(
-                                        position = when (selectedItem.value) {
-                                            Item.SHUTTER -> {
-                                                characteristics.shutterPosition
-                                            }
+                            /* AnimatedContent(
+                                 targetState = autoChecked,
+                                 transitionSpec = {
+                                     (scaleIn() + expandHorizontally()) togetherWith
+                                             // Комбинируем анимации для исчезновения
+                                             (scaleOut() + shrinkHorizontally())
+                                 }
+                                 /* enter = scaleIn() + expandHorizontally(),
+                              exit = scaleOut() + shrinkHorizontally()*/
+                             ) { isVisible ->
+                                 if (isVisible) {*/
+                            ValueSelector(
+                                position = when (radioGroupSelectedItem) {
+                                    Item.SHUTTER -> {
+                                        car.shutterPosition
+                                    }
 
-                                            Item.ISO -> {
-                                                characteristics.isoPosition
-                                            }
-                                            Item.WB -> {
-                                                characteristics.wbPosition
-                                            }
-                                            Item.FOCUS -> {
-                                                characteristics.focusPosition
-                                            }
+                                    Item.ISO -> {
+                                        car.isoPosition
+                                    }
 
-                                            Item.MAGNIFIER ->{
-                                                characteristics.magnifierPosition
-                                            }
-                                            null -> 0
+                                    Item.WB -> {
+                                        characteristics.wbPosition
+                                    }
 
-                                        },
-                                        items = selectorItems,
-                                        adapter = adapter,
-                                        onSelectedItemChanged = { index ->
+                                    Item.FOCUS -> {
+                                        characteristics.focusPosition
+                                    }
 
-                                         /*   characteristics = when (selectedItem.value) {
-                                                Item.SHUTTER -> {
-                                                    selectorItems?.get(index)?.text?.let {
-                                                        shutter.value = it
-                                                    }
-                                                    characteristics.copy(
-                                                        shutterPosition = index,
-                                                        shutterValue = shutter.value
-                                                    )
-                                                }
+                                    Item.MAGNIFIER -> {
+                                        characteristics.magnifierPosition
+                                    }
 
-                                                Item.ISO -> {
-                                                    selectorItems?.get(index)?.text?.let {
-                                                        iso.value = it
-                                                    }
-                                                    /* characteristics.characteristics[Item.ISO]?.copy(
-                                                     value = index
-                                                 )*/
-                                                    characteristics.copy(
-                                                        isoPosition = index,
-                                                        isoValue = iso.value
-                                                    )
-                                                }
-                                                Item.WB -> {
-                                                    selectorItems?.get(index)?.text?.let {
-                                                        wb.value = it
-                                                    }
-                                                    characteristics.copy(
-                                                        wbPosition = index,
-                                                        wbValue = wb.value
-                                                    )
-                                                }
-                                                Item.FOCUS -> {
-                                                    selectorItems?.get(index)?.text?.let {
-                                                        focus.value = it
-                                                    }
-                                                    characteristics.copy(
-                                                        focusPosition = index,
-                                                        focusValue = focus.value
-                                                    )
-                                                }
+                                    null -> 0
 
-                                                Item.MAGNIFIER -> {
-                                                    selectorItems?.get(index)?.text?.let {
-                                                            magnifier.value=it
-                                                            renderer.configureMagnifier(
-                                                                it.toFloat(),
-                                                                0.2f,
-                                                                0.4f
-                                                            )
-                                                        }
+                                },
+                                items = selectorItems,
+                                adapter = adapter,
+                                onSelectedItemChanged = { index ->
 
-                                                    characteristics.copy(
-                                                        magnifierPosition = index,
-                                                    )
-                                                }
+                                    val params = when (radioGroupSelectedItem) {
+                                        Item.SHUTTER -> {
+                                            selectorItems?.get(index)?.text?.let {
+                                                car.copy(
+                                                    shutterPosition = index,
+                                                    shutterValue = it
+                                                )
+                                            }?:run { car.copy() }
 
-                                                null -> characteristics.copy()
-
-                                            }*/
-                                            onCharacteristicChanged(
-                                                characteristics
-                                            )
-                                            selectorItems?.let {
-                                                for (i in it.indices) {
-                                                    it[i].passed = i <= index
-                                                }
-                                            }
                                         }
+
+                                        Item.ISO -> {
+                                            selectorItems?.get(index)?.text?.let {
+                                                car.copy(
+                                                    isoPosition = index,
+                                                    isoValue = it
+                                                )
+                                            }?:run { car.copy() }
+                                            /* characteristics.characteristics[Item.ISO]?.copy(
+                                             value = index
+                                         )*/
+
+                                        }
+
+                                        Item.WB -> {
+                                            selectorItems?.get(index)?.text?.let {
+                                                wb.value = it
+                                            }
+                                            characteristics.copy(
+                                                wbPosition = index,
+                                                wbValue = wb.value
+                                            )
+                                        }
+
+                                        Item.FOCUS -> {
+                                            selectorItems?.get(index)?.text?.let {
+                                                focus.value = it
+                                            }
+                                            characteristics.copy(
+                                                focusPosition = index,
+                                                focusValue = focus.value
+                                            )
+                                        }
+
+                                        Item.MAGNIFIER -> {
+                                            selectorItems?.get(index)?.text?.let {
+                                                magnifier.value = it
+                                                renderer.configureMagnifier(
+                                                    it.toFloat(),
+                                                    0.2f,
+                                                    0.4f
+                                                )
+                                            }
+
+                                            characteristics.copy(
+                                                magnifierPosition = index,
+                                            )
+                                        }
+
+                                        null -> characteristics.copy()
+
+                                    }
+                                    //car=car.copy()
+                                    onCharacteristicChanged(
+                                        params
                                     )
-                              //  }
-                           // }
+                                    selectorItems?.let {
+                                        for (i in it.indices) {
+                                            it[i].passed = i <= index
+                                        }
+                                    }
+                                }
+                            )
+                            //  }
+                            // }
                         }
                     }
                 }
@@ -659,7 +674,7 @@ fun CameraScreenSuccess(
             //////////////////////////capture
             Row(
                 modifier = Modifier
-                 .align(Alignment.CenterHorizontally),
+                    .align(Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(56.dp)
             ) {

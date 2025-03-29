@@ -7,7 +7,7 @@ import com.yes.camera.presentation.model.SettingsItemUI
 import kotlin.math.abs
 
 class MapperUI {
-    private val standardShutterSpeeds = mapOf(
+    private val standardShutterSpeeds = mapOf<Long,String>(
         31_250L to "1/32000",
         62_500L to "1/16000",
         125_000L to "1/8000",
@@ -67,10 +67,15 @@ class MapperUI {
                 }
                 ?.toPair()
                 ?.second
-                .toString()
+
         }?:run {
-            "0"
+            "8"
         }
+
+        val shutterPosition= standardShutterSpeeds
+            .toSortedMap(compareByDescending { it })
+            .values.toList().indexOf(shutterValue)
+
         return CharacteristicsUI(
 
             /*  shutterItems= standardShutterSpeeds
@@ -79,7 +84,9 @@ class MapperUI {
               isoItems = standardIsoValues
                   .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
                   .map { SettingsItemUI(it.toString() )},*/
+
            shutterValue = shutterValue,
+            shutterPosition = shutterPosition,
             shutterItems = standardShutterSpeeds
                 .toSortedMap(compareByDescending { it })
                 .map {
