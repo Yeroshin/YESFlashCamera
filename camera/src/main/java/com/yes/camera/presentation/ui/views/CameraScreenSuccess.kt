@@ -274,22 +274,25 @@ fun CameraScreenSuccess(
     var iso by remember(characteristics) {
         mutableStateOf(characteristics.isoValue)
     }
-    var wb = remember {
+    var wb by remember {
         mutableStateOf("-")
     }
-    var focus = remember {
-        mutableStateOf("-")
+    var focus by remember {
+        mutableStateOf(characteristics.focusValue)
     }
-    var magnifier = remember {
-        mutableStateOf("-")
+    var magnifier by remember {
+        mutableStateOf(characteristics.magnifierValue)
+    }
+    var magnifierPosition:Int by remember {
+        mutableStateOf(1)
     }
     var radioGroupItems =
         listOf(
             TextRadioItem(Item.SHUTTER, shutter, "SHUTTER"),
             TextRadioItem(Item.ISO, iso, "ISO"),
-            TextRadioItem(Item.WB, wb.value, "WB"),
-            TextRadioItem(Item.FOCUS, focus.value, "FOCUS"),
-            TextRadioItem(Item.MAGNIFIER, magnifier.value, "MAGNIFIER")
+            TextRadioItem(Item.WB, wb, "WB"),
+            TextRadioItem(Item.FOCUS, focus, "FOCUS"),
+            TextRadioItem(Item.MAGNIFIER, magnifier, "MAGNIFIER")
         )
 
     Box(
@@ -591,13 +594,13 @@ fun CameraScreenSuccess(
 
                                             Item.WB -> {
                                                 characteristics.copy(
-                                                    wbValue = wb.value
+                                                    wbValue = wb
                                                 )
                                             }
 
                                             Item.FOCUS -> {
                                                 characteristics.copy(
-                                                    focusValue = focus.value
+                                                    focusValue = focus
                                                 )
                                             }
 
@@ -664,7 +667,7 @@ fun CameraScreenSuccess(
                                     }
 
                                     Item.MAGNIFIER -> {
-                                        characteristics.magnifierPosition
+                                        magnifierPosition
                                     }
 
                                     null -> 0
@@ -700,37 +703,36 @@ fun CameraScreenSuccess(
 
                                         Item.WB -> {
                                             selectorItems?.get(index)?.text?.let {
-                                                wb.value = it
+                                                wb = it
                                             }
                                             characteristics.copy(
                                                 wbPosition = index,
-                                                wbValue = wb.value
+                                                wbValue = wb
                                             )
                                         }
 
                                         Item.FOCUS -> {
                                             selectorItems?.get(index)?.text?.let {
-                                                focus.value = it
+                                                focus = it
                                             }
                                             characteristics.copy(
                                                 focusPosition = index,
-                                                focusValue = focus.value
+                                                focusValue = focus
                                             )
                                         }
 
                                         Item.MAGNIFIER -> {
                                             selectorItems?.get(index)?.text?.let {
-                                                magnifier.value = it
+                                                magnifier = it
                                                 renderer.configureMagnifier(
                                                     it.toFloat(),
                                                     0.2f,
                                                     0.4f
                                                 )
                                             }
+                                            magnifierPosition = index
+                                            characteristics.copy()
 
-                                            characteristics.copy(
-                                                magnifierPosition = index,
-                                            )
                                         }
 
                                         null -> characteristics.copy()

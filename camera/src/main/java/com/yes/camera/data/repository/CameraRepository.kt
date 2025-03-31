@@ -15,7 +15,6 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -33,6 +32,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
+import android.util.Range
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -45,7 +45,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -54,7 +53,6 @@ import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.random.Random
 
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -400,6 +398,7 @@ class CameraRepository(
         val minFocusDistance =
             characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val minFocus = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+
         /////////////////
         val availablePixelModes =
             characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
@@ -472,7 +471,7 @@ class CameraRepository(
                 override fun onConfigureFailed(session: CameraCaptureSession) {}
             }
         )
-        cameraDevice?.createCaptureSession(config)
+        cameraDevice.createCaptureSession(config)
     }
 
     var frameTime: Long = 0
