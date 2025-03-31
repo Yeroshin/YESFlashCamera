@@ -46,7 +46,7 @@ fun RadioGroup(
     items:List<RadioButton>
 ) {
 
-    val selectedOption = remember { mutableStateOf<Item?>(null) }
+    val selectedOption = remember { mutableStateOf<Item?>(items[0].id) }
 
     val visibleStates = remember { items.map { mutableStateOf(false) } }
 

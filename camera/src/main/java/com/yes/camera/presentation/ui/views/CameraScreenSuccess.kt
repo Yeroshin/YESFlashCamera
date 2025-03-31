@@ -28,10 +28,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -225,11 +227,18 @@ fun CameraScreenSuccess(
             null
         )
     }
+  /* LaunchedEffect(radioGroupSelectedItem) {
+        snapshotFlow { characteristicsInitial }
+            .collect {ch->
+                characteristics=ch
+                shutter.value=characteristics.characteristics[Item.SHUTTER]?.value.toString()
+            }
+    }*/
     var car by remember(characteristics) {
         mutableStateOf(characteristics)
     }
-    var shutter by remember(characteristics) {
-        mutableStateOf(characteristics.shutterValue)
+    var shutter by remember(car) {
+        mutableStateOf(car.shutterValue)
     }
 
     var iso by remember(characteristics) {
@@ -423,7 +432,7 @@ fun CameraScreenSuccess(
                         radioGroupSelectedItem = value
                         // characteristics.characteristics[value]
 
-                        valueRadioGroup = when (value) {
+                        when (value) {
                             Item.SHUTTER -> {
                                 selectorItems = characteristics.shutterItems
                                 characteristics.shutterValue
@@ -706,6 +715,7 @@ fun CameraScreenSuccess(
                                             it[i].passed = i <= index
                                         }
                                     }
+
                                 }
                             )
                             //  }

@@ -18,7 +18,7 @@ class MapperUI {
         4_000_000L to "1/250",
         8_000_000L to "1/125",
         16_000_000L to "1/60",
-        33_333_333L to "1/30",
+       /* 33_333_333L to "1/30",
         66_666_667L to "1/15",
         125_000_000L to "1/8",
         250_000_000L to "1/4",
@@ -26,7 +26,7 @@ class MapperUI {
         1_000_000_000L to "1",
         2_000_000_000L to "2",
         4_000_000_000L to "4",
-        8_000_000_000L to "8",
+        8_000_000_000L to "8",*/
     )
     private val standardIsoValues = listOf(
         50,
@@ -75,7 +75,7 @@ class MapperUI {
                 ?.second
 
         }?:run {
-            "8"
+            "1/60"
         }
         val shutterPosition= standardShutterSpeeds
             .toSortedMap(compareByDescending { it })

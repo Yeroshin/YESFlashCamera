@@ -58,55 +58,55 @@ fun ValueSelector(
     val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
 
 
-   /* LaunchedEffect(firstVisibleItem) {
-        snapshotFlow { firstVisibleItem }
-            .distinctUntilChanged()
-            .collect { newIndex ->
-                onSelectedItemChanged(newIndex)
-            }
+    /* LaunchedEffect(firstVisibleItem) {
+         snapshotFlow { firstVisibleItem }
+             .distinctUntilChanged()
+             .collect { newIndex ->
+                 onSelectedItemChanged(newIndex)
+             }
 
-    }*/
+     }*/
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(items) {
         snapshotFlow { items }
             .collect {
-             //   coroutineScope.launch {
-                    listState.animateScrollToItem(
-                        position,
-                       scrollOffset = itemWidthPx/2
-                    )
-                    snapshotFlow { listState.firstVisibleItemIndex }
-                        .collect { index ->
-                            onSelectedItemChanged(index)
-                        }
+                onSelectedItemChanged(position)
+                listState.animateScrollToItem(
+                    position,
+                    scrollOffset = itemWidthPx / 2
+                )
+                snapshotFlow { listState.firstVisibleItemIndex }
+                    .collect { index ->
+                        onSelectedItemChanged(index)
+                    }
 
-            //    }
+
             }
     }
-  /*  LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex }
-            .collect { index ->
-                onSelectedItemChanged(index)
-            }
-    }*/
-  /*  Column(
-        modifier = Modifier
-         /*   .background(
-                Color.LightGray.copy(alpha = 0.5f)
-            )*/
-            // .height(80.dp)
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {*/
+    /*  LaunchedEffect(listState) {
+          snapshotFlow { listState.firstVisibleItemIndex }
+              .collect { index ->
+                  onSelectedItemChanged(index)
+              }
+      }*/
+    /*  Column(
+          modifier = Modifier
+           /*   .background(
+                  Color.LightGray.copy(alpha = 0.5f)
+              )*/
+              // .height(80.dp)
+              .fillMaxWidth()
+              .wrapContentHeight()
+              .padding(4.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+      ) {*/
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(42.dp)
             .padding(4.dp),
-    ){
+    ) {
 
         LazyRow(
             state = listState,
@@ -117,19 +117,19 @@ fun ValueSelector(
                     rowWidthPx = coordinates.size.width
                 },
             contentPadding = PaddingValues(
-                horizontal = pixelsToDp(rowWidthPx/2)
-               // horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
+                horizontal = pixelsToDp(rowWidthPx / 2)
+                // horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
             ),
             flingBehavior = flingBehavior
         ) {
-            val modifier=Modifier
+            val modifier = Modifier
                 .width(48.dp)
                 .onGloballyPositioned { coordinates ->
                     itemWidthPx = coordinates.size.width
                 }
             items?.let {
                 items(it.size) { index ->
-                    adapter.Content(items[index],modifier)
+                    adapter.Content(items[index], modifier)
                 }
             }
 
@@ -145,5 +145,6 @@ fun ValueSelector(
     }
 
 }
+
 @Composable
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
