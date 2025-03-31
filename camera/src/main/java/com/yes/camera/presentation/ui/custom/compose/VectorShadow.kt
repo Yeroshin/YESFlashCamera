@@ -6,6 +6,7 @@ import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
@@ -50,8 +51,8 @@ fun VectorShadow(
 ) {
     val pathData = XmlParser(LocalContext.current, resId)
         .parse("path", "pathData")
-    val pathShadow = PathParser().parsePathString(pathData).toPath()
-    val pathVector = PathParser().parsePathString(pathData).toPath()
+    val pathShadow = remember { PathParser().parsePathString(pathData).toPath() }
+    val pathVector = remember{PathParser().parsePathString(pathData).toPath()}
     Canvas(
         modifier = modifier
             .fillMaxSize()
@@ -73,10 +74,9 @@ fun VectorShadow(
                         BlurMaskFilter(shadowBlur, BlurMaskFilter.Blur.NORMAL)
                 }
             }
-            val pathShadowWidth = pathShadow.getBounds().width
-            val pathShadowHeight = pathShadow.getBounds().height
-            val scaleShadowX = (canvasWidth / pathShadowWidth) * scale
-            val scaleShadowY = (canvasHeight / pathShadowHeight) * scale
+            val pathShadowBounds = pathShadow.getBounds()
+            val scaleShadowX = (canvasWidth / pathShadowBounds.width) * scale
+            val scaleShadowY = (canvasHeight / pathShadowBounds.height) * scale
 
             matrix.scale(scaleShadowX, scaleShadowY)
             matrix.translate(pathShadow.getBounds().left * -1, pathShadow.getBounds().top * -1)
@@ -84,8 +84,8 @@ fun VectorShadow(
 
             val offsetX = (1 - shadowOffsetXPct) * canvasWidth
             val offsetY = (1 - shadowOffsetYPct) * canvasHeight
-            val sdx = ((canvasWidth - pathShadowWidth * scaleShadowX) / 2) + offsetX
-            val sdy = ((canvasHeight - pathShadowHeight * scaleShadowY) / 2) + offsetY
+            val sdx = ((canvasWidth - pathShadowBounds.width * scaleShadowX) / 2) + offsetX
+            val sdy = ((canvasHeight - pathShadowBounds.height * scaleShadowY) / 2) + offsetY
 
             matrix.reset()
             matrix.translate(sdx, sdy)

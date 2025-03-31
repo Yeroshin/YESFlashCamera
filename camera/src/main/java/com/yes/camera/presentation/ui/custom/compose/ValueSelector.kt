@@ -72,7 +72,7 @@ fun ValueSelector(
              //   coroutineScope.launch {
                     listState.animateScrollToItem(
                         position,
-                        scrollOffset = itemWidthPx/2
+                       scrollOffset = itemWidthPx/2
                     )
                     snapshotFlow { listState.firstVisibleItemIndex }
                         .collect { index ->

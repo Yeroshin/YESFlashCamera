@@ -7,7 +7,7 @@ import com.yes.camera.presentation.model.SettingsItemUI
 import kotlin.math.abs
 
 class MapperUI {
-    private val standardShutterSpeeds = mapOf<Long,String>(
+    private val standardShutterSpeeds = mapOf(
         31_250L to "1/32000",
         62_500L to "1/16000",
         125_000L to "1/8000",
@@ -47,6 +47,12 @@ class MapperUI {
         1638400,
         3280000,
         4560000
+       /*  2048,
+        4096,
+        8192,
+        1638,
+        3280,
+        4560*/
     )
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
@@ -71,10 +77,16 @@ class MapperUI {
         }?:run {
             "8"
         }
-
         val shutterPosition= standardShutterSpeeds
             .toSortedMap(compareByDescending { it })
             .values.toList().indexOf(shutterValue)
+
+        val isoValue=characteristics.isoValue?.let {
+            standardIsoValues.minByOrNull {
+                abs(it - characteristics.isoValue)
+            }
+        }
+        val isoPosition=isoValue?.let {standardIsoValues.indexOf(isoValue) }?:0
 
         return CharacteristicsUI(
 
@@ -95,6 +107,8 @@ class MapperUI {
             isoItems = standardIsoValues.map {
                 SettingsItemUI(it.toString())
             },
+            isoValue = isoValue.toString(),
+            isoPosition = isoPosition,
           /*  shutterItems = supportedShutterSpeeds,
             isoItems = supportedIsoValues,*/
             focusItems = listOf(
@@ -229,7 +243,7 @@ class MapperUI {
     }
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
-        val isoValue = characteristics.isoValue.toInt()
+        val isoValue = characteristics.isoValue.toIntOrNull()
 
         val shutterValue =
             standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
@@ -238,9 +252,9 @@ class MapperUI {
         val focusValue = characteristics.focusValue.toFloat()
 
         return Characteristics(
-            isoValue = isoValue ?: 100,
+            isoValue = isoValue,
             isoRange = IntRange(0, 0),
-            shutterValue = shutterValue ?: 33_333_333L,
+            shutterValue = shutterValue,
             focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),

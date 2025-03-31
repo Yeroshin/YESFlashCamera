@@ -484,7 +484,7 @@ class CameraRepository(
         ) {
             super.onCaptureCompleted(session, request, result)
             //////////////////////////
-            val iso1 = request.get(CaptureRequest.SENSOR_SENSITIVITY)
+            val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
             val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
             //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
             val iso2 = result.get(CaptureResult.SENSOR_SENSITIVITY)
@@ -494,7 +494,7 @@ class CameraRepository(
                   current?.copy(
                       shutterValue = exposureTime,
                      // shutterValue = Random.nextLong(8_000_000_000L),
-                      isoValue = iso1
+                      isoValue = iso
                   )
               }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
@@ -1083,8 +1083,8 @@ class CameraRepository(
         ) { builder ->
             builder.apply {
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
-                   /*  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)*/
+                    // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                      set(
                          CaptureRequest.SENSOR_EXPOSURE_TIME,
                          characteristics.shutterValue
