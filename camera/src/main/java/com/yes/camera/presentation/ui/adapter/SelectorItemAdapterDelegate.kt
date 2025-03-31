@@ -48,7 +48,7 @@ class SelectorItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SettingsIte
                // .padding(4.dp),
         ) {
             val minFontSize: TextUnit = 8.sp
-            val initialFontSize=14.sp
+            val initialFontSize=16.sp
             var fontSize by remember { mutableStateOf(initialFontSize) }
             Text(
                 maxLines = 1,
