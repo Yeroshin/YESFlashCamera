@@ -6,9 +6,11 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -88,7 +90,7 @@ fun ValueSelector(
                 onSelectedItemChanged(index)
             }
     }*/
-    Column(
+  /*  Column(
         modifier = Modifier
          /*   .background(
                 Color.LightGray.copy(alpha = 0.5f)
@@ -98,11 +100,18 @@ fun ValueSelector(
             .wrapContentHeight()
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    ) {*/
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(42.dp)
+            .padding(4.dp),
+    ){
 
         LazyRow(
             state = listState,
             modifier = Modifier
+                .align(Alignment.TopCenter)
                 .wrapContentHeight()
                 .onGloballyPositioned { coordinates ->
                     rowWidthPx = coordinates.size.width
@@ -127,7 +136,8 @@ fun ValueSelector(
         }
         VectorShadow(
             Modifier
-                .size(24.dp),
+                .align(Alignment.BottomCenter)
+                .size(14.dp),
             vectorColor = Color.Green,
             shadowColor = Color.DarkGray,
             resId = R.drawable.arrow_drop_up
