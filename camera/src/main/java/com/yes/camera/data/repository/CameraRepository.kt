@@ -781,7 +781,7 @@ class CameraRepository(
             CameraDevice.TEMPLATE_PREVIEW,
             listOf(
                 previewSurface,
-                // captureSurface
+                captureSurface
             ),
             true
         ) { builder ->
@@ -1077,7 +1077,7 @@ class CameraRepository(
             CameraDevice.TEMPLATE_PREVIEW,
             listOf(
                 previewSurface,
-                // captureSurface
+                 captureSurface
             ),
             true
         ) { builder ->

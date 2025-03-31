@@ -222,9 +222,43 @@ fun CameraScreenSuccess(
     var valueSelectorVisibility by remember {
         mutableStateOf(true)
     }
-    var selectorItems: List<SettingsItemUI>? by remember {
+    var car by remember(characteristics) {
+        mutableStateOf(characteristics)
+    }
+    var shutter by remember(car) {
+        mutableStateOf(car.shutterValue)
+    }
+    var selectorItems: List<SettingsItemUI>? by remember(key1 = characteristics, key2 = radioGroupSelectedItem) {
         mutableStateOf(
-            null
+            when (radioGroupSelectedItem) {
+                Item.SHUTTER -> {
+                    characteristics.shutterItems
+
+                }
+
+                Item.ISO -> {
+                     characteristics.isoItems
+
+                }
+
+                Item.WB -> {
+                     characteristics.wbItems
+
+                }
+
+                Item.FOCUS -> {
+                     characteristics.focusItems
+
+                }
+
+                Item.MAGNIFIER -> {
+                     characteristics.magnifierItems
+
+                }
+
+                null -> characteristics.magnifierItems
+
+            }
         )
     }
   /* LaunchedEffect(radioGroupSelectedItem) {
@@ -234,12 +268,8 @@ fun CameraScreenSuccess(
                 shutter.value=characteristics.characteristics[Item.SHUTTER]?.value.toString()
             }
     }*/
-    var car by remember(characteristics) {
-        mutableStateOf(characteristics)
-    }
-    var shutter by remember(car) {
-        mutableStateOf(car.shutterValue)
-    }
+
+
 
     var iso by remember(characteristics) {
         mutableStateOf(characteristics.isoValue)
@@ -432,7 +462,7 @@ fun CameraScreenSuccess(
                         radioGroupSelectedItem = value
                         // characteristics.characteristics[value]
 
-                        when (value) {
+                      /*  when (value) {
                             Item.SHUTTER -> {
                                 selectorItems = characteristics.shutterItems
                                 characteristics.shutterValue
@@ -460,7 +490,7 @@ fun CameraScreenSuccess(
 
                             null -> ""
 
-                        }
+                        }*/
                         value?.let { valueSelectorVisibility = true }
                             ?: run { valueSelectorVisibility = false }
                         /* value?.let {
