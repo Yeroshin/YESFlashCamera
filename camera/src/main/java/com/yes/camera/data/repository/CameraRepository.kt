@@ -491,9 +491,9 @@ class CameraRepository(
             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
               _characteristicsFlow.update { current ->
                   current?.copy(
-                      shutterValue = exposureTime,
+                      shutterValue = exposureTime?:exposureTimeNs,
                      // shutterValue = Random.nextLong(8_000_000_000L),
-                      isoValue = iso
+                      isoValue = iso?:iso2
                   )
               }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(

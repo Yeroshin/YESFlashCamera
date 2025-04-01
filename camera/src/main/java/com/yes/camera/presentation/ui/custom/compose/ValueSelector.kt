@@ -48,7 +48,8 @@ fun ValueSelector(
     position: Int,
     items: List<Any>?,
     adapter: CompositeAdapter,
-    onSelectedItemChanged: (Int) -> Unit
+    onSelectedItemChanged: (Int) -> Unit,
+    updatedPosition:Int?=null
 ) {
 
     var rowWidthPx by remember { mutableIntStateOf(0) }
@@ -56,7 +57,19 @@ fun ValueSelector(
     val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
+    LaunchedEffect(updatedPosition) {
+        snapshotFlow { updatedPosition }
+            .collect {
+                updatedPosition?.let {
+                    onSelectedItemChanged(position)
+                    listState.animateScrollToItem(
+                        position,
+                        scrollOffset = itemWidthPx / 2
+                    )
+                }
 
+            }
+    }
 
     /* LaunchedEffect(firstVisibleItem) {
          snapshotFlow { firstVisibleItem }

@@ -1,6 +1,11 @@
 package com.yes.camera.presentation.model
 
 data class CharacteristicsUI(
+    val settings: Settings = Settings(),
+    val histogramData: ByteArray = ByteArray(0),
+
+)
+data class Settings(
     val backCamera: Boolean = true,
     val shutterValue: String = "0",
     val shutterItems:List<SettingsItemUI>? =null,
@@ -18,8 +23,6 @@ data class CharacteristicsUI(
     val magnifierItems:List<SettingsItemUI> =emptyList(),
     val magnifierPosition:Int=0,
     val touchPoint: FloatArray = FloatArray(2),
-    val histogramData: ByteArray = ByteArray(0),
-
 )
 
 enum class Item {

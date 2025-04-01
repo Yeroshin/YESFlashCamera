@@ -3,6 +3,7 @@ package com.yes.camera.presentation.mapper
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
+import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.SettingsItemUI
 import kotlin.math.abs
 
@@ -87,17 +88,8 @@ class MapperUI {
             }
         }
         val isoPosition=isoValue?.let {standardIsoValues.indexOf(isoValue) }?:0
-
-        return CharacteristicsUI(
-
-            /*  shutterItems= standardShutterSpeeds
-                  .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
-                  .map { SettingsItemUI(it.second )},
-              isoItems = standardIsoValues
-                  .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
-                  .map { SettingsItemUI(it.toString() )},*/
-
-           shutterValue = shutterValue,
+        val settings=Settings(
+            shutterValue = shutterValue,
             shutterPosition = shutterPosition,
             shutterItems = standardShutterSpeeds
                 .toSortedMap(compareByDescending { it })
@@ -109,8 +101,8 @@ class MapperUI {
             },
             isoValue = isoValue.toString(),
             isoPosition = isoPosition,
-          /*  shutterItems = supportedShutterSpeeds,
-            isoItems = supportedIsoValues,*/
+            /*  shutterItems = supportedShutterSpeeds,
+              isoItems = supportedIsoValues,*/
             focusItems = listOf(
                 SettingsItemUI("0.2"),
                 SettingsItemUI("1"),
@@ -143,6 +135,17 @@ class MapperUI {
                 SettingsItemUI("9"),
                 SettingsItemUI("10"),
             )
+        )
+        return CharacteristicsUI(
+            settings = settings
+            /*  shutterItems= standardShutterSpeeds
+                  .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
+                  .map { SettingsItemUI(it.second )},
+              isoItems = standardIsoValues
+                  .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
+                  .map { SettingsItemUI(it.toString() )},*/
+
+
             /*  characteristics = mapOf(
                   Item.SHUTTER to Characteristic(
                       value = 0,
@@ -243,13 +246,13 @@ class MapperUI {
     }
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
-        val isoValue = characteristics.isoValue.toIntOrNull()
+        val isoValue = characteristics.settings.isoValue.toIntOrNull()
 
         val shutterValue =
-            standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
+            standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.settings.shutterValue }?.key
 
 
-        val focusValue = characteristics.focusValue.toFloat()
+        val focusValue = characteristics.settings.focusValue.toFloat()
 
         return Characteristics(
             isoValue = isoValue,
@@ -259,7 +262,7 @@ class MapperUI {
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),
             resolutions = emptyList(),
-            touchPoint = characteristics.touchPoint
+            touchPoint = characteristics.settings.touchPoint
         )
     }
 
