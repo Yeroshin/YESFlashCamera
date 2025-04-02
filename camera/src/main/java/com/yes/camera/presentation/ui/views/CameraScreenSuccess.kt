@@ -296,27 +296,26 @@ fun CameraScreenSuccess(
             .collect { newValue ->
                 selectorItems=    when (radioGroupSelectedItem) {
                     Item.SHUTTER -> {
-                        val t=items.shutterItems
                         items.shutterItems?.map { it.copy() }
                     }
 
                     Item.ISO -> {
-                        items.isoItems
+                        items.isoItems?.map { it.copy() }
 
                     }
 
                     Item.WB -> {
-                        items.wbItems
+                        items.wbItems?.map { it.copy() }
 
                     }
 
                     Item.FOCUS -> {
-                        items.focusItems
+                        items.focusItems?.map { it.copy() }
 
                     }
 
                     Item.MAGNIFIER -> {
-                        items.magnifierItems
+                        items.magnifierItems?.map { it.copy() }
 
                     }
 
@@ -713,10 +712,7 @@ fun CameraScreenSuccess(
                                     }
                                     selectorItems?.let {
                                         for (i in it.indices) {
-                                            val a=items.shutterItems
-                                            val c=selectorItems
                                             it[i].passed = i <= index
-                                            val b=items.shutterItems
                                         }
                                     }
 

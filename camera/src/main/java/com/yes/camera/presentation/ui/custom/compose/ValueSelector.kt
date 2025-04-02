@@ -48,8 +48,8 @@ fun ValueSelector(
     position: Int,
     items: List<Any>?,
     adapter: CompositeAdapter,
-    onSelectedItemChanged: (index:Int,manual:Boolean) -> Unit,
-    updatedPosition:Int?=null
+    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
+    updatedPosition: Int? = null
 ) {
 
     var rowWidthPx by remember { mutableIntStateOf(0) }
@@ -59,13 +59,14 @@ fun ValueSelector(
     val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
     LaunchedEffect(updatedPosition) {
         snapshotFlow { updatedPosition }
-            .collect {
-                updatedPosition?.let {
-                    onSelectedItemChanged(position,true)
+            .collect { position ->
+                position?.let {
+
                     listState.animateScrollToItem(
                         position,
                         scrollOffset = itemWidthPx / 2
                     )
+                    onSelectedItemChanged(position, true)
                 }
 
             }
@@ -85,16 +86,16 @@ fun ValueSelector(
     LaunchedEffect(items) {
         snapshotFlow { items }
             .collect {
-               //
+                //
                 listState.animateScrollToItem(
                     position,
                     scrollOffset = itemWidthPx / 2
                 )
-                onSelectedItemChanged(position,false)
-              /*  snapshotFlow { listState.firstVisibleItemIndex }
-                    .collect { index ->
-                        onSelectedItemChanged(index,true)
-                    }*/
+                onSelectedItemChanged(position, false)
+                /*  snapshotFlow { listState.firstVisibleItemIndex }
+                      .collect { index ->
+                          onSelectedItemChanged(index,true)
+                      }*/
 
 
             }
