@@ -48,7 +48,7 @@ fun ValueSelector(
     position: Int,
     items: List<Any>?,
     adapter: CompositeAdapter,
-    onSelectedItemChanged: (Int) -> Unit,
+    onSelectedItemChanged: (index:Int,manual:Boolean) -> Unit,
     updatedPosition:Int?=null
 ) {
 
@@ -61,7 +61,7 @@ fun ValueSelector(
         snapshotFlow { updatedPosition }
             .collect {
                 updatedPosition?.let {
-                    onSelectedItemChanged(position)
+                    onSelectedItemChanged(position,true)
                     listState.animateScrollToItem(
                         position,
                         scrollOffset = itemWidthPx / 2
@@ -81,20 +81,29 @@ fun ValueSelector(
      }*/
     val coroutineScope = rememberCoroutineScope()
 
+
     LaunchedEffect(items) {
         snapshotFlow { items }
             .collect {
-                onSelectedItemChanged(position)
+               //
                 listState.animateScrollToItem(
                     position,
                     scrollOffset = itemWidthPx / 2
                 )
-                snapshotFlow { listState.firstVisibleItemIndex }
+                onSelectedItemChanged(position,false)
+              /*  snapshotFlow { listState.firstVisibleItemIndex }
                     .collect { index ->
-                        onSelectedItemChanged(index)
-                    }
+                        onSelectedItemChanged(index,true)
+                    }*/
 
 
+            }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged() // Только при реальном изменении
+            .collect { index ->
+                onSelectedItemChanged(index, true)
             }
     }
     /*  LaunchedEffect(listState) {

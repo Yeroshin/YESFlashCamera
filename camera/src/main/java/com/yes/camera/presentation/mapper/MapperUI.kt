@@ -3,6 +3,7 @@ package com.yes.camera.presentation.mapper
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
+import com.yes.camera.presentation.model.Items
 import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.SettingsItemUI
 import kotlin.math.abs
@@ -88,9 +89,7 @@ class MapperUI {
             }
         }
         val isoPosition=isoValue?.let {standardIsoValues.indexOf(isoValue) }?:0
-        val settings=Settings(
-            shutterValue = shutterValue,
-            shutterPosition = shutterPosition,
+        val items= Items(
             shutterItems = standardShutterSpeeds
                 .toSortedMap(compareByDescending { it })
                 .map {
@@ -99,10 +98,6 @@ class MapperUI {
             isoItems = standardIsoValues.map {
                 SettingsItemUI(it.toString())
             },
-            isoValue = isoValue.toString(),
-            isoPosition = isoPosition,
-            /*  shutterItems = supportedShutterSpeeds,
-              isoItems = supportedIsoValues,*/
             focusItems = listOf(
                 SettingsItemUI("0.2"),
                 SettingsItemUI("1"),
@@ -136,16 +131,26 @@ class MapperUI {
                 SettingsItemUI("10"),
             )
         )
+        val settings=Settings(
+            shutterValue = shutterValue,
+            shutterPosition = shutterPosition,
+
+            isoValue = isoValue.toString(),
+            isoPosition = isoPosition,
+            /*  shutterItems = supportedShutterSpeeds,
+              isoItems = supportedIsoValues,*/
+
+            )
+
         return CharacteristicsUI(
-            settings = settings
+            settings = settings,
+            items = items
             /*  shutterItems= standardShutterSpeeds
                   .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
                   .map { SettingsItemUI(it.second )},
               isoItems = standardIsoValues
                   .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
                   .map { SettingsItemUI(it.toString() )},*/
-
-
             /*  characteristics = mapOf(
                   Item.SHUTTER to Characteristic(
                       value = 0,
