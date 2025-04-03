@@ -242,11 +242,16 @@ fun CameraScreenSuccess(
     var valueSelectorAquiredItemIndex: Int? by remember {
         mutableStateOf(null)
     }
+    var shutter by remember(settings.shutterPosition) {
+        mutableStateOf(settings.shutterPosition)
+    }
     LaunchedEffect(autoChecked) {
         if (autoChecked) {
+            snapshotFlow { settings }
+                .collect { s ->
             when (radioGroupSelectedItem) {
                 Item.SHUTTER -> {
-                    valueSelectorAquiredItemIndex = settings.shutterPosition
+                    valueSelectorAquiredItemIndex = s.shutterPosition
 
                 }
 
@@ -267,7 +272,7 @@ fun CameraScreenSuccess(
                 }
 
                 null -> {}
-
+            }
             }
         }
     }
@@ -278,7 +283,6 @@ fun CameraScreenSuccess(
         snapshotFlow { characteristics.items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
-                val t =items
                 items = newValue
             }
     }

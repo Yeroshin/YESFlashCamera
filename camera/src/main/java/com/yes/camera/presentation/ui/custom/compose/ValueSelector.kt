@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,16 +58,18 @@ fun ValueSelector(
     val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
     LaunchedEffect(updatedPosition) {
         snapshotFlow { updatedPosition }
             .collect { position ->
                 position?.let {
-
+                    isProgrammaticScroll = true
                     listState.animateScrollToItem(
                         position,
                         scrollOffset = itemWidthPx / 2
                     )
-                    onSelectedItemChanged(position, true)
+                    onSelectedItemChanged(position, false)
+                    isProgrammaticScroll = false
                 }
 
             }
@@ -104,7 +107,9 @@ fun ValueSelector(
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged() // Только при реальном изменении
             .collect { index ->
-                onSelectedItemChanged(index, true)
+                if (!isProgrammaticScroll) {
+                    onSelectedItemChanged(index, true)
+                }
             }
     }
     /*  LaunchedEffect(listState) {
