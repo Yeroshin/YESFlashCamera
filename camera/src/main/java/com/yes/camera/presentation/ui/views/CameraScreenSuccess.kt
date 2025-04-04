@@ -29,9 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,14 +40,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
-import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.SettingsItemUI
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.SelectorItemAdapterDelegate
@@ -237,44 +233,53 @@ fun CameraScreenSuccess(
             TextRadioItem(Item.FOCUS, settings.focusValue, "FOCUS"),
             TextRadioItem(Item.MAGNIFIER, settings.magnifierValue, "MAGNIFIER")
         )
-    var autoChecked by remember { mutableStateOf(false) }
+    //  var autoChecked by remember { mutableStateOf(false) }
 
-    var valueSelectorAquiredItemIndex: Int? by remember {
+    var valueSelectorAcquiredItemIndex: Int? by remember {
         mutableStateOf(null)
     }
-    var shutter by remember(settings.shutterPosition) {
-        mutableStateOf(settings.shutterPosition)
+    var autoItems by remember {
+        mutableStateOf(
+            mutableMapOf(
+                Item.SHUTTER to false,
+                Item.ISO to false,
+                Item.WB to false,
+                Item.FOCUS to false,
+                Item.MAGNIFIER to false
+            )
+        )
     }
-    LaunchedEffect(autoChecked) {
-        if (autoChecked) {
-            snapshotFlow { settings }
-                .collect { s ->
-            when (radioGroupSelectedItem) {
-                Item.SHUTTER -> {
-                    valueSelectorAquiredItemIndex = s.shutterPosition
 
+    LaunchedEffect(autoItems) {
+        snapshotFlow { settings }
+            .collect {
+                if (autoItems[radioGroupSelectedItem] == true) {
+                    when (radioGroupSelectedItem) {
+                        Item.SHUTTER -> {
+                            valueSelectorAcquiredItemIndex = settings.shutterPosition
+
+                        }
+
+                        Item.ISO -> {
+                            valueSelectorAcquiredItemIndex = settings.isoPosition
+                        }
+
+                        Item.WB -> {
+
+                        }
+
+                        Item.FOCUS -> {
+
+                        }
+
+                        Item.MAGNIFIER -> {
+
+                        }
+
+                        null -> {}
+                    }
                 }
-
-                Item.ISO -> {
-                    valueSelectorAquiredItemIndex = settings.isoPosition
-                }
-
-                Item.WB -> {
-
-                }
-
-                Item.FOCUS -> {
-
-                }
-
-                Item.MAGNIFIER -> {
-
-                }
-
-                null -> {}
             }
-            }
-        }
     }
     var items by remember {
         mutableStateOf(characteristics.items)
@@ -287,18 +292,19 @@ fun CameraScreenSuccess(
             }
     }
 
-    var selectorItems by remember{
+    var selectorItems by remember {
         mutableStateOf(
             CharacteristicsUI().items.shutterItems
         )
     }
     LaunchedEffect(
         key1 = items,
-        key2 = radioGroupSelectedItem) {
+        key2 = radioGroupSelectedItem
+    ) {
         snapshotFlow { items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
-                selectorItems=    when (radioGroupSelectedItem) {
+                selectorItems = when (radioGroupSelectedItem) {
                     Item.SHUTTER -> {
                         items.shutterItems?.map { it.copy() }
                     }
@@ -328,27 +334,43 @@ fun CameraScreenSuccess(
                 }
             }
     }
+    var settingsRequest by remember {
+        mutableStateOf(settings)
+    }
+    LaunchedEffect(settingsRequest) {
+        onCharacteristicChanged(
+            characteristics.copy(
+                settings = settingsRequest
+            )
+
+        )
+    }
     var valueSelectorSelectedItemIndex by remember {
         mutableStateOf(0)
     }
     LaunchedEffect(valueSelectorSelectedItemIndex) {
-        autoChecked = false
-        val params = when (radioGroupSelectedItem) {
+        radioGroupSelectedItem?.let {
+            autoItems = autoItems.toMutableMap().apply {
+                compute(it) { _, value -> false }
+            }
+        }
+
+        settingsRequest = when (radioGroupSelectedItem) {
             Item.SHUTTER -> {
                 selectorItems?.get(valueSelectorSelectedItemIndex)?.text?.let {
 
-                    settings.copy(shutterValue = it)
+                    settingsRequest.copy(shutterValue = it)
 
-                } ?: run { settings.copy() }
+                } ?: run { settingsRequest.copy() }
 
             }
 
             Item.ISO -> {
                 selectorItems?.get(valueSelectorSelectedItemIndex)?.text?.let {
 
-                    settings.copy(isoValue = it)
+                    settingsRequest.copy(isoValue = it)
 
-                } ?: run { settings.copy() }
+                } ?: run { settingsRequest.copy() }
             }
 
             Item.WB -> {
@@ -384,12 +406,7 @@ fun CameraScreenSuccess(
             null -> settings.copy()
 
         }
-        onCharacteristicChanged(
-            characteristics.copy(
-                settings = params
-            )
 
-        )
     }
 
     Box(
@@ -604,20 +621,23 @@ fun CameraScreenSuccess(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clickable {
-                                    autoChecked = !autoChecked
-                                    if (autoChecked) {
-                                        val params = when (radioGroupSelectedItem) {
+                                    radioGroupSelectedItem?.let {
+                                        autoItems = autoItems
+                                            .toMutableMap()
+                                            .apply {
+                                                compute(it) { _, value -> !(value ?: false) }
+                                            }
+                                    }
+                                    if (autoItems[radioGroupSelectedItem] == true) {
+                                        settingsRequest = when (radioGroupSelectedItem) {
                                             Item.SHUTTER -> {
-
-                                                settings.copy(
+                                                settingsRequest.copy(
                                                     shutterValue = ""
                                                 )
-
                                             }
 
                                             Item.ISO -> {
-
-                                                settings.copy(
+                                                settingsRequest.copy(
                                                     isoValue = ""
                                                 )
 
@@ -648,15 +668,13 @@ fun CameraScreenSuccess(
                                             null -> settings.copy()
 
                                         }
-                                        onCharacteristicChanged(
-                                            CharacteristicsUI(settings = params)
-                                        )
+
                                     }
 
                                     //car=car.copy()
 
                                 },
-                            vectorColor = if (autoChecked) {
+                            vectorColor = if (autoItems[radioGroupSelectedItem] == true) {
                                 Color.Green
                             } else {
                                 Color.White
@@ -710,8 +728,8 @@ fun CameraScreenSuccess(
                                 },
                                 items = selectorItems,
                                 adapter = adapter,
-                                onSelectedItemChanged = { index ,manual->
-                                    if (manual){
+                                onSelectedItemChanged = { index, manual ->
+                                    if (manual) {
                                         valueSelectorSelectedItemIndex = index
                                     }
                                     selectorItems?.let {
@@ -722,7 +740,7 @@ fun CameraScreenSuccess(
 
 
                                 },
-                                updatedPosition = valueSelectorAquiredItemIndex
+                                updatedPosition = valueSelectorAcquiredItemIndex
                             )
                             //  }
                             // }

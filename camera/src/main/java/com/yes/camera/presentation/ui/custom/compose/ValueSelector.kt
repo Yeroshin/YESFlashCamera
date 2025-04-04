@@ -75,32 +75,16 @@ fun ValueSelector(
             }
     }
 
-    /* LaunchedEffect(firstVisibleItem) {
-         snapshotFlow { firstVisibleItem }
-             .distinctUntilChanged()
-             .collect { newIndex ->
-                 onSelectedItemChanged(newIndex)
-             }
-
-     }*/
-    val coroutineScope = rememberCoroutineScope()
-
-
     LaunchedEffect(items) {
         snapshotFlow { items }
             .collect {
-                //
+                isProgrammaticScroll = true
                 listState.animateScrollToItem(
                     position,
                     scrollOffset = itemWidthPx / 2
                 )
                 onSelectedItemChanged(position, false)
-                /*  snapshotFlow { listState.firstVisibleItemIndex }
-                      .collect { index ->
-                          onSelectedItemChanged(index,true)
-                      }*/
-
-
+                isProgrammaticScroll = false
             }
     }
     LaunchedEffect(Unit) {

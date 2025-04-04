@@ -53,6 +53,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.random.Random
 
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -475,6 +476,8 @@ class CameraRepository(
     }
 
     var frameTime: Long = 0
+    var autoShutter:Long?=null
+    var autoIso:Int?=null
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -486,14 +489,14 @@ class CameraRepository(
             val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
             val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
             //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
-            val iso2 = result.get(CaptureResult.SENSOR_SENSITIVITY)
-            val exposureTimeNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+            autoIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
+            autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
               _characteristicsFlow.update { current ->
                   current?.copy(
-                      shutterValue = exposureTime?:exposureTimeNs,
-                     // shutterValue = Random.nextLong(8_000_000_000L),
-                      isoValue = iso?:iso2
+                      shutterValue = exposureTime?:autoShutter,
+                     // shutterValue = Random.nextLong(16_000_000L),
+                      isoValue = iso?:autoIso
                   )
               }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
@@ -1097,13 +1100,43 @@ class CameraRepository(
                 } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                } else {
-                    println()
-                }
+                } else if (characteristics.isoValue == null){
 
+                    characteristics.shutterValue?.let {shutterValue->
+                        set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                        autoShutter?.let {autoShutter->
+                            autoIso?.let {autoIso->
+                                set(
+                                    CaptureRequest.SENSOR_EXPOSURE_TIME,
+                                    characteristics.shutterValue
+                                )
+                                val isoValue=autoIso*(autoShutter/shutterValue)
+                                set(
+                                    CaptureRequest.SENSOR_SENSITIVITY,
+                                    isoValue.toInt()
+                                )
+                            }
+
+                        }
+                    }
+                }else {
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                        autoShutter?.let {autoShutter->
+                            autoIso?.let {autoIso->
+                                set(
+                                    CaptureRequest.SENSOR_EXPOSURE_TIME,
+                                    characteristics.isoValue.toLong()
+                                )
+                                val shutterValue=autoShutter*(autoIso/characteristics.isoValue)
+                                set(
+                                    CaptureRequest.SENSOR_SENSITIVITY,
+                                    shutterValue.toInt()
+                                )
+                            }
+                        }
+                }
             }
         }
-
     }
 
     private fun submitRequest(
