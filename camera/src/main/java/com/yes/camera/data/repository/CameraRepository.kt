@@ -20,6 +20,7 @@ import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.RggbChannelVector
 import android.hardware.camera2.params.SessionConfiguration
 import android.icu.text.SimpleDateFormat
 import android.media.Image
@@ -36,6 +37,7 @@ import android.util.Range
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import com.yes.camera.data.repository.CameraRepository.WhiteBalanceHelper.Companion.calculateRggbVector
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
@@ -49,10 +51,12 @@ import kotlinx.coroutines.flow.update
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.lang.Math.log
 import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.math.pow
 import kotlin.random.Random
 
 
@@ -491,6 +495,7 @@ class CameraRepository(
             //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
             autoIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
             autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+            val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
               _characteristicsFlow.update { current ->
                   if(autoAE){
@@ -1032,6 +1037,111 @@ class CameraRepository(
            }*/
 
     }
+    ////////////////////////
+    class WhiteBalanceHelper {
+
+        companion object {
+            private const val MAX_CHANNEL_VALUE = 255.0f
+            private const val TEMPERATURE_DIVIDER = 100
+
+            // Основная функция преобразования температуры в коэффициенты усиления
+            fun calculateRggbVector(temperatureKelvin: Int): RggbChannelVector {
+                val temp = temperatureKelvin / TEMPERATURE_DIVIDER.toFloat()
+
+                val red = calculateRedChannel(temp)
+                val green = calculateGreenChannel(temp)
+                val blue = calculateBlueChannel(temp)
+
+                return normalizeAndCreateVector(red, green, blue)
+            }
+
+            private fun calculateRedChannel(temp: Float): Float {
+                return when {
+                    temp > 66 -> {
+                        val value = 329.698727446 * (temp - 60).toDouble().pow(-0.1332047592)
+                        value.coerceIn(0.0, MAX_CHANNEL_VALUE.toDouble()).toFloat()
+                    }
+                    else -> 0f
+                }
+            }
+
+            private fun calculateGreenChannel(temp: Float): Float {
+                return when {
+                    temp > 66 -> {
+                        val value = 288.1221695283 * (temp - 60).toDouble().pow(-0.0755148492)
+                        value.coerceIn(0.0, MAX_CHANNEL_VALUE.toDouble()).toFloat()
+                    }
+                    else -> {
+                        val value = 99.4708025861 * log(temp.toDouble()) - 161.1195681661
+                        value.coerceIn(0.0, MAX_CHANNEL_VALUE.toDouble()).toFloat()
+                    }
+                }
+            }
+
+            private fun calculateBlueChannel(temp: Float): Float {
+                return when {
+                    temp >= 66 -> MAX_CHANNEL_VALUE
+                    temp <= 19 -> 0f
+                    else -> {
+                        val value = 138.5177312231 * log((temp - 10).toDouble()) - 305.0447927307
+                        value.coerceIn(0.0, MAX_CHANNEL_VALUE.toDouble()).toFloat()
+                    }
+                }
+            }
+
+            private fun normalizeAndCreateVector(red: Float, green: Float, blue: Float): RggbChannelVector {
+                val normalizedRed = (red / MAX_CHANNEL_VALUE) * 2.0f
+                val normalizedGreen = green / MAX_CHANNEL_VALUE
+                val normalizedBlue = (blue / MAX_CHANNEL_VALUE) * 2.0f
+
+                return RggbChannelVector(
+                    normalizedRed,
+                    normalizedGreen,
+                    normalizedGreen, // Дублируем для второго зеленого канала
+                    normalizedBlue
+                )
+            }
+
+            // Функция для установки баланса белого
+            fun setCustomWhiteBalance(
+                characteristics: CameraCharacteristics,
+                cameraDevice: CameraDevice,
+                temperatureKelvin: Int
+            ) {
+                // Проверка поддержки ручного режима
+                val awbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
+             /*   if (!awbModes.contains(CaptureRequest.CONTROL_AWB_MODE_OFF)) {
+                    throw IllegalStateException("Manual white balance not supported")
+                }*/
+
+                // Расчет коэффициентов
+              /*  val rggbVector = calculateRggbVector(temperatureKelvin)
+                val gains=floatArrayOf(
+                    rggbVector.redGain,
+                    rggbVector.greenEvenGain,
+                    rggbVector.greenOddGain,
+                    rggbVector.blueGain
+                )*/
+                // Создание запроса
+               /* val requestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL).apply {
+                    set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                    set(
+                        CaptureRequest.COLOR_CORRECTION_GAINS,
+                        floatArrayOf(
+                            rggbVector.redGain,
+                            rggbVector.greenEvenGain,
+                            rggbVector.greenOddGain,
+                            rggbVector.blueGain
+                        )
+                    )
+                }*/
+
+                // Применение настроек (пример для повторяющегося запроса)
+
+            }
+        }
+    }
+    ////////////////////////
     private var autoAE=false
     fun setInputCharacteristics(characteristics: Characteristics) {
         /* captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -1094,9 +1204,10 @@ class CameraRepository(
         ) { builder ->
             builder.apply {
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     autoAE=false
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                   /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                      set(
                          CaptureRequest.SENSOR_EXPOSURE_TIME,
@@ -1105,7 +1216,16 @@ class CameraRepository(
                      set(
                          CaptureRequest.SENSOR_SENSITIVITY,
                          characteristics.isoValue
-                     )
+                     )*/
+                    //////tmp wb
+                    val rggbVector = calculateRggbVector(500)
+                    set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                    set(
+                        CaptureRequest.COLOR_CORRECTION_GAINS,
+                        rggbVector
+                    )
+                    set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                    ////////////////////////////////
                    /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
                 } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
