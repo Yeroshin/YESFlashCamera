@@ -493,11 +493,20 @@ class CameraRepository(
             autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
               _characteristicsFlow.update { current ->
-                  current?.copy(
-                      shutterValue = exposureTime?:autoShutter,
-                     // shutterValue = Random.nextLong(16_000_000L),
-                      isoValue = iso?:autoIso
-                  )
+                  if(autoAE){
+                      current?.copy(
+                          shutterValue = autoShutter,
+                          // shutterValue = Random.nextLong(16_000_000L),
+                          isoValue = autoIso
+                      )
+                  }else{
+                      current?.copy(
+                          shutterValue = exposureTime?:autoShutter,
+                          // shutterValue = Random.nextLong(16_000_000L),
+                          isoValue = iso?:autoIso
+                      )
+                  }
+
               }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
                   shutterValue = exposureTimeNs,
@@ -1023,7 +1032,7 @@ class CameraRepository(
            }*/
 
     }
-
+    private var autoAE=false
     fun setInputCharacteristics(characteristics: Characteristics) {
         /* captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
          captureRequest?.addTarget(previewSurface)
@@ -1086,6 +1095,8 @@ class CameraRepository(
             builder.apply {
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                    autoAE=false
+                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                      set(
                          CaptureRequest.SENSOR_EXPOSURE_TIME,
@@ -1098,10 +1109,12 @@ class CameraRepository(
                    /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
                 } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
+                    autoAE=true
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 } else if (characteristics.isoValue == null){
-
+                    autoAE=false
+                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     characteristics.shutterValue?.let {shutterValue->
                         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                         autoShutter?.let {autoShutter->
@@ -1120,17 +1133,19 @@ class CameraRepository(
                         }
                     }
                 }else {
+                    autoAE=false
+                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                         autoShutter?.let {autoShutter->
                             autoIso?.let {autoIso->
                                 set(
-                                    CaptureRequest.SENSOR_EXPOSURE_TIME,
-                                    characteristics.isoValue.toLong()
+                                    CaptureRequest.SENSOR_SENSITIVITY,
+                                    characteristics.isoValue.toInt()
                                 )
                                 val shutterValue=autoShutter*(autoIso/characteristics.isoValue)
                                 set(
-                                    CaptureRequest.SENSOR_SENSITIVITY,
-                                    shutterValue.toInt()
+                                    CaptureRequest.SENSOR_EXPOSURE_TIME,
+                                    shutterValue
                                 )
                             }
                         }
