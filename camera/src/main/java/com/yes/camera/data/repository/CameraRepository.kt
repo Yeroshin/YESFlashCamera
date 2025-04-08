@@ -1038,6 +1038,59 @@ class CameraRepository(
 
     }
     ////////////////////////
+    fun kelvinToColorCorrectionGains(tempKelvin: Int): RggbChannelVector {
+        // Ограничиваем диапазон температур
+        val temp = tempKelvin.coerceIn(1000, 40000).toDouble()
+
+        // Вычисляем координаты цветности x и y
+        val x = if (temp <= 4000) {
+            (-0.2661239e9 / Math.pow(temp, 3.0) - 0.2343580e6 / Math.pow(temp, 2.0)
+                    + 0.8776956e3 / temp + 0.179910)
+        } else {
+            (-3.0258469e9 / Math.pow(temp, 3.0) + 2.1070379e6 / Math.pow(temp, 2.0)
+                    + 0.2226347e3 / temp + 0.240390)
+        }
+
+        val y = when {
+            temp <= 2222 -> {
+                -1.1063814 * Math.pow(x, 3.0) - 1.34811020 * Math.pow(x, 2.0)
+                + 2.18555832 * x - 0.20219683
+            }
+            temp <= 4000 -> {
+                -0.9549476 * Math.pow(x, 3.0) - 1.37418593 * Math.pow(x, 2.0)
+                + 2.09137015 * x - 0.16748867
+            }
+            else -> {
+                3.0817580 * Math.pow(x, 3.0) - 5.87338670 * Math.pow(x, 2.0)
+                + 3.75112997 * x - 0.37001483
+            }
+        }
+
+        // Преобразуем в XYZ
+        val Y = 1.0
+        val X = Y * x / y
+        val Z = Y * (1 - x - y) / y
+
+        // Преобразование XYZ в линейный RGB (sRGB D65)
+        val rLin = 3.2406 * X - 1.5372 * Y - 0.4986 * Z
+        val gLin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z
+        val bLin = 0.0557 * X - 0.2040 * Y + 1.0570 * Z
+
+        // Нормализация относительно зелёного канала
+        val rGain = if (rLin != 0.0) gLin / rLin else 1.0
+        val bGain = if (bLin != 0.0) gLin / bLin else 1.0
+
+        // Ограничение значений коэффициентов
+        val clampedRGain = rGain.coerceIn(0.25, 4.0)
+        val clampedBGain = bGain.coerceIn(0.25, 4.0)
+
+        return RggbChannelVector(
+            clampedRGain.toFloat(),
+            1.0f,
+            1.0f,
+            clampedBGain.toFloat()
+        )
+    }
     class WhiteBalanceHelper {
 
         companion object {
@@ -1218,7 +1271,7 @@ class CameraRepository(
                          characteristics.isoValue
                      )*/
                     //////tmp wb
-                    val rggbVector = calculateRggbVector(500)
+                    val rggbVector = kelvinToColorCorrectionGains(1000)
                     set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
                     set(
                         CaptureRequest.COLOR_CORRECTION_GAINS,

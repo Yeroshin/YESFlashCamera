@@ -56,6 +56,18 @@ class MapperUI {
         3280,
         4560*/
     )
+    private val standardWbValues = listOf(
+        1000,
+        2000,
+        3000,
+        4000,
+        5000,
+        6000,
+        7000,
+        8000,
+        9000,
+        10000
+    )
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
 
@@ -97,6 +109,9 @@ class MapperUI {
                 },
             isoItems = standardIsoValues.map {
                 SettingsItemUI(it.toString())
+            },
+            wbItems = standardWbValues.map {
+                SettingsItemUI(it.toString()+"K")
             },
             focusItems = listOf(
                 SettingsItemUI("0.2"),
@@ -255,7 +270,7 @@ class MapperUI {
 
         val shutterValue =
             standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.settings.shutterValue }?.key
-
+        val wbValue=characteristics.settings.wbValue.toIntOrNull()
 
         val focusValue = characteristics.settings.focusValue.toFloat()
 
@@ -263,6 +278,7 @@ class MapperUI {
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
+            wbValue=wbValue,
             focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),

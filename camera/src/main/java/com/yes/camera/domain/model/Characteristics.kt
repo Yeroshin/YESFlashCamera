@@ -8,6 +8,8 @@ data class Characteristics(
     val isoRange: IntRange= IntRange(0,0),
     val shutterValue:Long?=0L,
     val shutterRange: LongRange=LongRange(0L,0L),
+    val wbValue:Int?=0,
+    val wbRange: IntRange=IntRange(0,0),
     val focusValue:Float=0f,
     val minFocusValue:Float=0f,
     val resolutions:List<Dimensions> = emptyList(),
