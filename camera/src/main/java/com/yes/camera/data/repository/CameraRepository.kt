@@ -33,11 +33,9 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
-import android.util.Range
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import com.yes.camera.data.repository.CameraRepository.WhiteBalanceHelper.Companion.calculateRggbVector
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.model.Dimensions
 import com.yes.camera.utils.ImageComparator
@@ -56,8 +54,9 @@ import java.nio.ByteBuffer
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.math.pow
-import kotlin.random.Random
 
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -482,6 +481,7 @@ class CameraRepository(
     var frameTime: Long = 0
     var autoShutter:Long?=null
     var autoIso:Int?=null
+    var wb:Int?=0
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -500,12 +500,14 @@ class CameraRepository(
               _characteristicsFlow.update { current ->
                   if(autoAE){
                       current?.copy(
+                          wbValue  = wb,
                           shutterValue = autoShutter,
                           // shutterValue = Random.nextLong(16_000_000L),
                           isoValue = autoIso
                       )
                   }else{
                       current?.copy(
+                          wbValue  = wb,
                           shutterValue = exposureTime?:autoShutter,
                           // shutterValue = Random.nextLong(16_000_000L),
                           isoValue = iso?:autoIso
@@ -1038,59 +1040,346 @@ class CameraRepository(
 
     }
     ////////////////////////
-    fun kelvinToColorCorrectionGains(tempKelvin: Int): RggbChannelVector {
-        // Ограничиваем диапазон температур
-        val temp = tempKelvin.coerceIn(1000, 40000).toDouble()
+  /*  fun colorCorrectionGainsToKelvin(gains: RggbChannelVector): Int {
+        val rGain = gains.red.toDouble()
+        val bGain = gains.blue.toDouble()
 
-        // Вычисляем координаты цветности x и y
+        // Добавляем проверку на минимальные значения
+        val rLin = (1.0 / rGain).coerceAtMost(4.0)
+        val bLin = (1.0 / bGain).coerceAtMost(4.0)
+        val gLin = 1.0
+
+        // Уточнённая обратная матрица
+        val X = 0.4124 * rLin + 0.3576 * gLin + 0.1805 * bLin
+        val Y = 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin
+        val Z = 0.0193 * rLin + 0.1192 * gLin + 0.9505 * bLin
+
+        val sum = X + Y + Z
+        val x = (X / sum).coerceIn(0.0, 1.0)
+        val y = (Y / sum).coerceIn(0.0, 1.0)
+
+        // Модифицированный алгоритм поиска
+        var low = 1000
+        var high = 40000
+        var bestTemp = 6500
+        var minError = Double.MAX_VALUE
+
+        repeat(100) {
+            val mid = (low + high) / 2
+            val (xCalc, yCalc) = calculateXY(mid.toDouble())
+
+            val error = (xCalc - x).pow(2) + (yCalc - y).pow(2)
+
+            if (error < minError) {
+                minError = error
+                bestTemp = mid
+            }
+
+            when {
+                xCalc < x -> low = mid
+                else -> high = mid
+            }
+
+            if (high - low <= 1) return bestTemp
+        }
+
+        return bestTemp
+    }
+
+    private fun calculateXY(temp: Double): Pair<Double, Double> {
         val x = if (temp <= 4000) {
-            (-0.2661239e9 / Math.pow(temp, 3.0) - 0.2343580e6 / Math.pow(temp, 2.0)
+            (-0.2661239e9 / temp.pow(3) - 0.2343580e6 / temp.pow(2)
                     + 0.8776956e3 / temp + 0.179910)
         } else {
-            (-3.0258469e9 / Math.pow(temp, 3.0) + 2.1070379e6 / Math.pow(temp, 2.0)
+            (-3.0258469e9 / temp.pow(3) + 2.1070379e6 / temp.pow(2)
                     + 0.2226347e3 / temp + 0.240390)
         }
 
         val y = when {
             temp <= 2222 -> {
-                -1.1063814 * Math.pow(x, 3.0) - 1.34811020 * Math.pow(x, 2.0)
+                -1.1063814 * x.pow(3) - 1.34811020 * x.pow(2)
                 + 2.18555832 * x - 0.20219683
             }
             temp <= 4000 -> {
-                -0.9549476 * Math.pow(x, 3.0) - 1.37418593 * Math.pow(x, 2.0)
+                -0.9549476 * x.pow(3) - 1.37418593 * x.pow(2)
                 + 2.09137015 * x - 0.16748867
             }
             else -> {
-                3.0817580 * Math.pow(x, 3.0) - 5.87338670 * Math.pow(x, 2.0)
+                3.0817580 * x.pow(3) - 5.87338670 * x.pow(2)
                 + 3.75112997 * x - 0.37001483
             }
         }
 
-        // Преобразуем в XYZ
+        return x to y
+    }*/
+   /* fun kelvinToColorCorrectionGains(tempKelvin: Int): RggbChannelVector {
+        val temp = tempKelvin.coerceIn(1000, 40000).toDouble()
+
+        val x = if (temp <= 4000) {
+            (-0.2661239e9 / temp.pow(3) - 0.2343580e6 / temp.pow(2)
+                    + 0.8776956e3 / temp + 0.179910)
+        } else {
+            (-3.0258469e9 / temp.pow(3) + 2.1070379e6 / temp.pow(2)
+                    + 0.2226347e3 / temp + 0.240390)
+        }
+
+        val y = when {
+            temp <= 2222 -> {
+                -1.1063814 * x.pow(3) - 1.34811020 * x.pow(2)
+                + 2.18555832 * x - 0.20219683
+            }
+            temp <= 4000 -> {
+                -0.9549476 * x.pow(3) - 1.37418593 * x.pow(2)
+                + 2.09137015 * x - 0.16748867
+            }
+            else -> {
+                3.0817580 * x.pow(3) - 5.87338670 * x.pow(2)
+                + 3.75112997 * x - 0.37001483
+            }
+        }
+
+        // Фиксируем отрицательные значения RGB
         val Y = 1.0
-        val X = Y * x / y
-        val Z = Y * (1 - x - y) / y
+        val X = (Y * x / y).coerceAtLeast(0.0)
+        val Z = (Y * (1 - x - y) / y).coerceAtLeast(0.0)
 
-        // Преобразование XYZ в линейный RGB (sRGB D65)
-        val rLin = 3.2406 * X - 1.5372 * Y - 0.4986 * Z
-        val gLin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z
-        val bLin = 0.0557 * X - 0.2040 * Y + 1.0570 * Z
+        val rLin = (3.2406 * X - 1.5372 * Y - 0.4986 * Z).coerceAtLeast(0.001)
+        val gLin = (-0.9689 * X + 1.8758 * Y + 0.0415 * Z).coerceAtLeast(0.001)
+        val bLin = (0.0557 * X - 0.2040 * Y + 1.0570 * Z).coerceAtLeast(0.001)
 
-        // Нормализация относительно зелёного канала
-        val rGain = if (rLin != 0.0) gLin / rLin else 1.0
-        val bGain = if (bLin != 0.0) gLin / bLin else 1.0
+        val rGain = (gLin / rLin).coerceIn(0.25, 4.0)
+        val bGain = (gLin / bLin).coerceIn(0.25, 4.0)
 
-        // Ограничение значений коэффициентов
-        val clampedRGain = rGain.coerceIn(0.25, 4.0)
-        val clampedBGain = bGain.coerceIn(0.25, 4.0)
+        return RggbChannelVector(rGain.toFloat(), 1.0f, 1.0f, bGain.toFloat())
+    }*/
+
+   /* fun colorCorrectionGainsToKelvin(gains: RggbChannelVector): Int {
+        val rGain = gains.red.toDouble()
+        val gGain = gains.greenEven.toDouble()
+        val bGain = gains.blue.toDouble()
+
+        // Проверка на минимальные значения
+        val rLin = (1.0 / rGain).coerceAtMost(4.0)
+        val gLin = (1.0 / gGain).coerceAtMost(4.0)
+        val bLin = (1.0 / bGain).coerceAtMost(4.0)
+
+        // Обратные значения X, Y, Z
+        val X = 0.4124 * rLin + 0.3576 * gLin + 0.1805 * bLin
+        val Y = 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin
+        val Z = 0.0193 * rLin + 0.1192 * gLin + 0.9505 * bLin
+
+        val sum = X + Y + Z
+        val x = (X / sum).coerceIn(0.0, 1.0)
+        val y = (Y / sum).coerceIn(0.0, 1.0)
+
+        // Алгоритм поиска температуры
+        var low = 1000
+        var high = 40000
+        var bestTemp = 6500
+        var minError = Double.MAX_VALUE
+
+        repeat(100) {
+            val mid = (low + high) / 2
+            val (xCalc, yCalc) = calculateXY(mid.toDouble())
+
+            val error = (xCalc - x).pow(2) + (yCalc - y).pow(2)
+
+            if (error < minError) {
+                minError = error
+                bestTemp = mid
+            }
+
+            // Обновляем границы для бинарного поиска
+            if (xCalc < x) {
+                low = mid + 1
+            } else {
+                high = mid - 1
+            }
+        }
+
+        return bestTemp
+    }
+
+    fun calculateXY(kelvin: Double): Pair<Double, Double> {
+        val temp = kelvin
+        val x: Double
+        val y: Double
+
+        // Рассчитываем значения x и y на основе температуры
+        if (temp <= 4000) {
+            x = (-0.2661239e9 / temp.pow(3) - 0.2343580e6 / temp.pow(2) + 0.8776956e3 / temp + 0.179910)
+        } else {
+            x = (-3.0258469e9 / temp.pow(3) + 2.1070379e6 / temp.pow(2) + 0.2226347e3 / temp + 0.240390)
+        }
+
+        y = when {
+            temp <= 2222 -> {
+                -1.1063814 * x.pow(3) - 1.34811020 * x.pow(2) + 2.18555832 * x - 0.20219683
+            }
+            temp <= 4000 -> {
+                -0.9549476 * x.pow(3) - 1.37418593 * x.pow(2) + 2.09137015 * x - 0.16748867
+            }
+            else -> {
+                3.0817580 * x.pow(3) - 5.87338670 * x.pow(2) + 3.75112997 * x - 0.37001483
+            }
+        }
+
+        return Pair(x, y)
+    }*/
+
+    /*private fun calculateXY(temp: Double): Pair<Double, Double> {
+        val x = if (temp <= 4000) {
+            (-0.2661239e9 / temp.pow(3) - 0.2343580e6 / temp.pow(2)
+                    + 0.8776956e3 / temp + 0.179910)
+        } else {
+            (-3.0258469e9 / temp.pow(3) + 2.1070379e6 / temp.pow(2)
+                    + 0.2226347e3 / temp + 0.240390)
+        }
+
+        val y = when {
+            temp <= 2222 -> {
+                -1.1063814 * x.pow(3) - 1.34811020 * x.pow(2)
+                + 2.18555832 * x - 0.20219683
+            }
+            temp <= 4000 -> {
+                -0.9549476 * x.pow(3) - 1.37418593 * x.pow(2)
+                + 2.09137015 * x - 0.16748867
+            }
+            else -> {
+                3.0817580 * x.pow(3) - 5.87338670 * x.pow(2)
+                + 3.75112997 * x - 0.37001483
+            }
+        }
+
+        return x to y
+    }*/
+   /* fun kelvinToColorCorrectionGains(kelvin: Int): RggbChannelVector {
+        val temp = kelvin.toDouble()
+
+        val x: Double
+        val y: Double
+
+        // Рассчитываем значения x и y на основе температуры
+        if (temp <= 4000) {
+            x = (-0.2661239e9 / temp.pow(3) - 0.2343580e6 / temp.pow(2) + 0.8776956e3 / temp + 0.179910)
+        } else {
+            x = (-3.0258469e9 / temp.pow(3) + 2.1070379e6 / temp.pow(2) + 0.2226347e3 / temp + 0.240390)
+        }
+
+        y = when {
+            temp <= 2222 -> {
+                -1.1063814 * x.pow(3) - 1.34811020 * x.pow(2) + 2.18555832 * x - 0.20219683
+            }
+            temp <= 4000 -> {
+                -0.9549476 * x.pow(3) - 1.37418593 * x.pow(2) + 2.09137015 * x - 0.16748867
+            }
+            else -> {
+                3.0817580 * x.pow(3) - 5.87338670 * x.pow(2) + 3.75112997 * x - 0.37001483
+            }
+        }
+
+        // Преобразуем x и y в коэффициенты коррекции цвета
+        val rGain = (1.0 / (x / y)).coerceIn(0.25, 4.0)
+        val gGain = 1.0f // Грин всегда равен 1.0
+        val bGain = (1.0 / ((1 - x) / (1 - y))).coerceIn(0.25, 4.0)
+
+        return RggbChannelVector(rGain.toFloat(), gGain,gGain, bGain.toFloat())
+    }*/
+
+
+    fun colorCorrectionGainsToKelvin(rggb: RggbChannelVector): Int {
+        val targetRed = rggb.red
+        val targetBlue = rggb.blue
+        var bestKelvin = 6500
+        var minError = Float.MAX_VALUE
+
+        // Коэффициенты для поиска (можно оптимизировать)
+        val searchParams = listOf(
+            Triple(1000, 40000, 500),  // Грубый поиск
+            Triple(-500, 500, 50),     // Средняя точность
+            Triple(-50, 50, 1)         // Точное уточнение
+        )
+
+        searchParams.forEach { (startOffset, endOffset, step) ->
+            val searchStart = (bestKelvin + startOffset).coerceAtLeast(1000)
+            val searchEnd = (bestKelvin + endOffset).coerceAtMost(40000)
+
+            for (kelvin in searchStart..searchEnd step step) {
+                val gains = kelvinToColorCorrectionGains(kelvin)
+                val error = abs(gains.red - targetRed) + abs(gains.blue - targetBlue)
+
+                if (error < minError) {
+                    minError = error
+                    bestKelvin = kelvin
+                }
+            }
+        }
+
+        return bestKelvin
+    }
+
+    /*fun kelvinToColorCorrectionGains(whiteBalance: Int): RggbChannelVector {
+        var tmpKelvin = whiteBalance.coerceIn(1000, 40000) / 100
+
+        val r = if (tmpKelvin <= 66) 255 else {
+            (329.698727446 * (tmpKelvin - 60.0).pow(-0.1332047592))
+                .coerceIn(0.0, 255.0).toInt()
+        }
+
+        val g = if (tmpKelvin <= 66) {
+            (99.4708025861 * ln(tmpKelvin.toDouble()) - 161.1195681661)
+                .coerceIn(0.0, 255.0).toInt()
+        } else {
+            (288.1221695283 * (tmpKelvin - 60.0).pow(-0.0755148492))
+                .coerceIn(0.0, 255.0).toInt()
+        }
+
+        val b = when {
+            tmpKelvin >= 66 -> 255
+            tmpKelvin <= 19 -> 0
+            else -> (138.5177312231 * ln(tmpKelvin - 10.0) - 305.0447927307)
+                .coerceIn(0.0, 255.0).toInt()
+        }
 
         return RggbChannelVector(
-            clampedRGain.toFloat(),
-            1.0f,
-            1.0f,
-            clampedBGain.toFloat()
+            if (r == 0) 1f else g.toFloat() / r,
+            1f,
+            1f,
+            when {
+                b == 0 && g == 0 -> 1f
+                b == 0 -> g.toFloat()
+                else -> g.toFloat() / b
+            }
+        )
+    }*/
+
+    fun kelvinToColorCorrectionGains(kelvin: Int): RggbChannelVector {
+        val scaledTemp = (kelvin.coerceIn(1000, 40000) / 100)
+
+        val red = when {
+            scaledTemp <= 66 -> 255f
+            else -> 329.698727446f * (scaledTemp - 60).toFloat().pow(-0.1332047592f)
+        }.coerceIn(0f, 255f)
+
+        val green = when {
+            scaledTemp <= 66 -> 99.4708025861f * ln(scaledTemp.toFloat()) - 161.1195681661f
+            else -> 288.1221695283f * (scaledTemp - 60).toFloat().pow(-0.0755148492f)
+        }.coerceIn(0f, 255f)
+
+        val blue = when {
+            scaledTemp >= 66 -> 255f
+            scaledTemp <= 19 -> 0f
+            else -> 138.5177312231f * ln((scaledTemp - 10).toFloat()) - 305.0447927307f
+        }.coerceIn(0f, 255f)
+
+        return RggbChannelVector(
+            (red / 255f) * 2f,
+            green / 255f,
+            green / 255f,
+            (blue / 255f) * 2f
         )
     }
+    /////////////////////////////////
     class WhiteBalanceHelper {
 
         companion object {
@@ -1257,10 +1546,9 @@ class CameraRepository(
         ) { builder ->
             builder.apply {
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
-
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     autoAE=false
-                   /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                      set(
                          CaptureRequest.SENSOR_EXPOSURE_TIME,
@@ -1269,16 +1557,7 @@ class CameraRepository(
                      set(
                          CaptureRequest.SENSOR_SENSITIVITY,
                          characteristics.isoValue
-                     )*/
-                    //////tmp wb
-                    val rggbVector = kelvinToColorCorrectionGains(1000)
-                    set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-                    set(
-                        CaptureRequest.COLOR_CORRECTION_GAINS,
-                        rggbVector
-                    )
-                    set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-                    ////////////////////////////////
+                     )
                    /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
                 } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
@@ -1323,6 +1602,16 @@ class CameraRepository(
                             }
                         }
                 }
+                //////wb
+                wb=characteristics.wbValue
+                val rggbVector = kelvinToColorCorrectionGains(characteristics.wbValue!!)
+                set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                set(
+                    CaptureRequest.COLOR_CORRECTION_GAINS,
+                    rggbVector
+                )
+                set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                ////////////////////////////////
             }
         }
     }

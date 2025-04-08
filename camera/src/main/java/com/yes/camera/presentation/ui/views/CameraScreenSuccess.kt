@@ -46,7 +46,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.Item
-import com.yes.camera.presentation.model.SettingsItemUI
+import com.yes.camera.presentation.model.SelectorItemUI
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.SelectorItemAdapterDelegate
 import com.yes.camera.presentation.ui.custom.compose.Histogram
@@ -178,7 +178,7 @@ fun CameraScreenSuccess(
 ) {
     val adapter = CompositeAdapter(
         mapOf(
-            SettingsItemUI::class.java to SelectorItemAdapterDelegate(),
+            SelectorItemUI::class.java to SelectorItemAdapterDelegate(),
         )
     )
     val context = LocalContext.current

@@ -27,11 +27,11 @@ data class CharacteristicsUI(
     }
 }
 data class Items(
-    val shutterItems: List<SettingsItemUI>? = null,
-    val isoItems: List<SettingsItemUI>? = null,
-    val wbItems: List<SettingsItemUI>? = null,
-    val focusItems: List<SettingsItemUI>? = null,
-    val magnifierItems: List<SettingsItemUI>? = null,
+    val shutterItems: List<SelectorItemUI>? = null,
+    val isoItems: List<SelectorItemUI>? = null,
+    val wbItems: List<SelectorItemUI>? = null,
+    val focusItems: List<SelectorItemUI>? = null,
+    val magnifierItems: List<SelectorItemUI>? = null,
 )
 {
     override fun equals(other: Any?): Boolean {

@@ -2,10 +2,9 @@ package com.yes.camera.presentation.mapper
 
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
-import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.Items
 import com.yes.camera.presentation.model.Settings
-import com.yes.camera.presentation.model.SettingsItemUI
+import com.yes.camera.presentation.model.SelectorItemUI
 import kotlin.math.abs
 
 class MapperUI {
@@ -76,10 +75,10 @@ class MapperUI {
             .entries
             .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
             .sortedBy { it.key }
-            .map { SettingsItemUI(it.value) }
+            .map { SelectorItemUI(it.value) }
         val supportedIsoValues = standardIsoValues
             .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
-            .map { SettingsItemUI(it.toString()) }
+            .map { SelectorItemUI(it.toString()) }
         val shutterValue=characteristics.shutterValue?.let {
             standardShutterSpeeds.entries
                 .minByOrNull { (key, _) ->
@@ -105,45 +104,45 @@ class MapperUI {
             shutterItems = standardShutterSpeeds
                 .toSortedMap(compareByDescending { it })
                 .map {
-                    SettingsItemUI(it.value)
+                    SelectorItemUI(it.value)
                 },
             isoItems = standardIsoValues.map {
-                SettingsItemUI(it.toString())
+                SelectorItemUI(it.toString())
             },
             wbItems = standardWbValues.map {
-                SettingsItemUI(it.toString()+"K")
+                SelectorItemUI(it.toString()+"K")
             },
             focusItems = listOf(
-                SettingsItemUI("0.2"),
-                SettingsItemUI("1"),
-                SettingsItemUI("2"),
-                SettingsItemUI("3"),
-                SettingsItemUI("4"),
-                SettingsItemUI("5"),
-                SettingsItemUI("6"),
-                SettingsItemUI("7"),
-                SettingsItemUI("8"),
-                SettingsItemUI("9"),
-                SettingsItemUI("9.5"),
-                SettingsItemUI("10"),
-                SettingsItemUI("11"),
-                SettingsItemUI("12"),
-                SettingsItemUI("13"),
-                SettingsItemUI("14"),
-                SettingsItemUI("15"),
+                SelectorItemUI("0.2"),
+                SelectorItemUI("1"),
+                SelectorItemUI("2"),
+                SelectorItemUI("3"),
+                SelectorItemUI("4"),
+                SelectorItemUI("5"),
+                SelectorItemUI("6"),
+                SelectorItemUI("7"),
+                SelectorItemUI("8"),
+                SelectorItemUI("9"),
+                SelectorItemUI("9.5"),
+                SelectorItemUI("10"),
+                SelectorItemUI("11"),
+                SelectorItemUI("12"),
+                SelectorItemUI("13"),
+                SelectorItemUI("14"),
+                SelectorItemUI("15"),
 
                 ),
             magnifierItems = listOf(
-                SettingsItemUI("1"),
-                SettingsItemUI("2"),
-                SettingsItemUI("3"),
-                SettingsItemUI("4"),
-                SettingsItemUI("5"),
-                SettingsItemUI("6"),
-                SettingsItemUI("7"),
-                SettingsItemUI("8"),
-                SettingsItemUI("9"),
-                SettingsItemUI("10"),
+                SelectorItemUI("1"),
+                SelectorItemUI("2"),
+                SelectorItemUI("3"),
+                SelectorItemUI("4"),
+                SelectorItemUI("5"),
+                SelectorItemUI("6"),
+                SelectorItemUI("7"),
+                SelectorItemUI("8"),
+                SelectorItemUI("9"),
+                SelectorItemUI("10"),
             )
         )
         val settings=Settings(
@@ -270,7 +269,7 @@ class MapperUI {
 
         val shutterValue =
             standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.settings.shutterValue }?.key
-        val wbValue=characteristics.settings.wbValue.toIntOrNull()
+        val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
 
         val focusValue = characteristics.settings.focusValue.toFloat()
 

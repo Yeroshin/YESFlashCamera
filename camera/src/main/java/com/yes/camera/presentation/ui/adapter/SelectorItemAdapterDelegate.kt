@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.ui.adapter
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,13 +17,14 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.SettingsItemUI
+import com.yes.camera.presentation.model.SelectorItemUI
 
-class SelectorItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SettingsItemUI> {
+class SelectorItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SelectorItemUI> {
     @Composable
     override fun Content(
-        item: SettingsItemUI,
+        item: SelectorItemUI,
         modifier: Modifier,
     ) {
       //  var rowWidthPx by remember { mutableIntStateOf(0) }
@@ -51,6 +53,8 @@ class SelectorItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SettingsIte
             val initialFontSize=16.sp
             var fontSize by remember { mutableStateOf(initialFontSize) }
             Text(
+                modifier = Modifier
+                    .padding(2.dp),
                 maxLines = 1,
                 textAlign = TextAlign.Center,
                 text = item.text,

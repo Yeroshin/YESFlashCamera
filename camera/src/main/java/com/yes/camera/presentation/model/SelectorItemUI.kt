@@ -1,6 +1,6 @@
 package com.yes.camera.presentation.model
 
-data class SettingsItemUI(
+data class SelectorItemUI(
     val text: String,
     var passed:Boolean=false
 )
