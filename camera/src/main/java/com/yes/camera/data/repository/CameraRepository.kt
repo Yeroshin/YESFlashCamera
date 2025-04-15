@@ -15,6 +15,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -497,17 +498,19 @@ class CameraRepository(
             autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
             val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
+            val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
               _characteristicsFlow.update { current ->
                   if(autoAE){
                       current?.copy(
-                          wbValue  = wb,
+                          wbValue  = wbMode,
                           shutterValue = autoShutter,
                           // shutterValue = Random.nextLong(16_000_000L),
                           isoValue = autoIso
                       )
                   }else{
                       current?.copy(
-                          wbValue  = wb,
+                          wbValue  = wbMode,
                           shutterValue = exposureTime?:autoShutter,
                           // shutterValue = Random.nextLong(16_000_000L),
                           isoValue = iso?:autoIso
@@ -1545,10 +1548,11 @@ class CameraRepository(
             true
         ) { builder ->
             builder.apply {
+                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     autoAE=false
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                   // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                      set(
                          CaptureRequest.SENSOR_EXPOSURE_TIME,
@@ -1562,11 +1566,11 @@ class CameraRepository(
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
                 } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
                     autoAE=true
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                  //  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 } else if (characteristics.isoValue == null){
                     autoAE=false
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                 //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     characteristics.shutterValue?.let {shutterValue->
                         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                         autoShutter?.let {autoShutter->
@@ -1586,7 +1590,7 @@ class CameraRepository(
                     }
                 }else {
                     autoAE=false
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                 //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                         autoShutter?.let {autoShutter->
                             autoIso?.let {autoIso->
@@ -1603,15 +1607,17 @@ class CameraRepository(
                         }
                 }
                 //////wb
-                wb=characteristics.wbValue
+              /*  wb=characteristics.wbValue
                 val rggbVector = kelvinToColorCorrectionGains(characteristics.wbValue!!)
                 set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
                 set(
                     CaptureRequest.COLOR_CORRECTION_GAINS,
                     rggbVector
                 )
-                set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-                ////////////////////////////////
+                set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)*/
+                //////wb
+                set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_SHADE)
+            ////////////////////////////////
             }
         }
     }

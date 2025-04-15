@@ -1,5 +1,8 @@
 package com.yes.camera.presentation.model
 
+import com.yes.camera.R
+import com.yes.camera.presentation.ui.views.ImmutableCollection
+
 data class CharacteristicsUI(
     val settings: Settings = Settings(),
     val items: Items = Items(),
@@ -27,11 +30,11 @@ data class CharacteristicsUI(
     }
 }
 data class Items(
-    val shutterItems: List<SelectorItemUI>? = null,
-    val isoItems: List<SelectorItemUI>? = null,
-    val wbItems: List<SelectorItemUI>? = null,
-    val focusItems: List<SelectorItemUI>? = null,
-    val magnifierItems: List<SelectorItemUI>? = null,
+    val shutterItems: ImmutableCollection<TextItem>? = null,
+    val isoItems: ImmutableCollection<TextItem>? = null,
+    val wbItems: ImmutableCollection<IconItem>? = null,
+    val focusItems: ImmutableCollection<TextItem>? = null,
+    val magnifierItems: ImmutableCollection<TextItem>? = null,
 )
 {
     override fun equals(other: Any?): Boolean {
@@ -61,21 +64,22 @@ data class Items(
 
 data class Settings(
     val backCamera: Boolean = true,
+
     val shutterValue: String = "0",
-
     val shutterPosition: Int = 0,
+
     val isoValue: String = "0",
-
     val isoPosition: Int = 0,
-    val wbValue: String = "0",
 
+    val wbValue: Int? = null,
     val wbPosition: Int = 0,
+
     val focusValue: String = "0",
-
     val focusPosition: Int = 0,
-    val magnifierValue: String = "0",
 
+    val magnifierValue: String = "0",
     val magnifierPosition: Int = 0,
+
     val touchPoint: FloatArray = FloatArray(2),
 ) {
     // Переопределяем equals/hashCode для FloatArray
@@ -120,4 +124,7 @@ data class Settings(
 
 enum class Item {
     SHUTTER, ISO, FOCUS, WB, MAGNIFIER
+}
+enum class WbItem {
+    AUTO,INCANDESCENT,FLUORESCENT,WARM_FLUORESCENT,DAYLIGHT,CLOUDY_DAYLIGHT,TWILIGHT,SHADE
 }

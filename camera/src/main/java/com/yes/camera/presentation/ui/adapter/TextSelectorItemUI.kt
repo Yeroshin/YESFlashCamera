@@ -19,12 +19,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.SelectorItemUI
+import com.yes.camera.presentation.model.SelectorItem
+import com.yes.camera.presentation.model.TextItem
 
-class SelectorItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SelectorItemUI> {
+class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
+
     @Composable
     override fun Content(
-        item: SelectorItemUI,
+        item: TextItem,
         modifier: Modifier,
     ) {
       //  var rowWidthPx by remember { mutableIntStateOf(0) }
@@ -113,4 +115,6 @@ class SelectorItemAdapterDelegate : CompositeAdapter.AdapterDelegate<SelectorIte
 
 
     }
+
+
 }

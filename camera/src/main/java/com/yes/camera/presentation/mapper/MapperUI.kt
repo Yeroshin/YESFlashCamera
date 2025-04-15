@@ -1,13 +1,30 @@
 package com.yes.camera.presentation.mapper
 
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
+import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
+import com.yes.camera.presentation.model.IconItem
 import com.yes.camera.presentation.model.Items
+import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.Settings
-import com.yes.camera.presentation.model.SelectorItemUI
+import com.yes.camera.presentation.model.TextItem
+import com.yes.camera.presentation.model.TextSelectorItemUI
+import com.yes.camera.presentation.model.WbItem
+import com.yes.camera.presentation.ui.views.ImmutableCollection
+import com.yes.camera.utils.ResourceProvider
 import kotlin.math.abs
 
-class MapperUI {
+class MapperUI(
+    private val resources: ResourceProvider
+) {
     private val standardShutterSpeeds = mapOf(
         31_250L to "1/32000",
         62_500L to "1/16000",
@@ -19,15 +36,15 @@ class MapperUI {
         4_000_000L to "1/250",
         8_000_000L to "1/125",
         16_000_000L to "1/60",
-       /* 33_333_333L to "1/30",
-        66_666_667L to "1/15",
-        125_000_000L to "1/8",
-        250_000_000L to "1/4",
-        500_000_000L to "1/2",
-        1_000_000_000L to "1",
-        2_000_000_000L to "2",
-        4_000_000_000L to "4",
-        8_000_000_000L to "8",*/
+        /* 33_333_333L to "1/30",
+         66_666_667L to "1/15",
+         125_000_000L to "1/8",
+         250_000_000L to "1/4",
+         500_000_000L to "1/2",
+         1_000_000_000L to "1",
+         2_000_000_000L to "2",
+         4_000_000_000L to "4",
+         8_000_000_000L to "8",*/
     )
     private val standardIsoValues = listOf(
         50,
@@ -48,24 +65,36 @@ class MapperUI {
         1638400,
         3280000,
         4560000
-       /*  2048,
-        4096,
-        8192,
-        1638,
-        3280,
-        4560*/
+        /*  2048,
+         4096,
+         8192,
+         1638,
+         3280,
+         4560*/
     )
+
+    /* private val standardWbValues = listOf(
+         1000,
+         2000,
+         3000,
+         4000,
+         5000,
+         6000,
+         7000,
+         8000,
+         9000,
+         10000
+     )*/
     private val standardWbValues = listOf(
-        1000,
-        2000,
-        3000,
-        4000,
-        5000,
-        6000,
-        7000,
-        8000,
-        9000,
-        10000
+        CONTROL_AWB_MODE_AUTO,
+        CONTROL_AWB_MODE_INCANDESCENT,
+        CONTROL_AWB_MODE_FLUORESCENT,
+        CONTROL_AWB_MODE_WARM_FLUORESCENT,
+        CONTROL_AWB_MODE_DAYLIGHT,
+        CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
+        CONTROL_AWB_MODE_TWILIGHT,
+        CONTROL_AWB_MODE_SHADE
+
     )
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
@@ -75,11 +104,11 @@ class MapperUI {
             .entries
             .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
             .sortedBy { it.key }
-            .map { SelectorItemUI(it.value) }
+            .map { TextSelectorItemUI(it.value) }
         val supportedIsoValues = standardIsoValues
             .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
-            .map { SelectorItemUI(it.toString()) }
-        val shutterValue=characteristics.shutterValue?.let {
+            .map { TextSelectorItemUI(it.toString()) }
+        val shutterValue = characteristics.shutterValue?.let {
             standardShutterSpeeds.entries
                 .minByOrNull { (key, _) ->
                     abs(key - characteristics.shutterValue)
@@ -87,74 +116,114 @@ class MapperUI {
                 ?.toPair()
                 ?.second
 
-        }?:run {
+        } ?: run {
             "1/60"
         }
-        val shutterPosition= standardShutterSpeeds
+        val shutterPosition = standardShutterSpeeds
             .toSortedMap(compareByDescending { it })
             .values.toList().indexOf(shutterValue)
 
-        val isoValue=characteristics.isoValue?.let {
+        val isoValue = characteristics.isoValue?.let {
             standardIsoValues.minByOrNull {
                 abs(it - characteristics.isoValue)
             }
         }
-        val isoPosition=isoValue?.let {standardIsoValues.indexOf(isoValue) }?:0
-        val items= Items(
-            shutterItems = standardShutterSpeeds
-                .toSortedMap(compareByDescending { it })
-                .map {
-                    SelectorItemUI(it.value)
-                },
-            isoItems = standardIsoValues.map {
-                SelectorItemUI(it.toString())
-            },
-            wbItems = standardWbValues.map {
-                SelectorItemUI(it.toString()+"K")
-            },
-            focusItems = listOf(
-                SelectorItemUI("0.2"),
-                SelectorItemUI("1"),
-                SelectorItemUI("2"),
-                SelectorItemUI("3"),
-                SelectorItemUI("4"),
-                SelectorItemUI("5"),
-                SelectorItemUI("6"),
-                SelectorItemUI("7"),
-                SelectorItemUI("8"),
-                SelectorItemUI("9"),
-                SelectorItemUI("9.5"),
-                SelectorItemUI("10"),
-                SelectorItemUI("11"),
-                SelectorItemUI("12"),
-                SelectorItemUI("13"),
-                SelectorItemUI("14"),
-                SelectorItemUI("15"),
-
+        val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
+        val items = Items(
+            shutterItems = ImmutableCollection(
+                standardShutterSpeeds
+                    .toSortedMap(compareByDescending { it })
+                    .map {
+                        TextItem(it.key.toFloat(), it.value.toString())
+                    }
+            ),
+            isoItems = ImmutableCollection(
+                standardIsoValues.map {
+                    TextItem(it.toFloat(), it.toString())
+                }
+            ),
+            wbItems =  ImmutableCollection(
+            standardWbValues.map {
+                IconItem(
+                    0F,
+                    when (it) {
+                        CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
+                        CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
+                        CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.wb_iridescent
+                        CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.wb_iridescent
+                        CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
+                        CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_shade
+                        CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
+                        CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
+                        else -> {
+                            R.drawable.wb_shade
+                        }
+                    },
+                    false
+                )
+            }
+            ),
+            focusItems = ImmutableCollection(
+                listOf(
+                TextItem(0.2F, "0,2"),
+                TextItem(0.2F, "1"),
+                TextItem(0.2F, "2"),
+                TextItem(0.2F, "3"),
+                TextItem(0.2F, "4"),
+                TextItem(0.2F, "5"),
+                TextItem(0.2F, "6"),
+                TextItem(0.2F, "7"),
+                TextItem(0.2F, "8"),
+                TextItem(0.2F, "9"),
+                TextItem(0.2F, "9.5"),
+                TextItem(0.2F, "10"),
+                TextItem(0.2F, "11"),
+                TextItem(0.2F, "12"),
+                TextItem(0.2F, "13"),
+                TextItem(0.2F, "14"),
+                TextItem(0.2F, "15"),
+                )
                 ),
-            magnifierItems = listOf(
-                SelectorItemUI("1"),
-                SelectorItemUI("2"),
-                SelectorItemUI("3"),
-                SelectorItemUI("4"),
-                SelectorItemUI("5"),
-                SelectorItemUI("6"),
-                SelectorItemUI("7"),
-                SelectorItemUI("8"),
-                SelectorItemUI("9"),
-                SelectorItemUI("10"),
+            magnifierItems = ImmutableCollection(
+                listOf(
+                TextItem(0.2F, "1"),
+                TextItem(0.2F, "2"),
+                TextItem(0.2F, "3"),
+                TextItem(0.2F, "4"),
+                TextItem(0.2F, "5"),
+                TextItem(0.2F, "6"),
+                TextItem(0.2F, "7"),
+                TextItem(0.2F, "8"),
+                TextItem(0.2F, "9"),
+                TextItem(0.2F, "10"),
+            )
             )
         )
-        val settings=Settings(
+        val wbValue = when (characteristics.wbValue) {
+            CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
+            CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
+            CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.wb_iridescent
+            CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.wb_iridescent
+            CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
+            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_shade
+            CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
+            CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
+            else -> {
+                R.drawable.wb_auto
+            }
+        }
+        val settings = Settings(
             shutterValue = shutterValue,
             shutterPosition = shutterPosition,
 
             isoValue = isoValue.toString(),
             isoPosition = isoPosition,
+
+            wbValue = wbValue
             /*  shutterItems = supportedShutterSpeeds,
               isoItems = supportedIsoValues,*/
 
-            )
+        )
 
         return CharacteristicsUI(
             settings = settings,
@@ -265,25 +334,60 @@ class MapperUI {
     }
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
+        //  val isoValue = standardIsoValues[characteristics.settings.isoPosition]
+        /*  val shutterValue = characteristics.items.shutterItems?.let {
+              it[characteristics.settings.shutterPosition].value
+          }*/
+
+
         val isoValue = characteristics.settings.isoValue.toIntOrNull()
+        val shutterValue = standardShutterSpeeds.entries.firstOrNull {
+            it.value == characteristics.settings.shutterValue
+        }?.key
+        //  val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
+        val wbValue = when (characteristics.settings.wbValue) {
+            CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
+            CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
+            CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.wb_iridescent
+            CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.wb_iridescent
+            CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
+            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_shade
+            CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
+            CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
+            else -> {
+                R.drawable.wb_auto
+            }
+        }
 
-        val shutterValue =
-            standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.settings.shutterValue }?.key
-        val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
 
-        val focusValue = characteristics.settings.focusValue.toFloat()
-
-        return Characteristics(
+        // val focusValue = characteristics.settings.focusValue.toInt()
+        val tem = shutterValue
+        val te = characteristics.settings.focusValue.toInt()
+        val focusValue = te.toFloat()
+        val t = Characteristics(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
-            wbValue=wbValue,
+            wbValue = wbValue,
             focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),
             resolutions = emptyList(),
             touchPoint = characteristics.settings.touchPoint
         )
+        val r = t
+        return t
+        /*  return Characteristics(
+              isoValue = isoValue,
+              isoRange = IntRange(0, 0),
+              shutterValue = shutterValue as Long,
+              wbValue=wbValue.toInt(),
+              focusValue = focusValue ?: 0f,
+              minFocusValue = 0f,
+              shutterRange = LongRange(0, 0),
+              resolutions = emptyList(),
+              touchPoint = characteristics.settings.touchPoint
+          )*/
     }
 
     fun map(histogramData: ByteArray): CharacteristicsUI {

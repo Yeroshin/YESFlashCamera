@@ -1,9 +1,5 @@
 package com.yes.camera.presentation.ui.custom.compose
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 
@@ -14,24 +10,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.yes.camera.presentation.model.Item
-import kotlinx.coroutines.delay
+import com.yes.camera.presentation.ui.views.ImmutableCollection
 
-abstract class RadioButton(val id: Item){
+@Immutable
+abstract class RadioButton(open val id: Item){
 
     @Composable
     abstract fun item(
@@ -43,19 +38,22 @@ abstract class RadioButton(val id: Item){
 fun RadioGroup(
     modifier: Modifier,
     onOptionSelected:((value:Item?)->Unit),
-    items:List<RadioButton>
+    items: ImmutableCollection<RadioButton>
+  // items:RadioButton
 ) {
+  /*  var items by remember{
+        mutableStateOf(items)
+    }*/
+   val selectedOption = remember { mutableStateOf<Item?>(items.list[0].id) }
 
-    val selectedOption = remember { mutableStateOf<Item?>(items[0].id) }
+  //  val visibleStates = remember { items.map { mutableStateOf(false) } }
 
-    val visibleStates = remember { items.map { mutableStateOf(false) } }
-
-    LaunchedEffect(Unit) {
+  /*  LaunchedEffect(Unit) {
         items.forEachIndexed { index, _ ->
             delay(index * 150L)
             visibleStates[index].value = true
         }
-    }
+    }*/
     Row(
         modifier = modifier
             /* .background(
@@ -72,7 +70,7 @@ fun RadioGroup(
        // horizontalArrangement = Arrangement.Center,
                // horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        items.forEachIndexed { index, item ->
+        items.list.forEachIndexed { index, item ->
             Box(
 
                 modifier = Modifier
@@ -83,10 +81,10 @@ fun RadioGroup(
                 contentAlignment = Alignment.Center
 
             ) {
-                this@Row.AnimatedVisibility(
+              /*  this@Row.AnimatedVisibility(
                     visible = visibleStates[index].value,
                     enter = fadeIn() + scaleIn()
-                ) {
+                ) {*/
                     Row(
                         Modifier
                             .alpha(
@@ -119,5 +117,5 @@ fun RadioGroup(
                 }
             }
         }
-    }
+
 }

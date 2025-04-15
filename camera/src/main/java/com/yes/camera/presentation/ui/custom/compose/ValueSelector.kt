@@ -38,16 +38,24 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.yes.camera.R
+import com.yes.camera.presentation.model.IconItem
+import com.yes.camera.presentation.model.SelectorItem
+import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
+import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
+import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
+import com.yes.camera.presentation.ui.views.ImmutableCollection
+import com.yes.camera.presentation.ui.views.MapImmutableCollection
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlin.math.truncate
 
-
+/*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
     position: Int,
-    items: List<Any>?,
+    items: ImmutableCollection<SelectorItem>?,
     adapter: CompositeAdapter,
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
     updatedPosition: Int? = null
@@ -96,23 +104,7 @@ fun ValueSelector(
                 }
             }
     }
-    /*  LaunchedEffect(listState) {
-          snapshotFlow { listState.firstVisibleItemIndex }
-              .collect { index ->
-                  onSelectedItemChanged(index)
-              }
-      }*/
-    /*  Column(
-          modifier = Modifier
-           /*   .background(
-                  Color.LightGray.copy(alpha = 0.5f)
-              )*/
-              // .height(80.dp)
-              .fillMaxWidth()
-              .wrapContentHeight()
-              .padding(4.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-      ) {*/
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -132,7 +124,7 @@ fun ValueSelector(
                 horizontal = pixelsToDp(rowWidthPx / 2)
                 // horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
             ),
-            flingBehavior = flingBehavior
+          //  flingBehavior = flingBehavior
         ) {
             val modifier = Modifier
                 .width(48.dp)
@@ -140,8 +132,8 @@ fun ValueSelector(
                     itemWidthPx = coordinates.size.width
                 }
             items?.let {
-                items(it.size) { index ->
-                    adapter.Content(items[index], modifier)
+                items(it.list.size) { index ->
+                    adapter.Content(it.list[index], modifier)
                 }
             }
 
@@ -157,6 +149,122 @@ fun ValueSelector(
     }
 
 }
+*/
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ValueSelector(
+    position: Int,
+    items: ImmutableCollection<SelectorItem>?,
+  //  adapter: CompositeAdapter,
+    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
+    updatedPosition: Int? = null
+) {
+    val adapter by remember {
+        mutableStateOf(
+            CompositeAdapter(
+                MapImmutableCollection(
+                    mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>(
+                        TextItem::class.java to TextSelectorItemUI(),
+                        IconItem::class.java to IconSelectorItemUI()
+                    )
+                ).map
+            )
+        )
+    }
+  /*  val items by remember {
+        mutableStateOf(
+            ImmutableCollection(
+                listOf( TextItem(10f, "hel",false))
+            )
+        )
+    }*/
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+    var itemWidthPx by remember { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
+    LaunchedEffect(updatedPosition) {
+        snapshotFlow { updatedPosition }
+            .collect { position ->
+                position?.let {
+                    isProgrammaticScroll = true
+                    listState.animateScrollToItem(
+                        position,
+                        scrollOffset = itemWidthPx / 2
+                    )
+                    onSelectedItemChanged(position, false)
+                    isProgrammaticScroll = false
+                }
 
+            }
+    }
+
+    LaunchedEffect(items) {
+        snapshotFlow { items }
+            .collect {
+                isProgrammaticScroll = true
+                listState.animateScrollToItem(
+                    position,
+                    scrollOffset = itemWidthPx / 2
+                )
+                onSelectedItemChanged(position, false)
+                isProgrammaticScroll = false
+            }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged() // Только при реальном изменении
+            .collect { index ->
+                if (!isProgrammaticScroll) {
+                    onSelectedItemChanged(index, true)
+                }
+            }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(42.dp)
+            .padding(4.dp),
+    ) {
+
+        LazyRow(
+            state = listState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .wrapContentHeight()
+                .onGloballyPositioned { coordinates ->
+                    rowWidthPx = coordinates.size.width
+                },
+            contentPadding = PaddingValues(
+                horizontal = pixelsToDp(rowWidthPx / 2)
+                // horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
+            ),
+              flingBehavior = flingBehavior
+        ) {
+            val modifier = Modifier
+                .width(48.dp)
+                .onGloballyPositioned { coordinates ->
+                    itemWidthPx = coordinates.size.width
+                }
+            items?.let {
+                items(it.list.size) { index ->
+                    adapter.Content(it.list[index], modifier)
+                }
+            }
+
+        }
+        VectorShadow(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .size(14.dp),
+            vectorColor = Color.Green,
+            shadowColor = Color.DarkGray,
+            resId = R.drawable.arrow_drop_up
+        )
+    }
+
+}
 @Composable
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }

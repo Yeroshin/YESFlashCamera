@@ -49,10 +49,13 @@ fun VectorShadow(
     shadowOffsetYPct: Float = 0.95f,
     scale: Float = 0.85f
 ) {
-    val pathData = XmlParser(LocalContext.current, resId)
-        .parse("path", "pathData")
-    val pathShadow = remember { PathParser().parsePathString(pathData).toPath() }
-    val pathVector = remember{PathParser().parsePathString(pathData).toPath()}
+    val context = LocalContext.current
+    val pathData = remember {
+        XmlParser(context, resId)
+            .parse("path", "pathData")
+    }
+    val pathShadow = remember(pathData) { PathParser().parsePathString(pathData).toPath() }
+    val pathVector = remember(pathData){PathParser().parsePathString(pathData).toPath()}
     Canvas(
         modifier = modifier
             .fillMaxSize()

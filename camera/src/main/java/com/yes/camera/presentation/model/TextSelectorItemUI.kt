@@ -1,6 +1,6 @@
 package com.yes.camera.presentation.model
-
-data class SelectorItemUI(
+@Deprecated("not used")
+data class TextSelectorItemUI(
     val text: String,
     var passed:Boolean=false
 )

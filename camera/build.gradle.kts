@@ -1,3 +1,4 @@
+import com.android.build.api.variant.AndroidComponentsExtension
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)

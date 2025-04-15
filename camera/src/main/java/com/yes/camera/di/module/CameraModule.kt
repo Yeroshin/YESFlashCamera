@@ -11,6 +11,8 @@ import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
 import com.yes.camera.domain.usecase.SubscribeHistogramUseCase
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
+import com.yes.camera.utils.AndroidResourceProvider
+import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
@@ -21,9 +23,20 @@ import javax.inject.Singleton
 @Module
 class CameraModule {
     @Provides
+    fun providesAndroidResourceProvider(
+        context: Context,
+    ): ResourceProvider {
+        return AndroidResourceProvider(
+            context
+        )
+    }
+    @Provides
     fun providesMapper(
+        resources: ResourceProvider
     ): MapperUI {
-        return MapperUI()
+        return MapperUI(
+            resources
+        )
     }
     @Singleton
     @Provides
