@@ -346,16 +346,16 @@ class MapperUI(
         }?.key
         //  val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
         val wbValue = when (characteristics.settings.wbValue) {
-            CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
-            CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
-            CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.wb_iridescent
-            CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.wb_iridescent
-            CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
-            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_shade
-            CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
-            CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
+            R.drawable.wb_auto-> CONTROL_AWB_MODE_AUTO
+            R.drawable.wb_incandescent->CONTROL_AWB_MODE_INCANDESCENT
+            R.drawable.wb_iridescent->CONTROL_AWB_MODE_FLUORESCENT
+            R.drawable.wb_iridescent->CONTROL_AWB_MODE_WARM_FLUORESCENT
+            R.drawable.wb_sunny->CONTROL_AWB_MODE_DAYLIGHT
+            R.drawable.wb_shade->CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+            R.drawable.wb_twilight->CONTROL_AWB_MODE_TWILIGHT
+            R.drawable.wb_shade-> CONTROL_AWB_MODE_SHADE
             else -> {
-                R.drawable.wb_auto
+                CONTROL_AWB_MODE_AUTO
             }
         }
 

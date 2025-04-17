@@ -344,7 +344,7 @@ fun CameraScreenSuccess(
                             it?.list
 
                         }*/
-                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                        ImmutableCollection(items.isoItems?.list?.map { it as SelectorItem }
                             ?: emptyList())
                     }
 
@@ -353,7 +353,7 @@ fun CameraScreenSuccess(
                        /* items.wbItems?.let {
                             it?.list
                         }*/
-                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                        ImmutableCollection(items.wbItems?.list?.map { it as SelectorItem }
                             ?: emptyList())
                     }
 
@@ -362,7 +362,7 @@ fun CameraScreenSuccess(
                        /* items.focusItems?.let {
                             it?.list
                         }*/
-                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                        ImmutableCollection(items.focusItems?.list?.map { it as SelectorItem }
                             ?: emptyList())
                     }
 
@@ -371,7 +371,7 @@ fun CameraScreenSuccess(
                        /* items.magnifierItems?.let {
                             it?.list
                         }*/
-                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                        ImmutableCollection(items.magnifierItems?.list?.map { it as SelectorItem }
                             ?: emptyList())
                     }
 
@@ -439,7 +439,17 @@ fun CameraScreenSuccess(
             }
 
             Item.WB -> {
-                settings.copy()
+                if (autoItems[radioGroupSelectedItem] == false) {
+                    val tmp=characteristics.items.wbItems?.list?.get(
+                        selectorSelectedItemIndex
+                    )?.value?.toInt()
+                    settingsRequest.copy(
+                        wbValue = characteristics.items.wbItems?.list?.get(
+                            selectorSelectedItemIndex
+                        )?.icon?: run { 0 })
+                } else {
+                    settingsRequest.copy(wbValue = 0)
+                }
                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
                      settings.copy(wbValue = it)

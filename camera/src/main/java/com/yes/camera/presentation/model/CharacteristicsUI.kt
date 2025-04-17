@@ -65,19 +65,19 @@ data class Items(
 data class Settings(
     val backCamera: Boolean = true,
 
-    val shutterValue: String = "0",
+    val shutterValue: String = "1",
     val shutterPosition: Int = 0,
 
-    val isoValue: String = "0",
+    val isoValue: String = "1",
     val isoPosition: Int = 0,
 
     val wbValue: Int? = null,
     val wbPosition: Int = 0,
 
-    val focusValue: String = "0",
+    val focusValue: String = "1",
     val focusPosition: Int = 0,
 
-    val magnifierValue: String = "0",
+    val magnifierValue: String = "1",
     val magnifierPosition: Int = 0,
 
     val touchPoint: FloatArray = FloatArray(2),

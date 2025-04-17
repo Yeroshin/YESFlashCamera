@@ -15,6 +15,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
@@ -1538,7 +1539,20 @@ class CameraRepository(
          captureRequest?.let {
              sessio?.capture(it.build(), captureCallback, mBackgroundHandler)
          }*/
-
+        submitRequest(
+            CameraDevice.TEMPLATE_PREVIEW,
+            listOf(
+                previewSurface,
+                captureSurface
+            ),
+            false
+        ) { builder ->
+            builder.apply {
+                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbValue)
+                set(CaptureRequest.CONTROL_AWB_LOCK, true)
+            }
+        }
         submitRequest(
             CameraDevice.TEMPLATE_PREVIEW,
             listOf(
@@ -1548,7 +1562,8 @@ class CameraRepository(
             true
         ) { builder ->
             builder.apply {
-                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                //set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     autoAE=false
@@ -1616,7 +1631,9 @@ class CameraRepository(
                 )
                 set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)*/
                 //////wb
-                set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_SHADE)
+                 set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_DAYLIGHT)
+               // set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbValue)
+                set(CaptureRequest.CONTROL_AWB_LOCK, true)
             ////////////////////////////////
             }
         }
