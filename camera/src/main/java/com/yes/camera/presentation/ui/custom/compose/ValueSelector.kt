@@ -48,6 +48,7 @@ import com.yes.camera.presentation.ui.views.ImmutableCollection
 import com.yes.camera.presentation.ui.views.MapImmutableCollection
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import java.lang.reflect.TypeVariable
 import kotlin.math.truncate
 
 /*
@@ -154,11 +155,16 @@ fun ValueSelector(
 @Composable
 fun ValueSelector(
     position: Int,
-    items: ImmutableCollection<SelectorItem>?,
-  //  adapter: CompositeAdapter,
+    items: List<SelectorItem>?,
+    //  adapter: CompositeAdapter,
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
     updatedPosition: Int? = null
 ) {
+     val items by remember (items){
+         mutableStateOf(items)
+     }
+
+
     val adapter by remember {
         mutableStateOf(
             CompositeAdapter(
@@ -171,13 +177,13 @@ fun ValueSelector(
             )
         )
     }
-  /*  val items by remember {
-        mutableStateOf(
-            ImmutableCollection(
-                listOf( TextItem(10f, "hel",false))
-            )
-        )
-    }*/
+    /*  val items by remember {
+          mutableStateOf(
+              ImmutableCollection(
+                  listOf( TextItem(10f, "hel",false))
+              )
+          )
+      }*/
     var rowWidthPx by remember { mutableIntStateOf(0) }
     var itemWidthPx by remember { mutableIntStateOf(0) }
     val listState = rememberLazyListState()
@@ -212,15 +218,48 @@ fun ValueSelector(
                 isProgrammaticScroll = false
             }
     }
+    var curIndex by remember {
+        mutableStateOf(0)
+    }
     LaunchedEffect(Unit) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged() // Только при реальном изменении
             .collect { index ->
+                curIndex=index
                 if (!isProgrammaticScroll) {
                     onSelectedItemChanged(index, true)
+                    items?.let {
+                          it.forEachIndexed { curIndex, item ->
+                               item.passed = curIndex <= index
+
+                           } /* for (i in it.indices) {
+                            it[i].passed = i <= index
+                        }*/
+                    }
                 }
             }
     }
+    var itemsR: ImmutableCollection<SelectorItem>? by remember(items) {
+        mutableStateOf(
+            items?.let {
+                ImmutableCollection(
+                    it
+                )
+            }
+
+
+
+        )
+    }
+  /*  LaunchedEffect(items) {
+        snapshotFlow { items }
+            .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
+            .collect { newValue ->
+                itemsR = ImmutableCollection(
+                    newValue
+                )
+            }
+    }*/
 
     Box(
         modifier = Modifier
@@ -241,16 +280,20 @@ fun ValueSelector(
                 horizontal = pixelsToDp(rowWidthPx / 2)
                 // horizontal = LocalDensity.current.run { rowWidthPx.toDp() / 2 }
             ),
-              flingBehavior = flingBehavior
+            flingBehavior = flingBehavior
         ) {
             val modifier = Modifier
                 .width(48.dp)
                 .onGloballyPositioned { coordinates ->
                     itemWidthPx = coordinates.size.width
                 }
+
             items?.let {
-                items(it.list.size) { index ->
-                    adapter.Content(it.list[index], modifier)
+                items(it.size, key = {item->item}) { index ->
+                    if (curIndex <= index){
+                        it[index].passed=true
+                    }
+                    adapter.Content(it[index], modifier)
                 }
             }
 
@@ -266,5 +309,6 @@ fun ValueSelector(
     }
 
 }
+
 @Composable
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }

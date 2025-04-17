@@ -22,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -158,7 +159,7 @@ fun orew() {
         fullscreen = false
     )
 }*/
-@Immutable
+@Stable
 data class ImmutableCollection <T>(
     val list: List<T>
 )
@@ -312,7 +313,7 @@ fun CameraScreenSuccess(
             }
     }
 
-     var selectorItems: ImmutableCollection<SelectorItem>? by remember {
+     var selectorItems: List< SelectorItem>? by remember {
          mutableStateOf(
              null//CharacteristicsUI().items.shutterItems
          )
@@ -327,20 +328,18 @@ fun CameraScreenSuccess(
                  selectorItems = when (radioGroupSelectedItem) {
                      Item.SHUTTER -> {
 
-                             items.shutterItems?.let {
-                                 ImmutableCollection(
-                                     it.list
-                                 )
-                             }
+                             items.shutterItems?.list
+
+
 
                          //map { it.copy() }
                      }
 
                      Item.ISO -> {
                          items.isoItems?.let {
-                             ImmutableCollection(
-                                 it.list
-                             )
+
+                                 it?.list
+
                          }
 
                      }
@@ -348,32 +347,31 @@ fun CameraScreenSuccess(
                      Item.WB -> {
                        //  items.wbItems?.map { it.copy() }
                          items.wbItems?.let {
-                             ImmutableCollection(
-                                 it.list
-                             )
+
+                                 it?.list
+
                          }
                      }
 
                      Item.FOCUS -> {
                        //  items.focusItems?.map { it.copy() }
                          items.focusItems?.let {
-                             ImmutableCollection(
-                                 it.list
-                             )
+
+                                 it?.list
+
                          }
                      }
 
                      Item.MAGNIFIER -> {
                        //  items.magnifierItems?.map { it.copy() }
                          items.magnifierItems?.let {
-                             ImmutableCollection(
-                                 it.list
-                             )
+
+                                 it?.list
                          }
                      }
 
                      null ->items.magnifierItems?.let {
-                         ImmutableCollection(it.list)
+                         it?.list
                      }
 
                  }
@@ -771,8 +769,8 @@ fun CameraScreenSuccess(
                                    selectorSelectedItemIndex = index
                                }
                                selectorItems?.let {
-                                   for (i in it.list.indices) {
-                                       it.list[i].passed = i <= index
+                                   for (i in it.indices) {
+                                       it[i].passed = i <= index
                                    }
                                }
 
