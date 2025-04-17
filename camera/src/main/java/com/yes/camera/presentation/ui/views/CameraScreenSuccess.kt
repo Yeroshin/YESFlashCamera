@@ -160,12 +160,13 @@ fun orew() {
     )
 }*/
 @Stable
-data class ImmutableCollection <T>(
+data class ImmutableCollection<T>(
     val list: List<T>
 )
+
 @Immutable
-data class MapImmutableCollection <T,R>(
-    val map: Map<T,R>
+data class MapImmutableCollection<T, R>(
+    val map: Map<T, R>
 )
 
 @Composable
@@ -180,36 +181,36 @@ fun CameraScreenSuccess(
     histogram: MutableMap<Int, Int>?,
     fullscreen: Boolean
 ) {
-    val immut=MapImmutableCollection(
+    val immut = MapImmutableCollection(
         mapOf(
             TextItem::class.java to TextSelectorItemUI(),
             IconItem::class.java to IconSelectorItemUI()
         )
     )
-   /* val adapter by remember {
-        mutableStateOf(
-            CompositeAdapter(
-                MapImmutableCollection(
-                mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>((
-                    TextItem::class.java to TextSelectorItemUI(),
-                    IconItem::class.java to IconSelectorItemUI()
-                )
-            )
-            )
-        )
-    }*/
-   /* val adapter by remember {
-        mutableStateOf(
-            CompositeAdapter(
-                MapImmutableCollection(
-                    mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>(
-                        TextItem::class.java to TextSelectorItemUI(),
-                        IconItem::class.java to IconSelectorItemUI()
-                    )
-                ).map
-            )
-        )
-    }*/
+    /* val adapter by remember {
+         mutableStateOf(
+             CompositeAdapter(
+                 MapImmutableCollection(
+                 mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>((
+                     TextItem::class.java to TextSelectorItemUI(),
+                     IconItem::class.java to IconSelectorItemUI()
+                 )
+             )
+             )
+         )
+     }*/
+    /* val adapter by remember {
+         mutableStateOf(
+             CompositeAdapter(
+                 MapImmutableCollection(
+                     mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>(
+                         TextItem::class.java to TextSelectorItemUI(),
+                         IconItem::class.java to IconSelectorItemUI()
+                     )
+                 ).map
+             )
+         )
+     }*/
     val context = LocalContext.current
     /////////////////////
 
@@ -247,9 +248,9 @@ fun CameraScreenSuccess(
                 //  item
                 TextRadioItem(Item.SHUTTER, settings.shutterValue, "SHUTTER"),
                 TextRadioItem(Item.ISO, settings.isoValue, "ISO"),
-                  VectorRadioItem(Item.WB, "WB", wb.value),
-                  TextRadioItem(Item.FOCUS, settings.focusValue, "FOCUS"),
-                  TextRadioItem(Item.MAGNIFIER, settings.magnifierValue, "MAGNIFIER")
+                VectorRadioItem(Item.WB, "WB", wb.value),
+                TextRadioItem(Item.FOCUS, settings.focusValue, "FOCUS"),
+                TextRadioItem(Item.MAGNIFIER, settings.magnifierValue, "MAGNIFIER")
 
             )
 
@@ -277,12 +278,12 @@ fun CameraScreenSuccess(
                 if (autoItems[radioGroupSelectedItem] == true) {
                     when (radioGroupSelectedItem) {
                         Item.SHUTTER -> {
-                          //  valueSelectorAcquiredItemIndex = settings.shutterPosition
+                            //  valueSelectorAcquiredItemIndex = settings.shutterPosition
 
                         }
 
                         Item.ISO -> {
-                          //  valueSelectorAcquiredItemIndex = settings.isoPosition
+                            //  valueSelectorAcquiredItemIndex = settings.isoPosition
                         }
 
                         Item.WB -> {
@@ -313,161 +314,167 @@ fun CameraScreenSuccess(
             }
     }
 
-     var selectorItems: List< SelectorItem>? by remember {
-         mutableStateOf(
-             null//CharacteristicsUI().items.shutterItems
-         )
-     }
-     LaunchedEffect(
-         key1 = items,
-         key2 = radioGroupSelectedItem
-     ) {
-         snapshotFlow { items }
-             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
-             .collect { newValue ->
-                 selectorItems = when (radioGroupSelectedItem) {
-                     Item.SHUTTER -> {
+    var selectorItems: ImmutableCollection<SelectorItem>? by remember {
+        mutableStateOf(
+            null//CharacteristicsUI().items.shutterItems
+        )
+    }
+    LaunchedEffect(
+        key1 = items,
+        key2 = radioGroupSelectedItem
+    ) {
+        snapshotFlow { items }
+            .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
+            .collect { newValue ->
+                selectorItems = when (radioGroupSelectedItem) {
+                    Item.SHUTTER -> {
 
-                             items.shutterItems?.list
+                        //    items.shutterItems
 
 
+                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                            ?: emptyList())
 
-                         //map { it.copy() }
-                     }
+                        //map { it.copy() }
+                    }
 
-                     Item.ISO -> {
-                         items.isoItems?.let {
+                    Item.ISO -> {
+                       /* items.isoItems?.let {
 
-                                 it?.list
+                            it?.list
 
-                         }
+                        }*/
+                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                            ?: emptyList())
+                    }
 
-                     }
+                    Item.WB -> {
+                        //  items.wbItems?.map { it.copy() }
+                       /* items.wbItems?.let {
+                            it?.list
+                        }*/
+                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                            ?: emptyList())
+                    }
 
-                     Item.WB -> {
-                       //  items.wbItems?.map { it.copy() }
-                         items.wbItems?.let {
+                    Item.FOCUS -> {
+                        //  items.focusItems?.map { it.copy() }
+                       /* items.focusItems?.let {
+                            it?.list
+                        }*/
+                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                            ?: emptyList())
+                    }
 
-                                 it?.list
+                    Item.MAGNIFIER -> {
+                        //  items.magnifierItems?.map { it.copy() }
+                       /* items.magnifierItems?.let {
+                            it?.list
+                        }*/
+                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                            ?: emptyList())
+                    }
 
-                         }
-                     }
+                    null -> items.magnifierItems?.let {
+                        //it?.list
+                        ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
+                            ?: emptyList())
+                    }
 
-                     Item.FOCUS -> {
-                       //  items.focusItems?.map { it.copy() }
-                         items.focusItems?.let {
+                }
+            }
+    }
+    var settingsRequest by remember {
+        mutableStateOf(settings)
+    }
+    LaunchedEffect(settingsRequest) {
+        onCharacteristicChanged(
+            characteristics.copy(
+                settings = settingsRequest
+            )
 
-                                 it?.list
+        )
+    }
+    var selectorSelectedItemIndex by remember {
+        mutableStateOf(0)
+    }
+    LaunchedEffect(selectorSelectedItemIndex) {
+        radioGroupSelectedItem?.let {
+            autoItems = autoItems.toMutableMap().apply {
+                compute(it) { _, value -> false }
+            }
+        }
 
-                         }
-                     }
+        settingsRequest = when (radioGroupSelectedItem) {
+            Item.SHUTTER -> {
+                if (autoItems[radioGroupSelectedItem] == false) {
+                    settingsRequest.copy(
+                        shutterValue = characteristics.items.shutterItems?.list?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: run { "" })
+                } else {
+                    settingsRequest.copy(shutterValue = "")
+                }
+                // settingsRequest.copy(shutterPosition = selectorSelectedItemIndex)
+                /*text?.let {
+                    settingsRequest.copy(shutterValue = it)
+                } ?: run { settingsRequest.copy() }*/
+            }
 
-                     Item.MAGNIFIER -> {
-                       //  items.magnifierItems?.map { it.copy() }
-                         items.magnifierItems?.let {
+            Item.ISO -> {
+                if (autoItems[radioGroupSelectedItem] == false) {
+                    settingsRequest.copy(
+                        isoValue = characteristics.items.isoItems?.list?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: run { "" })
+                } else {
+                    settingsRequest.copy(isoValue = "")
+                }
+                // settingsRequest.copy(isoPosition = selectorSelectedItemIndex)
+                /*  selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
-                                 it?.list
-                         }
-                     }
+                      settingsRequest.copy(isoValue = it)
 
-                     null ->items.magnifierItems?.let {
-                         it?.list
-                     }
+                  } ?: run { settingsRequest.copy() }*/
+            }
 
-                 }
-             }
-     }
-     var settingsRequest by remember {
-         mutableStateOf(settings)
-     }
-     LaunchedEffect(settingsRequest) {
-         onCharacteristicChanged(
-             characteristics.copy(
-                 settings = settingsRequest
-             )
+            Item.WB -> {
+                settings.copy()
+                /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
-         )
-     }
-     var selectorSelectedItemIndex by remember {
-         mutableStateOf(0)
-     }
-     LaunchedEffect(selectorSelectedItemIndex) {
-         radioGroupSelectedItem?.let {
-             autoItems = autoItems.toMutableMap().apply {
-                 compute(it) { _, value -> false }
-             }
-         }
+                     settings.copy(wbValue = it)
 
-         settingsRequest = when (radioGroupSelectedItem) {
-             Item.SHUTTER -> {
-                 if (autoItems[radioGroupSelectedItem] == false) {
-                     settingsRequest.copy(
-                         shutterValue = characteristics.items.shutterItems?.list?.get(
-                             selectorSelectedItemIndex
-                         )?.text ?: run { "" })
-                 } else {
-                     settingsRequest.copy(shutterValue = "")
-                 }
-                 // settingsRequest.copy(shutterPosition = selectorSelectedItemIndex)
-                 /*text?.let {
-                     settingsRequest.copy(shutterValue = it)
-                 } ?: run { settingsRequest.copy() }*/
-             }
+                 } ?: run { settings.copy() }*/
+            }
 
-             Item.ISO -> {
-                 if (autoItems[radioGroupSelectedItem] == false) {
-                     settingsRequest.copy(
-                         isoValue = characteristics.items.isoItems?.list?.get(
-                             selectorSelectedItemIndex
-                         )?.text ?: run { "" })
-                 } else {
-                     settingsRequest.copy(isoValue = "")
-                 }
-                 // settingsRequest.copy(isoPosition = selectorSelectedItemIndex)
-                 /*  selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
+            Item.FOCUS -> {
+                settings.copy()
+                /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
-                       settingsRequest.copy(isoValue = it)
+                     settings.copy(focusValue = it)
 
-                   } ?: run { settingsRequest.copy() }*/
-             }
+                 } ?: run { settings.copy() }*/
+            }
 
-             Item.WB -> {
-                 settings.copy()
-                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
+            Item.MAGNIFIER -> {
+                /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
+                     magnifier = it
+                     renderer.configureMagnifier(
+                         it.toFloat(),
+                         0.2f,
+                         0.4f
+                     )
+                 } ?: run { settings.copy() }
+                 magnifierPosition = selectorSelectedItemIndex*/
+                settings.copy()
 
-                      settings.copy(wbValue = it)
+            }
 
-                  } ?: run { settings.copy() }*/
-             }
+            null -> settings.copy()
 
-             Item.FOCUS -> {
-                 settings.copy()
-                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
+        }
 
-                      settings.copy(focusValue = it)
-
-                  } ?: run { settings.copy() }*/
-             }
-
-             Item.MAGNIFIER -> {
-                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
-                      magnifier = it
-                      renderer.configureMagnifier(
-                          it.toFloat(),
-                          0.2f,
-                          0.4f
-                      )
-                  } ?: run { settings.copy() }
-                  magnifierPosition = selectorSelectedItemIndex*/
-                 settings.copy()
-
-             }
-
-             null -> settings.copy()
-
-         }
-
-     }
+    }
 
     Box(
         modifier = Modifier
@@ -641,213 +648,213 @@ fun CameraScreenSuccess(
         //   }
 
         //////////////////////////selector
-           var isCheck by remember { mutableStateOf(false) }
-           Column(
-               modifier = Modifier
-                   .padding(8.dp)
-                   .fillMaxWidth()
-                   .align(Alignment.BottomCenter),
-               verticalArrangement = Arrangement.spacedBy(8.dp)
-           ) {
+        var isCheck by remember { mutableStateOf(false) }
+        Column(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
 
 
-               Row {
-                   ///////////auto
-                   VectorShadow(
-                       modifier = Modifier
-                           .size(32.dp)
-                           .clickable {
-                               radioGroupSelectedItem?.let {
-                                   autoItems = autoItems
-                                       .toMutableMap()
-                                       .apply {
-                                           compute(it) { _, value -> !(value ?: false) }
-                                       }
-                               }
-                               if (autoItems[radioGroupSelectedItem] == true) {
-                                   settingsRequest = when (radioGroupSelectedItem) {
-                                       Item.SHUTTER -> {
-                                           settingsRequest.copy(
-                                               shutterValue = ""
-                                           )
-                                       }
-
-                                       Item.ISO -> {
-                                           settingsRequest.copy(
-                                               isoValue = ""
-                                           )
-
-                                       }
-
-                                       Item.WB -> {
-
-                                           settings.copy(wbValue = 0)
-
-                                       }
-
-                                       Item.FOCUS -> {
-
-                                           settings.copy(
-                                               focusValue = ""
-                                           )
-
-                                       }
-
-                                       Item.MAGNIFIER -> {
-
-                                           settings.copy(
-                                               magnifierPosition = 0
-                                           )
-
-                                       }
-
-                                       null -> settings.copy()
-
-                                   }
-
-                               }
-
-                               //car=car.copy()
-
-                           },
-                       vectorColor = if (autoItems[radioGroupSelectedItem] == true) {
-                           Color.Green
-                       } else {
-                           Color.White
-                       },
-                       shadowColor = Color.DarkGray,
-                       resId = R.drawable.auto,
-                   )
-
-                   ///////////value selector
-                   Box(
-                       modifier = Modifier
-                           .fillMaxWidth()
-                           .padding(bottom = 16.dp)
-                           .height(50.dp)
-                   ) {
-                       /* AnimatedContent(
-                            targetState = autoChecked,
-                            transitionSpec = {
-                                (scaleIn() + expandHorizontally()) togetherWith
-                                        // Комбинируем анимации для исчезновения
-                                        (scaleOut() + shrinkHorizontally())
+            Row {
+                ///////////auto
+                VectorShadow(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable {
+                            radioGroupSelectedItem?.let {
+                                autoItems = autoItems
+                                    .toMutableMap()
+                                    .apply {
+                                        compute(it) { _, value -> !(value ?: false) }
+                                    }
                             }
-                            /* enter = scaleIn() + expandHorizontally(),
-                         exit = scaleOut() + shrinkHorizontally()*/
-                        ) { isVisible ->
-                            if (isVisible) {*/
-                       ValueSelector(
-                           position = when (radioGroupSelectedItem) {
-                               Item.SHUTTER -> {
-                                   settings.shutterPosition
-                               }
+                            if (autoItems[radioGroupSelectedItem] == true) {
+                                settingsRequest = when (radioGroupSelectedItem) {
+                                    Item.SHUTTER -> {
+                                        settingsRequest.copy(
+                                            shutterValue = ""
+                                        )
+                                    }
 
-                               Item.ISO -> {
-                                   settings.isoPosition
-                               }
+                                    Item.ISO -> {
+                                        settingsRequest.copy(
+                                            isoValue = ""
+                                        )
 
-                               Item.WB -> {
-                                   settings.wbPosition
-                               }
+                                    }
 
-                               Item.FOCUS -> {
-                                   settings.focusPosition
-                               }
+                                    Item.WB -> {
 
-                               Item.MAGNIFIER -> {
-                                   magnifierPosition
-                               }
+                                        settings.copy(wbValue = 0)
 
-                               null -> 0
+                                    }
 
-                           },
-                           items = selectorItems,
-                          // adapter = adapter,
-                           onSelectedItemChanged = { index, manual ->
-                               if (manual) {
-                                   selectorSelectedItemIndex = index
-                               }
-                               selectorItems?.let {
-                                   for (i in it.indices) {
-                                       it[i].passed = i <= index
-                                   }
-                               }
+                                    Item.FOCUS -> {
 
+                                        settings.copy(
+                                            focusValue = ""
+                                        )
 
-                           },
-                           updatedPosition = valueSelectorAcquiredItemIndex
-                       )
-                       //  }
-                       // }
-                   }
-               }
+                                    }
 
-               //////////////////////////capture
-               Row(
-                   modifier = Modifier
-                       .align(Alignment.CenterHorizontally),
-                   verticalAlignment = Alignment.CenterVertically,
-                   horizontalArrangement = Arrangement.spacedBy(56.dp)
-               ) {
-                   ///settings
-                   VectorShadow(
-                       Modifier
-                           //  .padding(24.dp)
-                           .size(32.dp)
-                           .clickable {
-                               onSettingsClick()
-                           },
-                       vectorColor = Color.White,
-                       shadowColor = Color.DarkGray,
-                       resId = R.drawable.settings,
-                   )
+                                    Item.MAGNIFIER -> {
 
-                   //////////////////camera flip
-                   VectorShadow(
-                       Modifier
-                           // .padding(24.dp)
-                           .size(32.dp)
-                           .clickable {
+                                        settings.copy(
+                                            magnifierPosition = 0
+                                        )
 
-                           },
-                       vectorColor = Color.White,
-                       shadowColor = Color.DarkGray,
-                       resId = R.drawable.flip_camera_android,
-                   )
-                   /////capture
-                   Button(
+                                    }
 
-                       border = BorderStroke(5.dp, Color.Green),
-                       shape = CircleShape,
-                       modifier = Modifier
-                           .size(96.dp)
-                           // .align(Alignment.BottomCenter)
-                           .toggleable(
-                               value = isCheck,
-                               onValueChange = {
-                                   isCheck = it
-                                   onStartVideoRecord(isCheck)
-                               },
-                               role = Role.Checkbox,
-                           ),
-                       onClick = {
-                           isCheck = !isCheck
-                           onStartVideoRecord(isCheck)
-                       },
-                       colors = if (isCheck) {
-                           ButtonDefaults.buttonColors(containerColor = Color.Red)
-                       } else {
-                           ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                       }
+                                    null -> settings.copy()
 
-                   ) {
-                       // Text(text = "Capture", fontSize = 40.sp)
-                   }
-               }
+                                }
+
+                            }
+
+                            //car=car.copy()
+
+                        },
+                    vectorColor = if (autoItems[radioGroupSelectedItem] == true) {
+                        Color.Green
+                    } else {
+                        Color.White
+                    },
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.auto,
+                )
+
+                ///////////value selector
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .height(50.dp)
+                ) {
+                    /* AnimatedContent(
+                         targetState = autoChecked,
+                         transitionSpec = {
+                             (scaleIn() + expandHorizontally()) togetherWith
+                                     // Комбинируем анимации для исчезновения
+                                     (scaleOut() + shrinkHorizontally())
+                         }
+                         /* enter = scaleIn() + expandHorizontally(),
+                      exit = scaleOut() + shrinkHorizontally()*/
+                     ) { isVisible ->
+                         if (isVisible) {*/
+                    ValueSelector(
+                        position = when (radioGroupSelectedItem) {
+                            Item.SHUTTER -> {
+                                settings.shutterPosition
+                            }
+
+                            Item.ISO -> {
+                                settings.isoPosition
+                            }
+
+                            Item.WB -> {
+                                settings.wbPosition
+                            }
+
+                            Item.FOCUS -> {
+                                settings.focusPosition
+                            }
+
+                            Item.MAGNIFIER -> {
+                                magnifierPosition
+                            }
+
+                            null -> 0
+
+                        },
+                        items = selectorItems,
+                        // adapter = adapter,
+                        onSelectedItemChanged = { index, manual ->
+                            if (manual) {
+                                selectorSelectedItemIndex = index
+                            }
+                          /*  selectorItems?.let {
+                                for (i in it.list.indices) {
+                                    it.list[i].passed = i <= index
+                                }
+                            }*/
 
 
-           }
+                        },
+                        updatedPosition = valueSelectorAcquiredItemIndex
+                    )
+                    //  }
+                    // }
+                }
+            }
+
+            //////////////////////////capture
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(56.dp)
+            ) {
+                ///settings
+                VectorShadow(
+                    Modifier
+                        //  .padding(24.dp)
+                        .size(32.dp)
+                        .clickable {
+                            onSettingsClick()
+                        },
+                    vectorColor = Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.settings,
+                )
+
+                //////////////////camera flip
+                VectorShadow(
+                    Modifier
+                        // .padding(24.dp)
+                        .size(32.dp)
+                        .clickable {
+
+                        },
+                    vectorColor = Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.flip_camera_android,
+                )
+                /////capture
+                Button(
+
+                    border = BorderStroke(5.dp, Color.Green),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(96.dp)
+                        // .align(Alignment.BottomCenter)
+                        .toggleable(
+                            value = isCheck,
+                            onValueChange = {
+                                isCheck = it
+                                onStartVideoRecord(isCheck)
+                            },
+                            role = Role.Checkbox,
+                        ),
+                    onClick = {
+                        isCheck = !isCheck
+                        onStartVideoRecord(isCheck)
+                    },
+                    colors = if (isCheck) {
+                        ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    } else {
+                        ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                    }
+
+                ) {
+                    // Text(text = "Capture", fontSize = 40.sp)
+                }
+            }
+
+
+        }
 
     }
 }

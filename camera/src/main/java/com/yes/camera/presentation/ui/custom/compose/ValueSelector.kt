@@ -155,14 +155,18 @@ fun ValueSelector(
 @Composable
 fun ValueSelector(
     position: Int,
-    items: List<SelectorItem>?,
-    //  adapter: CompositeAdapter,
+  // items: List<SelectorItem>?,
+    items:ImmutableCollection<SelectorItem>?,
+    //  adapter: CompositeAdapter,ut
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
     updatedPosition: Int? = null
 ) {
-     val items by remember (items){
+     /*val items by remember (items){
          mutableStateOf(items)
-     }
+     }*/
+   /* val itemsR by remember(items) {
+        mutableStateOf(ImmutableCollection(list = items ?: emptyList()))
+    }*/
 
 
     val adapter by remember {
@@ -190,10 +194,14 @@ fun ValueSelector(
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val firstVisibleItem by rememberUpdatedState(listState.firstVisibleItemIndex)
     var isProgrammaticScroll by remember { mutableStateOf(false) }
+    var curIndex by remember {
+        mutableStateOf(0)
+    }
     LaunchedEffect(updatedPosition) {
         snapshotFlow { updatedPosition }
             .collect { position ->
                 position?.let {
+                    curIndex=position
                     isProgrammaticScroll = true
                     listState.animateScrollToItem(
                         position,
@@ -206,7 +214,7 @@ fun ValueSelector(
             }
     }
 
-    LaunchedEffect(items) {
+   LaunchedEffect(items) {
         snapshotFlow { items }
             .collect {
                 isProgrammaticScroll = true
@@ -214,32 +222,31 @@ fun ValueSelector(
                     position,
                     scrollOffset = itemWidthPx / 2
                 )
+                curIndex=position
                 onSelectedItemChanged(position, false)
                 isProgrammaticScroll = false
             }
     }
-    var curIndex by remember {
-        mutableStateOf(0)
-    }
-    LaunchedEffect(Unit) {
+
+   LaunchedEffect(Unit) {
         snapshotFlow { listState.firstVisibleItemIndex }
-            .distinctUntilChanged() // Только при реальном изменении
+           // .distinctUntilChanged() // Только при реальном изменении
             .collect { index ->
                 curIndex=index
                 if (!isProgrammaticScroll) {
                     onSelectedItemChanged(index, true)
-                    items?.let {
-                          it.forEachIndexed { curIndex, item ->
+                  /*  items?.let {
+                         /* it.forEachIndexed { curIndex, item ->
                                item.passed = curIndex <= index
 
-                           } /* for (i in it.indices) {
-                            it[i].passed = i <= index
-                        }*/
-                    }
+                           } */ for (i in it.indices) {
+                          //  it[i].passed = i <= index
+                        }
+                    }*/
                 }
             }
     }
-    var itemsR: ImmutableCollection<SelectorItem>? by remember(items) {
+   /* var itemsR: ImmutableCollection<SelectorItem>? by remember(items) {
         mutableStateOf(
             items?.let {
                 ImmutableCollection(
@@ -250,7 +257,7 @@ fun ValueSelector(
 
 
         )
-    }
+    }*/
   /*  LaunchedEffect(items) {
         snapshotFlow { items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
@@ -274,6 +281,11 @@ fun ValueSelector(
                 .align(Alignment.TopCenter)
                 .wrapContentHeight()
                 .onGloballyPositioned { coordinates ->
+                    /* items?.list?.forEachIndexed{index,item->
+                      /*  if (curIndex >= index){
+                            item.passed=true
+                        }*/
+                    }*/
                     rowWidthPx = coordinates.size.width
                 },
             contentPadding = PaddingValues(
@@ -289,11 +301,18 @@ fun ValueSelector(
                 }
 
             items?.let {
-                items(it.size, key = {item->item}) { index ->
-                    if (curIndex <= index){
-                        it[index].passed=true
+                items(it.list.size) { index ->
+                    it.list.forEachIndexed{index,item->
+                        if (curIndex >= index){
+                            item.passed=true
+                        }else{
+                            item.passed=false
+                        }
                     }
-                    adapter.Content(it[index], modifier)
+                   /* if (curIndex >= index){
+                        it[index].passed=true
+                    }*/
+                    adapter.Content(it.list[index], modifier)
                 }
             }
 
