@@ -32,7 +32,7 @@ data class CharacteristicsUI(
 data class Items(
     val shutterItems: ImmutableCollection<TextItem>? = null,
     val isoItems: ImmutableCollection<TextItem>? = null,
-    val wbItems: ImmutableCollection<IconItem>? = null,
+    val wbItems: ImmutableCollection<TextItem>? = null,
     val focusItems: ImmutableCollection<TextItem>? = null,
     val magnifierItems: ImmutableCollection<TextItem>? = null,
 )
@@ -71,7 +71,7 @@ data class Settings(
     val isoValue: String = "1",
     val isoPosition: Int = 0,
 
-    val wbValue: Int? = null,
+    val wbValue: String = "1",
     val wbPosition: Int = 0,
 
     val focusValue: String = "1",

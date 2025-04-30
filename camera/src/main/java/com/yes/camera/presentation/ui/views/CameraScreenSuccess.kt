@@ -45,6 +45,7 @@ import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
 import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
 import com.yes.camera.presentation.ui.custom.compose.Histogram
+import com.yes.camera.presentation.ui.custom.compose.RadioButton
 import com.yes.camera.presentation.ui.custom.compose.RadioGroup
 import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 
@@ -241,14 +242,15 @@ fun CameraScreenSuccess(
         mutableStateOf(listOf(VectorRadioItem(Item.WB, "WB", 2131099791)))
     }
     // val radioGroupItems= listOf(VectorRadioItem(Item.WB, "WB", wb.value))
-    val radioGroupItems = remember(settings) {
+    val radioGroupItems:ImmutableCollection<RadioButton> = remember(settings) {
         // emptyList<TextRadioItem>()
         ImmutableCollection(
             listOf(
                 //  item
                 TextRadioItem(Item.SHUTTER, settings.shutterValue, "SHUTTER"),
                 TextRadioItem(Item.ISO, settings.isoValue, "ISO"),
-                VectorRadioItem(Item.WB, "WB", wb.value),
+                TextRadioItem(Item.WB, settings.wbValue, "WB"),
+               // VectorRadioItem(Item.WB, "WB", wb.value),
                 TextRadioItem(Item.FOCUS, settings.focusValue, "FOCUS"),
                 TextRadioItem(Item.MAGNIFIER, settings.magnifierValue, "MAGNIFIER")
 
@@ -440,15 +442,15 @@ fun CameraScreenSuccess(
 
             Item.WB -> {
                 if (autoItems[radioGroupSelectedItem] == false) {
-                    val tmp=characteristics.items.wbItems?.list?.get(
+                   /* val tmp=characteristics.items.wbItems?.list?.get(
                         selectorSelectedItemIndex
-                    )?.value?.toInt()
+                    )?.value?.toInt()*/
                     settingsRequest.copy(
                         wbValue = characteristics.items.wbItems?.list?.get(
                             selectorSelectedItemIndex
-                        )?.icon?: run { 0 })
+                        )?.text?: run { "0" })
                 } else {
-                    settingsRequest.copy(wbValue = 0)
+                    settingsRequest.copy(wbValue = "0")
                 }
                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
@@ -698,7 +700,7 @@ fun CameraScreenSuccess(
 
                                     Item.WB -> {
 
-                                        settings.copy(wbValue = 0)
+                                        settings.copy(wbValue = "")
 
                                     }
 

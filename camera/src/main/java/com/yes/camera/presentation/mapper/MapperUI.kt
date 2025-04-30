@@ -73,7 +73,7 @@ class MapperUI(
          4560*/
     )
 
-    /* private val standardWbValues = listOf(
+     private val standardWbValues = listOf(
          1000,
          2000,
          3000,
@@ -84,8 +84,8 @@ class MapperUI(
          8000,
          9000,
          10000
-     )*/
-    private val standardWbValues = listOf(
+     )
+   /* private val standardWbValues = listOf(
         CONTROL_AWB_MODE_AUTO,
         CONTROL_AWB_MODE_INCANDESCENT,
         CONTROL_AWB_MODE_FLUORESCENT,
@@ -95,7 +95,7 @@ class MapperUI(
         CONTROL_AWB_MODE_TWILIGHT,
         CONTROL_AWB_MODE_SHADE
 
-    )
+    )*/
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
 
@@ -134,15 +134,16 @@ class MapperUI(
                 standardShutterSpeeds
                     .toSortedMap(compareByDescending { it })
                     .map {
-                        TextItem(it.key.toFloat(), it.value.toString())
+                        TextItem( it.value.toString())
                     }
             ),
             isoItems = ImmutableCollection(
                 standardIsoValues.map {
-                    TextItem(it.toFloat(), it.toString())
+                    TextItem( it.toString())
                 }
             ),
-            wbItems =  ImmutableCollection(
+            ///worked for icon
+           /* wbItems =  ImmutableCollection(
             standardWbValues.map {
                 IconItem(
                     0F,
@@ -162,56 +163,52 @@ class MapperUI(
                     false
                 )
             }
+            )*/
+            wbItems = ImmutableCollection(
+                standardWbValues.map {
+                    TextItem(
+                        it.toString() + "K"
+                    )
+                }
             ),
             focusItems = ImmutableCollection(
                 listOf(
-                TextItem(0.2F, "0,2"),
-                TextItem(0.2F, "1"),
-                TextItem(0.2F, "2"),
-                TextItem(0.2F, "3"),
-                TextItem(0.2F, "4"),
-                TextItem(0.2F, "5"),
-                TextItem(0.2F, "6"),
-                TextItem(0.2F, "7"),
-                TextItem(0.2F, "8"),
-                TextItem(0.2F, "9"),
-                TextItem(0.2F, "9.5"),
-                TextItem(0.2F, "10"),
-                TextItem(0.2F, "11"),
-                TextItem(0.2F, "12"),
-                TextItem(0.2F, "13"),
-                TextItem(0.2F, "14"),
-                TextItem(0.2F, "15"),
+                TextItem( "0,2"),
+                TextItem( "1"),
+                TextItem( "2"),
+                TextItem( "3"),
+                TextItem( "4"),
+                TextItem( "5"),
+                TextItem( "6"),
+                TextItem( "7"),
+                TextItem("8"),
+                TextItem( "9"),
+                TextItem( "9.5"),
+                TextItem( "10"),
+                TextItem( "11"),
+                TextItem( "12"),
+                TextItem( "13"),
+                TextItem( "14"),
+                TextItem( "15"),
                 )
                 ),
             magnifierItems = ImmutableCollection(
                 listOf(
-                TextItem(0.2F, "1"),
-                TextItem(0.2F, "2"),
-                TextItem(0.2F, "3"),
-                TextItem(0.2F, "4"),
-                TextItem(0.2F, "5"),
-                TextItem(0.2F, "6"),
-                TextItem(0.2F, "7"),
-                TextItem(0.2F, "8"),
-                TextItem(0.2F, "9"),
-                TextItem(0.2F, "10"),
+                TextItem( "1"),
+                TextItem( "2"),
+                TextItem( "3"),
+                TextItem( "4"),
+                TextItem( "5"),
+                TextItem( "6"),
+                TextItem( "7"),
+                TextItem( "8"),
+                TextItem( "9"),
+                TextItem( "10"),
             )
             )
         )
-        val wbValue = when (characteristics.wbValue) {
-            CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
-            CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
-            CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.wb_iridescent
-            CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.wb_iridescent
-            CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
-            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_shade
-            CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
-            CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
-            else -> {
-                R.drawable.wb_auto
-            }
-        }
+
+        val wbValue=characteristics.wbValue.toString()
         val settings = Settings(
             shutterValue = shutterValue,
             shutterPosition = shutterPosition,
@@ -344,8 +341,9 @@ class MapperUI(
         val shutterValue = standardShutterSpeeds.entries.firstOrNull {
             it.value == characteristics.settings.shutterValue
         }?.key
-        //  val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
-        val wbValue = when (characteristics.settings.wbValue) {
+          val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
+        //worked for icon
+      /*  val wbValue = when (characteristics.settings.wbValue) {
             R.drawable.wb_auto-> CONTROL_AWB_MODE_AUTO
             R.drawable.wb_incandescent->CONTROL_AWB_MODE_INCANDESCENT
             R.drawable.wb_iridescent->CONTROL_AWB_MODE_FLUORESCENT
@@ -357,7 +355,10 @@ class MapperUI(
             else -> {
                 CONTROL_AWB_MODE_AUTO
             }
-        }
+        }*/
+
+
+
 
 
         // val focusValue = characteristics.settings.focusValue.toInt()

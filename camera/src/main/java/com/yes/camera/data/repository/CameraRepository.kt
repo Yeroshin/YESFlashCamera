@@ -15,8 +15,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
+import android.hardware.camera2.CameraMetadata.COLOR_CORRECTION_MODE_FAST
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -483,7 +482,8 @@ class CameraRepository(
     var frameTime: Long = 0
     var autoShutter:Long?=null
     var autoIso:Int?=null
-    var wb:Int?=0
+  //  var wb:Int?=0
+  var autoWhiteBalanceGains:RggbChannelVector?=null
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -497,26 +497,19 @@ class CameraRepository(
             //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
             autoIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
             autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-            val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
-            val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+           /* val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+            val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)*/
             val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
             val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
               _characteristicsFlow.update { current ->
-                  if(autoAE){
+
                       current?.copy(
-                          wbValue  = wbMode,
-                          shutterValue = autoShutter,
+                        // wbValue  = wbMode,
+                          shutterValue = exposureTime,
                           // shutterValue = Random.nextLong(16_000_000L),
-                          isoValue = autoIso
+                          isoValue = iso
                       )
-                  }else{
-                      current?.copy(
-                          wbValue  = wbMode,
-                          shutterValue = exposureTime?:autoShutter,
-                          // shutterValue = Random.nextLong(16_000_000L),
-                          isoValue = iso?:autoIso
-                      )
-                  }
+
 
               }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
@@ -524,6 +517,20 @@ class CameraRepository(
                   isoValue = iso
               )*/
             //  }
+            ///////////////////wb
+            val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+            val tmpautoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+             autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            val wbState=result.get(CaptureResult.CONTROL_AWB_STATE)
+            if(wb){
+                when(wbState){
+                    CaptureResult.CONTROL_AWB_STATE_CONVERGED->{
+                        wb=false
+                        println()
+                    }
+                }
+            }
+
             ///////////////////focus
             val afState = result[CaptureResult.CONTROL_AF_STATE]!!
 
@@ -1489,6 +1496,9 @@ class CameraRepository(
     }
     ////////////////////////
     private var autoAE=false
+    private var previousWbValue:Int?=null
+    private var wb=false
+    private var characteristicsLast: Characteristics?=null
     fun setInputCharacteristics(characteristics: Characteristics) {
         /* captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
          captureRequest?.addTarget(previewSurface)
@@ -1539,22 +1549,10 @@ class CameraRepository(
          captureRequest?.let {
              sessio?.capture(it.build(), captureCallback, mBackgroundHandler)
          }*/
+
+
         submitRequest(
-            CameraDevice.TEMPLATE_PREVIEW,
-            listOf(
-                previewSurface,
-                captureSurface
-            ),
-            false
-        ) { builder ->
-            builder.apply {
-                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbValue)
-                set(CaptureRequest.CONTROL_AWB_LOCK, true)
-            }
-        }
-        submitRequest(
-            CameraDevice.TEMPLATE_PREVIEW,
+            CameraDevice.TEMPLATE_MANUAL,
             listOf(
                 previewSurface,
                  captureSurface
@@ -1562,8 +1560,35 @@ class CameraRepository(
             true
         ) { builder ->
             builder.apply {
+                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+               // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                /////wb
+
+                    previousWbValue=characteristics.wbValue
+
+                  //  wb=true
+                characteristics.wbValue?.let {wb->
+                    val rggbVector = kelvinToColorCorrectionGains(wb)
+                    set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                    set(
+                        CaptureRequest.COLOR_CORRECTION_GAINS,
+                        rggbVector
+                    )
+                    set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                }?:run{
+                    wb=true
+                    set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                    set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)
+                    set(CaptureRequest.CONTROL_AWB_LOCK, false)
+                }
+
+
+
+                    // set(CaptureRequest.CONTROL_AWB_LOCK, true)
+
+                ///////////////
                 //set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+
                 if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     autoAE=false
@@ -1582,7 +1607,15 @@ class CameraRepository(
                 } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
                     autoAE=true
                   //  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                  //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                    set(
+                        CaptureRequest.SENSOR_EXPOSURE_TIME,
+                        autoShutter
+                    )
+                    set(
+                        CaptureRequest.SENSOR_SENSITIVITY,
+                        autoIso
+                    )
                 } else if (characteristics.isoValue == null){
                     autoAE=false
                  //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
@@ -1622,6 +1655,7 @@ class CameraRepository(
                         }
                 }
                 //////wb
+
               /*  wb=characteristics.wbValue
                 val rggbVector = kelvinToColorCorrectionGains(characteristics.wbValue!!)
                 set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
@@ -1631,12 +1665,17 @@ class CameraRepository(
                 )
                 set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)*/
                 //////wb
-                 set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_DAYLIGHT)
+               //  set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_WARM_FLUORESCENT)
                // set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbValue)
-                set(CaptureRequest.CONTROL_AWB_LOCK, true)
+              //  set(CaptureRequest.CONTROL_AWB_LOCK, true)
             ////////////////////////////////
             }
         }
+
+
+    }
+    private fun setExposure(){
+
     }
 
     private fun submitRequest(
@@ -1655,6 +1694,7 @@ class CameraRepository(
                 }
             if (isRepeating) {
                 sessio?.stopRepeating()
+                sessio?.abortCaptures()
                 sessio?.setRepeatingRequest(
                     captureBuilder.build(),
                     captureCallback, mBackgroundHandler
