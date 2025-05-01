@@ -1568,11 +1568,22 @@ class CameraRepository(
 
                   //  wb=true
                 characteristics.wbValue?.let {wb->
+                    ////////////////////////////
+                    val rggb=ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
+                    val kelvin=ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
+                    ////////////////////////////
+
+
                     val rggbVector = kelvinToColorCorrectionGains(wb)
+                    val kelvin2=ColorTemperatureConverter.rgbNormalizedToKelvin(rggbVector)
+                    //////////////////////
+                    val rgb =convertTemperatureToRggb(wb)
+                    val k=rgbToKelvin(rgb!!)
                     set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
                     set(
                         CaptureRequest.COLOR_CORRECTION_GAINS,
-                        rggbVector
+                        //rggbVector
+                        rggb
                     )
                     set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
                 }?:run{
@@ -3075,5 +3086,286 @@ class CameraRepository(
             lastFrameTime = currentTime
             /////////////////////////
         }
+    }
+
+    /////////////////////////
+    fun kelvinToRgb(kelvin: Float): RggbChannelVector? {
+        val temperature = (kelvin / 100.0)
+        var red: Double
+        var green: Double
+        var blue: Double
+        if (temperature < 66.0) {
+            red = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 351.97690566805693`,
+            // b -> 0.114206453784165`,
+            // c -> -40.25366309332127
+            //x -> (kelvin/100) - 55}
+            red = temperature - 55.0
+            red = 351.97690566805693 + 0.114206453784165 * red - 40.25366309332127 * ln(red)
+            if (red < 0) red = 0.0
+            if (red > 255) red = 255.0
+        }
+        /* Calculate green */
+        if (temperature < 66.0) {
+            // a + b x + c Log[x] /.
+            // {a -> -155.25485562709179`,
+            // b -> -0.44596950469579133`,
+            // c -> 104.49216199393888`,
+            // x -> (kelvin/100) - 2}
+            green = temperature - 2
+            green =
+                -155.25485562709179 - 0.44596950469579133 * green + 104.49216199393888 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 325.4494125711974`,
+            // b -> 0.07943456536662342`,
+            // c -> -28.0852963507957`,
+            // x -> (kelvin/100) - 50}
+            green = temperature - 50.0
+            green = 325.4494125711974 + 0.07943456536662342 * green - 28.0852963507957 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        }
+        /* Calculate blue */
+        if (temperature >= 66.0) {
+            blue = 255.0
+        } else {
+            if (temperature <= 20.0) {
+                blue = 0.0
+            } else {
+                // a + b x + c Log[x] /.
+                // {a -> -254.76935184120902`,
+                // b -> 0.8274096064007395`,
+                // c -> 115.67994401066147`,
+                // x -> kelvin/100 - 10}
+                blue = temperature - 10
+                blue =
+                    -254.76935184120902 + 0.8274096064007395 * blue + 115.67994401066147 * ln(
+                        blue
+                    )
+                if (blue < 0) blue = 0.0
+                if (blue > 255) blue = 255.0
+            }
+        }
+        val r = Math.round(red).toFloat()
+        val g = Math.round(green).toFloat()
+        val b = Math.round(blue).toFloat()
+        return RggbChannelVector(r, g, g, b)
+    }
+    fun rgbToKelvin(rgb: RggbChannelVector): Int {
+        val r = rgb.red
+        val b = rgb.blue
+
+        var temperature = 0f
+        var testRGB: RggbChannelVector
+        val epsilon = 0.4f
+        var minTemperature = 1000f
+        var maxTemperature = 40000f
+        while (maxTemperature - minTemperature > epsilon) {
+            temperature = (maxTemperature + minTemperature) / 2
+            testRGB = kelvinToRgb(temperature)!!
+            if ((testRGB.blue / testRGB.red) >= (b / r)) {
+                maxTemperature = temperature
+            } else {
+                minTemperature = temperature
+            }
+        }
+        return Math.round(temperature)
+    }
+    fun convertTemperatureToRggb(temperature_kelvin: Int): RggbChannelVector? {
+        val temperature = temperature_kelvin / 100.0f
+        var red: Float
+        var green: Float
+        var blue: Float
+
+        if (temperature <= 66) {
+            red = 255f
+        } else {
+            red = temperature - 60
+            red = (329.698727446 * (red.toDouble().pow(-0.1332047592))).toFloat()
+            if (red < 0) {
+                red = 0f
+            }
+            if (red > 255) {
+                red = 255f
+            }
+        }
+
+        if (temperature <= 66) {
+            green = temperature
+            green = (99.4708025861 * ln(green.toDouble()) - 161.1195681661).toFloat()
+            if (green < 0) {
+                green = 0f
+            }
+            if (green > 255) {
+                green = 255f
+            }
+        } else {
+            green = temperature - 60
+            green = (288.1221695283 * (green.toDouble().pow(-0.0755148492))).toFloat()
+            if (green < 0) {
+                green = 0f
+            }
+            if (green > 255) {
+                green = 255f
+            }
+        }
+
+        if (temperature >= 66) {
+            blue = 255f
+        } else if (temperature <= 19) {
+            blue = 0f
+        } else {
+            blue = temperature - 10
+            blue = (138.5177312231 * ln(blue.toDouble()) - 305.0447927307).toFloat()
+            if (blue < 0) {
+                blue = 0f
+            }
+            if (blue > 255) {
+                blue = 255f
+            }
+        }
+
+
+        return RggbChannelVector(
+            (red / 255) * 2, (green / 255),
+            (green / 255), (blue / 255) * 2
+        )
+    }
+}
+
+object ColorTemperatureConverter {
+    fun rggbToNormalized(rggb: RggbChannelVector): RggbChannelVector {
+        var r = rggb.red
+        var g1 = rggb.greenEven
+        var g2 = rggb.greenOdd
+        var b = rggb.blue
+
+        r /= 127.5f
+        g1 /= 255f
+        g2 /= 255f
+        b /= 127.5f
+
+        val normalizedRggb = RggbChannelVector(r + 1, g1 + 1, g2 + 1, b + 1)
+        return normalizedRggb
+    }
+
+    fun normalizedRggbToRggb(normalizedRggb: RggbChannelVector): RggbChannelVector {
+        var r = normalizedRggb.red - 1
+        var g1 = normalizedRggb.greenEven - 1
+        var g2 = normalizedRggb.greenOdd - 1
+        var b = normalizedRggb.blue - 1
+
+        r *= 127.5f
+        g1 *= 255f
+        g2 *= 255f
+        b *= 127.5f
+
+        return RggbChannelVector(r, g1, g2, b)
+    }
+
+    fun rgbNormalizedToKelvin(normalizedRggb: RggbChannelVector): Int {
+        val rggb = normalizedRggbToRggb(normalizedRggb)
+
+        return rgbToKelvin(rggb)
+    }
+
+    fun rgbToKelvin(rgb: RggbChannelVector): Int {
+        val r = rgb.red
+        val b = rgb.blue
+
+        var temperature = 0f
+        var testRGB: RggbChannelVector
+        val epsilon = 0.4f
+        var minTemperature = 1000f
+        var maxTemperature = 40000f
+        while (maxTemperature - minTemperature > epsilon) {
+            temperature = (maxTemperature + minTemperature) / 2
+            testRGB = kelvinToRgb(temperature)
+            if ((testRGB.blue / testRGB.red) >= (b / r)) {
+                maxTemperature = temperature
+            } else {
+                minTemperature = temperature
+            }
+        }
+        return Math.round(temperature)
+    }
+
+    fun kelvinToNormalizedRgb(kelvin: Float): RggbChannelVector {
+        val rggb = kelvinToRgb(kelvin)
+
+        return rggbToNormalized(rggb)
+    }
+
+    fun kelvinToRgb(kelvin: Float): RggbChannelVector {
+        val temperature = (kelvin / 100.0)
+        var red: Double
+        var green: Double
+        var blue: Double
+        if (temperature < 66.0) {
+            red = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 351.97690566805693`,
+            // b -> 0.114206453784165`,
+            // c -> -40.25366309332127
+            //x -> (kelvin/100) - 55}
+            red = temperature - 55.0
+            red = 351.97690566805693 + 0.114206453784165 * red - 40.25366309332127 * ln(red)
+            if (red < 0) red = 0.0
+            if (red > 255) red = 255.0
+        }
+        /* Calculate green */
+        if (temperature < 66.0) {
+            // a + b x + c Log[x] /.
+            // {a -> -155.25485562709179`,
+            // b -> -0.44596950469579133`,
+            // c -> 104.49216199393888`,
+            // x -> (kelvin/100) - 2}
+            green = temperature - 2
+            green =
+                -155.25485562709179 - 0.44596950469579133 * green + 104.49216199393888 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 325.4494125711974`,
+            // b -> 0.07943456536662342`,
+            // c -> -28.0852963507957`,
+            // x -> (kelvin/100) - 50}
+            green = temperature - 50.0
+            green = 325.4494125711974 + 0.07943456536662342 * green - 28.0852963507957 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        }
+        /* Calculate blue */
+        if (temperature >= 66.0) {
+            blue = 255.0
+        } else {
+            if (temperature <= 20.0) {
+                blue = 0.0
+            } else {
+                // a + b x + c Log[x] /.
+                // {a -> -254.76935184120902`,
+                // b -> 0.8274096064007395`,
+                // c -> 115.67994401066147`,
+                // x -> kelvin/100 - 10}
+                blue = temperature - 10
+                blue =
+                    -254.76935184120902 + 0.8274096064007395 * blue + 115.67994401066147 * ln(
+                        blue
+                    )
+                if (blue < 0) blue = 0.0
+                if (blue > 255) blue = 255.0
+            }
+        }
+        val r = Math.round(red).toFloat()
+        val g = Math.round(green).toFloat()
+        val b = Math.round(blue).toFloat()
+        return RggbChannelVector(r, g, g, b)
     }
 }
