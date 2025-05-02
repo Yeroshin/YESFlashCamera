@@ -410,12 +410,12 @@ fun CameraScreenSuccess(
         settingsRequest = when (radioGroupSelectedItem) {
             Item.SHUTTER -> {
                 if (autoItems[radioGroupSelectedItem] == false) {
-                    settingsRequest.copy(
+                    characteristics.settings.copy(
                         shutterValue = characteristics.items.shutterItems?.list?.get(
                             selectorSelectedItemIndex
                         )?.text ?: run { "" })
                 } else {
-                    settingsRequest.copy(shutterValue = "")
+                    characteristics.settings.copy(shutterValue = "")
                 }
                 // settingsRequest.copy(shutterPosition = selectorSelectedItemIndex)
                 /*text?.let {
@@ -425,12 +425,12 @@ fun CameraScreenSuccess(
 
             Item.ISO -> {
                 if (autoItems[radioGroupSelectedItem] == false) {
-                    settingsRequest.copy(
+                    characteristics.settings.copy(
                         isoValue = characteristics.items.isoItems?.list?.get(
                             selectorSelectedItemIndex
                         )?.text ?: run { "" })
                 } else {
-                    settingsRequest.copy(isoValue = "")
+                    characteristics.settings.copy(isoValue = "")
                 }
                 // settingsRequest.copy(isoPosition = selectorSelectedItemIndex)
                 /*  selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
@@ -445,12 +445,12 @@ fun CameraScreenSuccess(
                    /* val tmp=characteristics.items.wbItems?.list?.get(
                         selectorSelectedItemIndex
                     )?.value?.toInt()*/
-                    settingsRequest.copy(
+                    characteristics.settings.copy(
                         wbValue = characteristics.items.wbItems?.list?.get(
                             selectorSelectedItemIndex
                         )?.text?: run { "0" })
                 } else {
-                    settingsRequest.copy(wbValue = "0")
+                    characteristics.settings.copy(wbValue = "0")
                 }
                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
@@ -460,7 +460,7 @@ fun CameraScreenSuccess(
             }
 
             Item.FOCUS -> {
-                settings.copy()
+                characteristics.settings.copy()
                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
                      settings.copy(focusValue = it)
@@ -478,11 +478,11 @@ fun CameraScreenSuccess(
                      )
                  } ?: run { settings.copy() }
                  magnifierPosition = selectorSelectedItemIndex*/
-                settings.copy()
+                characteristics.settings.copy()
 
             }
 
-            null -> settings.copy()
+            null -> characteristics.settings.copy()
 
         }
 
@@ -659,7 +659,7 @@ fun CameraScreenSuccess(
 
         //   }
 
-        //////////////////////////selector
+        //////////////////////////bottom buttons
         var isCheck by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
@@ -669,7 +669,7 @@ fun CameraScreenSuccess(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-
+            //selector row
             Row {
                 ///////////auto
                 VectorShadow(
@@ -857,7 +857,7 @@ fun CameraScreenSuccess(
                     colors = if (isCheck) {
                         ButtonDefaults.buttonColors(containerColor = Color.Red)
                     } else {
-                        ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                        ButtonDefaults.buttonColors(containerColor = Color.White)
                     }
 
                 ) {

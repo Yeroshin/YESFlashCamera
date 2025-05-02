@@ -71,7 +71,7 @@ data class Settings(
     val isoValue: String = "1",
     val isoPosition: Int = 0,
 
-    val wbValue: String = "1",
+    val wbValue: String = "A",
     val wbPosition: Int = 0,
 
     val focusValue: String = "1",

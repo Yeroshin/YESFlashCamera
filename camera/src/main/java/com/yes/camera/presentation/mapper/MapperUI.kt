@@ -208,7 +208,7 @@ class MapperUI(
             )
         )
 
-        val wbValue=characteristics.wbValue.toString()
+        val wbValue=characteristics.wbValue?.toString()?:"A"
         val settings = Settings(
             shutterValue = shutterValue,
             shutterPosition = shutterPosition,

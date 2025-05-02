@@ -16,6 +16,8 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata.COLOR_CORRECTION_MODE_FAST
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -501,13 +503,15 @@ class CameraRepository(
             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)*/
             val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
             val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
+            autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            val kelvin=rgbToKelvin(autoWhiteBalanceGains!!)
               _characteristicsFlow.update { current ->
 
                       current?.copy(
-                        // wbValue  = wbMode,
-                          shutterValue = exposureTime,
+                         wbValue  = kelvin,
+                          shutterValue = exposureTime?:autoShutter,
                           // shutterValue = Random.nextLong(16_000_000L),
-                          isoValue = iso
+                          isoValue = iso?:autoIso
                       )
 
 
@@ -520,12 +524,16 @@ class CameraRepository(
             ///////////////////wb
             val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
             val tmpautoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
-             autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+
             val wbState=result.get(CaptureResult.CONTROL_AWB_STATE)
+            val k=rgbToKelvin(tmpautoWhiteBalanceGains!!)
             if(wb){
                 when(wbState){
                     CaptureResult.CONTROL_AWB_STATE_CONVERGED->{
                         wb=false
+                        val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+                        val tmpautoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+                        val k=rgbToKelvin(tmpautoWhiteBalanceGains!!)
                         println()
                     }
                 }
@@ -1561,6 +1569,8 @@ class CameraRepository(
         ) { builder ->
             builder.apply {
                 set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                 /////wb
 
@@ -1575,6 +1585,7 @@ class CameraRepository(
 
 
                     val rggbVector = kelvinToColorCorrectionGains(wb)
+                    val kelvin1=colorCorrectionGainsToKelvin(rggbVector)
                     val kelvin2=ColorTemperatureConverter.rgbNormalizedToKelvin(rggbVector)
                     //////////////////////
                     val rgb =convertTemperatureToRggb(wb)
@@ -1583,14 +1594,17 @@ class CameraRepository(
                     set(
                         CaptureRequest.COLOR_CORRECTION_GAINS,
                         //rggbVector
-                        rggb
+                        rgb
                     )
                     set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
                 }?:run{
                     wb=true
-                    set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
-                    set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)
-                    set(CaptureRequest.CONTROL_AWB_LOCK, false)
+                    set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_FLUORESCENT)
+                   // set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                  //  set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)
+                  //  set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+
+                  //  set(CaptureRequest.CONTROL_AWB_LOCK, false)
                 }
 
 
@@ -1604,7 +1618,7 @@ class CameraRepository(
                     // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                     autoAE=false
                    // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                   //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                      set(
                          CaptureRequest.SENSOR_EXPOSURE_TIME,
                          characteristics.shutterValue
@@ -1650,13 +1664,14 @@ class CameraRepository(
                 }else {
                     autoAE=false
                  //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                 //   set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                         autoShutter?.let {autoShutter->
                             autoIso?.let {autoIso->
                                 set(
                                     CaptureRequest.SENSOR_SENSITIVITY,
                                     characteristics.isoValue.toInt()
                                 )
+                                val ttmp=characteristics.isoValue
                                 val shutterValue=autoShutter*(autoIso/characteristics.isoValue)
                                 set(
                                     CaptureRequest.SENSOR_EXPOSURE_TIME,
@@ -3089,6 +3104,7 @@ class CameraRepository(
     }
 
     /////////////////////////
+   // https://github.com/ZhengShang/CameraViewDemo/blob/29fa8d84791be76906df99c24a18e1f741300f14/library/src/main/java/cn/zhengshang/util/CameraUtil.java
     fun kelvinToRgb(kelvin: Float): RggbChannelVector? {
         val temperature = (kelvin / 100.0)
         var red: Double
