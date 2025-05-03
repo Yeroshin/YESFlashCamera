@@ -1,23 +1,15 @@
 package com.yes.camera.presentation.mapper
 
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
-import com.yes.camera.presentation.model.IconItem
 import com.yes.camera.presentation.model.Items
-import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.model.TextSelectorItemUI
 import com.yes.camera.presentation.model.WbItem
+import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
+import com.yes.camera.presentation.ui.custom.compose.RadioButton
 import com.yes.camera.presentation.ui.views.ImmutableCollection
 import com.yes.camera.utils.ResourceProvider
 import kotlin.math.abs
@@ -129,6 +121,9 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
+       val wbAutoItems=characteristics.wbManualItems.map {
+           IconRadioItem(WbItem.AUTO,"Auto", R.drawable.wb_auto)
+       }
         val items = Items(
             shutterItems = ImmutableCollection(
                 standardShutterSpeeds
@@ -164,13 +159,14 @@ class MapperUI(
                 )
             }
             )*/
-            wbItems = ImmutableCollection(
+            wbManualItems = ImmutableCollection(
                 standardWbValues.map {
                     TextItem(
                         it.toString() + "K"
                     )
                 }
             ),
+            wbAutoItems =wbAutoItems,
             focusItems = ImmutableCollection(
                 listOf(
                 TextItem( "0,2"),

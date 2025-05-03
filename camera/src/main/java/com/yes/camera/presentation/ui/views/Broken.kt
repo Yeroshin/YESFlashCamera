@@ -1,60 +1,6 @@
 package com.yes.camera.presentation.ui.views
 
 
-
-
-import android.content.Context
-import android.view.MotionEvent
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.yes.camera.R
-import com.yes.camera.presentation.model.CharacteristicsUI
-import com.yes.camera.presentation.model.Item
-import com.yes.camera.presentation.model.SelectorItem
-import com.yes.camera.presentation.ui.adapter.CompositeAdapter
-import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
-import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
-import com.yes.camera.presentation.ui.custom.compose.Histogram
-import com.yes.camera.presentation.ui.custom.compose.RadioButton
-import com.yes.camera.presentation.ui.custom.compose.RadioGroup
-import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
-
-import com.yes.camera.presentation.ui.custom.compose.ValueSelector
-import com.yes.camera.presentation.ui.custom.compose.VectorRadioItem
-import com.yes.camera.presentation.ui.custom.compose.VectorShadow
-import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
-import com.yes.camera.presentation.ui.custom.gles.GLRenderer
-import kotlinx.coroutines.flow.distinctUntilChanged
-
-
 /*@Composable
 @Preview
 fun orew() {

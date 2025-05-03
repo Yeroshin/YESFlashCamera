@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.yes.camera.presentation.model.Item
+import com.yes.camera.presentation.model.SettingsItem
 import com.yes.camera.presentation.ui.views.ImmutableCollection
 
 @Immutable
