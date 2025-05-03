@@ -45,8 +45,8 @@ fun VectorShadow(
     vectorColor: Color = Color.Red,
     shadowColor: Color = Color.Black,
     shadowBlur: Float = 10f,
-    shadowOffsetXPct: Float = 0.95f,
-    shadowOffsetYPct: Float = 0.95f,
+    shadowOffsetX: Float = 0.95f,
+    shadowOffsetY: Float = 0.95f,
     scale: Float = 0.85f
 ) {
     val context = LocalContext.current
@@ -54,6 +54,7 @@ fun VectorShadow(
         XmlParser(context, resId)
             .parse("path", "pathData")
     }
+
     val pathShadow = remember(pathData) { PathParser().parsePathString(pathData).toPath() }
     val pathVector = remember(pathData){PathParser().parsePathString(pathData).toPath()}
     Canvas(
@@ -78,15 +79,25 @@ fun VectorShadow(
                 }
             }
             val pathShadowBounds = pathShadow.getBounds()
-            val scaleShadowX = (canvasWidth / pathShadowBounds.width) * scale
-            val scaleShadowY = (canvasHeight / pathShadowBounds.height) * scale
+           /* val scaleShadowX = (canvasWidth / pathShadowBounds.width) * scale
+            val scaleShadowY = (canvasHeight / pathShadowBounds.height) * scale*/
+            var scaleShadowX = 0f
+            var scaleShadowY = 0f
+            if (pathShadow.getBounds().width>=pathShadow.getBounds().height){
+                scaleShadowX = (canvasWidth / pathShadowBounds.width) * scale
+                scaleShadowY=scaleShadowX
+            }else{
+                scaleShadowY=(canvasHeight / pathShadowBounds.height) * scale
+                scaleShadowX = scaleShadowY
+
+            }
 
             matrix.scale(scaleShadowX, scaleShadowY)
             matrix.translate(pathShadow.getBounds().left * -1, pathShadow.getBounds().top * -1)
             pathShadow.transform(matrix)
 
-            val offsetX = (1 - shadowOffsetXPct) * canvasWidth
-            val offsetY = (1 - shadowOffsetYPct) * canvasHeight
+            val offsetX = (1 - shadowOffsetX) * canvasWidth
+            val offsetY = (1 - shadowOffsetY) * canvasHeight
             val sdx = ((canvasWidth - pathShadowBounds.width * scaleShadowX) / 2) + offsetX
             val sdy = ((canvasHeight - pathShadowBounds.height * scaleShadowY) / 2) + offsetY
 
@@ -101,8 +112,18 @@ fun VectorShadow(
             }
             val pathVectorWidth = pathVector.getBounds().width
             val pathVectorHeight = pathVector.getBounds().height
-            val scaleVectorX = (canvasWidth / pathVectorWidth) * scale
-            val scaleVectorY = (canvasHeight / pathVectorHeight) * scale
+            var scaleVectorX = 0f
+            var scaleVectorY = 0f
+            if (pathVector.getBounds().width>=pathVector.getBounds().height){
+                scaleVectorX = (canvasWidth / pathVectorWidth) * scale
+                scaleVectorY=scaleVectorX
+            }else{
+                scaleVectorY=(canvasHeight / pathVectorHeight) * scale
+                scaleVectorX = scaleVectorY
+
+            }
+           /* val scaleVectorX = (canvasWidth / pathVectorWidth) * scale
+            val scaleVectorY = (canvasHeight / pathVectorHeight) * scale*/
 
             matrix.reset()
             matrix.scale(scaleVectorX, scaleVectorY)

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -224,9 +225,9 @@ fun CameraScreenSuccess(
     var settingsRadioGroupSelectedSettingsItem: SettingsItem? by remember {
         mutableStateOf(SettingsItem.SHUTTER)
     }
-    var valueSelectorVisibility by remember {
+    /*var valueSelectorVisibility by remember {
         mutableStateOf(true)
-    }
+    }*/
     var settings = characteristics.settings
     LaunchedEffect(characteristics.settings) {
         snapshotFlow { characteristics.settings }
@@ -247,7 +248,12 @@ fun CameraScreenSuccess(
             ImmutableCollection(
                 listOf(
                     IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
-                    IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto)
+                    IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
+                    IconRadioItem(WbItem.FLUORESCENT, "Auto", R.drawable.wb_incandescent),
+                    IconRadioItem(WbItem.WARM_FLUORESCENT, "Auto", R.drawable.wb_iridescent),
+                    IconRadioItem(WbItem.DAYLIGHT, "Auto", R.drawable.wb_shade),
+                    IconRadioItem(WbItem.CLOUDY_DAYLIGHT, "Auto", R.drawable.wb_sunny),
+                    IconRadioItem(WbItem.TWILIGHT, "Auto", R.drawable.wb_twilight)
 
                 )
             )
@@ -336,8 +342,8 @@ fun CameraScreenSuccess(
         snapshotFlow { items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
-                isWbSelectorVisible.value=false
-                isSelectorVisible.value=true
+                isWbSelectorVisible.value = false
+                isSelectorVisible.value = true
                 selectorItems = when (settingsRadioGroupSelectedSettingsItem) {
                     SettingsItem.SHUTTER -> {
 
@@ -365,9 +371,9 @@ fun CameraScreenSuccess(
                         /* items.wbItems?.let {
                              it?.list
                          }*/
-                        if (autoItems[SettingsItem.WB]==true){
-                            isWbSelectorVisible.value=true
-                            isSelectorVisible.value=false
+                        if (autoItems[SettingsItem.WB] == true) {
+                            isWbSelectorVisible.value = true
+                            isSelectorVisible.value = false
                         }
                         ImmutableCollection(items.wbManualItems?.list?.map { it as SelectorItem }
                             ?: emptyList())
@@ -611,6 +617,8 @@ fun CameraScreenSuccess(
           ) {*/
         RadioGroup(
             modifier = Modifier
+                .padding(4.dp)
+                .fillMaxWidth()
                 // .align(Alignment.CenterHorizontally)
                 .padding(
                     top = 16.dp
@@ -619,8 +627,8 @@ fun CameraScreenSuccess(
             onOptionSelected = { value ->
                 settingsRadioGroupSelectedSettingsItem = value as SettingsItem?
 
-                value?.let { valueSelectorVisibility = true }
-                    ?: run { valueSelectorVisibility = false }
+                /*  value?.let { valueSelectorVisibility = true }
+                      ?: run { valueSelectorVisibility = false }*/
                 /* value?.let {
                      isOpen = true
 
@@ -684,10 +692,13 @@ fun CameraScreenSuccess(
         ) {
 
             //selector row
-            Row {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 ///////////auto
                 VectorShadow(
                     modifier = Modifier
+
                         .size(32.dp)
                         .clickable {
                             settingsRadioGroupSelectedSettingsItem?.let {
@@ -697,8 +708,8 @@ fun CameraScreenSuccess(
                                         compute(it) { _, value -> !(value ?: false) }
                                     }
                             }
-                            isWbSelectorVisible.value=false
-                            isSelectorVisible.value=true
+                            isWbSelectorVisible.value = false
+                            isSelectorVisible.value = true
                             if (autoItems[settingsRadioGroupSelectedSettingsItem] == true) {
 
 
@@ -718,8 +729,8 @@ fun CameraScreenSuccess(
                                     }
 
                                     SettingsItem.WB -> {
-                                        isWbSelectorVisible.value=true
-                                        isSelectorVisible.value=false
+                                        isWbSelectorVisible.value = true
+                                        isSelectorVisible.value = false
                                         settings.copy(wbValue = "")
 
                                     }
@@ -758,12 +769,12 @@ fun CameraScreenSuccess(
                     resId = R.drawable.auto,
                 )
 
-                ///////////value selector
+
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp)
+                        .padding(4.dp)
                         .height(50.dp)
                 ) {
                     /* AnimatedContent(
@@ -777,8 +788,11 @@ fun CameraScreenSuccess(
                       exit = scaleOut() + shrinkHorizontally()*/
                      ) { isVisible ->
                          if (isVisible) {*/
+                    ///////////value selector
                     if (isSelectorVisible.value) {
                         ValueSelector(
+                            modifier = Modifier
+                                .height(42.dp),
                             position = when (settingsRadioGroupSelectedSettingsItem) {
                                 SettingsItem.SHUTTER -> {
                                     settings.shutterPosition
@@ -824,16 +838,20 @@ fun CameraScreenSuccess(
                     if (isWbSelectorVisible.value) {
                         RadioGroup(
                             modifier = Modifier
-                                // .align(Alignment.CenterHorizontally)
-                                .padding(
-                                    top = 16.dp
-                                ),
+                                .padding(4.dp)
+                                .fillMaxWidth()
+                            //  .fillMaxHeight()
+                            // .height(42.dp)
+                            // .align(Alignment.CenterHorizontally)
+                            /* .padding(
+                                 top = 4.dp
+                             )*/,
                             items = wbRadioGroupItems,
                             onOptionSelected = { value ->
                                 // settingsRadioGroupSelectedSettingsItem = value as WbItem?
 
-                                value?.let { valueSelectorVisibility = true }
-                                    ?: run { valueSelectorVisibility = false }
+                                /*  value?.let { valueSelectorVisibility = true }
+                                      ?: run { valueSelectorVisibility = false }*/
                                 /* value?.let {
                                      isOpen = true
 

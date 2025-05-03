@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 
@@ -61,11 +62,11 @@ fun RadioGroup(
                 Color.LightGray.copy(alpha = 0.5f)
             )*/
 
-            .selectableGroup()
-            .wrapContentHeight()
-            .padding(4.dp)
+            .selectableGroup(),
+           // .wrapContentHeight()
+           // .padding(4.dp)
             // .height(120.dp)
-            .fillMaxWidth(),
+           // .fillMaxWidth(),
          verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly
        // horizontalArrangement = Arrangement.Center,
@@ -75,8 +76,8 @@ fun RadioGroup(
             Box(
 
                 modifier = Modifier
-                    // .wrapContentWidth()
-                    .width(72.dp)
+                     .wrapContentWidth()
+                   // .width(72.dp)
                     // .background(Color.Red)
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center

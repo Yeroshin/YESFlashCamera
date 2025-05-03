@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -16,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItem
-@Immutable
-data class IconRadioItem(
-    override val id: Item,
+
+class IconRadioItem(
+     id: Item,
     val title: String,
     val resId: Int?,
 ) : RadioButton(id) {
@@ -30,7 +31,7 @@ data class IconRadioItem(
             horizontalAlignment = Alignment.CenterHorizontally
 
         ) {
-            Text(
+          /*  Text(
                 textAlign = TextAlign.Start,
                 text = title,
                 style = TextStyle(
@@ -42,7 +43,7 @@ data class IconRadioItem(
                         blurRadius = 5f
                     )
                 )
-            )
+            )*/
            /* Box(
                 modifier = Modifier
                     .size(20.dp)
@@ -50,7 +51,8 @@ data class IconRadioItem(
                 resId?.let {
                     VectorShadow(
                         Modifier
-                            .size(18.dp),
+                           // .alpha(0.3f)
+                            .size(24.dp),
                         vectorColor = Color.White,
                         shadowColor = Color.DarkGray,
                         resId = it

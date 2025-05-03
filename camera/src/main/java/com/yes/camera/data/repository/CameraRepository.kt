@@ -417,7 +417,7 @@ class CameraRepository(
         val activeArraySize =
             characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
         val maxRegionsAf = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
-
+        val awbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
 /////////////////
         /////////////////
         return Characteristics(
@@ -425,6 +425,7 @@ class CameraRepository(
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterValue = 0,
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
+            wbItems = awbModes,
             focusValue = 0F,
             minFocusValue = minFocusDistance ?: 0f,
             resolutions = allSizes?.map {

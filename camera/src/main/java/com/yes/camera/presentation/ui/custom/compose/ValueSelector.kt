@@ -154,6 +154,7 @@ fun ValueSelector(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
+    modifier: Modifier,
     position: Int,
   // items: List<SelectorItem>?,
     items:ImmutableCollection<SelectorItem>?,
@@ -269,9 +270,9 @@ fun ValueSelector(
     }*/
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(42.dp)
+
             .padding(4.dp),
     ) {
 

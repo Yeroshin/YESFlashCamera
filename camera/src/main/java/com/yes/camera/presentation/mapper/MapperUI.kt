@@ -1,5 +1,13 @@
 package com.yes.camera.presentation.mapper
 
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
@@ -121,8 +129,38 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-       val wbAutoItems=characteristics.wbManualItems.map {
-           IconRadioItem(WbItem.AUTO,"Auto", R.drawable.wb_auto)
+       val wbItems=characteristics.wbItems?.map {
+
+           val (id,res)= when(it){
+                    CONTROL_AWB_MODE_AUTO->{
+                        WbItem.AUTO to R.drawable.wb_auto
+                    }
+                    CONTROL_AWB_MODE_INCANDESCENT->{
+                        WbItem.INCANDESCENT to R.drawable.wb_incandescent
+                    }
+                    CONTROL_AWB_MODE_FLUORESCENT->{
+                        WbItem.FLUORESCENT to R.drawable.fluorescent
+                    }
+                    CONTROL_AWB_MODE_WARM_FLUORESCENT->{
+                        WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
+                    }
+                    CONTROL_AWB_MODE_DAYLIGHT->{
+                        WbItem.DAYLIGHT to R.drawable.wb_sunny
+                    }
+                    CONTROL_AWB_MODE_CLOUDY_DAYLIGHT->{
+                        WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
+                    }
+                    CONTROL_AWB_MODE_TWILIGHT->{
+                        WbItem.TWILIGHT to R.drawable.wb_twilight
+                    }
+                    CONTROL_AWB_MODE_SHADE->{
+                        WbItem.SHADE to R.drawable.wb_shade
+                    }
+                    else -> WbItem.AUTO to R.drawable.wb_auto
+                }
+               IconRadioItem(id,"Auto", res)
+
+
        }
         val items = Items(
             shutterItems = ImmutableCollection(
@@ -166,7 +204,7 @@ class MapperUI(
                     )
                 }
             ),
-            wbAutoItems =wbAutoItems,
+            wbAutoItems =wbItems,
             focusItems = ImmutableCollection(
                 listOf(
                 TextItem( "0,2"),
