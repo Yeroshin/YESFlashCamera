@@ -40,13 +40,14 @@ abstract class RadioButton(open val id: Item){
 fun RadioGroup(
     modifier: Modifier,
     onOptionSelected:((value:Item?)->Unit),
-    items: ImmutableCollection<RadioButton>
+    items: ImmutableCollection<RadioButton>,
+    selectedOption:Item=items.list[0].id
   // items:RadioButton
 ) {
   /*  var items by remember{
         mutableStateOf(items)
     }*/
-   val selectedOption = remember { mutableStateOf<Item?>(items.list[0].id) }
+   val selectedOption = remember { mutableStateOf<Item?>(selectedOption) }
 
   //  val visibleStates = remember { items.map { mutableStateOf(false) } }
 

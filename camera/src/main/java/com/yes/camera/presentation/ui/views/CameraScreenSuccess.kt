@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +38,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.IconItem
+import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.TextItem
@@ -243,10 +243,14 @@ fun CameraScreenSuccess(
         mutableStateOf(listOf(IconRadioItem(SettingsItem.WB, "WB", 2131099791)))
     }
     // val radioGroupItems= listOf(VectorRadioItem(Item.WB, "WB", wb.value))
+    var wbRadioGroupSelectedSettingsItem: WbItem? by remember {
+        mutableStateOf(WbItem.AUTO)
+    }
     val wbRadioGroupItems: ImmutableCollection<RadioButton> =
         remember(characteristics.items.wbAutoItems) {
             ImmutableCollection(
-                listOf(
+                characteristics.items.wbAutoItems as List<RadioButton>
+               /* listOf(
                     IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
                     IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
                     IconRadioItem(WbItem.FLUORESCENT, "Auto", R.drawable.wb_incandescent),
@@ -254,8 +258,7 @@ fun CameraScreenSuccess(
                     IconRadioItem(WbItem.DAYLIGHT, "Auto", R.drawable.wb_shade),
                     IconRadioItem(WbItem.CLOUDY_DAYLIGHT, "Auto", R.drawable.wb_sunny),
                     IconRadioItem(WbItem.TWILIGHT, "Auto", R.drawable.wb_twilight)
-
-                )
+                )*/
             )
         }
     val settingsRadioGroupItems: ImmutableCollection<RadioButton> = remember(settings) {
@@ -847,9 +850,13 @@ fun CameraScreenSuccess(
                                  top = 4.dp
                              )*/,
                             items = wbRadioGroupItems,
+                            selectedOption = wbRadioGroupSelectedSettingsItem as Item,
                             onOptionSelected = { value ->
-                                // settingsRadioGroupSelectedSettingsItem = value as WbItem?
-
+                                 wbRadioGroupSelectedSettingsItem = value as WbItem?
+                                settingsRequest=characteristics.settings.copy(
+                                    wbValue = "",
+                                    wbAutoMode = value?.ordinal
+                                    )
                                 /*  value?.let { valueSelectorVisibility = true }
                                       ?: run { valueSelectorVisibility = false }*/
                                 /* value?.let {

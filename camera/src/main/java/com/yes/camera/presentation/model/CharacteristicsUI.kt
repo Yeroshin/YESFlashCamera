@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.model
 
+import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.custom.compose.RadioButton
 import com.yes.camera.presentation.ui.views.ImmutableCollection
 
@@ -12,7 +13,7 @@ data class Items(
     val shutterItems: ImmutableCollection<TextItem>? = null,
     val isoItems: ImmutableCollection<TextItem>? = null,
     val wbManualItems: ImmutableCollection<TextItem>? = null,
-    val wbAutoItems: List<RadioButton> = emptyList(),
+    val wbAutoItems: List<RadioButton>? = emptyList(),
     val focusItems: ImmutableCollection<TextItem>? = null,
     val magnifierItems: ImmutableCollection<TextItem>? = null,
 )
@@ -29,6 +30,7 @@ data class Settings(
 
     val wbValue: String = "A",
     val wbPosition: Int = 0,
+    val wbAutoMode:Int?=1,
 
     val focusValue: String = "1",
     val focusPosition: Int = 0,

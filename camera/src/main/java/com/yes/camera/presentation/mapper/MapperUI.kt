@@ -17,7 +17,6 @@ import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.model.TextSelectorItemUI
 import com.yes.camera.presentation.model.WbItem
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
-import com.yes.camera.presentation.ui.custom.compose.RadioButton
 import com.yes.camera.presentation.ui.views.ImmutableCollection
 import com.yes.camera.utils.ResourceProvider
 import kotlin.math.abs
@@ -129,9 +128,9 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-       val wbItems=characteristics.wbItems?.map {
+       val wbItems=characteristics.wbItems?.toList()?.mapNotNull {mode->
 
-           val (id,res)= when(it){
+           when(mode){
                     CONTROL_AWB_MODE_AUTO->{
                         WbItem.AUTO to R.drawable.wb_auto
                     }
@@ -156,12 +155,19 @@ class MapperUI(
                     CONTROL_AWB_MODE_SHADE->{
                         WbItem.SHADE to R.drawable.wb_shade
                     }
-                    else -> WbItem.AUTO to R.drawable.wb_auto
-                }
-               IconRadioItem(id,"Auto", res)
+                    else -> null
+                }?.let { (id, res) -> IconRadioItem(id,"Auto", res) }
+            //   IconRadioItem(id,"Auto", res)
 
 
        }
+        val wbValue=characteristics.wbManualValue?.toString()?:"A"
+        val wbPosition=characteristics.wbManualValue?.let {
+            val closestValue=standardWbValues.minByOrNull { value->
+                abs(value - it)
+            }
+            standardWbValues.indexOf(closestValue)
+        }?:0
         val items = Items(
             shutterItems = ImmutableCollection(
                 standardShutterSpeeds
@@ -204,7 +210,39 @@ class MapperUI(
                     )
                 }
             ),
-            wbAutoItems =wbItems,
+            wbAutoItems = characteristics.wbItems?.toList()?.mapNotNull { mode->
+
+                when(mode){
+                    CONTROL_AWB_MODE_AUTO->{
+                        WbItem.AUTO to R.drawable.wb_auto
+                    }
+                    CONTROL_AWB_MODE_INCANDESCENT->{
+                        WbItem.INCANDESCENT to R.drawable.wb_incandescent
+                    }
+                    CONTROL_AWB_MODE_FLUORESCENT->{
+                        WbItem.FLUORESCENT to R.drawable.fluorescent
+                    }
+                    CONTROL_AWB_MODE_WARM_FLUORESCENT->{
+                        WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
+                    }
+                    CONTROL_AWB_MODE_DAYLIGHT->{
+                        WbItem.DAYLIGHT to R.drawable.wb_sunny
+                    }
+                    CONTROL_AWB_MODE_CLOUDY_DAYLIGHT->{
+                        WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
+                    }
+                    CONTROL_AWB_MODE_TWILIGHT->{
+                        WbItem.TWILIGHT to R.drawable.wb_twilight
+                    }
+                    CONTROL_AWB_MODE_SHADE->{
+                        WbItem.SHADE to R.drawable.wb_shade
+                    }
+                    else -> null
+                }?.let { (id, res) -> IconRadioItem(id,"Auto", res) }
+                //   IconRadioItem(id,"Auto", res)
+
+
+            },
             focusItems = ImmutableCollection(
                 listOf(
                 TextItem( "0,2"),
@@ -242,7 +280,7 @@ class MapperUI(
             )
         )
 
-        val wbValue=characteristics.wbValue?.toString()?:"A"
+
         val settings = Settings(
             shutterValue = shutterValue,
             shutterPosition = shutterPosition,
@@ -250,7 +288,8 @@ class MapperUI(
             isoValue = isoValue.toString(),
             isoPosition = isoPosition,
 
-            wbValue = wbValue
+            wbValue = wbValue,
+            wbPosition = wbPosition
             /*  shutterItems = supportedShutterSpeeds,
               isoItems = supportedIsoValues,*/
 
@@ -376,6 +415,9 @@ class MapperUI(
             it.value == characteristics.settings.shutterValue
         }?.key
           val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
+        val wbAutoMode=wbValue?.let{null}?:run {
+            characteristics.settings.wbAutoMode
+        }
         //worked for icon
       /*  val wbValue = when (characteristics.settings.wbValue) {
             R.drawable.wb_auto-> CONTROL_AWB_MODE_AUTO
@@ -403,7 +445,8 @@ class MapperUI(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
-            wbValue = wbValue,
+            wbManualValue = wbValue,
+            wbAutoValue = wbAutoMode,
             focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),

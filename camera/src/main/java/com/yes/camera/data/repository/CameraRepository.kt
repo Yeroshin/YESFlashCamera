@@ -15,9 +15,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata.COLOR_CORRECTION_MODE_FAST
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -509,7 +507,7 @@ class CameraRepository(
               _characteristicsFlow.update { current ->
 
                       current?.copy(
-                         wbValue  = kelvin,
+                         wbManualValue  = kelvin,
                           shutterValue = exposureTime?:autoShutter,
                           // shutterValue = Random.nextLong(16_000_000L),
                           isoValue = iso?:autoIso
@@ -1575,10 +1573,10 @@ class CameraRepository(
                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                 /////wb
 
-                    previousWbValue=characteristics.wbValue
+                    previousWbValue=characteristics.wbManualValue
 
                   //  wb=true
-                characteristics.wbValue?.let {wb->
+                characteristics.wbManualValue?.let { wb->
                     ////////////////////////////
                     val rggb=ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
                     val kelvin=ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
@@ -1600,6 +1598,7 @@ class CameraRepository(
                     set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
                 }?:run{
                     wb=true
+                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbAutoValue)
                     set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_FLUORESCENT)
                    // set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
                   //  set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)
