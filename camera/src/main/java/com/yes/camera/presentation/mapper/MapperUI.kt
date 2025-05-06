@@ -416,7 +416,17 @@ class MapperUI(
         }?.key
           val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
         val wbAutoMode=wbValue?.let{null}?:run {
-            characteristics.settings.wbAutoMode
+            when(characteristics.settings.wbAutoMode){
+                WbItem.AUTO.ordinal -> CONTROL_AWB_MODE_AUTO
+                WbItem.INCANDESCENT.ordinal->CONTROL_AWB_MODE_INCANDESCENT
+                WbItem.FLUORESCENT.ordinal->CONTROL_AWB_MODE_FLUORESCENT
+                WbItem.WARM_FLUORESCENT.ordinal->CONTROL_AWB_MODE_WARM_FLUORESCENT
+                WbItem.DAYLIGHT.ordinal->CONTROL_AWB_MODE_DAYLIGHT
+                WbItem.CLOUDY_DAYLIGHT.ordinal->CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+                WbItem.TWILIGHT.ordinal->CONTROL_AWB_MODE_TWILIGHT
+                WbItem.SHADE.ordinal->CONTROL_AWB_MODE_SHADE
+                else -> {null}
+            }
         }
         //worked for icon
       /*  val wbValue = when (characteristics.settings.wbValue) {
@@ -446,7 +456,7 @@ class MapperUI(
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
             wbManualValue = wbValue,
-            wbAutoValue = wbAutoMode,
+            wbSustemValue = wbAutoMode,
             focusValue = focusValue ?: 0f,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),

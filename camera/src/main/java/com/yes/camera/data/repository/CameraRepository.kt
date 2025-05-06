@@ -15,7 +15,6 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -1567,6 +1566,19 @@ class CameraRepository(
             true
         ) { builder ->
             builder.apply {
+                set(
+                    CaptureRequest.EDGE_MODE,
+                    CaptureRequest.EDGE_MODE_OFF
+                )
+                set(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                )
+                set(
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+                )
+
                 set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
@@ -1598,8 +1610,8 @@ class CameraRepository(
                     set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
                 }?:run{
                     wb=true
-                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbAutoValue)
-                    set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_FLUORESCENT)
+                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbSustemValue)
+                  //  set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_FLUORESCENT)
                    // set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
                   //  set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)
                   //  set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)

@@ -217,6 +217,7 @@ fun ValueSelector(
 
    LaunchedEffect(items) {
         snapshotFlow { items }
+            .distinctUntilChanged()
             .collect {
                 isProgrammaticScroll = true
                 listState.animateScrollToItem(
