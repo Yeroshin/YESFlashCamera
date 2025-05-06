@@ -162,7 +162,7 @@ fun ValueSelector(
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
     updatedPosition: Int? = null
 ) {
-     /*val items by remember (items){
+    /* val items by remember (items){
          mutableStateOf(items)
      }*/
    /* val itemsR by remember(items) {
@@ -214,9 +214,17 @@ fun ValueSelector(
 
             }
     }
-
-   LaunchedEffect(items) {
-        snapshotFlow { items }
+    val itemsHashKey = remember(items) {
+        items?.list?.joinToString {
+            when (it) {
+                is IconItem -> "icon:${it.icon}:${it.passed}"
+                is TextItem -> "text:${it.text}:${it.passed}"
+                else -> it.hashCode().toString()
+            }
+        }?.hashCode()
+    }
+   LaunchedEffect(itemsHashKey ) {
+       snapshotFlow { items }
             .distinctUntilChanged()
             .collect {
                 isProgrammaticScroll = true
