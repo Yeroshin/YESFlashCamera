@@ -13,5 +13,5 @@ data class Characteristics(
     val focusValue:Float=0f,
     val minFocusValue:Float=0f,
     val resolutions:List<Dimensions> = emptyList(),
-    val touchPoint: FloatArray = FloatArray(2)
+    val touchPoint: FloatArray? = null
 )

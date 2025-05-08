@@ -409,15 +409,26 @@ fun CameraScreenSuccess(
                 }
             }
     }
+
+
     var settingsRequest by remember {
         mutableStateOf(settings)
     }
+
     LaunchedEffect(settingsRequest) {
         onCharacteristicChanged(
             characteristics.copy(
                 settings = settingsRequest
             )
 
+        )
+    }
+    var touchPoint by remember {
+        mutableStateOf(FloatArray(0))
+    }
+    LaunchedEffect(touchPoint) {
+        settingsRequest=settings.copy(
+            touchPoint = touchPoint
         )
     }
     var selectorSelectedItemIndex by remember {
@@ -574,7 +585,17 @@ fun CameraScreenSuccess(
                                     val y = event.y
                                     val w = v.width
                                     val h = v.height
-                                    onCharacteristicChanged(
+                                    touchPoint=floatArrayOf(
+                                        event.x / v.width,
+                                        event.y / v.height
+                                    )
+                                   /* settingsRequest=settingsRequest.copy(
+                                        touchPoint = floatArrayOf(
+                                            event.x / v.width,
+                                            event.y / v.height
+                                        )
+                                    )*/
+                                  /*  onCharacteristicChanged(
                                         characteristics.copy(
                                             settings = settings.copy(
                                                 touchPoint = floatArrayOf(
@@ -583,7 +604,7 @@ fun CameraScreenSuccess(
                                                 )
                                             )
                                         )
-                                    )
+                                    )*/
 
                                 }
 

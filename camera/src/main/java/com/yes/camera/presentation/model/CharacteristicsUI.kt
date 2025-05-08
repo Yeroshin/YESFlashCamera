@@ -38,7 +38,7 @@ data class Settings(
     val magnifierValue: String = "1",
     val magnifierPosition: Int = 0,
 
-    val touchPoint: FloatArray = FloatArray(2),
+    val touchPoint: FloatArray?=null,
 )
 
 
