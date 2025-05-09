@@ -291,7 +291,7 @@ fun CameraScreenSuccess(
         )
     }
     val isSelectorVisible = remember { mutableStateOf(true) }
-    val isWbSelectorVisible = remember { mutableStateOf(false) }
+    val isRadioGroupSelectorVisible = remember { mutableStateOf(false) }
     LaunchedEffect(autoItems) {
         snapshotFlow { settings }
             .collect {
@@ -345,7 +345,7 @@ fun CameraScreenSuccess(
         snapshotFlow { items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
-                isWbSelectorVisible.value = false
+                isRadioGroupSelectorVisible.value = false
                 isSelectorVisible.value = true
                 selectorItems = when (settingsRadioGroupSelectedSettingsItem) {
                     SettingsItem.SHUTTER -> {
@@ -375,7 +375,7 @@ fun CameraScreenSuccess(
                              it?.list
                          }*/
                         if (autoItems[SettingsItem.WB] == true) {
-                            isWbSelectorVisible.value = true
+                            isRadioGroupSelectorVisible.value = true
                             isSelectorVisible.value = false
                         }
                         ImmutableCollection(items.wbManualItems?.list?.map { it as SelectorItem }
@@ -740,7 +740,7 @@ fun CameraScreenSuccess(
                                         compute(it) { _, value -> !(value ?: false) }
                                     }
                             }
-                            isWbSelectorVisible.value = false
+                            isRadioGroupSelectorVisible.value = false
                             isSelectorVisible.value = true
                             if (autoItems[settingsRadioGroupSelectedSettingsItem] == true) {
 
@@ -761,14 +761,15 @@ fun CameraScreenSuccess(
                                     }
 
                                     SettingsItem.WB -> {
-                                        isWbSelectorVisible.value = true
+                                        isRadioGroupSelectorVisible.value = true
                                         isSelectorVisible.value = false
                                         settings.copy(wbValue = "")
 
                                     }
 
                                     SettingsItem.FOCUS -> {
-
+                                        isRadioGroupSelectorVisible.value = true
+                                        isSelectorVisible.value = false
                                         settings.copy(
                                             focusValue = ""
                                         )
@@ -866,18 +867,12 @@ fun CameraScreenSuccess(
                             updatedPosition = valueSelectorAcquiredItemIndex
                         )
                     }
-                    //wb radio group
-                    if (isWbSelectorVisible.value) {
+                    //selector radio group
+                    if (isRadioGroupSelectorVisible.value) {
                         RadioGroup(
                             modifier = Modifier
                                 .padding(4.dp)
-                                .fillMaxWidth()
-                            //  .fillMaxHeight()
-                            // .height(42.dp)
-                            // .align(Alignment.CenterHorizontally)
-                            /* .padding(
-                                 top = 4.dp
-                             )*/,
+                                .fillMaxWidth(),
                             items = wbRadioGroupItems,
                             selectedOption = wbRadioGroupSelectedSettingsItem as Item,
                             onOptionSelected = { value ->
@@ -886,29 +881,7 @@ fun CameraScreenSuccess(
                                     wbValue = "",
                                     wbAutoMode = value?.ordinal
                                     )
-                                /*  value?.let { valueSelectorVisibility = true }
-                                      ?: run { valueSelectorVisibility = false }*/
-                                /* value?.let {
-                                     isOpen = true
 
-
-                                     when(it){
-                                         Item.SHUTTER->{
-                                             valueSelectorItems=characteristics.shutterValues
-                                             position.value=1
-                                         }
-
-                                         Item.ISO->{
-                                             valueSelectorItems=characteristics.isoValues
-                                             position.value=3
-                                         }
-
-                                         Item.FOCUS->{}
-                                     }
-                                 } ?: run {
-                                     isOpen = false
-                                 }*/
-                                //  radioGroupItems[0].resId = R.drawable.iso
                             }
                         )
                     }
