@@ -504,9 +504,11 @@ class CameraRepository(
             val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
             autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
             val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
+            val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
             _characteristicsFlow.update { current ->
 
                 current?.copy(
+                    focusValue = focusDistance,
                     wbManualValue = kelvin,
                     shutterValue = exposureTime ?: autoShutter,
                     // shutterValue = Random.nextLong(16_000_000L),
@@ -1597,7 +1599,13 @@ class CameraRepository(
                 )
 
                 set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                characteristics.focusValue?.let {
+                    set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+                }?:run{
+                    set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                }
+
                 set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
                 // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -1751,58 +1759,62 @@ class CameraRepository(
             }
         }
         /////////////////////////////////////////focus
-        if (characteristics.touchPoint!=touchPoint){
-            characteristics.touchPoint?.let {touchPoint->
+        characteristics.focusValue?:run {
+            if (characteristics.touchPoint!=touchPoint){
+                touchPoint=characteristics.touchPoint
+                characteristics.touchPoint?.let {touchPoint->
 
-                //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
-               /* submitRequest(
-                    CameraDevice.TEMPLATE_MANUAL,
-                    listOf(
-                        previewSurface,
-                        captureSurface
-                    ),
-                    true
-                ) { builder ->
-                    builder.apply {
-                        set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                      //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                        set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                    }
-                }*/
+                    //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
+                    /* submitRequest(
+                         CameraDevice.TEMPLATE_MANUAL,
+                         listOf(
+                             previewSurface,
+                             captureSurface
+                         ),
+                         true
+                     ) { builder ->
+                         builder.apply {
+                             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                           //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                         }
+                     }*/
 
-                submitRequest(
-                    CameraDevice.TEMPLATE_MANUAL,
-                    listOf(
-                        previewSurface,
-                        captureSurface
-                    ),
-                    false
-                ) { builder ->
-                    builder.apply {
-                        focus = true
-                       // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                       // set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                      //  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                        val r = meteringRectangle(touchPoint)
-                        val focusArea = Rect(1, 1, 300, 300)
-                        set(
-                            CaptureRequest.CONTROL_AF_REGIONS,
-                            arrayOf(r)
-                        )
-                    /*    set(
-                            CaptureRequest.CONTROL_AE_REGIONS,
-                            arrayOf(r)
-                        )*/
-                        set(
-                            CaptureRequest.CONTROL_AF_TRIGGER,
-                            CaptureRequest.CONTROL_AF_TRIGGER_START
-                        )
+                    submitRequest(
+                        CameraDevice.TEMPLATE_MANUAL,
+                        listOf(
+                            previewSurface,
+                            captureSurface
+                        ),
+                        false
+                    ) { builder ->
+                        builder.apply {
+                            focus = true
+                            // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                            // set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                            //  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                            val r = meteringRectangle(touchPoint)
+                            val focusArea = Rect(1, 1, 300, 300)
+                            set(
+                                CaptureRequest.CONTROL_AF_REGIONS,
+                                arrayOf(r)
+                            )
+                            /*    set(
+                                    CaptureRequest.CONTROL_AE_REGIONS,
+                                    arrayOf(r)
+                                )*/
+                            set(
+                                CaptureRequest.CONTROL_AF_TRIGGER,
+                                CaptureRequest.CONTROL_AF_TRIGGER_START
+                            )
 
 
+                        }
                     }
                 }
             }
         }
+
 
 
 

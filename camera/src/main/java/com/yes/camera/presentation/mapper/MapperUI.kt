@@ -95,6 +95,25 @@ class MapperUI(
         CONTROL_AWB_MODE_SHADE
 
     )*/
+    private val standardFocusValues=listOf(
+       0.2F,
+       1F,
+       2F,
+       3F,
+       4F,
+       5F,
+       6F,
+       7F,
+       8F,
+       9F,
+       9.5F,
+       10F,
+       11F,
+       12F,
+       13F,
+       14F,
+       15F,
+   )
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
 
@@ -167,6 +186,14 @@ class MapperUI(
                 abs(value - it)
             }
             standardWbValues.indexOf(closestValue)
+        }?:0
+
+        val focusValue=characteristics.focusValue?.toString()?:"A"
+        val focusPosition=characteristics.focusValue?.let {
+            val closestValue=standardFocusValues.minByOrNull { value->
+                abs(value - it)
+            }
+            standardFocusValues.indexOf(closestValue)
         }?:0
         val items = Items(
             shutterItems = ImmutableCollection(
@@ -243,27 +270,10 @@ class MapperUI(
 
 
             },
-            focusItems = ImmutableCollection(
-                listOf(
-                TextItem( "0,2"),
-                TextItem( "1"),
-                TextItem( "2"),
-                TextItem( "3"),
-                TextItem( "4"),
-                TextItem( "5"),
-                TextItem( "6"),
-                TextItem( "7"),
-                TextItem("8"),
-                TextItem( "9"),
-                TextItem( "9.5"),
-                TextItem( "10"),
-                TextItem( "11"),
-                TextItem( "12"),
-                TextItem( "13"),
-                TextItem( "14"),
-                TextItem( "15"),
-                )
-                ),
+            focusItems =standardFocusValues.map {
+                TextItem(it.toString())
+            },
+
             magnifierItems = ImmutableCollection(
                 listOf(
                 TextItem( "1"),
@@ -289,7 +299,10 @@ class MapperUI(
             isoPosition = isoPosition,
 
             wbValue = wbValue,
-            wbPosition = wbPosition
+            wbPosition = wbPosition,
+
+            focusValue = focusValue,
+            focusPosition = focusPosition
             /*  shutterItems = supportedShutterSpeeds,
               isoItems = supportedIsoValues,*/
 
@@ -449,15 +462,15 @@ class MapperUI(
 
         // val focusValue = characteristics.settings.focusValue.toInt()
         val tem = shutterValue
-        val te = characteristics.settings.focusValue.toInt()
-        val focusValue = te.toFloat()
+        val te = characteristics.settings.focusValue.toFloatOrNull()
+        val focusValue = te
         val t = Characteristics(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
             wbManualValue = wbValue,
             wbSustemValue = wbAutoMode,
-            focusValue = focusValue ?: 0f,
+            focusValue = focusValue,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),
             resolutions = emptyList(),

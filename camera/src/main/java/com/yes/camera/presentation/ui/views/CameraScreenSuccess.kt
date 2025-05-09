@@ -387,8 +387,7 @@ fun CameraScreenSuccess(
                         /* items.focusItems?.let {
                              it?.list
                          }*/
-                        ImmutableCollection(items.focusItems?.list?.map { it as SelectorItem }
-                            ?: emptyList())
+                        ImmutableCollection(items.focusItems ?: emptyList())
                     }
 
                     SettingsItem.MAGNIFIER -> {
@@ -428,6 +427,7 @@ fun CameraScreenSuccess(
     }
     LaunchedEffect(touchPoint) {
         settingsRequest=settings.copy(
+            focusValue =  if (autoItems[SettingsItem.FOCUS] == true){"A"}else{settings.focusValue},
             touchPoint = touchPoint
         )
     }
@@ -494,7 +494,15 @@ fun CameraScreenSuccess(
             }
 
             SettingsItem.FOCUS -> {
-                characteristics.settings.copy()
+                if (autoItems[settingsRadioGroupSelectedSettingsItem] == false) {
+                    characteristics.settings.copy(
+                        focusValue = characteristics.items.focusItems?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: run { "0" })
+                } else {
+                    characteristics.settings.copy(focusValue = "A")
+                }
+              //  characteristics.settings.copy()
                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
 
                      settings.copy(focusValue = it)

@@ -10,7 +10,7 @@ data class Characteristics(
     val wbSustemValue:Int?=null,
   //  val wbManualItems: List<Int> = emptyList(),
     val wbItems: IntArray?=null,
-    val focusValue:Float=0f,
+    val focusValue:Float?=null,
     val minFocusValue:Float=0f,
     val resolutions:List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null

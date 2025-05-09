@@ -14,7 +14,7 @@ data class Items(
     val isoItems: ImmutableCollection<TextItem>? = null,
     val wbManualItems: ImmutableCollection<TextItem>? = null,
     val wbAutoItems: List<RadioButton>? = emptyList(),
-    val focusItems: ImmutableCollection<TextItem>? = null,
+    val focusItems: List<TextItem>? = null,
     val magnifierItems: ImmutableCollection<TextItem>? = null,
 )
 
@@ -32,7 +32,7 @@ data class Settings(
     val wbPosition: Int = 0,
     val wbAutoMode:Int?=1,
 
-    val focusValue: String = "1",
+    val focusValue: String = "A",
     val focusPosition: Int = 0,
 
     val magnifierValue: String = "1",
