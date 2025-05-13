@@ -15,10 +15,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.SettingsItem
+import com.yes.camera.presentation.model.SettingsRadioGroupItem
 
 class TextRadioItem (
-    id: SettingsItem,
+    id: SettingsRadioGroupItem,
     var value: String,
     private val title: String,
     ) : RadioButton(id) {

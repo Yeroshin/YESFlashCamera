@@ -5,7 +5,7 @@ import org.xmlpull.v1.XmlPullParser
 
 class XmlParser(
     val context: Context,
-    private val resId:Int
+    private val resId: Int
 ){
     fun parse(type:String, value:String):String{
         val parser=context.resources.getXml(resId)

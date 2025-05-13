@@ -37,10 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
+import com.yes.camera.presentation.model.FocusItem
 import com.yes.camera.presentation.model.IconItem
-import com.yes.camera.presentation.model.Item
-import com.yes.camera.presentation.model.SettingsItem
+import com.yes.camera.presentation.model.SettingsRadioGroupItem
 import com.yes.camera.presentation.model.SelectorItem
+import com.yes.camera.presentation.model.SelectorRadioGroupItem
 import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.model.WbItem
 import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
@@ -53,6 +54,7 @@ import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
+import com.yes.camera.presentation.ui.custom.compose.VectorShadowT
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -215,6 +217,11 @@ fun CameraScreenSuccess(
      }*/
     val context = LocalContext.current
     /////////////////////
+    var settings = characteristics.settings
+    var settingsRequest by remember {
+        mutableStateOf(settings)
+    }
+
 
     var magnifier by remember {
         mutableStateOf("")
@@ -222,13 +229,13 @@ fun CameraScreenSuccess(
     var magnifierPosition by remember {
         mutableStateOf(0)
     }
-    var settingsRadioGroupSelectedSettingsItem: SettingsItem? by remember {
-        mutableStateOf(SettingsItem.SHUTTER)
+    var settingsRadioGroupSelectedSettingsRadioGroupItem: SettingsRadioGroupItem? by remember {
+        mutableStateOf(SettingsRadioGroupItem.SHUTTER)
     }
     /*var valueSelectorVisibility by remember {
         mutableStateOf(true)
     }*/
-    var settings = characteristics.settings
+
     LaunchedEffect(characteristics.settings) {
         snapshotFlow { characteristics.settings }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
@@ -240,38 +247,79 @@ fun CameraScreenSuccess(
         mutableStateOf(2131099791)
     }
     val settingsItem by remember {
-        mutableStateOf(listOf(IconRadioItem(SettingsItem.WB, "WB", 2131099791)))
+        mutableStateOf(listOf(IconRadioItem(SettingsRadioGroupItem.WB, "WB", 2131099791)))
     }
     // val radioGroupItems= listOf(VectorRadioItem(Item.WB, "WB", wb.value))
     var wbRadioGroupSelectedSettingsItem: WbItem? by remember {
         mutableStateOf(WbItem.AUTO)
     }
-    val wbRadioGroupItems: ImmutableCollection<RadioButton> =
+    var selectorRadioGroupSelectedItem: SelectorRadioGroupItem? by remember {
+        mutableStateOf(null)
+    }
+    LaunchedEffect (selectorRadioGroupSelectedItem){
+        when (selectorRadioGroupSelectedItem) {
+
+            WbItem.AUTO -> { /* обработка */ }
+            WbItem.INCANDESCENT -> { /* обработка */ }
+            WbItem.FLUORESCENT -> TODO()
+            WbItem.WARM_FLUORESCENT -> TODO()
+            WbItem.DAYLIGHT -> TODO()
+            WbItem.CLOUDY_DAYLIGHT -> TODO()
+            WbItem.TWILIGHT -> TODO()
+            WbItem.SHADE -> TODO()
+            FocusItem.MACRO -> { /* обработка */ }
+            FocusItem.CONTINUOUS -> { /* обработка */ }
+            FocusItem.TOUCH -> TODO()
+            FocusItem.INFINITE -> TODO()
+
+            null -> { /* обработка */ }
+        }
+    }
+    val wbRadioGroupItems: ImmutableCollection<RadioButton>? =
         remember(characteristics.items.wbAutoItems) {
+            characteristics.items.wbAutoItems?.let {
+
+                  //  characteristics.items.wbAutoItems
+                ImmutableCollection(
+                     listOf(
+                         IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
+                         IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
+                         IconRadioItem(WbItem.FLUORESCENT, "Auto", R.drawable.wb_incandescent),
+                         IconRadioItem(WbItem.WARM_FLUORESCENT, "Auto", R.drawable.wb_iridescent),
+                         IconRadioItem(WbItem.DAYLIGHT, "day", R.drawable.wb_shade),
+                         IconRadioItem(WbItem.CLOUDY_DAYLIGHT, "cloudy", R.drawable.wb_sunny),
+                         IconRadioItem(WbItem.TWILIGHT, "twighlight", R.drawable.wb_twilight)
+                     )
+                )
+            }
+
+        }
+
+    val focusRadioGroupItems: ImmutableCollection<RadioButton> =
+        remember {
+
+              //  characteristics.items.wbAutoItems as List<RadioButton>
             ImmutableCollection(
-                characteristics.items.wbAutoItems as List<RadioButton>
-               /* listOf(
-                    IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
-                    IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
-                    IconRadioItem(WbItem.FLUORESCENT, "Auto", R.drawable.wb_incandescent),
-                    IconRadioItem(WbItem.WARM_FLUORESCENT, "Auto", R.drawable.wb_iridescent),
-                    IconRadioItem(WbItem.DAYLIGHT, "Auto", R.drawable.wb_shade),
-                    IconRadioItem(WbItem.CLOUDY_DAYLIGHT, "Auto", R.drawable.wb_sunny),
-                    IconRadioItem(WbItem.TWILIGHT, "Auto", R.drawable.wb_twilight)
-                )*/
+                 listOf(
+                     IconRadioItem(FocusItem.MACRO, "Auto", R.drawable.macro_auto),
+                     IconRadioItem(FocusItem.CONTINUOUS, "Auto", R.drawable.continuous),
+                     IconRadioItem(FocusItem.TOUCH, "Auto", R.drawable.touch),
+                     IconRadioItem(FocusItem.INFINITE, "Auto", R.drawable.infinity),
+                 )
             )
+
         }
     val settingsRadioGroupItems: ImmutableCollection<RadioButton> = remember(settings) {
         // emptyList<TextRadioItem>()
         ImmutableCollection(
             listOf(
                 //  item
-                TextRadioItem(SettingsItem.SHUTTER, settings.shutterValue, "SHUTTER"),
-                TextRadioItem(SettingsItem.ISO, settings.isoValue, "ISO"),
-                TextRadioItem(SettingsItem.WB, settings.wbValue, "WB"),
+                TextRadioItem(SettingsRadioGroupItem.SHUTTER, settings.shutterValue, "SHUTTER"),
+                TextRadioItem(SettingsRadioGroupItem.ISO, settings.isoValue, "ISO"),
+                TextRadioItem(SettingsRadioGroupItem.WB, settings.wbValue, "WB"),
                 // VectorRadioItem(Item.WB, "WB", wb.value),
-                TextRadioItem(SettingsItem.FOCUS, settings.focusValue, "FOCUS"),
-                TextRadioItem(SettingsItem.MAGNIFIER, settings.magnifierValue, "MAGNIFIER")
+                TextRadioItem(SettingsRadioGroupItem.FOCUS, settings.focusValue, "FOCUS"),
+                TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, settings.magnifierValue, "MAGNIFIER")
 
             )
         )
@@ -282,11 +330,11 @@ fun CameraScreenSuccess(
     var autoItems by remember {
         mutableStateOf(
             mutableMapOf(
-                SettingsItem.SHUTTER to false,
-                SettingsItem.ISO to false,
-                SettingsItem.WB to false,
-                SettingsItem.FOCUS to false,
-                SettingsItem.MAGNIFIER to false
+                SettingsRadioGroupItem.SHUTTER to false,
+                SettingsRadioGroupItem.ISO to false,
+                SettingsRadioGroupItem.WB to false,
+                SettingsRadioGroupItem.FOCUS to false,
+                SettingsRadioGroupItem.MAGNIFIER to false
             )
         )
     }
@@ -295,25 +343,25 @@ fun CameraScreenSuccess(
     LaunchedEffect(autoItems) {
         snapshotFlow { settings }
             .collect {
-                if (autoItems[settingsRadioGroupSelectedSettingsItem] == true) {
-                    when (settingsRadioGroupSelectedSettingsItem) {
-                        SettingsItem.SHUTTER -> {
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
+                    when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                        SettingsRadioGroupItem.SHUTTER -> {
                             //  valueSelectorAcquiredItemIndex = settings.shutterPosition
 
                         }
 
-                        SettingsItem.ISO -> {
+                        SettingsRadioGroupItem.ISO -> {
                             //  valueSelectorAcquiredItemIndex = settings.isoPosition
                         }
 
-                        SettingsItem.WB -> {
+                        SettingsRadioGroupItem.WB -> {
                         }
 
-                        SettingsItem.FOCUS -> {
+                        SettingsRadioGroupItem.FOCUS -> {
 
                         }
 
-                        SettingsItem.MAGNIFIER -> {
+                        SettingsRadioGroupItem.MAGNIFIER -> {
 
                         }
 
@@ -338,28 +386,28 @@ fun CameraScreenSuccess(
             null//CharacteristicsUI().items.shutterItems
         )
     }
+    var selectorRadioGroupItems: ImmutableCollection<RadioButton>? by remember {
+        mutableStateOf(
+            null//CharacteristicsUI().items.shutterItems
+        )
+    }
+
     LaunchedEffect(
         key1 = items,
-        key2 = settingsRadioGroupSelectedSettingsItem
+        key2 = settingsRadioGroupSelectedSettingsRadioGroupItem
     ) {
         snapshotFlow { items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
                 isRadioGroupSelectorVisible.value = false
                 isSelectorVisible.value = true
-                selectorItems = when (settingsRadioGroupSelectedSettingsItem) {
-                    SettingsItem.SHUTTER -> {
-
-                        //    items.shutterItems
-
-
+                selectorItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                    SettingsRadioGroupItem.SHUTTER -> {
                         ImmutableCollection(items.shutterItems?.list?.map { it as SelectorItem }
                             ?: emptyList())
-
-                        //map { it.copy() }
                     }
 
-                    SettingsItem.ISO -> {
+                    SettingsRadioGroupItem.ISO -> {
                         /* items.isoItems?.let {
 
                              it?.list
@@ -369,12 +417,8 @@ fun CameraScreenSuccess(
                             ?: emptyList())
                     }
 
-                    SettingsItem.WB -> {
-                        //  items.wbItems?.map { it.copy() }
-                        /* items.wbItems?.let {
-                             it?.list
-                         }*/
-                        if (autoItems[SettingsItem.WB] == true) {
+                    SettingsRadioGroupItem.WB -> {
+                        if (autoItems[SettingsRadioGroupItem.WB] == true) {
                             isRadioGroupSelectorVisible.value = true
                             isSelectorVisible.value = false
                         }
@@ -382,15 +426,15 @@ fun CameraScreenSuccess(
                             ?: emptyList())
                     }
 
-                    SettingsItem.FOCUS -> {
-                        //  items.focusItems?.map { it.copy() }
-                        /* items.focusItems?.let {
-                             it?.list
-                         }*/
+                    SettingsRadioGroupItem.FOCUS -> {
+                        if (autoItems[SettingsRadioGroupItem.FOCUS] == true) {
+                            isRadioGroupSelectorVisible.value = true
+                            isSelectorVisible.value = false
+                        }
                         ImmutableCollection(items.focusItems ?: emptyList())
                     }
 
-                    SettingsItem.MAGNIFIER -> {
+                    SettingsRadioGroupItem.MAGNIFIER -> {
                         //  items.magnifierItems?.map { it.copy() }
                         /* items.magnifierItems?.let {
                              it?.list
@@ -406,28 +450,43 @@ fun CameraScreenSuccess(
                     }
 
                 }
+                selectorRadioGroupItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                    SettingsRadioGroupItem.SHUTTER -> {
+                        null
+                    }
+
+                    SettingsRadioGroupItem.ISO -> {
+                        null
+                    }
+
+                    SettingsRadioGroupItem.WB -> {
+                        wbRadioGroupItems
+                    }
+
+                    SettingsRadioGroupItem.FOCUS -> {
+                        focusRadioGroupItems
+                    }
+
+                    SettingsRadioGroupItem.MAGNIFIER -> {
+                        null
+                    }
+
+                    null -> null
+
+                }
             }
     }
 
 
-    var settingsRequest by remember {
-        mutableStateOf(settings)
-    }
 
-    LaunchedEffect(settingsRequest) {
-        onCharacteristicChanged(
-            characteristics.copy(
-                settings = settingsRequest
-            )
 
-        )
-    }
+
     var touchPoint by remember {
         mutableStateOf(FloatArray(0))
     }
     LaunchedEffect(touchPoint) {
         settingsRequest=settings.copy(
-            focusValue =  if (autoItems[SettingsItem.FOCUS] == true){"A"}else{settings.focusValue},
+            focusValue =  if (autoItems[SettingsRadioGroupItem.FOCUS] == true){"A"}else{settings.focusValue},
             touchPoint = touchPoint
         )
     }
@@ -435,15 +494,15 @@ fun CameraScreenSuccess(
         mutableStateOf(0)
     }
     LaunchedEffect(selectorSelectedItemIndex) {
-        settingsRadioGroupSelectedSettingsItem?.let {
+        settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
             autoItems = autoItems.toMutableMap().apply {
                 compute(it) { _, value -> false }
             }
         }
 
-        settingsRequest = when (settingsRadioGroupSelectedSettingsItem) {
-            SettingsItem.SHUTTER -> {
-                if (autoItems[settingsRadioGroupSelectedSettingsItem] == false) {
+        settingsRequest = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+            SettingsRadioGroupItem.SHUTTER -> {
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == false) {
                     characteristics.settings.copy(
                         shutterValue = characteristics.items.shutterItems?.list?.get(
                             selectorSelectedItemIndex
@@ -457,8 +516,8 @@ fun CameraScreenSuccess(
                 } ?: run { settingsRequest.copy() }*/
             }
 
-            SettingsItem.ISO -> {
-                if (autoItems[settingsRadioGroupSelectedSettingsItem] == false) {
+            SettingsRadioGroupItem.ISO -> {
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == false) {
                     characteristics.settings.copy(
                         isoValue = characteristics.items.isoItems?.list?.get(
                             selectorSelectedItemIndex
@@ -474,8 +533,8 @@ fun CameraScreenSuccess(
                   } ?: run { settingsRequest.copy() }*/
             }
 
-            SettingsItem.WB -> {
-                if (autoItems[settingsRadioGroupSelectedSettingsItem] == false) {
+            SettingsRadioGroupItem.WB -> {
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == false) {
                     /* val tmp=characteristics.items.wbItems?.list?.get(
                          selectorSelectedItemIndex
                      )?.value?.toInt()*/
@@ -493,8 +552,8 @@ fun CameraScreenSuccess(
                  } ?: run { settings.copy() }*/
             }
 
-            SettingsItem.FOCUS -> {
-                if (autoItems[settingsRadioGroupSelectedSettingsItem] == false) {
+            SettingsRadioGroupItem.FOCUS -> {
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == false) {
                     characteristics.settings.copy(
                         focusValue = characteristics.items.focusItems?.get(
                             selectorSelectedItemIndex
@@ -510,7 +569,7 @@ fun CameraScreenSuccess(
                  } ?: run { settings.copy() }*/
             }
 
-            SettingsItem.MAGNIFIER -> {
+            SettingsRadioGroupItem.MAGNIFIER -> {
                 /* selectorItems?.get(selectorSelectedItemIndex)?.text?.let {
                      magnifier = it
                      renderer.configureMagnifier(
@@ -529,7 +588,14 @@ fun CameraScreenSuccess(
         }
 
     }
+    LaunchedEffect(settingsRequest) {
+        onCharacteristicChanged(
+            characteristics.copy(
+                settings = settingsRequest
+            )
 
+        )
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -657,7 +723,7 @@ fun CameraScreenSuccess(
                 ),
             items = settingsRadioGroupItems,
             onOptionSelected = { value ->
-                settingsRadioGroupSelectedSettingsItem = value as SettingsItem?
+                settingsRadioGroupSelectedSettingsRadioGroupItem = value as SettingsRadioGroupItem?
 
                 /*  value?.let { valueSelectorVisibility = true }
                       ?: run { valueSelectorVisibility = false }*/
@@ -685,36 +751,10 @@ fun CameraScreenSuccess(
             }
         )
 
-
-        /*   DropDown(
-               isOpen,
-               modifier = Modifier
-                   .fillMaxWidth()
-                   .wrapContentHeight()
-               //   .wrapContentHeight()
-           ) {
-               ValueSelector(
-                   items = valueSelectorItems,
-                   adapter = adapter,
-                   onSelectedItemChanged = { index ->
-                       valueSelectorItems?.let {
-                           for (i in it.indices) {
-                               it[i].passed = i <= index
-                           }
-                       }
-
-
-
-                   }
-               )
-           }*/
-        /////////////////////magnifier
-
-
-        //   }
-
         //////////////////////////bottom buttons
         var isCheck by remember { mutableStateOf(false) }
+
+
         Column(
             modifier = Modifier
                 .padding(8.dp)
@@ -728,12 +768,79 @@ fun CameraScreenSuccess(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ///////////auto
-                VectorShadow(
-                    modifier = Modifier
+                val mod by remember {
+                    mutableStateOf(
+                        Modifier
+                            .size(32.dp)
+                            .clickable {
+                                settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
+                                    autoItems = autoItems
+                                        .toMutableMap()
+                                        .apply {
+                                            compute(it) { _, value -> !(value ?: false) }
+                                        }
+                                }
+                                isRadioGroupSelectorVisible.value = false
+                                isSelectorVisible.value = true
+                                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
 
-                        .size(32.dp)
+
+                                    settingsRequest = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                                        SettingsRadioGroupItem.SHUTTER -> {
+
+                                            settingsRequest.copy(
+                                                shutterValue = ""
+                                            )
+                                        }
+
+                                        SettingsRadioGroupItem.ISO -> {
+                                            settingsRequest.copy(
+                                                isoValue = ""
+                                            )
+
+                                        }
+
+                                        SettingsRadioGroupItem.WB -> {
+                                            isRadioGroupSelectorVisible.value = true
+                                            isSelectorVisible.value = false
+                                            settings.copy(wbValue = "")
+
+                                        }
+
+                                        SettingsRadioGroupItem.FOCUS -> {
+                                            isRadioGroupSelectorVisible.value = true
+                                            isSelectorVisible.value = false
+                                            settings.copy(
+                                                focusValue = ""
+                                            )
+
+                                        }
+
+                                        SettingsRadioGroupItem.MAGNIFIER -> {
+
+                                            settings.copy(
+                                                magnifierPosition = 0
+                                            )
+
+                                        }
+
+                                        null -> settings.copy()
+
+                                    }
+
+                                }
+
+                                //car=car.copy()
+
+                            }
+                    )
+                }
+                VectorShadow(
+                    modifier = mod
+
+                       /* .size(32.dp)
                         .clickable {
-                            settingsRadioGroupSelectedSettingsItem?.let {
+                            settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
                                 autoItems = autoItems
                                     .toMutableMap()
                                     .apply {
@@ -742,58 +849,59 @@ fun CameraScreenSuccess(
                             }
                             isRadioGroupSelectorVisible.value = false
                             isSelectorVisible.value = true
-                            if (autoItems[settingsRadioGroupSelectedSettingsItem] == true) {
+                            if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
 
 
-                                settingsRequest = when (settingsRadioGroupSelectedSettingsItem) {
-                                    SettingsItem.SHUTTER -> {
+                                settingsRequest =
+                                    when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                                        SettingsRadioGroupItem.SHUTTER -> {
 
-                                        settingsRequest.copy(
-                                            shutterValue = ""
-                                        )
+                                            settingsRequest.copy(
+                                                shutterValue = ""
+                                            )
+                                        }
+
+                                        SettingsRadioGroupItem.ISO -> {
+                                            settingsRequest.copy(
+                                                isoValue = ""
+                                            )
+
+                                        }
+
+                                        SettingsRadioGroupItem.WB -> {
+                                            isRadioGroupSelectorVisible.value = true
+                                            isSelectorVisible.value = false
+                                            settings.copy(wbValue = "")
+
+                                        }
+
+                                        SettingsRadioGroupItem.FOCUS -> {
+                                            isRadioGroupSelectorVisible.value = true
+                                            isSelectorVisible.value = false
+                                            settings.copy(
+                                                focusValue = ""
+                                            )
+
+                                        }
+
+                                        SettingsRadioGroupItem.MAGNIFIER -> {
+
+                                            settings.copy(
+                                                magnifierPosition = 0
+                                            )
+
+                                        }
+
+                                        null -> settings.copy()
+
                                     }
-
-                                    SettingsItem.ISO -> {
-                                        settingsRequest.copy(
-                                            isoValue = ""
-                                        )
-
-                                    }
-
-                                    SettingsItem.WB -> {
-                                        isRadioGroupSelectorVisible.value = true
-                                        isSelectorVisible.value = false
-                                        settings.copy(wbValue = "")
-
-                                    }
-
-                                    SettingsItem.FOCUS -> {
-                                        isRadioGroupSelectorVisible.value = true
-                                        isSelectorVisible.value = false
-                                        settings.copy(
-                                            focusValue = ""
-                                        )
-
-                                    }
-
-                                    SettingsItem.MAGNIFIER -> {
-
-                                        settings.copy(
-                                            magnifierPosition = 0
-                                        )
-
-                                    }
-
-                                    null -> settings.copy()
-
-                                }
 
                             }
 
                             //car=car.copy()
 
-                        },
-                    vectorColor = if (autoItems[settingsRadioGroupSelectedSettingsItem] == true) {
+                        }*/,
+                    vectorColor = if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
                         Color.Green
                     } else {
                         Color.White
@@ -826,24 +934,24 @@ fun CameraScreenSuccess(
                         ValueSelector(
                             modifier = Modifier
                                 .height(42.dp),
-                            position = when (settingsRadioGroupSelectedSettingsItem) {
-                                SettingsItem.SHUTTER -> {
+                            position = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                                SettingsRadioGroupItem.SHUTTER -> {
                                     settings.shutterPosition
                                 }
 
-                                SettingsItem.ISO -> {
+                                SettingsRadioGroupItem.ISO -> {
                                     settings.isoPosition
                                 }
 
-                                SettingsItem.WB -> {
+                                SettingsRadioGroupItem.WB -> {
                                     settings.wbPosition
                                 }
 
-                                SettingsItem.FOCUS -> {
+                                SettingsRadioGroupItem.FOCUS -> {
                                     settings.focusPosition
                                 }
 
-                                SettingsItem.MAGNIFIER -> {
+                                SettingsRadioGroupItem.MAGNIFIER -> {
                                     magnifierPosition
                                 }
 
@@ -873,14 +981,14 @@ fun CameraScreenSuccess(
                             modifier = Modifier
                                 .padding(4.dp)
                                 .fillMaxWidth(),
-                            items = wbRadioGroupItems,
-                            selectedOption = wbRadioGroupSelectedSettingsItem as Item,
+                            items =selectorRadioGroupItems, //wbRadioGroupItems,
+                           selectedOption =selectorRadioGroupSelectedItem,// wbRadioGroupSelectedSettingsItem as Item,
                             onOptionSelected = { value ->
-                                 wbRadioGroupSelectedSettingsItem = value as WbItem?
-                                settingsRequest=characteristics.settings.copy(
+                                selectorRadioGroupSelectedItem = value as SelectorRadioGroupItem
+                              /*  settingsRequest=characteristics.settings.copy(
                                     wbValue = "",
                                     wbAutoMode = value?.ordinal
-                                    )
+                                    )*/
 
                             }
                         )
