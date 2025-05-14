@@ -170,8 +170,8 @@ fun ValueSelector(
     }*/
 
 
-    val adapter by remember {
-        mutableStateOf(
+    val adapter = remember {
+
             CompositeAdapter(
                 MapImmutableCollection(
                     mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>(
@@ -180,7 +180,7 @@ fun ValueSelector(
                     )
                 ).map
             )
-        )
+
     }
     /*  val items by remember {
           mutableStateOf(
@@ -228,7 +228,7 @@ fun ValueSelector(
             .distinctUntilChanged()
             .collect {
                 isProgrammaticScroll = true
-                listState.animateScrollToItem(
+                listState.scrollToItem(
                     position,
                     scrollOffset = itemWidthPx / 2
                 )

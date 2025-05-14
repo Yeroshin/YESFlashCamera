@@ -3,7 +3,6 @@ package com.yes.camera.presentation.ui.views
 
 import android.content.Context
 import android.view.MotionEvent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,10 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
@@ -53,8 +47,8 @@ import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
+import com.yes.camera.presentation.ui.custom.compose.RecordButton
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
-import com.yes.camera.presentation.ui.custom.compose.VectorShadowT
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -768,6 +762,68 @@ fun CameraScreenSuccess(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ///////////auto
+                val autoClick = remember {
+                    {
+                        settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
+                            autoItems = autoItems
+                                .toMutableMap()
+                                .apply {
+                                    compute(it) { _, value -> !(value ?: false) }
+                                }
+                        }
+                        isRadioGroupSelectorVisible.value = false
+                        isSelectorVisible.value = true
+                        if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
+
+
+                            settingsRequest =
+                                when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                                    SettingsRadioGroupItem.SHUTTER -> {
+
+                                        settingsRequest.copy(
+                                            shutterValue = ""
+                                        )
+                                    }
+
+                                    SettingsRadioGroupItem.ISO -> {
+                                        settingsRequest.copy(
+                                            isoValue = ""
+                                        )
+
+                                    }
+
+                                    SettingsRadioGroupItem.WB -> {
+                                        isRadioGroupSelectorVisible.value = true
+                                        isSelectorVisible.value = false
+                                        settings.copy(wbValue = "")
+
+                                    }
+
+                                    SettingsRadioGroupItem.FOCUS -> {
+                                        isRadioGroupSelectorVisible.value = true
+                                        isSelectorVisible.value = false
+                                        settings.copy(
+                                            focusValue = ""
+                                        )
+
+                                    }
+
+                                    SettingsRadioGroupItem.MAGNIFIER -> {
+
+                                        settings.copy(
+                                            magnifierPosition = 0
+                                        )
+
+                                    }
+
+                                    null -> settings.copy()
+
+                                }
+
+                        }
+
+                    }
+                }
                 val mod by remember {
                     mutableStateOf(
                         Modifier
@@ -785,48 +841,49 @@ fun CameraScreenSuccess(
                                 if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
 
 
-                                    settingsRequest = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
-                                        SettingsRadioGroupItem.SHUTTER -> {
+                                    settingsRequest =
+                                        when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                                            SettingsRadioGroupItem.SHUTTER -> {
 
-                                            settingsRequest.copy(
-                                                shutterValue = ""
-                                            )
+                                                settingsRequest.copy(
+                                                    shutterValue = ""
+                                                )
+                                            }
+
+                                            SettingsRadioGroupItem.ISO -> {
+                                                settingsRequest.copy(
+                                                    isoValue = ""
+                                                )
+
+                                            }
+
+                                            SettingsRadioGroupItem.WB -> {
+                                                isRadioGroupSelectorVisible.value = true
+                                                isSelectorVisible.value = false
+                                                settings.copy(wbValue = "")
+
+                                            }
+
+                                            SettingsRadioGroupItem.FOCUS -> {
+                                                isRadioGroupSelectorVisible.value = true
+                                                isSelectorVisible.value = false
+                                                settings.copy(
+                                                    focusValue = ""
+                                                )
+
+                                            }
+
+                                            SettingsRadioGroupItem.MAGNIFIER -> {
+
+                                                settings.copy(
+                                                    magnifierPosition = 0
+                                                )
+
+                                            }
+
+                                            null -> settings.copy()
+
                                         }
-
-                                        SettingsRadioGroupItem.ISO -> {
-                                            settingsRequest.copy(
-                                                isoValue = ""
-                                            )
-
-                                        }
-
-                                        SettingsRadioGroupItem.WB -> {
-                                            isRadioGroupSelectorVisible.value = true
-                                            isSelectorVisible.value = false
-                                            settings.copy(wbValue = "")
-
-                                        }
-
-                                        SettingsRadioGroupItem.FOCUS -> {
-                                            isRadioGroupSelectorVisible.value = true
-                                            isSelectorVisible.value = false
-                                            settings.copy(
-                                                focusValue = ""
-                                            )
-
-                                        }
-
-                                        SettingsRadioGroupItem.MAGNIFIER -> {
-
-                                            settings.copy(
-                                                magnifierPosition = 0
-                                            )
-
-                                        }
-
-                                        null -> settings.copy()
-
-                                    }
 
                                 }
 
@@ -836,7 +893,8 @@ fun CameraScreenSuccess(
                     )
                 }
                 VectorShadow(
-                    modifier = mod
+                    modifier = Modifier
+                        .size(32.dp)
 
                        /* .size(32.dp)
                         .clickable {
@@ -908,6 +966,8 @@ fun CameraScreenSuccess(
                     },
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.auto,
+                    onClick = autoClick
+
                 )
 
 
@@ -1011,12 +1071,13 @@ fun CameraScreenSuccess(
                     Modifier
                         //  .padding(24.dp)
                         .size(32.dp)
-                        .clickable {
+                        /*.clickable {
                             onSettingsClick()
-                        },
+                        }*/,
                     vectorColor = Color.White,
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.settings,
+                    onClick = onSettingsClick
                 )
 
                 //////////////////camera flip
@@ -1024,15 +1085,27 @@ fun CameraScreenSuccess(
                     Modifier
                         // .padding(24.dp)
                         .size(32.dp)
-                        .clickable {
+                       /* .clickable {
 
-                        },
+                        }*/,
                     vectorColor = Color.White,
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.flip_camera_android,
                 )
                 /////capture
-                Button(
+                val startVideoRecord = remember {
+                    onStartVideoRecord
+                }
+                RecordButton(
+                    modifier = Modifier
+                        .size(96.dp),
+                    isChecked = false,
+                    onClick ={ isCheck->
+                        startVideoRecord(isCheck)
+                    }
+
+                )
+               /* Button(
 
                     border = BorderStroke(5.dp, Color.Green),
                     shape = CircleShape,
@@ -1059,7 +1132,7 @@ fun CameraScreenSuccess(
 
                 ) {
                     // Text(text = "Capture", fontSize = 40.sp)
-                }
+                }*/
             }
 
 
