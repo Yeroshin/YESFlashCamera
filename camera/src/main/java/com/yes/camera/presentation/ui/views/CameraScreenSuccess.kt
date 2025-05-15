@@ -255,16 +255,18 @@ fun CameraScreenSuccess(
 
             WbItem.AUTO -> { /* обработка */ }
             WbItem.INCANDESCENT -> { /* обработка */ }
-            WbItem.FLUORESCENT -> TODO()
-            WbItem.WARM_FLUORESCENT -> TODO()
-            WbItem.DAYLIGHT -> TODO()
-            WbItem.CLOUDY_DAYLIGHT -> TODO()
-            WbItem.TWILIGHT -> TODO()
-            WbItem.SHADE -> TODO()
+            WbItem.FLUORESCENT -> {
+
+            }
+            WbItem.WARM_FLUORESCENT -> {}
+            WbItem.DAYLIGHT -> {}
+            WbItem.CLOUDY_DAYLIGHT -> {}
+            WbItem.TWILIGHT -> {}
+            WbItem.SHADE ->{}
             FocusItem.MACRO -> { /* обработка */ }
             FocusItem.CONTINUOUS -> { /* обработка */ }
-            FocusItem.TOUCH -> TODO()
-            FocusItem.INFINITE -> TODO()
+            FocusItem.TOUCH -> {}
+            FocusItem.INFINITE -> {}
 
             null -> { /* обработка */ }
         }
@@ -333,7 +335,7 @@ fun CameraScreenSuccess(
         )
     }
     val isSelectorVisible = remember { mutableStateOf(true) }
-    val isRadioGroupSelectorVisible = remember { mutableStateOf(false) }
+    var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
     LaunchedEffect(autoItems) {
         snapshotFlow { settings }
             .collect {
@@ -393,7 +395,7 @@ fun CameraScreenSuccess(
         snapshotFlow { items }
             .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
-                isRadioGroupSelectorVisible.value = false
+                isRadioGroupSelectorVisible = false
                 isSelectorVisible.value = true
                 selectorItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
                     SettingsRadioGroupItem.SHUTTER -> {
@@ -413,7 +415,7 @@ fun CameraScreenSuccess(
 
                     SettingsRadioGroupItem.WB -> {
                         if (autoItems[SettingsRadioGroupItem.WB] == true) {
-                            isRadioGroupSelectorVisible.value = true
+                            isRadioGroupSelectorVisible = true
                             isSelectorVisible.value = false
                         }
                         ImmutableCollection(items.wbManualItems?.list?.map { it as SelectorItem }
@@ -422,7 +424,7 @@ fun CameraScreenSuccess(
 
                     SettingsRadioGroupItem.FOCUS -> {
                         if (autoItems[SettingsRadioGroupItem.FOCUS] == true) {
-                            isRadioGroupSelectorVisible.value = true
+                            isRadioGroupSelectorVisible = true
                             isSelectorVisible.value = false
                         }
                         ImmutableCollection(items.focusItems ?: emptyList())
@@ -771,7 +773,7 @@ fun CameraScreenSuccess(
                                     compute(it) { _, value -> !(value ?: false) }
                                 }
                         }
-                        isRadioGroupSelectorVisible.value = false
+                        isRadioGroupSelectorVisible = false
                         isSelectorVisible.value = true
                         if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
 
@@ -793,14 +795,14 @@ fun CameraScreenSuccess(
                                     }
 
                                     SettingsRadioGroupItem.WB -> {
-                                        isRadioGroupSelectorVisible.value = true
+                                        isRadioGroupSelectorVisible = true
                                         isSelectorVisible.value = false
                                         settings.copy(wbValue = "")
 
                                     }
 
                                     SettingsRadioGroupItem.FOCUS -> {
-                                        isRadioGroupSelectorVisible.value = true
+                                        isRadioGroupSelectorVisible = true
                                         isSelectorVisible.value = false
                                         settings.copy(
                                             focusValue = ""
@@ -836,7 +838,7 @@ fun CameraScreenSuccess(
                                             compute(it) { _, value -> !(value ?: false) }
                                         }
                                 }
-                                isRadioGroupSelectorVisible.value = false
+                                isRadioGroupSelectorVisible = false
                                 isSelectorVisible.value = true
                                 if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
 
@@ -858,14 +860,14 @@ fun CameraScreenSuccess(
                                             }
 
                                             SettingsRadioGroupItem.WB -> {
-                                                isRadioGroupSelectorVisible.value = true
+                                                isRadioGroupSelectorVisible = true
                                                 isSelectorVisible.value = false
                                                 settings.copy(wbValue = "")
 
                                             }
 
                                             SettingsRadioGroupItem.FOCUS -> {
-                                                isRadioGroupSelectorVisible.value = true
+                                                isRadioGroupSelectorVisible = true
                                                 isSelectorVisible.value = false
                                                 settings.copy(
                                                     focusValue = ""
@@ -1036,13 +1038,13 @@ fun CameraScreenSuccess(
                         )
                     }
                     //selector radio group
-                    if (isRadioGroupSelectorVisible.value) {
+                    if (isRadioGroupSelectorVisible) {
                         RadioGroup(
                             modifier = Modifier
                                 .padding(4.dp)
                                 .fillMaxWidth(),
                             items =selectorRadioGroupItems, //wbRadioGroupItems,
-                           selectedOption =selectorRadioGroupSelectedItem,// wbRadioGroupSelectedSettingsItem as Item,
+                          selectedOption =selectorRadioGroupSelectedItem,// wbRadioGroupSelectedSettingsItem as Item,
                             onOptionSelected = { value ->
                                 selectorRadioGroupSelectedItem = value as SelectorRadioGroupItem
                               /*  settingsRequest=characteristics.settings.copy(

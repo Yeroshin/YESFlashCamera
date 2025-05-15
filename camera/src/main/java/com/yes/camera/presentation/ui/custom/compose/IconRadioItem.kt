@@ -23,14 +23,46 @@ class IconRadioItem(
    // var resId by mutableStateOf(resId)
     @Composable
     override fun item() {
-        Column(
+     /*  resId?.let {
+           Text(
+               textAlign = TextAlign.Start,
+               text ="hell",
+               style = TextStyle(
+                   color = Color.White,
+                   fontSize = 8.sp,
+                   shadow = Shadow(
+                       color = Color.DarkGray,
+                       offset = Offset(5.0f, 5.0f),
+                       blurRadius = 5f
+                   )
+               )
+           )
+           VectorShadow(
+               Modifier
+                   // .alpha(0.3f)
+                   .size(24.dp),
+               vectorColor = Color.White,
+               shadowColor = Color.DarkGray,
+               resId = it
+           )
+       }*/
+       VectorShadow(
+           Modifier
+               // .alpha(0.3f)
+               .size(24.dp),
+           vectorColor = Color.White,
+           shadowColor = Color.DarkGray,
+           resId = resId!!
+       )
+       /////////////
+      /*  Column(
             //  modifier = Modifier
             horizontalAlignment = Alignment.CenterHorizontally
 
         ) {
-          /*  Text(
+            Text(
                 textAlign = TextAlign.Start,
-                text = title,
+                text ="hell",
                 style = TextStyle(
                     color = Color.White,
                     fontSize = 8.sp,
@@ -40,12 +72,12 @@ class IconRadioItem(
                         blurRadius = 5f
                     )
                 )
-            )*/
+            )
            /* Box(
                 modifier = Modifier
                     .size(20.dp)
             ){*/
-                resId?.let {
+              /*  resId?.let {
                     VectorShadow(
                         Modifier
                            // .alpha(0.3f)
@@ -54,10 +86,10 @@ class IconRadioItem(
                         shadowColor = Color.DarkGray,
                         resId = it
                     )
-                }
+                }*/
            // }
 
-        }
+        }*/
     }
 }
 @Composable

@@ -54,7 +54,7 @@ fun VectorShadow(
     shadowOffsetX: Float = 0.95f,
     shadowOffsetY: Float = 0.95f,
     scale: Float = 0.85f,
-    onClick: () -> Unit = {}
+    onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val pathData = remember(resId) {
@@ -70,10 +70,13 @@ fun VectorShadow(
     }
    /* val pathShadow = remember(pathData) { PathParser().parsePathString(pathData).toPath() }
     val pathVector = remember(pathData){PathParser().parsePathString(pathData).toPath()}*/
+    val canvasModifier = onClick?.let {
+        modifier.clickable { onClick() }
+    }?:run{
+        modifier
+    }.fillMaxSize()
     Canvas(
-        modifier = modifier
-            .clickable { onClick() }
-            .fillMaxSize()
+        modifier = canvasModifier
         /* .size(resSize)
           .background(color = Color.Green)*/
 

@@ -43,14 +43,14 @@ fun RadioGroup(
     modifier: Modifier,
     onOptionSelected: ((value: Item?) -> Unit),
     items: ImmutableCollection<RadioButton>? = null,
-    selectedOption: Item?=null //=  items?.list?.get(0)?.id,
+    selectedOption: Item? = items?.list?.get(0)?.id,
 
     ) {
     /*  var items by remember{
           mutableStateOf(items)
       }*/
 
-    var selected: Item? by  remember{
+    var selected by remember {
         mutableStateOf(selectedOption)
     }
 
@@ -84,48 +84,81 @@ fun RadioGroup(
                 Box(
 
                     modifier = Modifier
-                        .wrapContentWidth()
-                        // .width(72.dp)
-                        // .background(Color.Red)
-                        .wrapContentHeight(),
-                    contentAlignment = Alignment.Center
-
-                ) {
-                    /*  this@Row.AnimatedVisibility(
-                    visible = visibleStates[index].value,
-                    enter = fadeIn() + scaleIn()
-                ) {*/
-                    Row(
-                        Modifier
-                            /* .alpha(
-                                if (item.id == selected) {
-                                    1.0f
+                        .alpha(
+                            if (item.id == selected) {
+                                1.0f
+                            } else {
+                                0.5f
+                            }
+                        )
+                        .selectable(
+                            selected = (item.id == selected),
+                            onClick = {
+                               /*  if (item.id == selected) {
+                                    selected = null
+                                    onOptionSelected(null)
                                 } else {
-                                    0.5f
-                                }
-                            )*/
-                            .selectable(
-                                selected = (item.id == selected),
-                                onClick = {
-                                    /* if (item.id == selectedOption.value) {
-                                        selectedOption.value = null
-                                        onOptionSelected(null)
-                                    } else {
-                                        selectedOption.value = item.id
-                                        onOptionSelected(item.id)
-                                    }*/
                                     selected = item.id
                                     onOptionSelected(item.id)
-                                },
-                                role = Role.RadioButton
-                            )
-                            .padding(horizontal = 8.dp),
-                        // horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        item.item()
-                    }
-                }
+                                }*/
+                                selected = item.id
+                                onOptionSelected(item.id)
+                            },
+                            role = Role.RadioButton
+                        )
+                        .padding(horizontal = 8.dp),
+                    // horizontalAlignment = Alignment.CenterHorizontally
+
+                 //   . wrapContentWidth ()
+                    // .width(72.dp)
+                    // .background(Color.Red)
+                //    .wrapContentHeight(),
+            //    contentAlignment = Alignment.Center
+
+                ){
+                item.item()
+            }
             }
         }
     }
 }
+
+/*   {
+       /*  this@Row.AnimatedVisibility(
+       visible = visibleStates[index].value,
+       enter = fadeIn() + scaleIn()
+   ) {*/
+       Row(
+           Modifier
+                .alpha(
+                   if (item.id == selected) {
+                       1.0f
+                   } else {
+                       0.5f
+                   }
+               )
+               .selectable(
+                   selected = (item.id == selected),
+                   onClick = {
+                       /* if (item.id == selectedOption.value) {
+                           selectedOption.value = null
+                           onOptionSelected(null)
+                       } else {
+                           selectedOption.value = item.id
+                           onOptionSelected(item.id)
+                       }*/
+                       selected = item.id
+                       onOptionSelected(item.id)
+                   },
+                   role = Role.RadioButton
+               )
+               .padding(horizontal = 8.dp),
+           // horizontalAlignment = Alignment.CenterHorizontally
+       ) {
+           item.item()
+       }
+   }
+}
+}
+}
+}*/
