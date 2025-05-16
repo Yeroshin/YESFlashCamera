@@ -19,53 +19,56 @@ import com.yes.camera.presentation.model.SettingsRadioGroupItem
 
 class TextRadioItem (
     id: SettingsRadioGroupItem,
-    var value: String,
+    var value: String?,
     private val title: String,
     ) : RadioButton(id) {
         @Composable
         override fun item() {
-            Column(
-                //  modifier = Modifier
-                horizontalAlignment = Alignment.Start
+            value?.let {
+                Column(
+                    //  modifier = Modifier
+                    horizontalAlignment = Alignment.Start
 
-            ) {
-                Text(
-                    textAlign = TextAlign.Start,
-                    text = title,
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 8.sp,
-                        shadow = Shadow(
-                            color = Color.DarkGray,
-                            offset = Offset(5.0f, 5.0f),
-                            blurRadius = 5f
+                ) {
+                    Text(
+                        textAlign = TextAlign.Start,
+                        text = title,
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            shadow = Shadow(
+                                color = Color.DarkGray,
+                                offset = Offset(5.0f, 5.0f),
+                                blurRadius = 5f
+                            )
                         )
                     )
-                )
-                val minFontSize: TextUnit = 8.sp
-                val initialFontSize=16.sp
-                var fontSize by remember { mutableStateOf(initialFontSize) }
+                    val minFontSize: TextUnit = 8.sp
+                    val initialFontSize=16.sp
+                    var fontSize by remember { mutableStateOf(initialFontSize) }
 
-                Text(
-                    maxLines = 1,
-                    text = value,
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = fontSize,
-                        shadow = Shadow(
-                            color = Color.DarkGray,
-                            offset = Offset(5.0f, 5.0f),
-                            blurRadius = 5f
-                        )
-                    ),
-                    onTextLayout = { layoutResult ->
-                        if (layoutResult.hasVisualOverflow) {
-                            val newSize = fontSize.value * 0.95f
-                            fontSize = if (newSize.sp >= minFontSize) newSize.sp else minFontSize
-                        }
-                    },
-                )
+                    Text(
+                        maxLines = 1,
+                        text = it,
+                        style = TextStyle(
+                            color = Color.White,
+                            fontSize = fontSize,
+                            shadow = Shadow(
+                                color = Color.DarkGray,
+                                offset = Offset(5.0f, 5.0f),
+                                blurRadius = 5f
+                            )
+                        ),
+                        onTextLayout = { layoutResult ->
+                            if (layoutResult.hasVisualOverflow) {
+                                val newSize = fontSize.value * 0.95f
+                                fontSize = if (newSize.sp >= minFontSize) newSize.sp else minFontSize
+                            }
+                        },
+                    )
+                }
             }
+
 
 
 

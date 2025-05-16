@@ -180,8 +180,8 @@ class MapperUI(
 
 
        }
-        val wbValue=characteristics.wbManualValue?.toString()?:"A"
-        val wbPosition=characteristics.wbManualValue?.let {
+        val wbValue=characteristics.wbValue?.toString()?:"A"
+        val wbPosition=characteristics.wbValue?.let {
             val closestValue=standardWbValues.minByOrNull { value->
                 abs(value - it)
             }
@@ -427,17 +427,17 @@ class MapperUI(
         val shutterValue = standardShutterSpeeds.entries.firstOrNull {
             it.value == characteristics.settings.shutterValue
         }?.key
-          val wbValue=characteristics.settings.wbValue.filter { it.isDigit() }.toIntOrNull()
-        val wbAutoMode=wbValue?.let{null}?:run {
-            when(characteristics.settings.wbAutoMode){
-                WbItem.AUTO.ordinal -> CONTROL_AWB_MODE_AUTO
-                WbItem.INCANDESCENT.ordinal->CONTROL_AWB_MODE_INCANDESCENT
-                WbItem.FLUORESCENT.ordinal->CONTROL_AWB_MODE_FLUORESCENT
-                WbItem.WARM_FLUORESCENT.ordinal->CONTROL_AWB_MODE_WARM_FLUORESCENT
-                WbItem.DAYLIGHT.ordinal->CONTROL_AWB_MODE_DAYLIGHT
-                WbItem.CLOUDY_DAYLIGHT.ordinal->CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
-                WbItem.TWILIGHT.ordinal->CONTROL_AWB_MODE_TWILIGHT
-                WbItem.SHADE.ordinal->CONTROL_AWB_MODE_SHADE
+          val wbValue=characteristics.settings.wbValue?.filter { it.isDigit() }?.toIntOrNull()
+        val wbMode=wbValue?.let{null}?:run {
+            when(characteristics.settings.wbMode){
+                WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
+                WbItem.INCANDESCENT->CONTROL_AWB_MODE_INCANDESCENT
+                WbItem.FLUORESCENT->CONTROL_AWB_MODE_FLUORESCENT
+                WbItem.WARM_FLUORESCENT->CONTROL_AWB_MODE_WARM_FLUORESCENT
+                WbItem.DAYLIGHT->CONTROL_AWB_MODE_DAYLIGHT
+                WbItem.CLOUDY_DAYLIGHT->CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+                WbItem.TWILIGHT->CONTROL_AWB_MODE_TWILIGHT
+                WbItem.SHADE->CONTROL_AWB_MODE_SHADE
                 else -> {null}
             }
         }
@@ -462,14 +462,14 @@ class MapperUI(
 
         // val focusValue = characteristics.settings.focusValue.toInt()
         val tem = shutterValue
-        val te = characteristics.settings.focusValue.toFloatOrNull()
+        val te = characteristics.settings.focusValue?.toFloatOrNull()
         val focusValue = te
         val t = Characteristics(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
-            wbManualValue = wbValue,
-            wbSustemValue = wbAutoMode,
+            wbValue = wbValue,
+            wbMode = wbMode,
             focusValue = focusValue,
             minFocusValue = 0f,
             shutterRange = LongRange(0, 0),

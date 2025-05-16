@@ -509,7 +509,7 @@ class CameraRepository(
 
                 current?.copy(
                     focusValue = focusDistance,
-                    wbManualValue = kelvin,
+                    wbValue = kelvin,
                     shutterValue = exposureTime ?: autoShutter,
                     // shutterValue = Random.nextLong(16_000_000L),
                     isoValue = iso ?: autoIso
@@ -1632,10 +1632,10 @@ class CameraRepository(
 
                 /////wb
 
-                previousWbValue = characteristics.wbManualValue
+                previousWbValue = characteristics.wbValue
 
                 //  wb=true
-                characteristics.wbManualValue?.let { wb ->
+                characteristics.wbValue?.let { wb ->
                     ////////////////////////////
                     val rggb = ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
                     val kelvin = ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
@@ -1660,7 +1660,7 @@ class CameraRepository(
                     )
                 } ?: run {
                     wb = true
-                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbSustemValue)
+                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode)
                     //  set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_FLUORESCENT)
                     // set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
                     //  set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)

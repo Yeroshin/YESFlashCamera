@@ -27,13 +27,13 @@ data class Settings(
     val isoValue: String = "1",
     val isoPosition: Int = 0,
 
-    val wbValue: String = "A",
+    val wbValue: String? = null,
     val wbPosition: Int = 0,
-    val wbAutoMode:Int?=1,
+    val wbMode:WbItem? = null,
 
-    val focusValue: String = "A",
+    val focusValue: String? = null,
     val focusPosition: Int = 0,
-    val focusMode:Int?=null,
+    val focusMode:FocusItem?=null,
 
     val magnifierValue: String = "1",
     val magnifierPosition: Int = 0,

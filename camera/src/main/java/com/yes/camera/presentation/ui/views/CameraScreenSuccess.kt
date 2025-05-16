@@ -251,33 +251,89 @@ fun CameraScreenSuccess(
         mutableStateOf(null)
     }
     LaunchedEffect (selectorRadioGroupSelectedItem){
-        when (selectorRadioGroupSelectedItem) {
+       settingsRequest= when (selectorRadioGroupSelectedItem) {
 
-            WbItem.AUTO -> { /* обработка */ }
-            WbItem.INCANDESCENT -> { /* обработка */ }
-            WbItem.FLUORESCENT -> {
-
+            WbItem.AUTO -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.AUTO
+                )
             }
-            WbItem.WARM_FLUORESCENT -> {}
-            WbItem.DAYLIGHT -> {}
-            WbItem.CLOUDY_DAYLIGHT -> {}
-            WbItem.TWILIGHT -> {}
-            WbItem.SHADE ->{}
-            FocusItem.MACRO -> { /* обработка */ }
-            FocusItem.CONTINUOUS -> { /* обработка */ }
-            FocusItem.TOUCH -> {}
-            FocusItem.INFINITE -> {}
-
-            null -> { /* обработка */ }
-        }
+            WbItem.INCANDESCENT -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.INCANDESCENT
+                )
+            }
+            WbItem.FLUORESCENT -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.FLUORESCENT
+                )
+            }
+            WbItem.WARM_FLUORESCENT -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.WARM_FLUORESCENT
+                )
+            }
+            WbItem.DAYLIGHT -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.DAYLIGHT
+                )
+            }
+            WbItem.CLOUDY_DAYLIGHT -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.CLOUDY_DAYLIGHT
+                )
+            }
+            WbItem.TWILIGHT -> {
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.TWILIGHT
+                )
+            }
+            WbItem.SHADE ->{
+                characteristics.settings.copy(
+                    wbValue = null,
+                    wbMode = WbItem.SHADE
+                )
+            }
+            FocusItem.MACRO -> {
+                characteristics.settings.copy(
+                    focusValue = null,
+                    focusMode = FocusItem.MACRO
+                )
+            }
+            FocusItem.CONTINUOUS -> {
+                characteristics.settings.copy(
+                    focusValue = null,
+                    focusMode = FocusItem.CONTINUOUS
+                )
+            }
+            FocusItem.TOUCH -> {
+                characteristics.settings.copy(
+                    focusValue = null,
+                    focusMode = FocusItem.TOUCH
+                )
+            }
+            FocusItem.INFINITE -> {
+                characteristics.settings.copy(
+                    focusValue = null,
+                    focusMode = FocusItem.INFINITE
+                )
+            }
+           else -> {characteristics.settings.copy()}
+       }
     }
     val wbRadioGroupItems: ImmutableCollection<RadioButton>? =
         remember(characteristics.items.wbAutoItems) {
             characteristics.items.wbAutoItems?.let {
-
-                  //  characteristics.items.wbAutoItems
                 ImmutableCollection(
-                     listOf(
+                    characteristics.items.wbAutoItems
+                    /* listOf(
                          IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
                          IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
                          IconRadioItem(WbItem.FLUORESCENT, "Auto", R.drawable.wb_incandescent),
@@ -285,7 +341,7 @@ fun CameraScreenSuccess(
                          IconRadioItem(WbItem.DAYLIGHT, "day", R.drawable.wb_shade),
                          IconRadioItem(WbItem.CLOUDY_DAYLIGHT, "cloudy", R.drawable.wb_sunny),
                          IconRadioItem(WbItem.TWILIGHT, "twighlight", R.drawable.wb_twilight)
-                     )
+                     )*/
                 )
             }
 

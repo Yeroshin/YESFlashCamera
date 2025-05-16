@@ -46,14 +46,16 @@ class IconRadioItem(
                resId = it
            )
        }*/
-       VectorShadow(
-           Modifier
-               // .alpha(0.3f)
-               .size(24.dp),
-           vectorColor = Color.White,
-           shadowColor = Color.DarkGray,
-           resId = resId!!
-       )
+       resId?.let {
+           VectorShadow(
+               Modifier
+                   // .alpha(0.3f)
+                   .size(24.dp),
+               vectorColor = Color.White,
+               shadowColor = Color.DarkGray,
+               resId = it
+           )
+       }
        /////////////
       /*  Column(
             //  modifier = Modifier
