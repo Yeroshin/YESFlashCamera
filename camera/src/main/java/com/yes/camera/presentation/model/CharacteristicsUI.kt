@@ -12,7 +12,7 @@ data class Items(
     val shutterItems: ImmutableCollection<TextItem>? = null,
     val isoItems: ImmutableCollection<TextItem>? = null,
     val wbManualItems: ImmutableCollection<TextItem>? = null,
-    val wbAutoItems: List<RadioButton>? = null,
+    val wbModeItems: List<RadioButton>? = null,
     val focusItems: List<TextItem>? = null,
     val magnifierItems: ImmutableCollection<TextItem>? = null,
 )

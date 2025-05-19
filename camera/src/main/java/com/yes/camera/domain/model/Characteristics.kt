@@ -2,16 +2,18 @@ package com.yes.camera.domain.model
 
 
 data class Characteristics(
-    val isoValue:Int?=0,
-    val isoRange: IntRange= IntRange(0,0),
-    val shutterValue:Long?=0L,
-    val shutterRange: LongRange=LongRange(0L,0L),
-    val wbValue:Int?=null,
-    val wbMode:Int?=null,
-  //  val wbManualItems: List<Int> = emptyList(),
-    val wbItems: IntArray?=null,
-    val focusValue:Float?=null,
-    val minFocusValue:Float=0f,
-    val resolutions:List<Dimensions> = emptyList(),
+    val isoValue: Int? = null,
+    val isoRange: IntRange = IntRange(0, 0),
+    val shutterValue: Long? = null,
+    val shutterRange: LongRange = LongRange(0L, 0L),
+    val wbValue: Int? = null,
+    val wbMode: Int? = null,
+    //  val wbManualItems: List<Int> = emptyList(),
+    val wbItems: IntArray? = null,
+    val focusValue: Float? = null,
+    val focusMode: Int? = null,
+    val minFocusValue: Float = 0f,
+    val maxFocusValue: Float = 0f,
+    val resolutions: List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null
 )

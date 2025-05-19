@@ -401,7 +401,7 @@ class CameraRepository(
         val exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocusDistance =
             characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
-        val minFocus = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+        val maxFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
 
         /////////////////
         val availablePixelModes =
@@ -423,8 +423,8 @@ class CameraRepository(
             shutterValue = 0,
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
             wbItems = awbModes,
-            focusValue = 0F,
-            minFocusValue = minFocusDistance ?: 0f,
+            minFocusValue = minFocusDistance?:0f,
+            maxFocusValue = maxFocusDistance?:0f,
             resolutions = allSizes?.map {
                 Dimensions(
                     it.width, it.height
@@ -1659,8 +1659,11 @@ class CameraRepository(
                         CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
                     )
                 } ?: run {
-                    wb = true
-                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode)
+                    characteristics.wbMode?.let {
+                        wb = true
+                        set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode)
+                    }
+
                     //  set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_FLUORESCENT)
                     // set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
                     //  set(CaptureRequest.COLOR_CORRECTION_MODE, COLOR_CORRECTION_MODE_FAST)
@@ -1759,8 +1762,8 @@ class CameraRepository(
             }
         }
         /////////////////////////////////////////focus
-        characteristics.focusValue?:run {
-            if (characteristics.touchPoint!=touchPoint){
+        characteristics.focusValue?.let {
+            if (!characteristics.touchPoint.contentEquals(touchPoint)){
                 touchPoint=characteristics.touchPoint
                 characteristics.touchPoint?.let {touchPoint->
 

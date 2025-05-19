@@ -1,5 +1,7 @@
 package com.yes.camera.presentation.mapper
 
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_EDOF
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_MACRO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
@@ -11,6 +13,7 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
+import com.yes.camera.presentation.model.FocusItem
 import com.yes.camera.presentation.model.Items
 import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.TextItem
@@ -95,6 +98,10 @@ class MapperUI(
         CONTROL_AWB_MODE_SHADE
 
     )*/
+   private fun generateFocusValues(min: Float, max: Float, step: Float): List<Float> {
+       val size = ((max - min) / step).toInt() + 1
+       return List(size) { i -> min + i * step }
+   }
     private val standardFocusValues=listOf(
        0.2F,
        1F,
@@ -187,13 +194,13 @@ class MapperUI(
             }
             standardWbValues.indexOf(closestValue)
         }?:0
-
+        val focusValues=generateFocusValues(characteristics.minFocusValue,characteristics.maxFocusValue,1f)
         val focusValue=characteristics.focusValue?.toString()?:"A"
         val focusPosition=characteristics.focusValue?.let {
-            val closestValue=standardFocusValues.minByOrNull { value->
+            val closestValue=focusValues.minByOrNull { value->
                 abs(value - it)
             }
-            standardFocusValues.indexOf(closestValue)
+            focusValues.indexOf(closestValue)
         }?:0
         val items = Items(
             shutterItems = ImmutableCollection(
@@ -237,7 +244,7 @@ class MapperUI(
                     )
                 }
             ),
-            wbAutoItems = characteristics.wbItems?.toList()?.mapNotNull { mode->
+            wbModeItems = characteristics.wbItems?.toList()?.mapNotNull { mode->
 
                 when(mode){
                     CONTROL_AWB_MODE_AUTO->{
@@ -270,7 +277,7 @@ class MapperUI(
 
 
             },
-            focusItems =standardFocusValues.map {
+            focusItems =focusValues.map {
                 TextItem(it.toString())
             },
 
@@ -428,7 +435,7 @@ class MapperUI(
             it.value == characteristics.settings.shutterValue
         }?.key
           val wbValue=characteristics.settings.wbValue?.filter { it.isDigit() }?.toIntOrNull()
-        val wbMode=wbValue?.let{null}?:run {
+        val wbMode=wbValue?:run {
             when(characteristics.settings.wbMode){
                 WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
                 WbItem.INCANDESCENT->CONTROL_AWB_MODE_INCANDESCENT
@@ -462,8 +469,16 @@ class MapperUI(
 
         // val focusValue = characteristics.settings.focusValue.toInt()
         val tem = shutterValue
-        val te = characteristics.settings.focusValue?.toFloatOrNull()
-        val focusValue = te
+        val focusValue = characteristics.settings.focusValue?.toFloatOrNull()
+        val focusMode=focusValue?.let {
+            when(characteristics.settings.focusMode){
+                FocusItem.MACRO -> CONTROL_AF_MODE_MACRO
+                FocusItem.CONTINUOUS -> TODO()
+                FocusItem.TOUCH -> null
+                FocusItem.INFINITE -> CONTROL_AF_MODE_EDOF
+                null -> null
+            }
+        }
         val t = Characteristics(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
@@ -471,7 +486,7 @@ class MapperUI(
             wbValue = wbValue,
             wbMode = wbMode,
             focusValue = focusValue,
-            minFocusValue = 0f,
+            focusMode = focusMode,
             shutterRange = LongRange(0, 0),
             resolutions = emptyList(),
             touchPoint = characteristics.settings.touchPoint

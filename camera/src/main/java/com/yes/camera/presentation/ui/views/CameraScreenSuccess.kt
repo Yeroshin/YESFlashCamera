@@ -329,10 +329,10 @@ fun CameraScreenSuccess(
        }
     }
     val wbRadioGroupItems: ImmutableCollection<RadioButton>? =
-        remember(characteristics.items.wbAutoItems) {
-            characteristics.items.wbAutoItems?.let {
+        remember(characteristics.items.wbModeItems) {
+            characteristics.items.wbModeItems?.let {
                 ImmutableCollection(
-                    characteristics.items.wbAutoItems
+                    characteristics.items.wbModeItems
                     /* listOf(
                          IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
                          IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
