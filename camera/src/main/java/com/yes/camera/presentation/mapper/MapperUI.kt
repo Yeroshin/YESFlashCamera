@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.mapper
 
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_EDOF
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_MACRO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
@@ -10,6 +11,7 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
+import androidx.compose.ui.util.fastMapNotNull
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
@@ -469,16 +471,30 @@ class MapperUI(
 
         // val focusValue = characteristics.settings.focusValue.toInt()
         val tem = shutterValue
-        val focusValue = characteristics.settings.focusValue?.toFloatOrNull()
-        val focusMode=focusValue?.let {
-            when(characteristics.settings.focusMode){
-                FocusItem.MACRO -> CONTROL_AF_MODE_MACRO
-                FocusItem.CONTINUOUS -> TODO()
-                FocusItem.TOUCH -> null
-                FocusItem.INFINITE -> CONTROL_AF_MODE_EDOF
-                null -> null
-            }
-        }
+        var focusMode:Int?=null
+        val focusValue:Float? = characteristics.settings.focusValue?.toFloatOrNull()
+            ?: when(characteristics.settings.focusMode){
+                    FocusItem.MACRO -> {
+                        characteristics.items.focusItems?.fastMapNotNull {
+                            it.text.toFloatOrNull()
+                        }?.maxOrNull()
+
+                    }
+                    FocusItem.CONTINUOUS -> {
+                        focusMode= CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                        null
+                    }
+                    FocusItem.TOUCH -> {
+                        focusMode= -1
+                        null
+                    }
+                    FocusItem.INFINITE ->characteristics.items.focusItems?.fastMapNotNull {
+                        it.text.toFloatOrNull()
+                    }?.minOrNull()
+                    null -> null
+                }
+
+
         val t = Characteristics(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),

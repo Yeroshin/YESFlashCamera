@@ -85,14 +85,14 @@ fun RadioGroup(
 
                     modifier = Modifier
                         .alpha(
-                            if (item.id == selected) {
+                            if (item.id == selectedOption) {
                                 1.0f
                             } else {
                                 0.5f
                             }
                         )
                         .selectable(
-                            selected = (item.id == selected),
+                            selected = (item.id == selectedOption),
                             onClick = {
                                /*  if (item.id == selected) {
                                     selected = null

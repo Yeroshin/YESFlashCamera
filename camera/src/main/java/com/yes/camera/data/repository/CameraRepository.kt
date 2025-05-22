@@ -15,6 +15,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -401,7 +402,8 @@ class CameraRepository(
         val exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocusDistance =
             characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
-        val maxFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+        val maxFocusDistance =
+            characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
 
         /////////////////
         val availablePixelModes =
@@ -423,8 +425,8 @@ class CameraRepository(
             shutterValue = 0,
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
             wbItems = awbModes,
-            minFocusValue = minFocusDistance?:0f,
-            maxFocusValue = maxFocusDistance?:0f,
+            minFocusValue = minFocusDistance ?: 0f,
+            maxFocusValue = maxFocusDistance ?: 0f,
             resolutions = allSizes?.map {
                 Dimensions(
                     it.width, it.height
@@ -1518,7 +1520,7 @@ class CameraRepository(
     private var previousWbValue: Int? = null
     private var wb = false
     private var characteristicsLast: Characteristics? = null
-    private var touchPoint:FloatArray? =null
+    private var touchPoint: FloatArray? = null
     fun setInputCharacteristics(characteristics: Characteristics) {
         /* captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
          captureRequest?.addTarget(previewSurface)
@@ -1602,7 +1604,7 @@ class CameraRepository(
                 characteristics.focusValue?.let {
                     set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                     set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-                }?:run{
+                } ?: run {
                     set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
                 }
 
@@ -1610,25 +1612,25 @@ class CameraRepository(
                 set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
                 // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                 //////////////focus
-              /* characteristics.touchPoint?.let { touchPoint ->
+                /* characteristics.touchPoint?.let { touchPoint ->
 
-                    set(
-                        CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_AUTO
-                    )
-                    val r = meteringRectangle(touchPoint)
-                    val focusArea = Rect(1, 1, 300, 300)
-                    set(
-                        CaptureRequest.CONTROL_AF_REGIONS,
-                        arrayOf(r)
-                    )
-                    set(
-                        CaptureRequest.CONTROL_AF_TRIGGER,
-                        CaptureRequest.CONTROL_AF_TRIGGER_START
-                    )
-                    focus = true
+                      set(
+                          CaptureRequest.CONTROL_AF_MODE,
+                          CaptureRequest.CONTROL_AF_MODE_AUTO
+                      )
+                      val r = meteringRectangle(touchPoint)
+                      val focusArea = Rect(1, 1, 300, 300)
+                      set(
+                          CaptureRequest.CONTROL_AF_REGIONS,
+                          arrayOf(r)
+                      )
+                      set(
+                          CaptureRequest.CONTROL_AF_TRIGGER,
+                          CaptureRequest.CONTROL_AF_TRIGGER_START
+                      )
+                      focus = true
 
-                }*/
+                  }*/
 
                 /////wb
 
@@ -1758,67 +1760,74 @@ class CameraRepository(
                 //  set(CaptureRequest.CONTROL_AWB_MODE, CONTROL_AWB_MODE_WARM_FLUORESCENT)
                 // set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbValue)
                 //  set(CaptureRequest.CONTROL_AWB_LOCK, true)
-                ////////////////////////////////
+                ////////////////////////////////focus
+                characteristics.focusValue?.let {
+                    set(CaptureRequest.LENS_FOCUS_DISTANCE, it)
+                }
+                if (characteristics.focusMode == CONTROL_AF_MODE_CONTINUOUS_PICTURE){
+                    set(CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                }
             }
         }
         /////////////////////////////////////////focus
-        characteristics.focusValue?.let {
-            if (!characteristics.touchPoint.contentEquals(touchPoint)){
-                touchPoint=characteristics.touchPoint
-                characteristics.touchPoint?.let {touchPoint->
+        characteristics.focusValue ?: run {
+            if (characteristics.focusMode == -1) {
+                if (!characteristics.touchPoint.contentEquals(touchPoint)) {
+                    touchPoint = characteristics.touchPoint
+                    characteristics.touchPoint?.let { touchPoint ->
 
-                    //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
-                    /* submitRequest(
-                         CameraDevice.TEMPLATE_MANUAL,
-                         listOf(
-                             previewSurface,
-                             captureSurface
-                         ),
-                         true
-                     ) { builder ->
-                         builder.apply {
-                             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                           //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                         }
-                     }*/
+                        //  captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
+                        /* submitRequest(
+                             CameraDevice.TEMPLATE_MANUAL,
+                             listOf(
+                                 previewSurface,
+                                 captureSurface
+                             ),
+                             true
+                         ) { builder ->
+                             builder.apply {
+                                 set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                               //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                             }
+                         }*/
 
-                    submitRequest(
-                        CameraDevice.TEMPLATE_MANUAL,
-                        listOf(
-                            previewSurface,
-                            captureSurface
-                        ),
-                        false
-                    ) { builder ->
-                        builder.apply {
-                            focus = true
-                            // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                            // set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                            //  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                            val r = meteringRectangle(touchPoint)
-                            val focusArea = Rect(1, 1, 300, 300)
-                            set(
-                                CaptureRequest.CONTROL_AF_REGIONS,
-                                arrayOf(r)
-                            )
-                            /*    set(
-                                    CaptureRequest.CONTROL_AE_REGIONS,
+                        submitRequest(
+                            CameraDevice.TEMPLATE_MANUAL,
+                            listOf(
+                                previewSurface,
+                                captureSurface
+                            ),
+                            false
+                        ) { builder ->
+                            builder.apply {
+                                focus = true
+                                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                                // set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                                //  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                                val r = meteringRectangle(touchPoint)
+                                val focusArea = Rect(1, 1, 300, 300)
+                                set(
+                                    CaptureRequest.CONTROL_AF_REGIONS,
                                     arrayOf(r)
-                                )*/
-                            set(
-                                CaptureRequest.CONTROL_AF_TRIGGER,
-                                CaptureRequest.CONTROL_AF_TRIGGER_START
-                            )
+                                )
+                                /*    set(
+                                        CaptureRequest.CONTROL_AE_REGIONS,
+                                        arrayOf(r)
+                                    )*/
+                                set(
+                                    CaptureRequest.CONTROL_AF_TRIGGER,
+                                    CaptureRequest.CONTROL_AF_TRIGGER_START
+                                )
 
 
+                            }
                         }
                     }
                 }
             }
         }
-
-
 
 
     }
