@@ -231,9 +231,9 @@ fun CameraScreenSuccess(
         mutableStateOf(true)
     }*/
 
-    LaunchedEffect(characteristics.settings) {
-        snapshotFlow { characteristics.settings }
-            .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
+    LaunchedEffect(settings) {
+        snapshotFlow { settings }
+           // .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
                 settings = newValue
             }

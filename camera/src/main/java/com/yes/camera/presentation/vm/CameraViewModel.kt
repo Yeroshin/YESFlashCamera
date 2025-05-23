@@ -30,7 +30,22 @@ class CameraViewModel(
     }
 
     init {
-        viewModelScope.launch {
+        withUseCaseScope(
+            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
+            onError = { println(it.message) },
+            block = {
+                subscribeHistogramUseCase()
+                    .collect { histogramData ->
+                        setState {
+                            copy(
+                                histogram = histogramData
+
+                            )
+                        }
+                    }
+            }
+        )
+      /*  viewModelScope.launch {
             subscribeHistogramUseCase()
                 .collect { histogramData ->
                     setState {
@@ -40,7 +55,7 @@ class CameraViewModel(
                         )
                     }
                 }
-        }
+        }*/
         /*viewModelScope.launch {
             subscribeCharacteristicsUseCase()
                 .collect { characteristics ->

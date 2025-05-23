@@ -26,6 +26,15 @@ class SubscribeHistogramUseCase(
         return cameraRepository.subscribeOutputBuffer()
             .map { buffer ->
 
+                ////////////////////
+               /* Оптимизация:
+                to do in future
+                kotlin
+                val histogram = IntArray(256) { 0 }
+                for (i in buffer.indices step stepValue) {
+                    histogram[buffer[i].toUByte().toInt()]++
+                }*/
+                /////////////////////
                 val myMap: MutableMap<Int, Int> = (0..255).associateWith { 0 }.toMutableMap()
                 for(i in buffer.indices step 600){
                // for(i in buffer.indices step 250){

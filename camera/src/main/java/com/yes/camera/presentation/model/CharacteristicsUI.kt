@@ -7,7 +7,28 @@ data class CharacteristicsUI(
     val settings: Settings = Settings(),
     val items: Items = Items(),
     val histogramData: ByteArray = ByteArray(0),
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CharacteristicsUI
+
+        if (settings != other.settings) return false
+        if (items != other.items) return false
+        if (!histogramData.contentEquals(other.histogramData)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = settings.hashCode()
+        result = 31 * result + items.hashCode()
+        result = 31 * result + histogramData.contentHashCode()
+        return result
+    }
+}
+
 data class Items(
     val shutterItems: ImmutableCollection<TextItem>? = null,
     val isoItems: ImmutableCollection<TextItem>? = null,
@@ -19,7 +40,7 @@ data class Items(
 
 
 data class Settings(
-    val backCamera: Boolean = true,
+    val backCamera: Boolean? = null,
 
     val shutterValue: String = "1",
     val shutterPosition: Int = 0,

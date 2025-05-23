@@ -50,7 +50,7 @@ fun RadioGroup(
           mutableStateOf(items)
       }*/
 
-    var selected by remember {
+    var selected by remember(selectedOption) {
         mutableStateOf(selectedOption)
     }
 
@@ -85,14 +85,14 @@ fun RadioGroup(
 
                     modifier = Modifier
                         .alpha(
-                            if (item.id == selectedOption) {
+                            if (item.id == selected) {
                                 1.0f
                             } else {
                                 0.5f
                             }
                         )
                         .selectable(
-                            selected = (item.id == selectedOption),
+                            selected = (item.id == selected),
                             onClick = {
                                /*  if (item.id == selected) {
                                     selected = null

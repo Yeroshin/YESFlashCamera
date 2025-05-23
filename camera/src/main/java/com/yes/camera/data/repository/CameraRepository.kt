@@ -328,9 +328,7 @@ class CameraRepository(
         getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
             openCamera(
                 it
-            ) { characteristics ->
-                _characteristicsFlow.value = characteristics
-            }
+            )
         }
         return characteristicsFlow
     }
@@ -340,17 +338,15 @@ class CameraRepository(
         getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
             openCamera(
                 it
-            ) { characteristics ->
-                _characteristicsFlow.value = characteristics
-            }
+            )
         }
         return characteristicsFlow
     }
 
     @SuppressLint("MissingPermission")
-    private fun openCamera(id: String, onCameraOpened: (characteristics: Characteristics) -> Unit) {
+    private fun openCamera(id: String) {
         // this.onCameraOpened = onCameraOpened
-        cameraManager.getCameraCharacteristics(id)
+      //  cameraManager.getCameraCharacteristics(id)
         cameraManager.openCamera(
             id,
             object : CameraDevice.StateCallback() {
@@ -361,10 +357,13 @@ class CameraRepository(
                     //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
                     // setCharacteristics(51200)
                     startVideoSession()
-
-                    onCameraOpened(
+                    _characteristicsFlow.update {
                         getCameraCharacteristics(camera.id)
-                    )
+                    }
+                  /*  onCameraOpened(
+
+                        getCameraCharacteristics(camera.id)
+                    )*/
                 }
 
                 override fun onDisconnected(camera: CameraDevice) {
@@ -508,16 +507,12 @@ class CameraRepository(
             val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
             val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
             _characteristicsFlow.update { current ->
-
                 current?.copy(
                     focusValue = focusDistance,
                     wbValue = kelvin,
                     shutterValue = exposureTime ?: autoShutter,
-                    // shutterValue = Random.nextLong(16_000_000L),
                     isoValue = iso ?: autoIso
                 )
-
-
             }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
                   shutterValue = exposureTimeNs,

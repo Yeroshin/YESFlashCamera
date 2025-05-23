@@ -196,7 +196,7 @@ class MapperUI(
             }
             standardWbValues.indexOf(closestValue)
         }?:0
-        val focusValues=generateFocusValues(characteristics.minFocusValue,characteristics.maxFocusValue,1f)
+        val focusValues=generateFocusValues(characteristics.maxFocusValue,characteristics.minFocusValue,1f)
         val focusValue=characteristics.focusValue?.toString()?:"A"
         val focusPosition=characteristics.focusValue?.let {
             val closestValue=focusValues.minByOrNull { value->
