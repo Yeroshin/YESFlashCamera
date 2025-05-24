@@ -32,12 +32,13 @@ class AutoFitSurfaceView @JvmOverloads constructor(
     fun setFullscreen(fullScreen: Boolean) {
         this.fullscreen = fullScreen
     }
-
+    private var currentWidth = 0
+    private var currentHeight = 0
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         // Теперь у вас есть доступные размеры w и h
-        val availableWidth = w
-        val availableHeight = h
+        currentWidth = w
+        currentHeight = h
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

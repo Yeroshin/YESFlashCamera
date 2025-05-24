@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.ui.custom.compose
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 
@@ -23,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.yes.camera.presentation.model.Item
@@ -34,7 +36,7 @@ abstract class RadioButton(open val id: Item) {
 
     @Composable
     abstract fun item(
-
+        selected:Boolean
     )
 }
 
@@ -84,13 +86,13 @@ fun RadioGroup(
                 Box(
 
                     modifier = Modifier
-                        .alpha(
+                       /* .alpha(
                             if (item.id == selected) {
                                 1.0f
                             } else {
                                 0.5f
                             }
-                        )
+                        )*/
                         .selectable(
                             selected = (item.id == selected),
                             onClick = {
@@ -116,7 +118,9 @@ fun RadioGroup(
             //    contentAlignment = Alignment.Center
 
                 ){
-                item.item()
+                item.item(
+                    item.id == selected
+                )
             }
             }
         }

@@ -19,10 +19,13 @@ class IconRadioItem(
     id: Item,
     val title: String,
     val resId: Int?,
+
 ) : RadioButton(id) {
    // var resId by mutableStateOf(resId)
     @Composable
-    override fun item() {
+    override fun item(
+        selected: Boolean
+    ) {
      /*  resId?.let {
            Text(
                textAlign = TextAlign.Start,
@@ -51,7 +54,10 @@ class IconRadioItem(
                Modifier
                    // .alpha(0.3f)
                    .size(24.dp),
-               vectorColor = Color.White,
+               vectorColor = if(selected)
+                   Color.Green
+               else
+                   Color.White,
                shadowColor = Color.DarkGray,
                resId = it
            )

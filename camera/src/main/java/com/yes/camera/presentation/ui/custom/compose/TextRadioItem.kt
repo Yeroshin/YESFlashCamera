@@ -23,7 +23,9 @@ class TextRadioItem (
     private val title: String,
     ) : RadioButton(id) {
         @Composable
-        override fun item() {
+        override fun item(
+            selected:Boolean
+        ) {
             value?.let {
                 Column(
                     //  modifier = Modifier
@@ -34,7 +36,11 @@ class TextRadioItem (
                         textAlign = TextAlign.Start,
                         text = title,
                         style = TextStyle(
-                            color = Color.White,
+                            color =  if (selected) {
+                                Color.Green
+                            } else {
+                               Color.White
+                            },
                             fontSize = 8.sp,
                             shadow = Shadow(
                                 color = Color.DarkGray,
@@ -51,7 +57,11 @@ class TextRadioItem (
                         maxLines = 1,
                         text = it,
                         style = TextStyle(
-                            color = Color.White,
+                            color =  if (selected) {
+                                Color.Green
+                            } else {
+                                Color.White
+                            },
                             fontSize = fontSize,
                             shadow = Shadow(
                                 color = Color.DarkGray,

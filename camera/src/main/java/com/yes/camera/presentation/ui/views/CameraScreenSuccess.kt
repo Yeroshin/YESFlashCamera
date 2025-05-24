@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,14 +26,15 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
 import com.yes.camera.presentation.model.IconItem
-import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.SettingsRadioGroupItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SelectorRadioGroupItem
@@ -221,8 +221,8 @@ fun CameraScreenSuccess(
     }
 
 
-    var magnifier by remember {
-        mutableStateOf("")
+    var magnifierValue by remember {
+        mutableStateOf(settings.magnifierValue)
     }
     var magnifierPosition by remember {
         mutableStateOf(0)
@@ -397,14 +397,14 @@ fun CameraScreenSuccess(
             )
 
         }
-    val settingsRadioGroupItems: ImmutableCollection<RadioButton> = remember(settings) {
+    val settingsRadioGroupItems: ImmutableCollection<RadioButton> = remember(settings,magnifierValue) {
         ImmutableCollection(
             listOf(
                 TextRadioItem(SettingsRadioGroupItem.SHUTTER, settings.shutterValue, "SHUTTER"),
                 TextRadioItem(SettingsRadioGroupItem.ISO, settings.isoValue, "ISO"),
                 TextRadioItem(SettingsRadioGroupItem.WB, settings.wbValue, "WB"),
                 TextRadioItem(SettingsRadioGroupItem.FOCUS, settings.focusValue, "FOCUS"),
-                TextRadioItem(SettingsRadioGroupItem.MAGNIFIER,settings.magnifierValue,"MAGNIFIER")
+                TextRadioItem(SettingsRadioGroupItem.MAGNIFIER,magnifierValue,"MAGNIFIER")
 
             )
         )
@@ -666,6 +666,23 @@ fun CameraScreenSuccess(
                      )
                  } ?: run { settings.copy() }
                  magnifierPosition = selectorSelectedItemIndex*/
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == false) {
+                    magnifierPosition=selectorSelectedItemIndex
+                    magnifierValue = characteristics.items.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                        ?.text?:run{""}
+                    renderer.configureMagnifier(
+                        characteristics.items.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                            ?.text?.toFloat()?:run{0f}
+                    )
+                } else {
+                    valueSelectorAcquiredItemIndex=0
+                    magnifierValue ="1"
+                    magnifierPosition=0
+                    renderer.configureMagnifier(
+            0f
+                    )
+                }
+
                 characteristics.settings.copy()
 
             }
@@ -732,7 +749,12 @@ fun CameraScreenSuccess(
                                 }
 
                                 SettingsRadioGroupItem.MAGNIFIER -> {
-
+                                    valueSelectorAcquiredItemIndex=0
+                                    magnifierValue ="1"
+                                    magnifierPosition=0
+                                    renderer.configureMagnifier(
+                                        1f
+                                    )
                                     settings.copy(
                                         magnifierPosition = 0
                                     )
@@ -757,7 +779,7 @@ fun CameraScreenSuccess(
     ) {
         ///////////preview
         Box() {
-
+            var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
             AndroidView(
                 modifier = Modifier
                     .padding(
@@ -766,7 +788,10 @@ fun CameraScreenSuccess(
                         } else {
                             84.dp
                         }
-                    ),
+                    )
+                .onSizeChanged { size ->
+                 surfaceViewSize = size
+            },
                 //  .align(Alignment.Center),
                 factory = {
                     AutoFitSurfaceView(
@@ -781,6 +806,19 @@ fun CameraScreenSuccess(
                         setRenderer(
                             renderer
                         )
+                        viewTreeObserver.addOnGlobalLayoutListener {
+                            surfaceViewSize = IntSize(width, height)
+                            val normalizedX =
+                                (width/2 / width.toFloat()) * 2 - 1
+                            val normalizedY =
+                                -((height/2 / height.toFloat()) * 2 - 1)
+                            renderer.handleTouchPress(
+                                normalizedX, normalizedY
+                            )
+                            renderer.configureMagnifier(
+                                1f
+                            )
+                        }
                         setOnTouchListener { v, event ->
                             v.performClick()
 

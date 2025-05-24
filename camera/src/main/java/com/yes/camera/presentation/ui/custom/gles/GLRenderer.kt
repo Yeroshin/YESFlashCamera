@@ -203,8 +203,8 @@ class GLRenderer(
     }
     fun configureMagnifier(
         magnification: Float,
-        magnifierSizeW: Float,
-        magnifierSizeH: Float,
+        magnifierSizeW: Float= 0.5f,
+        magnifierSizeH: Float= 0.5f,
     ) {
        // val foundDog: GlMagnifier? = glObjects.fi{ glObjects is GlMagnifier  } as Dog?
         glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
