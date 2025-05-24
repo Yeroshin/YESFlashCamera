@@ -43,7 +43,7 @@ fun RadioGroup(
     modifier: Modifier,
     onOptionSelected: ((value: Item?) -> Unit),
     items: ImmutableCollection<RadioButton>? = null,
-    selectedOption: Item? = items?.list?.get(0)?.id,
+    selectedOption: Item? = null
 
     ) {
     /*  var items by remember{
@@ -51,7 +51,7 @@ fun RadioGroup(
       }*/
 
     var selected by remember(selectedOption) {
-        mutableStateOf(selectedOption)
+        mutableStateOf(selectedOption?:run { items?.list?.get(0)?.id})
     }
 
     //  val visibleStates = remember { items.map { mutableStateOf(false) } }
@@ -94,7 +94,7 @@ fun RadioGroup(
                         .selectable(
                             selected = (item.id == selected),
                             onClick = {
-                               /*  if (item.id == selected) {
+                                /*  if (item.id == selected) {
                                     selected = null
                                     onOptionSelected(null)
                                 } else {

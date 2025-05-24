@@ -36,14 +36,14 @@ fun RecordButton(
              onValueChange = toggleHandler,
              role = Role.Checkbox
          )*/,
-        border = BorderStroke(5.dp, Color.Green),
+        border = BorderStroke(5.dp, Color.White),
         shape = CircleShape,
         onClick = {
             checked=!checked
             onClick(checked)
         }, // Переиспользуем тот же обработчик
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (checked) Color.Red else Color.White
+            containerColor = if (checked) Color.Red else Color.Green
         )
     ) {
         // Ваш контент кнопки

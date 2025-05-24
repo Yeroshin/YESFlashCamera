@@ -437,7 +437,7 @@ class MapperUI(
             it.value == characteristics.settings.shutterValue
         }?.key
           val wbValue=characteristics.settings.wbValue?.filter { it.isDigit() }?.toIntOrNull()
-        val wbMode=wbValue?:run {
+        val wbMode=wbValue?.let{null}?:run {
             when(characteristics.settings.wbMode){
                 WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
                 WbItem.INCANDESCENT->CONTROL_AWB_MODE_INCANDESCENT
