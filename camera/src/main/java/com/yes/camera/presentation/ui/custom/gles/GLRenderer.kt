@@ -152,18 +152,16 @@ class GLRenderer(
         )
     }
 
-    private var touchedPoint = Geometry.Point(0f, 0f, 0f)
+ //   private var touchedPoint = Geometry.Point(0f, 0f, 0f)
     fun handleTouchPress(normalizedX: Float, normalizedY: Float) {
         val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
         val plane = Geometry.Plane(
             Geometry.Point(0f, 0f, 0f),
             Geometry.Vector(0f, 0f, 1f)
         )
-        touchedPoint = Geometry.intersectionPoint(ray, plane)
+       val  touchedPoint = Geometry.intersectionPoint(ray, plane)
         ////////////////////
-        glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
-            it.translate(touchedPoint.x, touchedPoint.y)
-        }
+        glObjects.find { it is GlMagnifierAdvanced  }?.translate(touchedPoint.x, touchedPoint.y)
         ////////////////////
 
         glObjects.forEach {
@@ -207,13 +205,13 @@ class GLRenderer(
         magnifierSizeH: Float= 0.5f,
     ) {
        // val foundDog: GlMagnifier? = glObjects.fi{ glObjects is GlMagnifier  } as Dog?
-        glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
+       /* glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
             it.configure(
                 magnification,
                 magnifierSizeW,
                 magnifierSizeH,
             )
-        }
+        }*/
         glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
             it.configure(
                 magnification,

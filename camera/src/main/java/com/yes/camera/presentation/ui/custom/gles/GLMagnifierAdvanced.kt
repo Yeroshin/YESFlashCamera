@@ -73,8 +73,8 @@ class GlMagnifierAdvanced(
 
     override fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float) {
         this.selected = pressed
-        posXcorrection = touchedPointX - centerPosition.first
-        posYcorrection = touchedPointY - centerPosition.second
+       // posXcorrection = touchedPointX - centerPosition.first
+        //posYcorrection = touchedPointY - centerPosition.second
     }
 
     private fun mapVertexToTextureCords(

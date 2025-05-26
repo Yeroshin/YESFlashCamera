@@ -700,6 +700,7 @@ fun CameraScreenSuccess(
 
         )
     }
+    var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
     val autoClick by remember(settings) {
 
             mutableStateOf(
@@ -714,8 +715,6 @@ fun CameraScreenSuccess(
                     isRadioGroupSelectorVisible = false
                     isSelectorVisible.value = true
                     if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
-
-
                         settingsRequest =
                             when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
                                 SettingsRadioGroupItem.SHUTTER -> {
@@ -749,6 +748,13 @@ fun CameraScreenSuccess(
                                 }
 
                                 SettingsRadioGroupItem.MAGNIFIER -> {
+                                    val normalizedX =0.0f
+                                      //  ((surfaceViewSize.width.toFloat()/2f / surfaceViewSize.width.toFloat()) * 2f - 1f)
+                                    val normalizedY =0.0f
+                                      // -((surfaceViewSize.height.toFloat()/2f / surfaceViewSize.height.toFloat()) * 2f - 1f).toFloat()
+                                    renderer.handleTouchPress(
+                                        normalizedX, normalizedY
+                                    )
                                     valueSelectorAcquiredItemIndex=0
                                     magnifierValue ="1"
                                     magnifierPosition=0
@@ -779,7 +785,7 @@ fun CameraScreenSuccess(
     ) {
         ///////////preview
         Box() {
-            var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
+
             AndroidView(
                 modifier = Modifier
                     .padding(
@@ -809,9 +815,9 @@ fun CameraScreenSuccess(
                         viewTreeObserver.addOnGlobalLayoutListener {
                             surfaceViewSize = IntSize(width, height)
                             val normalizedX =
-                                (width/2 / width.toFloat()) * 2 - 1
+                                (surfaceViewSize.width.toFloat()/2f / surfaceViewSize.width.toFloat()) * 2f - 1f
                             val normalizedY =
-                                -((height/2 / height.toFloat()) * 2 - 1)
+                                -((surfaceViewSize.height.toFloat()/2f / surfaceViewSize.height.toFloat()) * 2f- 1f)
                             renderer.handleTouchPress(
                                 normalizedX, normalizedY
                             )
@@ -823,9 +829,9 @@ fun CameraScreenSuccess(
                             v.performClick()
 
                             val normalizedX =
-                                (event.x / v.width.toFloat()) * 2 - 1
+                                (event.x / v.width.toFloat()) * 2f - 1f
                             val normalizedY =
-                                -((event.y / v.height.toFloat()) * 2 - 1)
+                                -((event.y / v.height.toFloat()) * 2f - 1f)
 
                             when (event.action) {
                                 MotionEvent.ACTION_DOWN -> {
