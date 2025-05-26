@@ -160,7 +160,8 @@ fun ValueSelector(
     items:ImmutableCollection<SelectorItem>?,
     //  adapter: CompositeAdapter,ut
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
-    updatedPosition: Int? = null
+    updatedPosition: Int? = null,
+    onPositionUpdated: () -> Unit = {}
 ) {
     /* val items by remember (items){
          mutableStateOf(items)
@@ -199,7 +200,7 @@ fun ValueSelector(
         mutableStateOf(0)
     }
     LaunchedEffect(updatedPosition) {
-        snapshotFlow { updatedPosition }
+       /* snapshotFlow { updatedPosition }
             .collect { position ->
                 position?.let {
                     curIndex=position
@@ -210,9 +211,20 @@ fun ValueSelector(
                     )
                     onSelectedItemChanged(position, false)
                     isProgrammaticScroll = false
+                    onPositionUpdated()
                 }
 
+            }*/
+        updatedPosition?.let { newPos ->
+            if (newPos != listState.firstVisibleItemIndex) {
+                listState.animateScrollToItem(
+                    index = newPos,
+                    scrollOffset = itemWidthPx / 2
+                )
+                onSelectedItemChanged(newPos, false)
+                onPositionUpdated() // Уведомляем родителя о завершении
             }
+        }
     }
     val itemsHashKey = remember(items) {
         items?.list?.joinToString {

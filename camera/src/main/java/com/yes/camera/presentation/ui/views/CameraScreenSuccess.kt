@@ -425,18 +425,18 @@ fun CameraScreenSuccess(
     }
     val isSelectorVisible = remember { mutableStateOf(true) }
     var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(autoItems) {
+    LaunchedEffect(autoItems,settings) {
         snapshotFlow { settings }
             .collect {
                 if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
                     when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
                         SettingsRadioGroupItem.SHUTTER -> {
-                            //  valueSelectorAcquiredItemIndex = settings.shutterPosition
+                              valueSelectorAcquiredItemIndex = settings.shutterPosition
 
                         }
 
                         SettingsRadioGroupItem.ISO -> {
-                            //  valueSelectorAcquiredItemIndex = settings.isoPosition
+                              valueSelectorAcquiredItemIndex = settings.isoPosition
                         }
 
                         SettingsRadioGroupItem.WB -> {
@@ -1175,7 +1175,8 @@ fun CameraScreenSuccess(
 
 
                             },
-                            updatedPosition = valueSelectorAcquiredItemIndex
+                            updatedPosition = valueSelectorAcquiredItemIndex,
+                            onPositionUpdated = { valueSelectorAcquiredItemIndex = null }
                         )
                     }
                     //selector radio group
