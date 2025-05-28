@@ -6,18 +6,14 @@ import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.domain.UseCase
 import kotlinx.coroutines.CoroutineDispatcher
 
-class SetInputCharacteristicsUseCase(
+class SaveSettingsUseCase (
     dispatcher: CoroutineDispatcher,
-    private val cameraRepository: CameraRepository,
     private val settingsRepository: SettingsRepository
-) : UseCase<SetInputCharacteristicsUseCase.Params, Unit>(dispatcher) {
-    override suspend fun run(params: Params) {
+) : UseCase<SaveSettingsUseCase.Params, Unit>(dispatcher) {
+    override suspend fun run(params:Params) {
+
         settingsRepository.setCharacteristics(params.characteristics)
-        cameraRepository.setInputCharacteristics(params.characteristics)
 
     }
-
-    data class Params(
-        val characteristics:Characteristics
-    )
+    data class Params(val characteristics: Characteristics)
 }

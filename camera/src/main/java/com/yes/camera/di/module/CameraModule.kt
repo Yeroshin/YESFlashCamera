@@ -5,6 +5,7 @@ import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraManager
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.MediaEncoder
+import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
@@ -13,6 +14,7 @@ import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.camera.utils.AndroidResourceProvider
 import com.yes.camera.utils.ResourceProvider
+import com.yes.shared.data.dataSource.SettingsDataSource
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
@@ -80,13 +82,24 @@ class CameraModule {
     }
 
     @Provides
+    fun providesSettingsRepository(
+        settingsDataSource: SettingsDataSource
+    ): SettingsRepository {
+        return SettingsRepository(
+            settingsDataSource
+        )
+    }
+
+    @Provides
     fun providesSetCharacteristicsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
-        cameraRepository: CameraRepository
+        cameraRepository: CameraRepository,
+        settingsRepository: SettingsRepository
     ): SetInputCharacteristicsUseCase {
         return SetInputCharacteristicsUseCase(
             dispatcher,
-            cameraRepository
+            cameraRepository,
+            settingsRepository
         )
     }
 
@@ -109,13 +122,15 @@ class CameraModule {
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         recordVideoUseCase: RecordVideoUseCase,
         subscribeHistogramUseCase:SubscribeHistogramUseCase,
+        settingsRepository: SettingsRepository
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
             openCameraUseCase,
             setInputCharacteristicsUseCase,
             recordVideoUseCase,
-            subscribeHistogramUseCase
+            subscribeHistogramUseCase,
+            settingsRepository
         )
     }
 

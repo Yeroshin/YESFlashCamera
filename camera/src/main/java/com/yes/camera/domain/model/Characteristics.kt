@@ -8,7 +8,6 @@ data class Characteristics(
     val shutterRange: LongRange = LongRange(0L, 0L),
     val wbValue: Int? = null,
     val wbMode: Int? = null,
-    //  val wbManualItems: List<Int> = emptyList(),
     val wbItems: IntArray? = null,
     val focusValue: Float? = null,
     val focusMode: Int? = null,

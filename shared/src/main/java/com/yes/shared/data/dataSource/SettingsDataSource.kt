@@ -11,7 +11,11 @@ import kotlinx.coroutines.flow.map
 class SettingsDataSource(
     private val dataStore: DataStore<Preferences>
 ) {
-
+    suspend fun <T>remove(key:Preferences.Key<T>){
+        dataStore.edit { preferences ->
+            preferences.remove(key)
+        }
+    }
     suspend fun <T>set(value:T,key:Preferences.Key<T>){
         dataStore.edit { preferences ->
             preferences[key] = value

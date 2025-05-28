@@ -4,6 +4,7 @@ import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
@@ -24,6 +25,7 @@ class CameraViewModel(
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
     private val recordVideoUseCase: RecordVideoUseCase,
     private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
+    private val settingsRepository: SettingsRepository
 ) : BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
@@ -157,6 +159,7 @@ class CameraViewModel(
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         private val recordVideoUseCase: RecordVideoUseCase,
         private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
+        private val settingsRepository: SettingsRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
@@ -165,7 +168,8 @@ class CameraViewModel(
                 openCameraUseCase,
                 setInputCharacteristicsUseCase,
                 recordVideoUseCase,
-                subscribeHistogramUseCase
+                subscribeHistogramUseCase,
+                settingsRepository
             ) as T
         }
     }
