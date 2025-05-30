@@ -19,6 +19,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -692,7 +693,12 @@ fun CameraScreenSuccess(
         }
 
     }
+    var settingsRequestSkipCounter by remember { mutableIntStateOf(0) }
     LaunchedEffect(settingsRequest) {
+        if (settingsRequestSkipCounter< 2) {
+            settingsRequestSkipCounter++
+            return@LaunchedEffect
+        }
         onCharacteristicChanged(
             characteristics.copy(
                 settings = settingsRequest

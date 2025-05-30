@@ -1,5 +1,7 @@
 package com.yes.camera.data.repository
 
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
 import android.util.Log
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -41,13 +43,14 @@ class SettingsRepository(
     }
 
     suspend fun getCharacteristics(): Characteristics {
-        setIsoValue(1)
+        /* setIsoValue(null)
         val isoValue = getIsoValue()
+        val t=isoValue
         val shutterValue = getShutterValue()
         val wbValue = getWbValue()
         val wbMode = getWbMode()
         val focusValue = getFocusValue()
-        val focusMode = getFocusMode()
+        val focusMode = getFocusMode()*/
       //  val touchPoint = getTouchPoint()
         return Characteristics(
             isoValue = getIsoValue(),
@@ -63,19 +66,17 @@ class SettingsRepository(
 
     private suspend fun setIsoValue(isoValue: Int?) {
         isoValue?.let {
-            try {
+
             settingsDataSource.set(it, ISOVALUE)
-        } catch (e: Exception) {
-            Log.e("DataStore", "Error", e)
-        }
+
         } ?: run {
             settingsDataSource.remove(ISOVALUE)
         }
 
     }
 
-    private suspend fun getIsoValue(): Int {
-        return settingsDataSource.subscribe(ISOVALUE, 0).first()
+    private suspend fun getIsoValue(): Int? {
+        return settingsDataSource.subscribe(ISOVALUE, null).first()
     }
 
     private suspend fun setShutterValue(shutterValue: Long?) {
@@ -87,8 +88,8 @@ class SettingsRepository(
 
     }
 
-    private suspend fun getShutterValue(): Long {
-        return settingsDataSource.subscribe(SHUTTERVALUE, 0).first()
+    private suspend fun getShutterValue(): Long? {
+        return settingsDataSource.subscribe(SHUTTERVALUE, null).first()
     }
 
     private suspend fun setWbValue(wbValue: Int?) {
@@ -100,8 +101,8 @@ class SettingsRepository(
 
     }
 
-    private suspend fun getWbValue(): Int {
-        return settingsDataSource.subscribe(WBVALUE, 0).first()
+    private suspend fun getWbValue(): Int? {
+        return settingsDataSource.subscribe(WBVALUE, null).first()
     }
 
     private suspend fun setWbMode(isoValue: Int?) {
@@ -113,8 +114,8 @@ class SettingsRepository(
 
     }
 
-    private suspend fun getWbMode(): Int {
-        return settingsDataSource.subscribe(WBMODE, 0).first()
+    private suspend fun getWbMode(): Int? {
+        return settingsDataSource.subscribe(WBMODE, CONTROL_AWB_MODE_AUTO).first()
     }
 
     private suspend fun setFocusValue(focusValue: Float?) {
@@ -126,8 +127,8 @@ class SettingsRepository(
 
     }
 
-    private suspend fun getFocusValue(): Float {
-        return settingsDataSource.subscribe(FOCUSVALUE, 0f).first()
+    private suspend fun getFocusValue(): Float? {
+        return settingsDataSource.subscribe(FOCUSVALUE, -1f).first()
     }
 
     private suspend fun setFocusMode(focusMode: Int?) {
@@ -139,8 +140,8 @@ class SettingsRepository(
 
     }
 
-    private suspend fun getFocusMode(): Int {
-        return settingsDataSource.subscribe(FOCUSMODE, 0).first()
+    private suspend fun getFocusMode(): Int? {
+        return settingsDataSource.subscribe(FOCUSMODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE).first()
     }
 
     private suspend fun setTouchPoint(touchPoint: FloatArray?) {
@@ -153,8 +154,10 @@ class SettingsRepository(
     }
 
     private suspend fun getTouchPoint(): FloatArray? {
-        return settingsDataSource.subscribe(TOUCHPOINT, "").first().split(",").map { it.toFloat() }
-            .toFloatArray()
+        return settingsDataSource.subscribe(TOUCHPOINT, "").first()
+            ?.split(",")
+            ?.map { it.toFloat() }
+            ?.toFloatArray()
     }
 
     ///////////////////////

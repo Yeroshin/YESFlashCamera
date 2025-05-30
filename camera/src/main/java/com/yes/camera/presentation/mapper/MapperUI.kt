@@ -432,7 +432,7 @@ class MapperUI(
           }*/
 
 
-        val isoValue = characteristics.settings.isoValue.toIntOrNull()
+        val isoValue = characteristics.settings.isoValue?.toIntOrNull()
         val shutterValue = standardShutterSpeeds.entries.firstOrNull {
             it.value == characteristics.settings.shutterValue
         }?.key

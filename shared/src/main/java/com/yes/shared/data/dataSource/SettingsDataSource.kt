@@ -21,13 +21,14 @@ class SettingsDataSource(
             preferences[key] = value
         }
     }
-    fun <T>subscribe(key:Preferences.Key<T>,defaultValue:T): Flow<T> {
+    fun <T>subscribe(key:Preferences.Key<T>,defaultValue:T?): Flow<T?> {
         return dataStore.data
             .map { preferences ->
-                preferences[key]?:run {
+                preferences[key] ?: defaultValue
+               /* preferences[key]?:run {
                     set(defaultValue,key)
                     defaultValue
-                }
+                */
             }.distinctUntilChanged()
     }
 }

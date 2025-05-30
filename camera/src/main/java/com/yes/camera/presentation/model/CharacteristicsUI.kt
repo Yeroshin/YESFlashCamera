@@ -42,10 +42,10 @@ data class Items(
 data class Settings(
     val backCamera: Boolean? = null,
 
-    val shutterValue: String = "1",
+    val shutterValue: String? = null,
     val shutterPosition: Int = 0,
 
-    val isoValue: String = "1",
+    val isoValue: String? = null,
     val isoPosition: Int = 0,
 
     val wbValue: String? = null,
@@ -56,7 +56,7 @@ data class Settings(
     val focusPosition: Int = 0,
     val focusMode:FocusItem?=null,
 
-    val magnifierValue: String = "1",
+    val magnifierValue: String? = null,
     val magnifierPosition: Int = 0,
 
     val touchPoint: FloatArray?=null,
