@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import javax.inject.Qualifier
+import javax.inject.Singleton
+
 private const val USER_PREFERENCES = "YES_preferences"
 @Module
 class SharedModule(
@@ -35,6 +37,7 @@ class SharedModule(
     fun providesMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 
     @Provides
+    @Singleton
     fun providesDataStore():DataStore<Preferences> {
         return  PreferenceDataStoreFactory.create(
             corruptionHandler = ReplaceFileCorruptionHandler(
@@ -46,6 +49,7 @@ class SharedModule(
     }
 
     @Provides
+    @Singleton
     fun providesSettingsDataSource(
         dataStore:DataStore<Preferences>
     ): SettingsDataSource {

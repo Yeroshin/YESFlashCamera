@@ -214,16 +214,6 @@ class CameraRepository(
     }
 
 
-    private fun getCameraByFacing(facing: Int): String? {
-        cameraManager.cameraIdList.forEach {
-            val characteristics = cameraManager.getCameraCharacteristics(it)
-            if (characteristics.get(CameraCharacteristics.LENS_FACING) == facing) {
-                return it
-            }
-        }
-        return null
-    }
-
     private val _characteristicsFlow: MutableStateFlow<Characteristics?> =
         MutableStateFlow(null)
     private val characteristicsFlow: StateFlow<Characteristics?> =
@@ -321,61 +311,79 @@ class CameraRepository(
               }
           }*/
      }*/
-
-    fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
-        this.glSurfaceTexture = glSurfaceTexture
-        // getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
-        getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
-            openCamera(
-                it
-            )
+    private fun getCameraByFacing(facing: Int): String? {
+        return cameraManager.cameraIdList.firstOrNull { cameraId ->
+            cameraManager.getCameraCharacteristics(cameraId)
+                .get(CameraCharacteristics.LENS_FACING) == facing
         }
-        return characteristicsFlow
+
+        /*  cameraManager.cameraIdList.forEach {
+              val characteristics = cameraManager.getCameraCharacteristics(it)
+              if (characteristics.get(CameraCharacteristics.LENS_FACING) == facing) {
+                  return it
+              }
+          }
+          return null*/
     }
 
-    fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
-        this.glSurfaceTexture = glSurfaceTexture
-        getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
-            openCamera(
-                it
-            )
-        }
-        return characteristicsFlow
-    }
+    /*  fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
+          this.glSurfaceTexture = glSurfaceTexture
+          // getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+          getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+              openCamera(
+                  it
+              )
+          }
+          return characteristicsFlow
+      }
 
+      fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
+          this.glSurfaceTexture = glSurfaceTexture
+          getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
+              openCamera(
+                  it
+              )
+          }
+          return characteristicsFlow
+      }
+  */
     @SuppressLint("MissingPermission")
-    private fun openCamera(id: String) {
-        // this.onCameraOpened = onCameraOpened
-      //  cameraManager.getCameraCharacteristics(id)
-        cameraManager.openCamera(
-            id,
-            object : CameraDevice.StateCallback() {
+    fun openCamera(
+        glSurfaceTexture: SurfaceTexture,
+        characteristics: Characteristics
+    ): StateFlow<Characteristics?> {
+        this.glSurfaceTexture = glSurfaceTexture
+        val facing = if (characteristics.backCamera) {
+            CameraCharacteristics.LENS_FACING_FRONT
+        } else {
+            CameraCharacteristics.LENS_FACING_BACK
+        }
+        getCameraByFacing(facing)?.let {
+            cameraManager.openCamera(
+                it,
+                object : CameraDevice.StateCallback() {
 
-                @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-                override fun onOpened(camera: CameraDevice) {
-                    cameraDevice = camera
-                    //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                    // setCharacteristics(51200)
-                    startVideoSession()
-                    _characteristicsFlow.update {
-                        getCameraCharacteristics(camera.id)
+                    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                    override fun onOpened(camera: CameraDevice) {
+                        cameraDevice = camera
+                        startVideoSession(characteristics)
+                        _characteristicsFlow.update {
+                            getCameraCharacteristics(camera.id)
+                        }
                     }
-                  /*  onCameraOpened(
 
-                        getCameraCharacteristics(camera.id)
-                    )*/
-                }
+                    override fun onDisconnected(camera: CameraDevice) {
+                        camera.close()
+                    }
 
-                override fun onDisconnected(camera: CameraDevice) {
-                    camera.close()
-                }
-
-                override fun onError(camera: CameraDevice, error: Int) {
-                    println()
-                }
-            },
-            mBackgroundHandler
-        )
+                    override fun onError(camera: CameraDevice, error: Int) {
+                        println()
+                    }
+                },
+                mBackgroundHandler
+            )
+        }
+        return characteristicsFlow
     }
 
 
@@ -436,19 +444,20 @@ class CameraRepository(
         )
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    fun startVideoSession() {
+
+    fun startVideoSession(characteristics: Characteristics) {
         createCaptureSession(
             listOf(
                 previewSurface,
                 //   encoder.configure(640,480),
                 captureSurface
-            )
+            ),
+            characteristics
         )
 
     }
 
-    private fun createCaptureSession(surfaces: List<Surface>) {
+    private fun createCaptureSession(surfaces: List<Surface>, characteristics: Characteristics) {
         val configs = mutableListOf<OutputConfiguration>()
         /* captureRequest =
              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
@@ -468,7 +477,8 @@ class CameraRepository(
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
                         sessio = session
-                        startPreviewCaptureRequest()
+                        startCaptureRequest(characteristics)
+                        // startPreviewCaptureRequest()
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
                     }
@@ -1516,7 +1526,7 @@ class CameraRepository(
     private var wb = false
     private var characteristicsLast: Characteristics? = null
     private var touchPoint: FloatArray? = null
-    fun setInputCharacteristics(characteristics: Characteristics) {
+    fun startCaptureRequest(characteristics: Characteristics) {
         /* captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
          captureRequest?.addTarget(previewSurface)
          captureRequest?.addTarget(captureSurface)
@@ -1759,9 +1769,11 @@ class CameraRepository(
                 characteristics.focusValue?.let {
                     set(CaptureRequest.LENS_FOCUS_DISTANCE, it)
                 }
-                if (characteristics.focusMode == CONTROL_AF_MODE_CONTINUOUS_PICTURE){
-                    set(CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                if (characteristics.focusMode == CONTROL_AF_MODE_CONTINUOUS_PICTURE) {
+                    set(
+                        CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                    )
                 }
             }
         }

@@ -2,6 +2,7 @@ package com.yes.camera.domain.model
 
 
 data class Characteristics(
+    val backCamera:Boolean=true,
     val isoValue: Int? = null,
     val isoRange: IntRange = IntRange(0, 0),
     val shutterValue: Long? = null,

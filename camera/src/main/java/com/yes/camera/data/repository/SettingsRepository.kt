@@ -1,5 +1,6 @@
 package com.yes.camera.data.repository
 
+import android.util.Log
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -39,22 +40,34 @@ class SettingsRepository(
         setTouchPoint(characteristics.touchPoint)
     }
 
-    suspend fun getCharacteristics(characteristics: Characteristics): Characteristics {
-        return characteristics.copy(
+    suspend fun getCharacteristics(): Characteristics {
+        setIsoValue(1)
+        val isoValue = getIsoValue()
+        val shutterValue = getShutterValue()
+        val wbValue = getWbValue()
+        val wbMode = getWbMode()
+        val focusValue = getFocusValue()
+        val focusMode = getFocusMode()
+      //  val touchPoint = getTouchPoint()
+        return Characteristics(
             isoValue = getIsoValue(),
             shutterValue = getShutterValue(),
             wbValue = getWbValue(),
             wbMode = getWbMode(),
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
-            touchPoint = getTouchPoint()
+          //  touchPoint = getTouchPoint()
         )
 
     }
 
     private suspend fun setIsoValue(isoValue: Int?) {
         isoValue?.let {
+            try {
             settingsDataSource.set(it, ISOVALUE)
+        } catch (e: Exception) {
+            Log.e("DataStore", "Error", e)
+        }
         } ?: run {
             settingsDataSource.remove(ISOVALUE)
         }

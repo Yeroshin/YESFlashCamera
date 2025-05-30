@@ -13,7 +13,7 @@ import javax.inject.Singleton
         CameraModule::class
     ]
 )
-@Singleton
+@CameraScope
 interface CameraComponent {
     fun getDependency(): BaseDependency
 }

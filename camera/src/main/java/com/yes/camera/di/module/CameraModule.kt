@@ -3,9 +3,12 @@ package com.yes.camera.di.module
 import android.content.Context
 import android.content.Context.CAMERA_SERVICE
 import android.hardware.camera2.CameraManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.MediaEncoder
 import com.yes.camera.data.repository.SettingsRepository
+import com.yes.camera.di.CameraScope
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
@@ -40,7 +43,7 @@ class CameraModule {
             resources
         )
     }
-    @Singleton
+    @CameraScope
     @Provides
     fun providesMediaEncoder(
     ): MediaEncoder {
@@ -57,7 +60,8 @@ class CameraModule {
             cameraRepository
         )
     }
-    @Singleton
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @CameraScope
     @Provides
     fun providesCameraRepository(
         context: Context,
@@ -73,11 +77,13 @@ class CameraModule {
     @Provides
     fun providesOpenCameraUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
-        cameraRepository: CameraRepository
+        cameraRepository: CameraRepository,
+        settingsRepository: SettingsRepository
     ): OpenCameraUseCase {
         return OpenCameraUseCase(
             dispatcher,
-            cameraRepository
+            cameraRepository,
+            settingsRepository
         )
     }
 

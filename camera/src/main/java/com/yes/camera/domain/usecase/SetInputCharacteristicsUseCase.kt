@@ -13,7 +13,7 @@ class SetInputCharacteristicsUseCase(
 ) : UseCase<SetInputCharacteristicsUseCase.Params, Unit>(dispatcher) {
     override suspend fun run(params: Params) {
         settingsRepository.setCharacteristics(params.characteristics)
-        cameraRepository.setInputCharacteristics(params.characteristics)
+        cameraRepository.startCaptureRequest(params.characteristics)
 
     }
 
