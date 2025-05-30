@@ -16,6 +16,8 @@ import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.skip
 import kotlinx.coroutines.launch
 
 
@@ -47,17 +49,17 @@ class CameraViewModel(
                     }
             }
         )
-      /*  viewModelScope.launch {
-            subscribeHistogramUseCase()
-                .collect { histogramData ->
-                    setState {
-                        copy(
-                            histogram = histogramData
+        /*  viewModelScope.launch {
+              subscribeHistogramUseCase()
+                  .collect { histogramData ->
+                      setState {
+                          copy(
+                              histogram = histogramData
 
-                        )
-                    }
-                }
-        }*/
+                          )
+                      }
+                  }
+          }*/
         /*viewModelScope.launch {
             subscribeCharacteristicsUseCase()
                 .collect { characteristics ->
@@ -140,15 +142,14 @@ class CameraViewModel(
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
                 ).collect { characteristics ->
-                        setState {
-                            copy(
-                                state = CameraState.Success(
-                                    characteristics = mapper.map(characteristics)
-                                )
-
+                    setState {
+                        copy(
+                            state = CameraState.Success(
+                                characteristics = mapper.map(characteristics)
                             )
-                        }
+                        )
                     }
+                }
             }
         )
     }

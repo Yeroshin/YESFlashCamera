@@ -484,7 +484,9 @@ class CameraRepository(
                     }
                 }
 
-                override fun onConfigureFailed(session: CameraCaptureSession) {}
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    println()
+                }
             }
         )
         cameraDevice.createCaptureSession(config)
@@ -1582,8 +1584,32 @@ class CameraRepository(
 
 
         /////////////////////////////////
-
         submitRequest(
+            CameraDevice.TEMPLATE_PREVIEW,
+            listOf(
+                previewSurface,
+                captureSurface
+            ),
+            true
+        ) { builder ->
+            builder.apply {
+                set(
+                    CaptureRequest.EDGE_MODE,
+                    CaptureRequest.EDGE_MODE_OFF
+                )
+                set(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                )
+                set(
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+                )
+            }
+        }
+        //////////////////////////////////
+
+      /*  submitRequest(
             CameraDevice.TEMPLATE_MANUAL,
             listOf(
                 previewSurface,
@@ -1834,12 +1860,8 @@ class CameraRepository(
                     }
                 }
             }
-        }
+        }*/
 
-
-    }
-
-    private fun setExposure() {
 
     }
 
