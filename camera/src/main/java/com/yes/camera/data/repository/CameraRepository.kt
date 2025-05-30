@@ -354,9 +354,9 @@ class CameraRepository(
     ): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
         val facing = if (characteristics.backCamera) {
-            CameraCharacteristics.LENS_FACING_FRONT
-        } else {
             CameraCharacteristics.LENS_FACING_BACK
+        } else {
+            CameraCharacteristics.LENS_FACING_FRONT
         }
         getCameraByFacing(facing)?.let {
             cameraManager.openCamera(
