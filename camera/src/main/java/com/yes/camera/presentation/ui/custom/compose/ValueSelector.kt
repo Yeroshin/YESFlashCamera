@@ -46,6 +46,7 @@ import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
 import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
 import com.yes.camera.presentation.ui.views.ImmutableCollection
 import com.yes.camera.presentation.ui.views.MapImmutableCollection
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.lang.reflect.TypeVariable
@@ -217,7 +218,7 @@ fun ValueSelector(
             }*/
         updatedPosition?.let { newPos ->
             if (newPos != listState.firstVisibleItemIndex) {
-                listState.animateScrollToItem(
+                listState.scrollToItem(
                     index = newPos,
                     scrollOffset = itemWidthPx / 2
                 )
@@ -235,24 +236,26 @@ fun ValueSelector(
             }
         }?.hashCode()
     }
-   LaunchedEffect(itemsHashKey ) {
-       snapshotFlow { items }
+   LaunchedEffect(itemsHashKey, itemWidthPx ) {
+/*snapshotFlow { itemsHashKey }
             .distinctUntilChanged()
-            .collect {
+            .collect {*/
                 isProgrammaticScroll = true
+               // delay(10)
                 listState.scrollToItem(
                     position,
                     scrollOffset = itemWidthPx / 2
                 )
                 curIndex=position
                 onSelectedItemChanged(position, false)
+                delay(100)
                 isProgrammaticScroll = false
-            }
+           // }
     }
 
    LaunchedEffect(Unit) {
         snapshotFlow { listState.firstVisibleItemIndex }
-           // .distinctUntilChanged() // Только при реальном изменении
+            .distinctUntilChanged() // Только при реальном изменении
             .collect { index ->
                 curIndex=index
                 if (!isProgrammaticScroll) {
