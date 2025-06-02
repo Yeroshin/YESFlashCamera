@@ -3,7 +3,6 @@ package com.yes.camera.presentation.vm
 import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
@@ -14,11 +13,7 @@ import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.skip
-import kotlinx.coroutines.launch
+
 
 
 class CameraViewModel(

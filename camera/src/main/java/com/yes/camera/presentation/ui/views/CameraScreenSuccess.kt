@@ -223,7 +223,7 @@ fun CameraScreenSuccess(
 
 
     var magnifierValue by remember {
-        mutableStateOf(settings.magnifierValue)
+        mutableStateOf("0")
     }
     var magnifierPosition by remember {
         mutableStateOf(0)

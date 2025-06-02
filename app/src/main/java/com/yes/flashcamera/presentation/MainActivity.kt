@@ -1,6 +1,5 @@
 package com.yes.flashcamera.presentation
 
-import android.hardware.camera2.CameraManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -11,12 +10,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.yes.camera.data.repository.CameraRepository
 
 import com.yes.camera.presentation.ui.CameraScreen
-import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.presentation.vm.CameraViewModel
-import com.yes.settings.presentation.ui.SettingsScreen
+import com.yes.settings.presentation.ui.views.SettingsScreen
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
 
 private const val PERMISSIONS_REQUEST_CODE = 10
