@@ -434,7 +434,7 @@ class CameraRepository(
             wbItems = awbModes,
             minFocusValue = minFocusDistance ?: 0f,
             maxFocusValue = maxFocusDistance ?: 0f,
-            resolutions = allSizes?.map {
+            resolutionItems = allSizes?.map {
                 Dimensions(
                     it.width, it.height
                 )

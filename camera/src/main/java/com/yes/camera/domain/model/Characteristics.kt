@@ -14,6 +14,7 @@ data class Characteristics(
     val focusMode: Int? = null,
     val minFocusValue: Float = 0f,
     val maxFocusValue: Float = 0f,
-    val resolutions: List<Dimensions> = emptyList(),
+    val resolution: Dimensions? = null,
+    val resolutionItems: List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null
 )

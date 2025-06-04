@@ -122,7 +122,7 @@ class CameraModule {
 
 
     @Provides
-    fun providesMainViewModelFactory(
+    fun providesCameraViewModelFactory(
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,

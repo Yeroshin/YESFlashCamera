@@ -1,8 +1,6 @@
 package com.yes.camera.presentation.mapper
 
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_EDOF
-import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_MACRO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
@@ -504,7 +502,7 @@ class MapperUI(
             focusValue = focusValue,
             focusMode = focusMode,
             shutterRange = LongRange(0, 0),
-            resolutions = emptyList(),
+            resolutionItems = emptyList(),
             touchPoint = characteristics.settings.touchPoint
         )
         val r = t

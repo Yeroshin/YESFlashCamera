@@ -13,10 +13,13 @@ import androidx.navigation.compose.rememberNavController
 
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.vm.CameraViewModel
-import com.yes.settings.presentation.ui.views.SettingsScreen
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
+import com.yes.settings.presentation.ui.views.SettingsScreen
+import com.yes.settings.presentation.wm.SettingsViewModel
+import com.yes.shared.presentation.vm.BaseDependency
 
 private const val PERMISSIONS_REQUEST_CODE = 10
+
 class MainActivity : ComponentActivity() {
 
     /*  private val adapter by lazy {
@@ -136,24 +139,29 @@ class MainActivity : ComponentActivity() {
 
     }*/
 
+    ////////////////////////////////
 
 
     private val mBackgroundThread: HandlerThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
 
     // private lateinit var cameraService: CameraService
-   /* private val cameraRepository by lazy {
-        CameraRepository(
-            getSystemService(CAMERA_SERVICE) as CameraManager,
-            mBackgroundHandler
-        )
-    }*/
-    private val dependency by lazy {
+    /* private val cameraRepository by lazy {
+         CameraRepository(
+             getSystemService(CAMERA_SERVICE) as CameraManager,
+             mBackgroundHandler
+         )
+     }*/
+
+    private val cameraViewModel: CameraViewModel by viewModels {
         (application as CameraViewModel.DependencyResolver)
             .resolveCameraDependency()
+        .viewModelFactory
     }
-    private val cameraViewModel:CameraViewModel by viewModels {
-        dependency.viewModelFactory
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        (application as SettingsViewModel.DependencyResolver)
+            .resolveSettingsDependency()
+            .viewModelFactory
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -175,7 +183,8 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("Settings") {
                         SettingsScreen(
-                            onButtonClick = {
+                            settingsViewModel,
+                            onBackClick = {
                                 navController.navigate("Camera")
                             }
                         )
@@ -209,20 +218,20 @@ class MainActivity : ComponentActivity() {
 
     private var rendererSet = false
 
-   /* private val renderer = GLRenderer(
-        this
-    ) { surfaceTexture ->
-        cameraRepository.getBackCameraId()?.let {
-            cameraRepository.openCamera(
-                it
-            ) { camera ->
-                val cam = camera
-                //cameraRepository.createCaptureSession(surfaceTexture)
-            }
-        }
+    /* private val renderer = GLRenderer(
+         this
+     ) { surfaceTexture ->
+         cameraRepository.getBackCameraId()?.let {
+             cameraRepository.openCamera(
+                 it
+             ) { camera ->
+                 val cam = camera
+                 //cameraRepository.createCaptureSession(surfaceTexture)
+             }
+         }
 
 
-    }*/
+     }*/
 
 
     /*  @RequiresApi(Build.VERSION_CODES.TIRAMISU)

@@ -78,7 +78,7 @@ fun RadioDialog(
 }
 
 @Composable
-fun SettingsScreen(
+fun SettingsScreenSuccess(
     onButtonClick: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
