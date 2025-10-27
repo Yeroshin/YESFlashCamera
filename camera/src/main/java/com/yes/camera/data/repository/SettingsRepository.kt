@@ -2,20 +2,23 @@ package com.yes.camera.data.repository
 
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
-import android.util.Log
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.BACKCAMERA
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FOCUSMODE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FOCUSVALUE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.ISOVALUE
+import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONS
+import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONVALUE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.SHUTTERVALUE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.TOUCHPOINT
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.WBMODE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.WBVALUE
 import com.yes.camera.domain.model.Characteristics
-import com.yes.camera.domain.model.Dimensions
+import com.yes.shared.domain.Dimensions
 import com.yes.shared.data.dataSource.SettingsDataSource
 import kotlinx.coroutines.flow.first
 
@@ -23,6 +26,9 @@ class SettingsRepository(
     private val settingsDataSource: SettingsDataSource
 ) {
     object PreferencesKeys {
+        val BACKCAMERA = booleanPreferencesKey("backCamera")
+        val RESOLUTIONS = stringPreferencesKey("resolutionItems")
+        val RESOLUTIONVALUE = stringPreferencesKey("resolutionValue")
         val ISOVALUE = intPreferencesKey("isoValue")
         val SHUTTERVALUE = longPreferencesKey("shutterValue")
         val WBVALUE = intPreferencesKey("wbValue")
@@ -51,17 +57,79 @@ class SettingsRepository(
         val wbMode = getWbMode()
         val focusValue = getFocusValue()
         val focusMode = getFocusMode()*/
-      //  val touchPoint = getTouchPoint()
+        //  val touchPoint = getTouchPoint()
         return Characteristics(
+            backCamera = getBackCamera(),
             isoValue = getIsoValue(),
             shutterValue = getShutterValue(),
             wbValue = getWbValue(),
             wbMode = getWbMode(),
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
-          //  touchPoint = getTouchPoint()
+            //  touchPoint = getTouchPoint()
         )
 
+    }
+
+    suspend fun setBackCamera(backCamera: Boolean?) {
+        backCamera?.let {
+
+            settingsDataSource.set(it, BACKCAMERA)
+
+        } ?: run {
+            settingsDataSource.remove(BACKCAMERA)
+        }
+
+    }
+
+     suspend fun getBackCamera(): Boolean? {
+        return settingsDataSource.subscribe(BACKCAMERA, null).first()
+    }
+
+    suspend fun setResolutions(dimensions: List<Dimensions>?) {
+        dimensions?.let { it ->
+            settingsDataSource.set(
+                it.joinToString(",") { it.height.toString() + "x" + it.width.toString() },
+                RESOLUTIONS
+            )
+        } ?: run {
+            settingsDataSource.remove(RESOLUTIONS)
+        }
+
+    }
+
+    suspend fun getResolutions(): List<Dimensions>? {
+        return settingsDataSource.subscribe(RESOLUTIONS, "").first()
+            ?.split(",")
+            ?.map { resolution ->
+                val parts = resolution.trim().split("x")
+                if (parts.size == 2) {
+                    val width = parts[1].trim().toInt()
+                    val height = parts[0].trim().toInt()
+                    Dimensions(width, height)
+                } else {
+                    null // или обработать ошибку по-другому
+                }
+            }
+            ?.filterNotNull()
+    }
+
+    suspend fun setResolutionValue(dimension: Dimensions?) {
+        dimension?.let { it ->
+            settingsDataSource.set(it.width.toString() + "x" + it.height.toString(), RESOLUTIONS)
+        } ?: run {
+            settingsDataSource.remove(RESOLUTIONVALUE)
+        }
+
+    }
+
+    suspend fun getResolutionValue(): Dimensions? {
+        return settingsDataSource.subscribe(RESOLUTIONVALUE, null).first()
+            ?.split("x")
+            ?.takeIf { it.size == 2 }
+            ?.let { parts ->
+                Dimensions(parts[0].toInt(), parts[1].toInt())
+            }
     }
 
     private suspend fun setIsoValue(isoValue: Int?) {

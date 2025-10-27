@@ -1,8 +1,10 @@
 package com.yes.camera.domain.model
 
+import com.yes.shared.domain.Dimensions
+
 
 data class Characteristics(
-    val backCamera:Boolean=true,
+    val backCamera:Boolean?=null,
     val isoValue: Int? = null,
     val isoRange: IntRange = IntRange(0, 0),
     val shutterValue: Long? = null,

@@ -1,3 +1,3 @@
-package com.yes.camera.domain.model
+package com.yes.shared.domain
 
 data class Dimensions(val width: Int, val height: Int)

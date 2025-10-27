@@ -41,7 +41,7 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.yes.camera.domain.model.Characteristics
-import com.yes.camera.domain.model.Dimensions
+import com.yes.shared.domain.Dimensions
 import com.yes.camera.utils.ImageComparator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

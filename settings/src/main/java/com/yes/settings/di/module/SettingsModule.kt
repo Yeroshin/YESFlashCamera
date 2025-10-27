@@ -1,9 +1,11 @@
 package com.yes.settings.di.module
 
+import com.yes.settings.data.repository.SettingsRepository
 import com.yes.settings.domain.usecase.GetSettingsUseCase
 import com.yes.settings.domain.usecase.SetSettingsUseCase
 import com.yes.settings.presentation.mapper.MapperUI
 import com.yes.settings.presentation.wm.SettingsViewModel
+import com.yes.shared.data.dataSource.SettingsDataSource
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
@@ -29,13 +31,22 @@ class SettingsModule {
             dispatcher,
         )
     }
-
+    @Provides
+    fun providesSettingsRepository(
+        settingsDataSource: SettingsDataSource
+    ): SettingsRepository {
+        return SettingsRepository(
+            settingsDataSource
+        )
+    }
     @Provides
     fun providesGetSettingsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
+        settingsRepository: SettingsRepository
     ): GetSettingsUseCase {
         return GetSettingsUseCase(
             dispatcher,
+            settingsRepository
         )
     }
 

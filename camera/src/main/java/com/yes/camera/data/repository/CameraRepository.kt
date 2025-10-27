@@ -38,7 +38,7 @@ import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
-import com.yes.camera.domain.model.Dimensions
+import com.yes.shared.domain.Dimensions
 import com.yes.camera.utils.ImageComparator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
@@ -350,10 +350,10 @@ class CameraRepository(
     @SuppressLint("MissingPermission")
     fun openCamera(
         glSurfaceTexture: SurfaceTexture,
-        characteristics: Characteristics
+        backCamera:Boolean
     ): StateFlow<Characteristics?> {
         this.glSurfaceTexture = glSurfaceTexture
-        val facing = if (characteristics.backCamera) {
+        val facing = if (backCamera) {
             CameraCharacteristics.LENS_FACING_BACK
         } else {
             CameraCharacteristics.LENS_FACING_FRONT
@@ -366,7 +366,7 @@ class CameraRepository(
                     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
                     override fun onOpened(camera: CameraDevice) {
                         cameraDevice = camera
-                        startVideoSession(characteristics)
+                       // startVideoSession(characteristics)
                         _characteristicsFlow.update {
                             getCameraCharacteristics(camera.id)
                         }

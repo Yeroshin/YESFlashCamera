@@ -1,5 +1,8 @@
 package com.yes.settings.domain.model
 
+import com.yes.shared.domain.Dimensions
+
 data class Settings (
-    val resolutionValue:Int
+    val resolutionValue:Dimensions,
+    val resolutionItems:List<Dimensions>
 )

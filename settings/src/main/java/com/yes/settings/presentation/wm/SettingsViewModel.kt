@@ -23,8 +23,20 @@ class SettingsViewModel(
     init {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
+            onError = {
+                println(it.message)
+                      },
             block = {
+                val characteristics=getSettingsUseCase()
+                setState {
+                    copy(
+                        state = SettingsState.Success(
+                            0
+                        )
+                    )
+                }
+
+
                 /* subscribeHistogramUseCase()
                      .collect { histogramData ->
                          setState {

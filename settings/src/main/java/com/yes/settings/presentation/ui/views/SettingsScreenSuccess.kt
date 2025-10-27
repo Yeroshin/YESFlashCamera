@@ -79,7 +79,7 @@ fun RadioDialog(
 
 @Composable
 fun SettingsScreenSuccess(
-    onButtonClick: () -> Unit
+    onBackClick: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
@@ -118,7 +118,7 @@ fun SettingsScreenSuccess(
             horizontalAlignment = Alignment.Start
         ) {
             IconButton(
-                onClick = { onButtonClick() },
+                onClick = { onBackClick() },
                 modifier = Modifier.size(48.dp),
 
                 ) {
