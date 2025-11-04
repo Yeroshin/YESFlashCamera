@@ -22,7 +22,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,22 +36,28 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.settings.R
+import com.yes.settings.presentation.model.SettingsUI
+
+@Stable
+data class ImmutableCollection<T>(
+    val list: List<T>
+)
 
 @Composable
 fun RadioDialog(
     show: Boolean,
-    options: List<String>,
+    options: ImmutableCollection<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    if (show) {
+    //if (show) {
         AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Select option") },
             text = {
                 Column {
-                    options.forEach { option ->
+                    options.list.forEach { option ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -58,7 +66,9 @@ fun RadioDialog(
                         ) {
                             RadioButton(
                                 selected = option == selectedOption,
-                                onClick = { onOptionSelected(option) }
+                                onClick = {
+                                    onOptionSelected(option)
+                                }
                             )
                             Text(
                                 text = option,
@@ -74,20 +84,44 @@ fun RadioDialog(
                 }
             }
         )
-    }
+  //  }
 }
 
 @Composable
 fun SettingsScreenSuccess(
+    settings: SettingsUI,
     onBackClick: () -> Unit
 ) {
+    //   var settings by remember { mutableStateOf(settings) }
     var showDialog by remember { mutableStateOf(false) }
-
+    var resolutionItems by remember(settings.resolutionItems) {
+        mutableStateOf(settings.resolutionItems)
+    }
+    var resolutionSelected by remember(
+        settings.resolutionValue
+    ) {
+        mutableStateOf(
+            settings.resolutionValue
+        )
+    }
     // Доступные варианты выбора
-    val options = listOf("Option 1", "Option 2", "Option 3")
+    /*var options : ImmutableCollection<String> =
+        ImmutableCollection(
+            listOf(
+                "a",
+                "b"
+            )
+        )*/
 
+    var options by remember{
+        mutableStateOf(
+            ImmutableCollection(
+                emptyList<String>()
+        )
+
+    ) }
     // Текущий выбранный вариант
-    var selectedOption by remember { mutableStateOf(options[0]) }
+    var selectedOption by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
@@ -100,7 +134,7 @@ fun SettingsScreenSuccess(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
             uri?.let {
-                directory=uri.lastPathSegment.toString()
+                directory = uri.lastPathSegment.toString()
             }
         }
     )
@@ -141,6 +175,8 @@ fun SettingsScreenSuccess(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
+                        options =resolutionItems
+                        selectedOption=resolutionSelected
                         showDialog = true
                     }
             ) {
@@ -150,7 +186,7 @@ fun SettingsScreenSuccess(
                     color = Color.White
                 )
                 Text(
-                    text = "1024 x 768",
+                    text = settings.resolutionValue,//"1024 x 768",
                     fontSize = 18.sp,
                     color = Color.Green
                 )
@@ -194,15 +230,28 @@ fun SettingsScreenSuccess(
             }
         }
     }
-    RadioDialog(
+    if (showDialog) {
+        RadioDialog(
+            show = showDialog,
+            options = options,
+            selectedOption = selectedOption,
+            onOptionSelected = { option ->
+             //   selectedOption.value = option
+                // Можно сразу закрыть диалог при выборе:
+                // showDialog = false
+            },
+            onDismiss = { showDialog = false }
+        )
+    }
+    /*RadioDialog(
         show = showDialog,
         options = options,
-        selectedOption = selectedOption,
+        selectedOption = selectedOption.value,
         onOptionSelected = { option ->
-            selectedOption = option
+            selectedOption.value = option
             // Можно сразу закрыть диалог при выборе:
             // showDialog = false
         },
         onDismiss = { showDialog = false }
-    )
+    )*/
 }

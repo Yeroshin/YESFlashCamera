@@ -1,7 +1,7 @@
 package com.yes.settings.presentation.contract
 
-import android.graphics.SurfaceTexture
 import com.yes.settings.domain.model.Settings
+import com.yes.settings.presentation.model.SettingsUI
 import com.yes.shared.presentation.vm.BaseViewModel.UiEffect
 import com.yes.shared.presentation.vm.BaseViewModel.UiEvent
 import com.yes.shared.presentation.vm.BaseViewModel.UiState
@@ -24,7 +24,7 @@ class SettingsContract {
         data object Idle : SettingsState()
         data object Loading : SettingsState()
         data class Success(
-            val characteristics:Int,
+            val settings: SettingsUI,
         ):  SettingsState()
 
     }

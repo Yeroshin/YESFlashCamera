@@ -10,6 +10,7 @@ import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
 import com.yes.settings.presentation.contract.SettingsContract.*
 import com.yes.settings.presentation.mapper.MapperUI
+import com.yes.settings.presentation.model.SettingsUI
 
 class SettingsViewModel(
     getSettingsUseCase: GetSettingsUseCase,
@@ -27,11 +28,11 @@ class SettingsViewModel(
                 println(it.message)
                       },
             block = {
-                val characteristics=getSettingsUseCase()
+                val settings=getSettingsUseCase()
                 setState {
                     copy(
                         state = SettingsState.Success(
-                            0
+                            mapperUI.map(settings)
                         )
                     )
                 }
@@ -54,7 +55,7 @@ class SettingsViewModel(
     override fun createInitialState(): State {
         return State(
             SettingsState.Success(
-                0
+                SettingsUI()
             )
         )
     }

@@ -20,12 +20,28 @@ class OpenCameraUseCase(
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override suspend fun run(params: Params):Flow< Characteristics> {
         val settingsCharacteristics=settingsRepository.getCharacteristics()
-        val firstLaunch:Boolean= settingsCharacteristics.backCamera==null
         val cameraCharacteristics=cameraRepository.openCamera(
             params.glSurfaceTexture,
             settingsCharacteristics.backCamera?:true
         )
+
+
+    //    settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
         val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
+        settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
+        settingsRepository.setResolutionValue(cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height })
+
+     /*   settingsCharacteristics.backCamera?:run{
+            settingsRepository.setBackCamera(true)
+            val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
+            settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
+            settingsRepository.setResolutionValue(cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width })
+        }*/
+       /* val firstLaunch:Boolean= settingsCharacteristics.backCamera==null
+
+
+        val e = settingsRepository.getResolutions()
+        val y=e
         if (firstLaunch){
             settingsRepository.setBackCamera(true)
             val s=settingsRepository.getBackCamera()
@@ -36,7 +52,7 @@ class OpenCameraUseCase(
             val y=e
             val o = settingsRepository.getResolutionValue()
             val d=o
-        }
+        }*/
         cameraRepository.startVideoSession(settingsCharacteristics)
         return cameraCharacteristics.filterNotNull()
       /*  return cameraRepository.openCamera(

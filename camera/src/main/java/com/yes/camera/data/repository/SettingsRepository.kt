@@ -100,8 +100,7 @@ class SettingsRepository(
 
     suspend fun getResolutions(): List<Dimensions>? {
         return settingsDataSource.subscribe(RESOLUTIONS, "").first()
-            ?.split(",")
-            ?.map { resolution ->
+            ?.split(",")?.mapNotNull { resolution ->
                 val parts = resolution.trim().split("x")
                 if (parts.size == 2) {
                     val width = parts[1].trim().toInt()
@@ -111,12 +110,11 @@ class SettingsRepository(
                     null // или обработать ошибку по-другому
                 }
             }
-            ?.filterNotNull()
     }
 
     suspend fun setResolutionValue(dimension: Dimensions?) {
         dimension?.let { it ->
-            settingsDataSource.set(it.width.toString() + "x" + it.height.toString(), RESOLUTIONS)
+            settingsDataSource.set(it.width.toString() + "x" + it.height.toString(), RESOLUTIONVALUE)
         } ?: run {
             settingsDataSource.remove(RESOLUTIONVALUE)
         }

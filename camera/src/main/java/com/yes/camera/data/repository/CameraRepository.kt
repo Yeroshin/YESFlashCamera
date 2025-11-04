@@ -426,6 +426,14 @@ class CameraRepository(
         val awbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
 /////////////////
         /////////////////
+        val resolutionItems = allSizes?.map {
+            Dimensions(
+                it.width, it.height
+            )
+        } ?: listOf(
+            Dimensions(0, 0)
+        )
+        val r=resolutionItems
         return Characteristics(
             isoValue = 0,
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
