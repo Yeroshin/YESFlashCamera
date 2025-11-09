@@ -29,7 +29,11 @@ class OpenCameraUseCase(
     //    settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
         val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
         settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
-        settingsRepository.setResolutionValue(cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height })
+       /* settingsRepository.setResolutionValue(
+            cameraCharacteristicsValue.resolution?:run{
+                cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height }
+            }
+        )*/
 
      /*   settingsCharacteristics.backCamera?:run{
             settingsRepository.setBackCamera(true)

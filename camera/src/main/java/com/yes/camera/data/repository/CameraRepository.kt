@@ -36,6 +36,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.Surface
 import android.widget.Toast
+import android.window.SurfaceSyncGroup
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.domain.Dimensions
@@ -75,17 +76,20 @@ class CameraRepository(
     private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
     private lateinit var cameraDevice: CameraDevice
-    private val previewSurface by lazy {
+  /*  private val previewSurface by lazy {
         Surface(glSurfaceTexture)
-    }
-    private val previewSurfaceConfiguration by lazy {
+    }*/
+  private lateinit var previewSurface :Surface
+
+
+   /* private val previewSurfaceConfiguration by lazy {
         OutputConfiguration(previewSurface).apply {
             //  enableSurfaceSharing()
         }
     }
     private val videoSurface by lazy {
         encoder.configure(640, 480)
-    }
+    }*/
 
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -347,11 +351,13 @@ class CameraRepository(
           return characteristicsFlow
       }
   */
+    var opened:Boolean=false
     @SuppressLint("MissingPermission")
     fun openCamera(
         glSurfaceTexture: SurfaceTexture,
         backCamera:Boolean
     ): StateFlow<Characteristics?> {
+        previewSurface=Surface(glSurfaceTexture)
         this.glSurfaceTexture = glSurfaceTexture
         val facing = if (backCamera) {
             CameraCharacteristics.LENS_FACING_BACK
@@ -359,6 +365,7 @@ class CameraRepository(
             CameraCharacteristics.LENS_FACING_FRONT
         }
         getCameraByFacing(facing)?.let {
+
             cameraManager.openCamera(
                 it,
                 object : CameraDevice.StateCallback() {
@@ -2362,7 +2369,17 @@ class CameraRepository(
              finished = true
              mpses?.cancel()
          }*/
-        if (enable) {
+        //////////worked
+
+       /* sessio?.stopRepeating()
+        sessio?.abortCaptures()
+        sessio?.close()*/
+        cameraDevice.close()
+      //  glSurfaceTexture?.release()
+        previewSurface.release()
+      /*  glSurfaceTexture?.releaseTexImage()
+        captureSurface.release()*/
+       /* if (enable) {
 
             encoder.start(createFile("mp4"))
             captureRequest?.addTarget(videoSurface)
@@ -2377,7 +2394,7 @@ class CameraRepository(
                 // sessio?.stopRepeating()
                 sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
             }
-        }
+        }*/
 
     }
 

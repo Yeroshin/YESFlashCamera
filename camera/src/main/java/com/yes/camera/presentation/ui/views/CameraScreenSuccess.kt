@@ -1237,7 +1237,10 @@ fun CameraScreenSuccess(
                     vectorColor = Color.White,
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.settings,
-                    onClick = onSettingsClick
+                    onClick =
+
+                        onSettingsClick
+
                 )
 
                 //////////////////camera flip
