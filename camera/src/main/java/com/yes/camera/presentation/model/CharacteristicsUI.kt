@@ -50,28 +50,32 @@ data class Settings(
 
     val wbValue: String? = null,
     val wbPosition: Int = 0,
-    val wbMode:WbItem? = null,
+    val wbMode: WbItem? = null,
 
     val focusValue: String? = null,
     val focusPosition: Int = 0,
-    val focusMode:FocusItem?=null,
+    val focusMode: FocusItem? = null,
 
     val magnifierValue: String? = null,
     val magnifierPosition: Int = 0,
 
-    val touchPoint: FloatArray?=null,
+    val touchPoint: FloatArray? = null,
+
+    val fullScreen: Boolean = false
 )
 
 
 sealed interface Item
-interface SelectorRadioGroupItem:Item
-enum class SettingsRadioGroupItem: Item {
+interface SelectorRadioGroupItem : Item
+enum class SettingsRadioGroupItem : Item {
     SHUTTER, ISO, FOCUS, WB, MAGNIFIER
 }
-enum class WbItem: SelectorRadioGroupItem {
-    AUTO,INCANDESCENT,FLUORESCENT,WARM_FLUORESCENT,DAYLIGHT,CLOUDY_DAYLIGHT,TWILIGHT,SHADE
+
+enum class WbItem : SelectorRadioGroupItem {
+    AUTO, INCANDESCENT, FLUORESCENT, WARM_FLUORESCENT, DAYLIGHT, CLOUDY_DAYLIGHT, TWILIGHT, SHADE
 }
-enum class FocusItem: SelectorRadioGroupItem {
-    MACRO,CONTINUOUS,TOUCH,INFINITE
+
+enum class FocusItem : SelectorRadioGroupItem {
+    MACRO, CONTINUOUS, TOUCH, INFINITE
 }
 

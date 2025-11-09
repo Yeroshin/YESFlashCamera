@@ -1,6 +1,7 @@
 package com.yes.settings.presentation.ui.views
 
 import android.net.Uri
+import android.widget.GridLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -15,13 +16,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,54 +50,67 @@ data class ImmutableCollection<T>(
 
 @Composable
 fun RadioDialog(
-    show: Boolean,
+    //   show: Boolean,
     options: ImmutableCollection<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
 ) {
-    //if (show) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Select option") },
-            text = {
-                Column {
-                    options.list.forEach { option ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOptionSelected(option) }
-                        ) {
-                            RadioButton(
-                                selected = option == selectedOption,
-                                onClick = {
-                                    onOptionSelected(option)
-                                }
-                            )
-                            Text(
-                                text = option,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
+
+    // if (show) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select option") },
+        text = {
+            Column {
+                options.list.forEach { option ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOptionSelected(option) }
+                    ) {
+                        RadioButton(
+                            selected = option == selectedOption,
+                            onClick = {
+                                onOptionSelected(option)
+                            }
+                        )
+                        Text(
+                            text = option,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("OK")
-                }
             }
-        )
-  //  }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("OK")
+            }
+        }
+    )
+    //  }
 }
 
 @Composable
 fun SettingsScreenSuccess(
-    settings: SettingsUI,
-    onBackClick: () -> Unit
+    settingsUI: SettingsUI,
+    onBackClick: () -> Unit,
+    onSettingsChanged: (SettingsUI) -> Unit
 ) {
-    //   var settings by remember { mutableStateOf(settings) }
+    var settings by remember(settingsUI) {
+        mutableStateOf(settingsUI)
+    }
+    LaunchedEffect(settings) {
+        onSettingsChanged(settings)
+    }
     var showDialog by remember { mutableStateOf(false) }
     var resolutionItems by remember(settings.resolutionItems) {
         mutableStateOf(settings.resolutionItems)
@@ -113,15 +131,19 @@ fun SettingsScreenSuccess(
             )
         )*/
 
-    var options by remember{
+    var options by remember {
         mutableStateOf(
             ImmutableCollection(
                 emptyList<String>()
-        )
+            )
 
-    ) }
+        )
+    }
     // Текущий выбранный вариант
     var selectedOption by remember { mutableStateOf("") }
+    var onConfirmAction by remember {
+        mutableStateOf({ })
+    }
 
     val context = LocalContext.current
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
@@ -175,9 +197,16 @@ fun SettingsScreenSuccess(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        options =resolutionItems
-                        selectedOption=resolutionSelected
+                        options = settings.resolutionItems
+                        selectedOption = settings.resolutionValue
                         showDialog = true
+                        onConfirmAction = {
+                            settings = settings.copy(
+                                resolutionValue = selectedOption
+                            )
+                            //  settings.resolutionValue = selectedOption  // Сброс
+                            showDialog = false
+                        }
                     }
             ) {
                 Text(
@@ -186,7 +215,7 @@ fun SettingsScreenSuccess(
                     color = Color.White
                 )
                 Text(
-                    text = settings.resolutionValue,//"1024 x 768",
+                    text = resolutionSelected,//"1024 x 768",
                     fontSize = 18.sp,
                     color = Color.Green
                 )
@@ -228,30 +257,54 @@ fun SettingsScreenSuccess(
                     color = Color.Green
                 )
             }
+            Spacer(modifier = Modifier.height(32.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Fullscreen preview",
+                    fontSize = 24.sp,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                var isChecked by remember { mutableStateOf(settings.fullScreen) }
+                Checkbox(
+                    checked = isChecked,
+                    onCheckedChange = {
+                        settings = settings.copy(
+                            fullScreen = it
+                        )
+                        isChecked = it
+                    },
+                    colors = CheckboxDefaults.colors(checkedColor = Color.Green)
+                )
+            }
         }
     }
     if (showDialog) {
         RadioDialog(
-            show = showDialog,
             options = options,
             selectedOption = selectedOption,
             onOptionSelected = { option ->
-             //   selectedOption.value = option
+                selectedOption = option
                 // Можно сразу закрыть диалог при выборе:
                 // showDialog = false
             },
-            onDismiss = { showDialog = false }
+            onDismiss = { showDialog = false },
+            onConfirm = onConfirmAction
         )
     }
-    /*RadioDialog(
-        show = showDialog,
-        options = options,
-        selectedOption = selectedOption.value,
-        onOptionSelected = { option ->
-            selectedOption.value = option
-            // Можно сразу закрыть диалог при выборе:
-            // showDialog = false
-        },
-        onDismiss = { showDialog = false }
-    )*/
+    /* RadioDialog(
+         show = showDialog,
+         options = options,
+         selectedOption = selectedOption,
+         onOptionSelected = { option ->
+             selectedOption = option
+             // Можно сразу закрыть диалог при выборе:
+             // showDialog = false
+         },
+         onDismiss = { showDialog = false }
+     )*/
 }

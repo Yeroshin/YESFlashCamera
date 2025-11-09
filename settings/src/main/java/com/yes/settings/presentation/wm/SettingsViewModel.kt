@@ -3,6 +3,7 @@ package com.yes.settings.presentation.wm
 import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.yes.settings.domain.model.Settings
 import com.yes.settings.domain.usecase.GetSettingsUseCase
 import com.yes.settings.domain.usecase.SetSettingsUseCase
 import com.yes.settings.presentation.contract.SettingsContract
@@ -13,9 +14,9 @@ import com.yes.settings.presentation.mapper.MapperUI
 import com.yes.settings.presentation.model.SettingsUI
 
 class SettingsViewModel(
-    getSettingsUseCase: GetSettingsUseCase,
-    setSettingsUseCase: SetSettingsUseCase,
-    mapperUI: MapperUI
+    private val getSettingsUseCase: GetSettingsUseCase,
+    private val setSettingsUseCase: SetSettingsUseCase,
+    private val mapperUI: MapperUI
 ) : BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveSettingsDependency(): BaseDependency
@@ -62,16 +63,12 @@ class SettingsViewModel(
 
     override fun handleEvent(event: Event) {
         when (event) {
+            is Event.OnGetSettings -> {
 
-
-            is Event.OnSetCharacteristics -> {
+            }
+            is Event.OnSetSettings ->{
                 setSettings()
             }
-
-            is Event.OnGetCharacteristics -> {
-                // startVideoRecord(event.enabled)
-            }
-
         }
     }
 
@@ -81,7 +78,7 @@ class SettingsViewModel(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-
+                setSettingsUseCase()
             }
         )
     }

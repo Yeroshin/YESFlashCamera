@@ -24,45 +24,20 @@ class OpenCameraUseCase(
             params.glSurfaceTexture,
             settingsCharacteristics.backCamera?:true
         )
-
-
-    //    settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
-        val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
-        settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
-       /* settingsRepository.setResolutionValue(
-            cameraCharacteristicsValue.resolution?:run{
-                cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height }
-            }
-        )*/
-
-     /*   settingsCharacteristics.backCamera?:run{
+        settingsCharacteristics.backCamera?.let {
+            cameraRepository.startVideoSession(settingsCharacteristics)
+        }?:run{
             settingsRepository.setBackCamera(true)
             val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
             settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
-            settingsRepository.setResolutionValue(cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width })
-        }*/
-       /* val firstLaunch:Boolean= settingsCharacteristics.backCamera==null
-
-
-        val e = settingsRepository.getResolutions()
-        val y=e
-        if (firstLaunch){
-            settingsRepository.setBackCamera(true)
-            val s=settingsRepository.getBackCamera()
-            val k=s
-            settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
-            settingsRepository.setResolutionValue(cameraCharacteristicsValue.resolutionItems.maxBy { it.width })
-            val e = settingsRepository.getResolutions()
-            val y=e
-            val o = settingsRepository.getResolutionValue()
-            val d=o
-        }*/
-        cameraRepository.startVideoSession(settingsCharacteristics)
+            settingsRepository.setResolutionValue(
+                cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height }
+            )
+            cameraRepository.startVideoSession(
+                settingsRepository.getCharacteristics()
+            )
+        }
         return cameraCharacteristics.filterNotNull()
-      /*  return cameraRepository.openCamera(
-            params.glSurfaceTexture,
-            settingsRepository.getCharacteristics()
-        ).filterNotNull()*/
     }
 
     data class Params(

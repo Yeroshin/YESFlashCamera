@@ -8,11 +8,11 @@ import com.yes.shared.presentation.vm.BaseViewModel.UiState
 
 class SettingsContract {
     sealed class Event : UiEvent {
-        data class OnGetCharacteristics(
+        data class OnGetSettings(
             val settings: Settings
         ): Event()
-        data class OnSetCharacteristics(
-            val settings: Settings
+        data class OnSetSettings(
+            val settings: SettingsUI
         ): Event()
 
     }

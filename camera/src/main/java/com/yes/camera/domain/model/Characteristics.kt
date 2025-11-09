@@ -18,5 +18,6 @@ data class Characteristics(
     val maxFocusValue: Float = 0f,
     val resolution: Dimensions? = null,
     val resolutionItems: List<Dimensions> = emptyList(),
-    val touchPoint: FloatArray? = null
+    val touchPoint: FloatArray? = null,
+    val fullscreen:Boolean? =null
 )

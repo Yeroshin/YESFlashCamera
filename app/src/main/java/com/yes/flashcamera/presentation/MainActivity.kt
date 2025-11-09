@@ -14,9 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
-import com.yes.settings.presentation.ui.views.SettingsScreen
+import com.yes.settings.presentation.ui.SettingsScreen
 import com.yes.settings.presentation.wm.SettingsViewModel
-import com.yes.shared.presentation.vm.BaseDependency
 
 private const val PERMISSIONS_REQUEST_CODE = 10
 

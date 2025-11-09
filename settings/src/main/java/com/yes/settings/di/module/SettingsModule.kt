@@ -26,9 +26,11 @@ class SettingsModule {
     @Provides
     fun providesSetSettingsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
+        settingsRepository: SettingsRepository
     ): SetSettingsUseCase {
         return SetSettingsUseCase(
             dispatcher,
+            settingsRepository
         )
     }
     @Provides

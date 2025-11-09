@@ -57,7 +57,7 @@ fun CameraScreen(
                 )
             },
             histogram = viewState.value.histogram,
-            fullscreen = false
+            fullscreen = state.characteristics.settings.fullScreen
         )
     }
 

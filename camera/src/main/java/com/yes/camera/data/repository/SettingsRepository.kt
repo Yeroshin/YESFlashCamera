@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.BACKCAMERA
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FOCUSMODE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FOCUSVALUE
+import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FULLSCREEN
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.ISOVALUE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONS
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONVALUE
@@ -36,6 +37,7 @@ class SettingsRepository(
         val FOCUSVALUE = floatPreferencesKey("focusValue")
         val FOCUSMODE = intPreferencesKey("focusMode")
         val TOUCHPOINT = stringPreferencesKey("touchPoint")
+        val FULLSCREEN = booleanPreferencesKey("fullScreen")
     }
 
     suspend fun setCharacteristics(characteristics: Characteristics) {
@@ -66,9 +68,13 @@ class SettingsRepository(
             wbMode = getWbMode(),
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
+            fullscreen = getFullScreen()
             //  touchPoint = getTouchPoint()
         )
 
+    }
+    private suspend fun getFullScreen(): Boolean? {
+        return settingsDataSource.subscribe(FULLSCREEN, null).first()
     }
 
     suspend fun setBackCamera(backCamera: Boolean?) {

@@ -13,13 +13,14 @@ class GetSettingsUseCase(
 ) : UseCase<Unit,Settings> (dispatcher) {
 
     override suspend fun run():Settings {
-        val   resolutionValue = settingsRepository.getResolutionValue()
+      /*  val   resolutionValue = settingsRepository.getResolutionValue()
         val items=settingsRepository.getResolutions()
-val t=items
-        return Settings(
-            resolutionValue = settingsRepository.getResolutionValue()?: throw IllegalStateException("Resolutions items is null"),
+val t=items*/
+        return settingsRepository.getSettings()
+      /*  return Settings(
+            resolutionValue = settingsRepository.getResolutionValue()?: throw IllegalStateException("ResolutionValue item is null"),
            // resolutionValue = settingsRepository.getResolutionValue()?: throw IllegalStateException("Resolution value is null"),
             resolutionItems = settingsRepository.getResolutions()?: throw IllegalStateException("Resolutions items is null")
-        )
+        )*/
     }
 }
