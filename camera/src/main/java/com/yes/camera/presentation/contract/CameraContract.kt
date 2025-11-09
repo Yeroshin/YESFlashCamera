@@ -12,6 +12,7 @@ class CameraContract {
             val backCamera:Boolean,
             val surfaceTexture: SurfaceTexture
         ): Event()
+        data object OnCloseCamera: Event()
         data class OnSetCharacteristics(
             val characteristics:CharacteristicsUI
         ): Event()

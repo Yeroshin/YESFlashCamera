@@ -4,6 +4,7 @@ import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.yes.camera.data.repository.SettingsRepository
+import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
@@ -19,10 +20,10 @@ import com.yes.shared.presentation.vm.BaseViewModel
 class CameraViewModel(
     private val mapper: MapperUI,
     private val openCameraUseCase: OpenCameraUseCase,
+    private val closeCameraUseCase: CloseCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
     private val recordVideoUseCase: RecordVideoUseCase,
     private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
-    private val settingsRepository: SettingsRepository
 ) : BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
@@ -92,6 +93,9 @@ class CameraViewModel(
                 startVideoRecord(event.enabled)
             }
 
+            Event.OnCloseCamera -> {
+                closeCamera()
+            }
         }
     }
 
@@ -148,24 +152,33 @@ class CameraViewModel(
             }
         )
     }
+    private fun closeCamera() {
+        withUseCaseScope(
+            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
+            onError = { println(it.message) },
+            block = {
+                closeCameraUseCase()
+            }
+        )
+    }
 
     class Factory(
         private val mapper: MapperUI,
         private val openCameraUseCase: OpenCameraUseCase,
+        private val closeCameraUseCase: CloseCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         private val recordVideoUseCase: RecordVideoUseCase,
         private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
-        private val settingsRepository: SettingsRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return CameraViewModel(
                 mapper,
                 openCameraUseCase,
+                closeCameraUseCase,
                 setInputCharacteristicsUseCase,
                 recordVideoUseCase,
                 subscribeHistogramUseCase,
-                settingsRepository
             ) as T
         }
     }

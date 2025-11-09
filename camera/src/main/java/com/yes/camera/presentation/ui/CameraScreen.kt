@@ -40,7 +40,12 @@ fun CameraScreen(
             context = context,
             renderer = renderer,
             characteristics = state.characteristics ,
-            onSettingsClick = onSettingsClick,
+            onSettingsClick ={
+                cameraViewModel.setEvent(
+                    CameraContract.Event.OnCloseCamera
+                )
+                onSettingsClick()
+            } ,
             onStartVideoRecord = {enabled->
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnStartVideoRecord(enabled)

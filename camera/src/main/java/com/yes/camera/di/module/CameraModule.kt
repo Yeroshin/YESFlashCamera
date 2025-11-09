@@ -9,6 +9,7 @@ import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.MediaEncoder
 import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.di.CameraScope
+import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
@@ -86,6 +87,16 @@ class CameraModule {
             settingsRepository
         )
     }
+    @Provides
+    fun providesCloseCameraUseCase(
+        @IoDispatcher dispatcher: CoroutineDispatcher,
+        cameraRepository: CameraRepository,
+    ): CloseCameraUseCase {
+        return CloseCameraUseCase(
+            dispatcher,
+            cameraRepository,
+        )
+    }
 
     @Provides
     fun providesSettingsRepository(
@@ -125,18 +136,18 @@ class CameraModule {
     fun providesCameraViewModelFactory(
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
+        closeCameraUseCase: CloseCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         recordVideoUseCase: RecordVideoUseCase,
         subscribeHistogramUseCase:SubscribeHistogramUseCase,
-        settingsRepository: SettingsRepository
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
             openCameraUseCase,
+            closeCameraUseCase,
             setInputCharacteristicsUseCase,
             recordVideoUseCase,
             subscribeHistogramUseCase,
-            settingsRepository
         )
     }
 

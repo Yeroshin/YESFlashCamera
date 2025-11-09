@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -32,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
@@ -801,9 +803,9 @@ fun CameraScreenSuccess(
                             84.dp
                         }
                     )
-                .onSizeChanged { size ->
-                 surfaceViewSize = size
-            },
+                    .onSizeChanged { size ->
+                        surfaceViewSize = size
+                    },
                 //  .align(Alignment.Center),
                 factory = {
                     AutoFitSurfaceView(

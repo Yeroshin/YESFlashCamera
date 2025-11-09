@@ -393,6 +393,11 @@ class CameraRepository(
         return characteristicsFlow
     }
 
+    fun closeCamera(){
+        cameraDevice.close()
+        previewSurface.release()
+    }
+
 
     private fun getCameraCharacteristics(id: String): Characteristics {
         val characteristics = cameraManager.getCameraCharacteristics(id)
@@ -2371,15 +2376,8 @@ class CameraRepository(
          }*/
         //////////worked
 
-       /* sessio?.stopRepeating()
-        sessio?.abortCaptures()
-        sessio?.close()*/
-        cameraDevice.close()
-      //  glSurfaceTexture?.release()
-        previewSurface.release()
-      /*  glSurfaceTexture?.releaseTexImage()
-        captureSurface.release()*/
-       /* if (enable) {
+
+     /*   if (enable) {
 
             encoder.start(createFile("mp4"))
             captureRequest?.addTarget(videoSurface)
