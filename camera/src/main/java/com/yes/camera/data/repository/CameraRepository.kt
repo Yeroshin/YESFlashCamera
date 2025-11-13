@@ -396,6 +396,7 @@ class CameraRepository(
     fun closeCamera(){
         cameraDevice.close()
         previewSurface.release()
+        _characteristicsFlow.update { null }
     }
 
 
@@ -466,6 +467,7 @@ class CameraRepository(
 
 
     fun startVideoSession(characteristics: Characteristics) {
+        //neeed pause?!
         createCaptureSession(
             listOf(
                 previewSurface,

@@ -4,6 +4,6 @@ import com.yes.shared.domain.Dimensions
 
 data class Settings (
     val resolutionValue:Dimensions?,
-    val resolutionItems:List<Dimensions>?,
+    val resolutionItems:List<Dimensions>? =null,
     val fullScreen: Boolean? = false
 )

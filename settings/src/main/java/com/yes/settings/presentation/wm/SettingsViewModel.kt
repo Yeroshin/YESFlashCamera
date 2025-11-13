@@ -67,18 +67,24 @@ class SettingsViewModel(
 
             }
             is Event.OnSetSettings ->{
-                setSettings()
+                setSettings(event.settings)
             }
         }
     }
 
 
-    private fun setSettings() {
+    private fun setSettings(settings:SettingsUI) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-                setSettingsUseCase()
+                setSettingsUseCase(
+                    SetSettingsUseCase.Params(
+                        settings =mapperUI.map(
+                            settings
+                        )
+                    )
+                )
             }
         )
     }
