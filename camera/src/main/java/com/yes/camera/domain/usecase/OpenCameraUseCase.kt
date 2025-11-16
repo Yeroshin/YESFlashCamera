@@ -28,8 +28,8 @@ class OpenCameraUseCase(
         )
         //delay(1000)
 
-        val initialCameraCharacteristics = cameraCharacteristics.filterNotNull().first()
-        val tmp=initialCameraCharacteristics
+       /* val initialCameraCharacteristics = cameraCharacteristics.filterNotNull().first()
+        val tmp=initialCameraCharacteristics*/
         settingsCharacteristics.backCamera?.let {
             cameraRepository.startVideoSession(settingsCharacteristics)
         }?:run{
