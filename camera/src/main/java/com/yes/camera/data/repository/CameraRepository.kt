@@ -222,6 +222,9 @@ class CameraRepository(
         MutableStateFlow(null)
     private val characteristicsFlow: StateFlow<Characteristics?> =
         _characteristicsFlow
+    fun subscribeCameraCharacteristics():StateFlow<Characteristics?>{
+        return characteristicsFlow
+    }
 
     /*  private val _event: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
       private val event = _event*/

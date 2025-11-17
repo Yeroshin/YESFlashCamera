@@ -54,11 +54,13 @@ class CameraModule {
     @Provides
     fun providesSubscribeHistogramUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
-        cameraRepository: CameraRepository
+        cameraRepository: CameraRepository,
+        settingsRepository: SettingsRepository
     ): SubscribeHistogramUseCase {
         return SubscribeHistogramUseCase(
             dispatcher,
-            cameraRepository
+            cameraRepository,
+            settingsRepository
         )
     }
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)

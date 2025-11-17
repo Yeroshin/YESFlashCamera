@@ -29,14 +29,17 @@ class SettingsViewModel(
                 println(it.message)
                       },
             block = {
-                val settings=getSettingsUseCase()
-                setState {
-                    copy(
-                        state = SettingsState.Success(
-                            mapperUI.map(settings)
-                        )
-                    )
-                }
+                getSettingsUseCase()
+                    .collect{settings->
+                        setState {
+                            copy(
+                                state = SettingsState.Success(
+                                    mapperUI.map(settings)
+                                )
+                            )
+                        }
+                    }
+
 
 
                 /* subscribeHistogramUseCase()

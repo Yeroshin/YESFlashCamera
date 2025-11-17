@@ -105,7 +105,7 @@ fun SettingsScreenSuccess(
     onBackClick: () -> Unit,
     onSettingsChanged: (SettingsUI) -> Unit
 ) {
-    var settings by remember(settingsUI) {
+    var settings by remember {
         mutableStateOf(settingsUI)
     }
     LaunchedEffect(settings) {

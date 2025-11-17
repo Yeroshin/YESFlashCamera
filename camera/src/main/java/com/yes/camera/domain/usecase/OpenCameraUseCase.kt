@@ -22,23 +22,29 @@ class OpenCameraUseCase(
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override suspend fun run(params: Params):Flow< Characteristics> {
         val settingsCharacteristics=settingsRepository.getCharacteristics()
+
         val cameraCharacteristics=cameraRepository.openCamera(
             params.glSurfaceTexture,
             settingsCharacteristics.backCamera?:true
         )
+     //   val tmp=cameraCharacteristics.filterNotNull().first().resolutionItems
         //delay(1000)
 
-       /* val initialCameraCharacteristics = cameraCharacteristics.filterNotNull().first()
-        val tmp=initialCameraCharacteristics*/
+        val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
         settingsCharacteristics.backCamera?.let {
             cameraRepository.startVideoSession(settingsCharacteristics)
         }?:run{
             settingsRepository.setBackCamera(true)
-            val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
+        //    val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
+           /* val tmp=cameraCharacteristics.filterNotNull().first().resolutionItems
+            val t=tmp*/
             settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
+
             settingsRepository.setResolutionValue(
                 cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height }
             )
+            val tmp=settingsRepository.subscribeResolutionValue().first()
+            val t=tmp
             cameraRepository.startVideoSession(
                 settingsRepository.getCharacteristics()
             )

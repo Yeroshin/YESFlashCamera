@@ -21,7 +21,10 @@ import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.WBVALUE
 import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.data.dataSource.SettingsDataSource
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 class SettingsRepository(
     private val settingsDataSource: SettingsDataSource
@@ -68,13 +71,24 @@ class SettingsRepository(
             wbMode = getWbMode(),
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
-            fullscreen = getFullScreen()
+            fullscreen = subscribeFullScreen().first()
             //  touchPoint = getTouchPoint()
         )
-
     }
-    private suspend fun getFullScreen(): Boolean? {
-        return settingsDataSource.subscribe(FULLSCREEN, null).first()
+    suspend fun subscribeSettings():Flow<Characteristics>{
+        val fullscreen=subscribeFullScreen()
+        return combine(
+            fullscreen,
+            subscribeResolutionValue()
+        ) {fullscreen,resolution ->
+            Characteristics(
+                fullscreen = fullscreen,
+                resolution = resolution
+            )
+        }
+    }
+    private suspend fun subscribeFullScreen(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(FULLSCREEN, null)
     }
 
     suspend fun setBackCamera(backCamera: Boolean?) {
@@ -127,13 +141,16 @@ class SettingsRepository(
 
     }
 
-    suspend fun getResolutionValue(): Dimensions? {
-        return settingsDataSource.subscribe(RESOLUTIONVALUE, null).first()
-            ?.split("x")
-            ?.takeIf { it.size == 2 }
-            ?.let { parts ->
-                Dimensions(parts[0].toInt(), parts[1].toInt())
+    suspend fun subscribeResolutionValue():Flow< Dimensions?> {
+        return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
+            .map {
+                it?.split("x")
+                ?.takeIf { it.size == 2 }
+                ?.let { parts ->
+                    Dimensions(parts[0].toInt(), parts[1].toInt())
+                }
             }
+
     }
 
     private suspend fun setIsoValue(isoValue: Int?) {

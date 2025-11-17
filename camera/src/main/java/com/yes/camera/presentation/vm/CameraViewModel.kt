@@ -35,11 +35,13 @@ class CameraViewModel(
             onError = { println(it.message) },
             block = {
                 subscribeHistogramUseCase()
-                    .collect { histogramData ->
+                    .collect { data ->
                         setState {
                             copy(
-                                histogram = histogramData
-
+                                histogram = data.second,
+                                        state = CameraState.Success(
+                                        characteristics = mapper.map(data.first)
+                                        )
                             )
                         }
                     }
