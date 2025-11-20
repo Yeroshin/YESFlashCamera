@@ -47,6 +47,7 @@ dependencies {
     implementation(project(":shared"))
    // implementation (libs.material)
 
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
 
 
     implementation(libs.androidx.core.ktx)

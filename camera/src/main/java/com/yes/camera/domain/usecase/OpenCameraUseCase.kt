@@ -31,6 +31,12 @@ class OpenCameraUseCase(
         //delay(1000)
 
         val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
+        /////
+      /*  settingsRepository.setResolutions(cameraCharacteristicsValue.resolutionItems)
+        settingsRepository.setResolutionValue(
+            cameraCharacteristicsValue.resolutionItems.maxByOrNull { it.width*it.height }
+        )*/
+        ////
         settingsCharacteristics.backCamera?.let {
             cameraRepository.startVideoSession(settingsCharacteristics)
         }?:run{

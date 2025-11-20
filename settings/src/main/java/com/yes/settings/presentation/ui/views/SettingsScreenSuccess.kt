@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.settings.R
 import com.yes.settings.presentation.model.SettingsUI
+import kotlinx.coroutines.flow.drop
 
 @Stable
 data class ImmutableCollection<T>(
@@ -108,11 +110,18 @@ fun SettingsScreenSuccess(
     var settings by remember {
         mutableStateOf(settingsUI)
     }
-    LaunchedEffect(settings) {
+   /* LaunchedEffect(settings) {
         onSettingsChanged(settings)
+    }*/
+    LaunchedEffect(Unit) {
+        snapshotFlow { settings }
+            .drop(1)  // Пропускаем начальное значение
+            .collect { newSettings ->
+                onSettingsChanged(newSettings)
+            }
     }
     var showDialog by remember { mutableStateOf(false) }
-    var resolutionItems by remember(settings.resolutionItems) {
+   /* var resolutionItems by remember(settings.resolutionItems) {
         mutableStateOf(settings.resolutionItems)
     }
     var resolutionSelected by remember(
@@ -121,7 +130,7 @@ fun SettingsScreenSuccess(
         mutableStateOf(
             settings.resolutionValue
         )
-    }
+    }*/
     // Доступные варианты выбора
     /*var options : ImmutableCollection<String> =
         ImmutableCollection(
@@ -215,7 +224,7 @@ fun SettingsScreenSuccess(
                     color = Color.White
                 )
                 Text(
-                    text = resolutionSelected,//"1024 x 768",
+                    text =settings.resolutionValue,// resolutionSelected,//"1024 x 768",
                     fontSize = 18.sp,
                     color = Color.Green
                 )

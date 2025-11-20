@@ -87,7 +87,7 @@ class SettingsRepository(
             )
         }
     }
-    private suspend fun subscribeFullScreen(): Flow<Boolean?> {
+     suspend fun subscribeFullScreen(): Flow<Boolean?> {
         return settingsDataSource.subscribe(FULLSCREEN, null)
     }
 

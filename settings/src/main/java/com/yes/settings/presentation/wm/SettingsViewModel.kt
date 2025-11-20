@@ -27,10 +27,10 @@ class SettingsViewModel(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = {
                 println(it.message)
-                      },
+            },
             block = {
                 getSettingsUseCase()
-                    .collect{settings->
+                    .collect { settings ->
                         setState {
                             copy(
                                 state = SettingsState.Success(
@@ -39,7 +39,6 @@ class SettingsViewModel(
                             )
                         }
                     }
-
 
 
                 /* subscribeHistogramUseCase()
@@ -58,9 +57,7 @@ class SettingsViewModel(
 
     override fun createInitialState(): State {
         return State(
-            SettingsState.Success(
-                SettingsUI()
-            )
+            SettingsState.Idle
         )
     }
 
@@ -69,21 +66,22 @@ class SettingsViewModel(
             is Event.OnGetSettings -> {
 
             }
-            is Event.OnSetSettings ->{
+
+            is Event.OnSetSettings -> {
                 setSettings(event.settings)
             }
         }
     }
 
 
-    private fun setSettings(settings:SettingsUI) {
+    private fun setSettings(settings: SettingsUI) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
                 setSettingsUseCase(
                     SetSettingsUseCase.Params(
-                        settings =mapperUI.map(
+                        settings = mapperUI.map(
                             settings
                         )
                     )

@@ -20,10 +20,13 @@ class MapperUI {
     fun map(settingsUI: SettingsUI):Settings{
         return Settings(
             resolutionValue =  settingsUI.resolutionValue.toDimensions(),
+            resolutionItems = settingsUI.resolutionItems.list.mapNotNull {
+               it.toDimensions()
+            },
             fullScreen = settingsUI.fullScreen
         )
     }
-    fun String.toDimensions(): Dimensions? {
+    private fun String.toDimensions(): Dimensions? {
         val (width, height) = split("x").map { it.toIntOrNull() ?: return null }
         return Dimensions(width, height)
     }

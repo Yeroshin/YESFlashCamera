@@ -10,6 +10,7 @@ import com.yes.shared.data.dataSource.SettingsDataSource
 import com.yes.shared.domain.Dimensions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class SettingsRepository(
@@ -66,6 +67,8 @@ class SettingsRepository(
     }
 
     private suspend fun subscribeResolutionValue(): Flow<Dimensions?> {
+        val tmp=settingsDataSource.subscribe(RESOLUTIONVALUE, null).first()
+        val t= tmp
         return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
             .map {
                 it?.split("x")
