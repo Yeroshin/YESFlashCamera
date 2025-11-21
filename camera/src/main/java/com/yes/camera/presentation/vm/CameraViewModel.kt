@@ -3,18 +3,16 @@ package com.yes.camera.presentation.vm
 import android.graphics.SurfaceTexture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
-import com.yes.camera.domain.usecase.SubscribeHistogramUseCase
+import com.yes.camera.domain.usecase.SubscribeCameraSettingsUseCase
 import com.yes.camera.presentation.contract.CameraContract.*
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
-
 
 
 class CameraViewModel(
@@ -23,7 +21,7 @@ class CameraViewModel(
     private val closeCameraUseCase: CloseCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
     private val recordVideoUseCase: RecordVideoUseCase,
-    private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
+    private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
 ) : BaseViewModel<Event, State, Effect>() {
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
@@ -34,14 +32,14 @@ class CameraViewModel(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = { println(it.message) },
             block = {
-                subscribeHistogramUseCase()
+                subscribeCameraSettingsUseCase()
                     .collect { data ->
                         setState {
                             copy(
                                 histogram = data.second,
-                                        state = CameraState.Success(
-                                        characteristics = mapper.map(data.first)
-                                        )
+                                state = CameraState.Success(
+                                    characteristics = mapper.map(data.first)
+                                )
                             )
                         }
                     }
@@ -142,7 +140,7 @@ class CameraViewModel(
             block = {
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
-                ).collect { characteristics ->
+                )/*.collect { characteristics ->
                     setState {
                         copy(
                             state = CameraState.Success(
@@ -150,10 +148,11 @@ class CameraViewModel(
                             )
                         )
                     }
-                }
+                }*/
             }
         )
     }
+
     private fun closeCamera() {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
@@ -170,7 +169,7 @@ class CameraViewModel(
         private val closeCameraUseCase: CloseCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         private val recordVideoUseCase: RecordVideoUseCase,
-        private val subscribeHistogramUseCase: SubscribeHistogramUseCase,
+        private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
@@ -180,7 +179,7 @@ class CameraViewModel(
                 closeCameraUseCase,
                 setInputCharacteristicsUseCase,
                 recordVideoUseCase,
-                subscribeHistogramUseCase,
+                subscribeCameraSettingsUseCase,
             ) as T
         }
     }

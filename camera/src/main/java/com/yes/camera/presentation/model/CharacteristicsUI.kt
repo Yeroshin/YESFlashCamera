@@ -7,7 +7,7 @@ data class CharacteristicsUI(
     val settings: Settings = Settings(),
     val items: Items = Items(),
     val histogramData: ByteArray = ByteArray(0),
-) {
+)/* {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -27,7 +27,7 @@ data class CharacteristicsUI(
         result = 31 * result + histogramData.contentHashCode()
         return result
     }
-}
+}*/
 
 data class Items(
     val shutterItems: ImmutableCollection<TextItem>? = null,
@@ -61,7 +61,8 @@ data class Settings(
 
     val touchPoint: FloatArray? = null,
 
-    val fullScreen: Boolean = false
+    val fullScreen: Boolean = false,
+    val resolution:String?=null
 )
 
 

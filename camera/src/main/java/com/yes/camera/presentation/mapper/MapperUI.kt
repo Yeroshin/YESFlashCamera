@@ -310,8 +310,9 @@ class MapperUI(
 
             focusValue = focusValue,
             focusPosition = focusPosition,
-            fullScreen = characteristics.fullscreen?:run { false }
-            /*  shutterItems = supportedShutterSpeeds,
+            fullScreen = characteristics.fullscreen?:run { false },
+           resolution = characteristics.resolution?.width.toString() + "x" + characteristics.resolution?.height.toString(),
+        /*  shutterItems = supportedShutterSpeeds,
               isoItems = supportedIsoValues,*/
 
         )

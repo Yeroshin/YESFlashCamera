@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-class SubscribeHistogramUseCase(
+class SubscribeCameraSettingsUseCase(
     dispatcher: CoroutineDispatcher,
     private val cameraRepository: CameraRepository,
     private val settingsRepository: SettingsRepository
@@ -43,11 +43,11 @@ class SubscribeHistogramUseCase(
            .stateIn(scope)
 
        val cameraCharacteristicsFlow=cameraRepository.subscribeCameraCharacteristics().filterNotNull()
-        val settings=settingsRepository.subscribeSettings()
+        val settingsFlow=settingsRepository.subscribeSettings()
       //  val combinedCameraFlow: Flow<Pair<Characteristics?, MutableMap<Int, Int>?>>
        return combine(
-            cameraCharacteristicsFlow, histogramFlow,settings
-        ) { characteristics, histogram,settings ->
+           histogramFlow,cameraCharacteristicsFlow, settingsFlow
+        ) {histogram, characteristics, settings ->
 
             Pair(characteristics.copy(
                 fullscreen = settings.fullscreen,

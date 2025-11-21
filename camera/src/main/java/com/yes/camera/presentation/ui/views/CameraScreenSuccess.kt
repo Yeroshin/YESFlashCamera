@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
@@ -27,20 +28,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
 import com.yes.camera.presentation.model.IconItem
+import com.yes.camera.presentation.model.Items
 import com.yes.camera.presentation.model.SettingsRadioGroupItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SelectorRadioGroupItem
+import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.model.WbItem
 import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
@@ -53,13 +62,14 @@ import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.custom.compose.RecordButton
+import com.yes.camera.presentation.ui.custom.compose.ShutterBox
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 
-/*@Composable
+@Composable
 @Preview
 fun orew() {
     val standardShutterSpeeds = mapOf(
@@ -104,46 +114,8 @@ fun orew() {
         4560000
     )
     val characteristics = CharacteristicsUI(
-        shutterItems = standardShutterSpeeds
-            .toSortedMap(compareByDescending { it })
-            .map {
-                SettingsItemUI(it.value)
-            },
-        isoItems = standardIsoValues.map {
-            SettingsItemUI(it.toString())
-        },
-        focusItems = listOf(
-            SettingsItemUI("0.2"),
-            SettingsItemUI("1"),
-            SettingsItemUI("2"),
-            SettingsItemUI("3"),
-            SettingsItemUI("4"),
-            SettingsItemUI("5"),
-            SettingsItemUI("6"),
-            SettingsItemUI("7"),
-            SettingsItemUI("8"),
-            SettingsItemUI("9"),
-            SettingsItemUI("9.5"),
-            SettingsItemUI("10"),
-            SettingsItemUI("11"),
-            SettingsItemUI("12"),
-            SettingsItemUI("13"),
-            SettingsItemUI("14"),
-            SettingsItemUI("15"),
-
-            ),
-        magnifierItems = listOf(
-            SettingsItemUI("1"),
-            SettingsItemUI("2"),
-            SettingsItemUI("3"),
-            SettingsItemUI("4"),
-            SettingsItemUI("5"),
-            SettingsItemUI("6"),
-            SettingsItemUI("7"),
-            SettingsItemUI("8"),
-            SettingsItemUI("9"),
-            SettingsItemUI("10"),
-        )
+        settings = Settings(),
+        items = Items()
     )
     val context = LocalContext.current
     val renderer = remember {
@@ -161,7 +133,8 @@ fun orew() {
         histogram = mutableMapOf(),
         fullscreen = false
     )
-}*/
+}
+
 @Stable
 data class ImmutableCollection<T>(
     val list: List<T>
@@ -239,7 +212,7 @@ fun CameraScreenSuccess(
 
     LaunchedEffect(settings) {
         snapshotFlow { settings }
-           // .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
+            // .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
                 settings = newValue
             }
@@ -284,7 +257,7 @@ fun CameraScreenSuccess(
 
             WbItem.FLUORESCENT -> {
                 wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
-               settings.copy(
+                settings.copy(
                     wbValue = null,
                     wbMode = WbItem.FLUORESCENT
                 )
@@ -400,18 +373,19 @@ fun CameraScreenSuccess(
             )
 
         }
-    val settingsRadioGroupItems: ImmutableCollection<RadioButton> = remember(settings,magnifierValue) {
-        ImmutableCollection(
-            listOf(
-                TextRadioItem(SettingsRadioGroupItem.SHUTTER, settings.shutterValue, "SHUTTER"),
-                TextRadioItem(SettingsRadioGroupItem.ISO, settings.isoValue, "ISO"),
-                TextRadioItem(SettingsRadioGroupItem.WB, settings.wbValue, "WB"),
-                TextRadioItem(SettingsRadioGroupItem.FOCUS, settings.focusValue, "FOCUS"),
-                TextRadioItem(SettingsRadioGroupItem.MAGNIFIER,magnifierValue,"MAGNIFIER")
+    val settingsRadioGroupItems: ImmutableCollection<RadioButton> =
+        remember(settings, magnifierValue) {
+            ImmutableCollection(
+                listOf(
+                    TextRadioItem(SettingsRadioGroupItem.SHUTTER, settings.shutterValue, "SHUTTER"),
+                    TextRadioItem(SettingsRadioGroupItem.ISO, settings.isoValue, "ISO"),
+                    TextRadioItem(SettingsRadioGroupItem.WB, settings.wbValue, "WB"),
+                    TextRadioItem(SettingsRadioGroupItem.FOCUS, settings.focusValue, "FOCUS"),
+                    TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, magnifierValue, "MAGNIFIER")
 
+                )
             )
-        )
-    }
+        }
     var valueSelectorAcquiredItemIndex: Int? by remember {
         mutableStateOf(null)
     }
@@ -428,18 +402,18 @@ fun CameraScreenSuccess(
     }
     val isSelectorVisible = remember { mutableStateOf(true) }
     var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(autoItems,settings) {
+    LaunchedEffect(autoItems, settings) {
         snapshotFlow { settings }
             .collect {
                 if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
                     when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
                         SettingsRadioGroupItem.SHUTTER -> {
-                              valueSelectorAcquiredItemIndex = settings.shutterPosition
+                            valueSelectorAcquiredItemIndex = settings.shutterPosition
 
                         }
 
                         SettingsRadioGroupItem.ISO -> {
-                              valueSelectorAcquiredItemIndex = settings.isoPosition
+                            valueSelectorAcquiredItemIndex = settings.isoPosition
                         }
 
                         SettingsRadioGroupItem.WB -> {
@@ -577,7 +551,7 @@ fun CameraScreenSuccess(
                 settings.focusValue
             },
             touchPoint = touchPoint,
-        //    focusMode = (focusSelectorRadioGroupSelectedItem as FocusItem)
+            //    focusMode = (focusSelectorRadioGroupSelectedItem as FocusItem)
         )
     }
     var selectorSelectedItemIndex by remember {
@@ -670,19 +644,20 @@ fun CameraScreenSuccess(
                  } ?: run { settings.copy() }
                  magnifierPosition = selectorSelectedItemIndex*/
                 if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == false) {
-                    magnifierPosition=selectorSelectedItemIndex
-                    magnifierValue = characteristics.items.magnifierItems?.list?.get(selectorSelectedItemIndex)
-                        ?.text?:run{""}
+                    magnifierPosition = selectorSelectedItemIndex
+                    magnifierValue =
+                        characteristics.items.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                            ?.text ?: run { "" }
                     renderer.configureMagnifier(
                         characteristics.items.magnifierItems?.list?.get(selectorSelectedItemIndex)
-                            ?.text?.toFloat()?:run{0f}
+                            ?.text?.toFloat() ?: run { 0f }
                     )
                 } else {
-                    valueSelectorAcquiredItemIndex=0
-                    magnifierValue ="1"
-                    magnifierPosition=0
+                    valueSelectorAcquiredItemIndex = 0
+                    magnifierValue = "1"
+                    magnifierPosition = 0
                     renderer.configureMagnifier(
-            0f
+                        0f
                     )
                 }
 
@@ -697,7 +672,7 @@ fun CameraScreenSuccess(
     }
     var settingsRequestSkipCounter by remember { mutableIntStateOf(0) }
     LaunchedEffect(settingsRequest) {
-        if (settingsRequestSkipCounter< 2) {
+        if (settingsRequestSkipCounter < 2) {
             settingsRequestSkipCounter++
             return@LaunchedEffect
         }
@@ -711,78 +686,77 @@ fun CameraScreenSuccess(
     var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
     val autoClick by remember(settings) {
 
-            mutableStateOf(
-                {
-                    settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
-                        autoItems = autoItems
-                            .toMutableMap()
-                            .apply {
-                                compute(it) { _, value -> !(value ?: false) }
-                            }
-                    }
-                    isRadioGroupSelectorVisible = false
-                    isSelectorVisible.value = true
-                    if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
-                        settingsRequest =
-                            when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
-                                SettingsRadioGroupItem.SHUTTER -> {
-
-                                    settings.copy(
-                                        shutterValue = ""
-                                    )
-                                }
-
-                                SettingsRadioGroupItem.ISO -> {
-                                    settings.copy(
-                                        isoValue = ""
-                                    )
-
-                                }
-
-                                SettingsRadioGroupItem.WB -> {
-                                    isRadioGroupSelectorVisible = true
-                                    isSelectorVisible.value = false
-                                    settings.copy(wbValue = "")
-
-                                }
-
-                                SettingsRadioGroupItem.FOCUS -> {
-                                    isRadioGroupSelectorVisible = true
-                                    isSelectorVisible.value = false
-                                    settings.copy(
-                                        focusValue = ""
-                                    )
-
-                                }
-
-                                SettingsRadioGroupItem.MAGNIFIER -> {
-                                    val normalizedX =0.0f
-                                      //  ((surfaceViewSize.width.toFloat()/2f / surfaceViewSize.width.toFloat()) * 2f - 1f)
-                                    val normalizedY =0.0f
-                                      // -((surfaceViewSize.height.toFloat()/2f / surfaceViewSize.height.toFloat()) * 2f - 1f).toFloat()
-                                    renderer.handleTouchPress(
-                                        normalizedX, normalizedY
-                                    )
-                                    valueSelectorAcquiredItemIndex=0
-                                    magnifierValue ="1"
-                                    magnifierPosition=0
-                                    renderer.configureMagnifier(
-                                        1f
-                                    )
-                                    settings.copy(
-                                        magnifierPosition = 0
-                                    )
-
-                                }
-
-                                null -> settings.copy()
-
-                            }
-
-                    }
+        mutableStateOf(
+            {
+                settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
+                    autoItems = autoItems
+                        .toMutableMap()
+                        .apply {
+                            compute(it) { _, value -> !(value ?: false) }
+                        }
                 }
-            )
+                isRadioGroupSelectorVisible = false
+                isSelectorVisible.value = true
+                if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
+                    settingsRequest =
+                        when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                            SettingsRadioGroupItem.SHUTTER -> {
 
+                                settings.copy(
+                                    shutterValue = ""
+                                )
+                            }
+
+                            SettingsRadioGroupItem.ISO -> {
+                                settings.copy(
+                                    isoValue = ""
+                                )
+
+                            }
+
+                            SettingsRadioGroupItem.WB -> {
+                                isRadioGroupSelectorVisible = true
+                                isSelectorVisible.value = false
+                                settings.copy(wbValue = "")
+
+                            }
+
+                            SettingsRadioGroupItem.FOCUS -> {
+                                isRadioGroupSelectorVisible = true
+                                isSelectorVisible.value = false
+                                settings.copy(
+                                    focusValue = ""
+                                )
+
+                            }
+
+                            SettingsRadioGroupItem.MAGNIFIER -> {
+                                val normalizedX = 0.0f
+                                //  ((surfaceViewSize.width.toFloat()/2f / surfaceViewSize.width.toFloat()) * 2f - 1f)
+                                val normalizedY = 0.0f
+                                // -((surfaceViewSize.height.toFloat()/2f / surfaceViewSize.height.toFloat()) * 2f - 1f).toFloat()
+                                renderer.handleTouchPress(
+                                    normalizedX, normalizedY
+                                )
+                                valueSelectorAcquiredItemIndex = 0
+                                magnifierValue = "1"
+                                magnifierPosition = 0
+                                renderer.configureMagnifier(
+                                    1f
+                                )
+                                settings.copy(
+                                    magnifierPosition = 0
+                                )
+
+                            }
+
+                            null -> settings.copy()
+
+                        }
+
+                }
+            }
+        )
 
 
     }
@@ -793,110 +767,141 @@ fun CameraScreenSuccess(
     ) {
         ///////////preview
         Box() {
-
-            AndroidView(
-                modifier = Modifier
-                    .padding(
-                        top = if (fullscreen) {
-                            0.dp
-                        } else {
-                            84.dp
-                        }
-                    )
-                    .onSizeChanged { size ->
-                        surfaceViewSize = size
-                    },
-                //  .align(Alignment.Center),
-                factory = {
-                    AutoFitSurfaceView(
-                        context,
-                        null
-                    ).apply {
-                        // autoFitSurfaceView = it
-                        // setFullscreen(true)
-                        setFullscreen(fullscreen)
-                        setAspectRatio(1280, 960)
-                        setEGLContextClientVersion(3)
-                        setRenderer(
-                            renderer
+            var isOpen by remember { mutableStateOf(true) }
+            ShutterBox(
+                isOpen = isOpen,
+                onToggle = {
+                    isOpen = !isOpen
+                },
+                modifier = Modifier.fillMaxSize()//.size(300.dp)
+            ) {
+                AndroidView(
+                    modifier = Modifier
+                        .padding(
+                            top = if (fullscreen) {
+                                0.dp
+                            } else {
+                                84.dp
+                            }
                         )
-                        viewTreeObserver.addOnGlobalLayoutListener {
-                            surfaceViewSize = IntSize(width, height)
-                            val normalizedX =
-                                (surfaceViewSize.width.toFloat()/2f / surfaceViewSize.width.toFloat()) * 2f - 1f
-                            val normalizedY =
-                                -((surfaceViewSize.height.toFloat()/2f / surfaceViewSize.height.toFloat()) * 2f- 1f)
-                            renderer.handleTouchPress(
-                                normalizedX, normalizedY
+                        .onSizeChanged { size ->
+                            surfaceViewSize = size
+                        },
+                    //  .align(Alignment.Center),
+                    factory = {
+                        AutoFitSurfaceView(
+                            context,
+                            null
+                        ).apply {
+                            // autoFitSurfaceView = it
+                            // setFullscreen(true)
+                            setFullscreen(fullscreen)
+                            setAspectRatio(1280, 960)
+                            setEGLContextClientVersion(3)
+                            setRenderer(
+                                renderer
                             )
-                            renderer.configureMagnifier(
-                                1f
-                            )
-                        }
-                        setOnTouchListener { v, event ->
-                            v.performClick()
+                            viewTreeObserver.addOnGlobalLayoutListener {
+                                surfaceViewSize = IntSize(width, height)
+                                val normalizedX =
+                                    (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
+                                val normalizedY =
+                                    -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
+                                renderer.handleTouchPress(
+                                    normalizedX, normalizedY
+                                )
+                                renderer.configureMagnifier(
+                                    1f
+                                )
+                            }
+                            setOnTouchListener { v, event ->
+                                v.performClick()
 
-                            val normalizedX =
-                                (event.x / v.width.toFloat()) * 2f - 1f
-                            val normalizedY =
-                                -((event.y / v.height.toFloat()) * 2f - 1f)
+                                val normalizedX =
+                                    (event.x / v.width.toFloat()) * 2f - 1f
+                                val normalizedY =
+                                    -((event.y / v.height.toFloat()) * 2f - 1f)
 
-                            when (event.action) {
-                                MotionEvent.ACTION_DOWN -> {
-                                    // it.queueEvent {
+                                when (event.action) {
+                                    MotionEvent.ACTION_DOWN -> {
+                                        // it.queueEvent {
 
-                                    //   it.setAspectRatio(3, 2)
-                                    renderer.handleTouchPress(
-                                        normalizedX, normalizedY
-                                    )
+                                        //   it.setAspectRatio(3, 2)
+                                        renderer.handleTouchPress(
+                                            normalizedX, normalizedY
+                                        )
 
-                                }
+                                    }
 
-                                MotionEvent.ACTION_MOVE -> {
-                                    //   it.queueEvent {
-                                    renderer.handleTouchDrag(
-                                        normalizedX, normalizedY
-                                    )
-                                }
+                                    MotionEvent.ACTION_MOVE -> {
+                                        //   it.queueEvent {
+                                        renderer.handleTouchDrag(
+                                            normalizedX, normalizedY
+                                        )
+                                    }
 
-                                MotionEvent.ACTION_UP -> {
-                                    val t = floatArrayOf(event.x / v.width, event.y / v.height)
-                                    val x = event.x
-                                    val y = event.y
-                                    val w = v.width
-                                    val h = v.height
-                                    touchPoint = floatArrayOf(
-                                        event.x / v.width,
-                                        event.y / v.height
-                                    )
-                                    /* settingsRequest=settingsRequest.copy(
-                                         touchPoint = floatArrayOf(
-                                             event.x / v.width,
-                                             event.y / v.height
-                                         )
-                                     )*/
-                                    /*  onCharacteristicChanged(
-                                          characteristics.copy(
-                                              settings = settings.copy(
-                                                  touchPoint = floatArrayOf(
-                                                      event.x / v.width,
-                                                      event.y / v.height
+                                    MotionEvent.ACTION_UP -> {
+                                        val t = floatArrayOf(event.x / v.width, event.y / v.height)
+                                        val x = event.x
+                                        val y = event.y
+                                        val w = v.width
+                                        val h = v.height
+                                        touchPoint = floatArrayOf(
+                                            event.x / v.width,
+                                            event.y / v.height
+                                        )
+                                        /* settingsRequest=settingsRequest.copy(
+                                             touchPoint = floatArrayOf(
+                                                 event.x / v.width,
+                                                 event.y / v.height
+                                             )
+                                         )*/
+                                        /*  onCharacteristicChanged(
+                                              characteristics.copy(
+                                                  settings = settings.copy(
+                                                      touchPoint = floatArrayOf(
+                                                          event.x / v.width,
+                                                          event.y / v.height
+                                                      )
                                                   )
                                               )
-                                          )
-                                      )*/
+                                          )*/
+
+                                    }
 
                                 }
+                                //   }
+
+                                true
 
                             }
-                            //   }
-
-                            true
-
                         }
                     }
-                }
-            )
+                )
+            }
+
+            ////////////////////////resolution
+            characteristics.settings.resolution?.let {
+                Text(
+                    modifier = Modifier
+                        .padding(
+                            top = 98.dp,
+                            start = 18.dp
+                        ),
+                    textAlign = TextAlign.Start,
+                    text = it,
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        shadow = Shadow(
+                            color = Color.DarkGray,
+                            offset = Offset(5.0f, 5.0f),
+                            blurRadius = 5f
+                        )
+                    )
+                )
+            }
+
             ////////////////////////histogram
             Histogram(
                 Modifier
@@ -1200,13 +1205,13 @@ fun CameraScreenSuccess(
                                 else -> null // Не присваиваем значение, если тип неизвестен
                             }, //selectorRadioGroupSelectedItem,// wbRadioGroupSelectedSettingsItem as Item,
                             onOptionSelected = { value ->
-                              /*  if (value?.javaClass == WbItem::class.java) {
-                                    wbSelectorRadioGroupSelectedItem = value
-                                }
-                                if (value?.javaClass == FocusItem::class.java) {
-                                    focusSelectorRadioGroupSelectedItem = value
-                                }*/
-                                   selectorRadioGroupSelectedItem = value as SelectorRadioGroupItem
+                                /*  if (value?.javaClass == WbItem::class.java) {
+                                      wbSelectorRadioGroupSelectedItem = value
+                                  }
+                                  if (value?.javaClass == FocusItem::class.java) {
+                                      focusSelectorRadioGroupSelectedItem = value
+                                  }*/
+                                selectorRadioGroupSelectedItem = value as SelectorRadioGroupItem
                                 /*  settingsRequest=characteristics.settings.copy(
                                       wbValue = "",
                                       wbAutoMode = value?.ordinal
@@ -1241,7 +1246,7 @@ fun CameraScreenSuccess(
                     resId = R.drawable.settings,
                     onClick =
 
-                        onSettingsClick
+                    onSettingsClick
 
                 )
 

@@ -13,7 +13,7 @@ import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
-import com.yes.camera.domain.usecase.SubscribeHistogramUseCase
+import com.yes.camera.domain.usecase.SubscribeCameraSettingsUseCase
 import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.camera.utils.AndroidResourceProvider
@@ -24,7 +24,6 @@ import com.yes.shared.presentation.vm.BaseDependency
 import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.CoroutineDispatcher
-import javax.inject.Singleton
 
 @Module
 class CameraModule {
@@ -56,8 +55,8 @@ class CameraModule {
         @IoDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
         settingsRepository: SettingsRepository
-    ): SubscribeHistogramUseCase {
-        return SubscribeHistogramUseCase(
+    ): SubscribeCameraSettingsUseCase {
+        return SubscribeCameraSettingsUseCase(
             dispatcher,
             cameraRepository,
             settingsRepository
@@ -141,7 +140,7 @@ class CameraModule {
         closeCameraUseCase: CloseCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
         recordVideoUseCase: RecordVideoUseCase,
-        subscribeHistogramUseCase:SubscribeHistogramUseCase,
+        subscribeCameraSettingsUseCase:SubscribeCameraSettingsUseCase,
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
@@ -149,7 +148,7 @@ class CameraModule {
             closeCameraUseCase,
             setInputCharacteristicsUseCase,
             recordVideoUseCase,
-            subscribeHistogramUseCase,
+            subscribeCameraSettingsUseCase,
         )
     }
 

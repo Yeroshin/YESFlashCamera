@@ -76,9 +76,8 @@ class SettingsRepository(
         )
     }
     suspend fun subscribeSettings():Flow<Characteristics>{
-        val fullscreen=subscribeFullScreen()
         return combine(
-            fullscreen,
+            subscribeFullScreen(),
             subscribeResolutionValue()
         ) {fullscreen,resolution ->
             Characteristics(
@@ -86,6 +85,9 @@ class SettingsRepository(
                 resolution = resolution
             )
         }
+    }
+    suspend fun getFullScreen(): Boolean? {
+        return settingsDataSource.subscribe(FULLSCREEN, null).first()
     }
      suspend fun subscribeFullScreen(): Flow<Boolean?> {
         return settingsDataSource.subscribe(FULLSCREEN, null)
@@ -140,7 +142,16 @@ class SettingsRepository(
         }
 
     }
+    suspend fun getResolutionValue(): Dimensions? {
+        return settingsDataSource.subscribe(RESOLUTIONVALUE, null).first()
+            ?.split("x")
+                    ?.takeIf { it.size == 2 }
+                    ?.let { parts ->
+                        Dimensions(parts[0].toInt(), parts[1].toInt())
+                    }
 
+
+    }
     suspend fun subscribeResolutionValue():Flow< Dimensions?> {
         return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
             .map {

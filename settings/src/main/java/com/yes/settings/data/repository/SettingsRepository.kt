@@ -59,7 +59,7 @@ class SettingsRepository(
     }
     private suspend fun setResolutionValue(dimension: Dimensions?) {
         dimension?.let { it ->
-            settingsDataSource.set(it.width.toString() + "x" + it.height.toString(), RESOLUTIONS)
+            settingsDataSource.set(it.width.toString() + "x" + it.height.toString(), RESOLUTIONVALUE)
         } ?: run {
             settingsDataSource.remove(RESOLUTIONVALUE)
         }

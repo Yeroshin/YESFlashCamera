@@ -18,9 +18,9 @@ class OpenCameraUseCase(
     dispatcher: CoroutineDispatcher,
     private val cameraRepository: CameraRepository,
     private val settingsRepository: SettingsRepository
-) : UseCase<OpenCameraUseCase.Params, Flow<Characteristics>>(dispatcher) {
+) : UseCase<OpenCameraUseCase.Params, Unit>(dispatcher) {
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    override suspend fun run(params: Params):Flow< Characteristics> {
+    override suspend fun run(params: Params){
         val settingsCharacteristics=settingsRepository.getCharacteristics()
 
         val cameraCharacteristics=cameraRepository.openCamera(
@@ -55,7 +55,6 @@ class OpenCameraUseCase(
                 settingsRepository.getCharacteristics()
             )
         }
-        return cameraCharacteristics.filterNotNull()
     }
 
     data class Params(
