@@ -760,6 +760,7 @@ fun CameraScreenSuccess(
 
 
     }
+    var isOpen by remember { mutableStateOf(true) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -767,23 +768,30 @@ fun CameraScreenSuccess(
     ) {
         ///////////preview
         Box() {
-            var isOpen by remember { mutableStateOf(true) }
+
             ShutterBox(
                 isOpen = isOpen,
                 onToggle = {
                     isOpen = !isOpen
                 },
-                modifier = Modifier.fillMaxSize()//.size(300.dp)
+                modifier = Modifier
+                    .padding(
+                        top = if (fullscreen) {
+                            0.dp
+                        } else {
+                            84.dp
+                        }
+                    )
             ) {
                 AndroidView(
                     modifier = Modifier
-                        .padding(
+                       /* .padding(
                             top = if (fullscreen) {
                                 0.dp
                             } else {
                                 84.dp
                             }
-                        )
+                        )*/
                         .onSizeChanged { size ->
                             surfaceViewSize = size
                         },
@@ -824,9 +832,6 @@ fun CameraScreenSuccess(
 
                                 when (event.action) {
                                     MotionEvent.ACTION_DOWN -> {
-                                        // it.queueEvent {
-
-                                        //   it.setAspectRatio(3, 2)
                                         renderer.handleTouchPress(
                                             normalizedX, normalizedY
                                         )
@@ -834,51 +839,28 @@ fun CameraScreenSuccess(
                                     }
 
                                     MotionEvent.ACTION_MOVE -> {
-                                        //   it.queueEvent {
                                         renderer.handleTouchDrag(
                                             normalizedX, normalizedY
                                         )
                                     }
 
                                     MotionEvent.ACTION_UP -> {
-                                        val t = floatArrayOf(event.x / v.width, event.y / v.height)
-                                        val x = event.x
-                                        val y = event.y
-                                        val w = v.width
-                                        val h = v.height
                                         touchPoint = floatArrayOf(
                                             event.x / v.width,
                                             event.y / v.height
                                         )
-                                        /* settingsRequest=settingsRequest.copy(
-                                             touchPoint = floatArrayOf(
-                                                 event.x / v.width,
-                                                 event.y / v.height
-                                             )
-                                         )*/
-                                        /*  onCharacteristicChanged(
-                                              characteristics.copy(
-                                                  settings = settings.copy(
-                                                      touchPoint = floatArrayOf(
-                                                          event.x / v.width,
-                                                          event.y / v.height
-                                                      )
-                                                  )
-                                              )
-                                          )*/
-
                                     }
-
                                 }
-                                //   }
-
                                 true
-
                             }
                         }
                     }
                 )
             }
+
+            /////////////
+
+            //////////////
 
             ////////////////////////resolution
             characteristics.settings.resolution?.let {
@@ -1244,10 +1226,7 @@ fun CameraScreenSuccess(
                     vectorColor = Color.White,
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.settings,
-                    onClick =
-
-                    onSettingsClick
-
+                    onClick = onSettingsClick
                 )
 
                 //////////////////camera flip
@@ -1271,6 +1250,7 @@ fun CameraScreenSuccess(
                         .size(96.dp),
                     isChecked = false,
                     onClick = { isCheck ->
+                        isOpen = !isOpen
                         startVideoRecord(isCheck)
                     }
 
