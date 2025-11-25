@@ -38,9 +38,9 @@ fun ShutterBox(
                 coroutineScope.launch {
                     isShutterSnapping = true
                     isShutterOpen = false // Шаг 1: Закрытие
-                    delay(350) // Задержка чуть больше анимации для полной смены
+                    delay(150) // Задержка чуть больше анимации для полной смены
                     isShutterOpen = true // Шаг 2: Открытие
-                    delay(350) // Задержка
+                    delay(150) // Задержка
                     isShutterSnapping = false
                     // После полной анимации можно вызвать onToggle, если нужно уведомить пользователя
                     onToggle()
@@ -68,12 +68,12 @@ fun ShutterBox(
 
             val panelHeight by animateDpAsState(
                 targetValue = if (isShutterOpen) 0.dp else heightDp / 2f,
-                animationSpec = tween(durationMillis = 300),
+                animationSpec = tween(durationMillis = 100),
             )
 
             val bottomOffset by animateDpAsState(
                 targetValue = if (isShutterOpen) heightDp else heightDp/ 2f,
-                animationSpec = tween(durationMillis =300),
+                animationSpec = tween(durationMillis =100),
             )
 
             Box(

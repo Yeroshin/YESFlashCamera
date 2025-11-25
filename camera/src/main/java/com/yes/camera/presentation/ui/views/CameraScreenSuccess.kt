@@ -785,13 +785,13 @@ fun CameraScreenSuccess(
             ) {
                 AndroidView(
                     modifier = Modifier
-                       /* .padding(
-                            top = if (fullscreen) {
-                                0.dp
-                            } else {
-                                84.dp
-                            }
-                        )*/
+                        /* .padding(
+                             top = if (fullscreen) {
+                                 0.dp
+                             } else {
+                                 84.dp
+                             }
+                         )*/
                         .onSizeChanged { size ->
                             surfaceViewSize = size
                         },
@@ -917,30 +917,6 @@ fun CameraScreenSuccess(
             items = settingsRadioGroupItems,
             onOptionSelected = { value ->
                 settingsRadioGroupSelectedSettingsRadioGroupItem = value as SettingsRadioGroupItem?
-
-                /*  value?.let { valueSelectorVisibility = true }
-                      ?: run { valueSelectorVisibility = false }*/
-                /* value?.let {
-                     isOpen = true
-
-
-                     when(it){
-                         Item.SHUTTER->{
-                             valueSelectorItems=characteristics.shutterValues
-                             position.value=1
-                         }
-
-                         Item.ISO->{
-                             valueSelectorItems=characteristics.isoValues
-                             position.value=3
-                         }
-
-                         Item.FOCUS->{}
-                     }
-                 } ?: run {
-                     isOpen = false
-                 }*/
-                //  radioGroupItems[0].resId = R.drawable.iso
             }
         )
 
@@ -1032,71 +1008,7 @@ fun CameraScreenSuccess(
                 }
                 VectorShadow(
                     modifier = Modifier
-                        .size(32.dp)
-
-                    /* .size(32.dp)
-                     .clickable {
-                         settingsRadioGroupSelectedSettingsRadioGroupItem?.let {
-                             autoItems = autoItems
-                                 .toMutableMap()
-                                 .apply {
-                                     compute(it) { _, value -> !(value ?: false) }
-                                 }
-                         }
-                         isRadioGroupSelectorVisible.value = false
-                         isSelectorVisible.value = true
-                         if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
-
-
-                             settingsRequest =
-                                 when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
-                                     SettingsRadioGroupItem.SHUTTER -> {
-
-                                         settingsRequest.copy(
-                                             shutterValue = ""
-                                         )
-                                     }
-
-                                     SettingsRadioGroupItem.ISO -> {
-                                         settingsRequest.copy(
-                                             isoValue = ""
-                                         )
-
-                                     }
-
-                                     SettingsRadioGroupItem.WB -> {
-                                         isRadioGroupSelectorVisible.value = true
-                                         isSelectorVisible.value = false
-                                         settings.copy(wbValue = "")
-
-                                     }
-
-                                     SettingsRadioGroupItem.FOCUS -> {
-                                         isRadioGroupSelectorVisible.value = true
-                                         isSelectorVisible.value = false
-                                         settings.copy(
-                                             focusValue = ""
-                                         )
-
-                                     }
-
-                                     SettingsRadioGroupItem.MAGNIFIER -> {
-
-                                         settings.copy(
-                                             magnifierPosition = 0
-                                         )
-
-                                     }
-
-                                     null -> settings.copy()
-
-                                 }
-
-                         }
-
-                         //car=car.copy()
-
-                     }*/,
+                        .size(32.dp),
                     vectorColor = if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
                         Color.Green
                     } else {
