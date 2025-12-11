@@ -23,6 +23,7 @@ import com.yes.shared.domain.Dimensions
 import com.yes.shared.data.dataSource.SettingsDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -71,14 +72,17 @@ class SettingsRepository(
             wbMode = getWbMode(),
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
-            fullscreen = subscribeFullScreen().first()
+            fullscreen = subscribeFullScreen().first(),
+            resolution = getResolutionValue()?: run {
+                throw IllegalArgumentException("ResolutionValue must not be null")
+            }
             //  touchPoint = getTouchPoint()
         )
     }
     suspend fun subscribeSettings():Flow<Characteristics>{
         return combine(
             subscribeFullScreen(),
-            subscribeResolutionValue()
+            subscribeResolutionValue().filterNotNull()
         ) {fullscreen,resolution ->
             Characteristics(
                 fullscreen = fullscreen,

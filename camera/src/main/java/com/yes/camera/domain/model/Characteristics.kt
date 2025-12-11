@@ -1,10 +1,11 @@
 package com.yes.camera.domain.model
 
 import com.yes.shared.domain.Dimensions
+import com.yes.shared.domain.ImgFormat
 
 
 data class Characteristics(
-    val backCamera:Boolean?=null,
+    val backCamera: Boolean? = null,
     val isoValue: Int? = null,
     val isoRange: IntRange = IntRange(0, 0),
     val shutterValue: Long? = null,
@@ -16,8 +17,9 @@ data class Characteristics(
     val focusMode: Int? = null,
     val minFocusValue: Float = 0f,
     val maxFocusValue: Float = 0f,
-    val resolution: Dimensions? = null,
+    val resolution: Dimensions,
     val resolutionItems: List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null,
-    val fullscreen:Boolean? =null
+    val fullscreen: Boolean? = null,
+    val imgFormat: ImgFormat =ImgFormat.JPEG
 )

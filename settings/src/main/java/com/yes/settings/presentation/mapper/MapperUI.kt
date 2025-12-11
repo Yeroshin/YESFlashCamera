@@ -4,6 +4,7 @@ import com.yes.settings.domain.model.Settings
 import com.yes.settings.presentation.model.SettingsUI
 import com.yes.settings.presentation.ui.views.ImmutableCollection
 import com.yes.shared.domain.Dimensions
+import com.yes.shared.domain.ImgFormat
 
 class MapperUI {
     fun map(settings: Settings): SettingsUI {
@@ -14,7 +15,16 @@ class MapperUI {
                     it.width.toString() + "x" + it.height.toString()
                 }?:run { emptyList() }
             ),
-            fullScreen = settings.fullScreen?:run { true }
+            fullScreen = settings.fullScreen?:run { true },
+            imgFormat = when(settings.imageFormat){
+                ImgFormat.JPEG->"JPEG"
+                ImgFormat.RAW->"RAW"
+                ImgFormat.JPEGRAW->"JPEG+RAW"
+                null->"JPEG"
+            },
+            imgFormatItems = listOf(
+                "JPEG","RAW","JPEG+RAW"
+            )
         )
     }
     fun map(settingsUI: SettingsUI):Settings{

@@ -41,6 +41,7 @@ import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.domain.Dimensions
 import com.yes.camera.utils.ImageComparator
+import com.yes.shared.domain.ImgFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.channels.BufferOverflow
@@ -71,25 +72,26 @@ class CameraRepository(
     //  private var captureResult: CaptureResult? = null
 
     private var captureRequest: CaptureRequest.Builder? = null
-    private var glSurfaceTexture: SurfaceTexture? = null
+    // private var glSurfaceTexture: SurfaceTexture? = null
 
     private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
     private lateinit var cameraDevice: CameraDevice
-  /*  private val previewSurface by lazy {
-        Surface(glSurfaceTexture)
-    }*/
-  private lateinit var previewSurface :Surface
 
+    /*  private val previewSurface by lazy {
+          Surface(glSurfaceTexture)
+      }*/
+    private lateinit var previewSurface: Surface
+    private lateinit var captureSurface: Surface
 
-   /* private val previewSurfaceConfiguration by lazy {
-        OutputConfiguration(previewSurface).apply {
-            //  enableSurfaceSharing()
-        }
-    }
-    private val videoSurface by lazy {
-        encoder.configure(640, 480)
-    }*/
+    /* private val previewSurfaceConfiguration by lazy {
+         OutputConfiguration(previewSurface).apply {
+             //  enableSurfaceSharing()
+         }
+     }
+     private val videoSurface by lazy {
+         encoder.configure(640, 480)
+     }*/
 
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -205,24 +207,25 @@ class CameraRepository(
         start()
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
-    val rWidth = 4096;
+    val rWidth = 4096
     val rHeight = 3072
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private val imageReader =
-        ImageReader.newInstance(rWidth, rHeight, ImageFormat.YUV_420_888, 30).apply {
-            setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
-        }
-    private val captureSurface by lazy {
-        imageReader.surface
-    }
+    /* @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+     private val imageReader =
+         ImageReader.newInstance(rWidth, rHeight, ImageFormat.YUV_420_888, 30).apply {
+             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+         }
+     private val captureSurface by lazy {
+         imageReader.surface
+     }*/
 
 
     private val _characteristicsFlow: MutableStateFlow<Characteristics?> =
         MutableStateFlow(null)
     private val characteristicsFlow: StateFlow<Characteristics?> =
         _characteristicsFlow
-    fun subscribeCameraCharacteristics():StateFlow<Characteristics?>{
+
+    fun subscribeCameraCharacteristics(): StateFlow<Characteristics?> {
         return characteristicsFlow
     }
 
@@ -354,14 +357,15 @@ class CameraRepository(
           return characteristicsFlow
       }
   */
-    var opened:Boolean=false
+    var opened: Boolean = false
+
     @SuppressLint("MissingPermission")
     fun openCamera(
-        glSurfaceTexture: SurfaceTexture,
-        backCamera:Boolean
+
+        backCamera: Boolean
     ): StateFlow<Characteristics?> {
-        previewSurface=Surface(glSurfaceTexture)
-        this.glSurfaceTexture = glSurfaceTexture
+
+        //  this.glSurfaceTexture = glSurfaceTexture
         val facing = if (backCamera) {
             CameraCharacteristics.LENS_FACING_BACK
         } else {
@@ -376,7 +380,7 @@ class CameraRepository(
                     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
                     override fun onOpened(camera: CameraDevice) {
                         cameraDevice = camera
-                       // startVideoSession(characteristics)
+                        // startVideoSession(characteristics)
                         _characteristicsFlow.update {
                             getCameraCharacteristics(camera.id)
                         }
@@ -396,7 +400,7 @@ class CameraRepository(
         return characteristicsFlow
     }
 
-    fun closeCamera(){
+    fun closeCamera() {
         cameraDevice.close()
         previewSurface.release()
         _characteristicsFlow.update { null }
@@ -449,7 +453,7 @@ class CameraRepository(
         } ?: listOf(
             Dimensions(0, 0)
         )
-        val r=resolutionItems
+        val r = resolutionItems
         return Characteristics(
             isoValue = 0,
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
@@ -464,13 +468,30 @@ class CameraRepository(
                 )
             } ?: listOf(
                 Dimensions(0, 0)
-            )
+            ),
+            resolution = Dimensions(0, 0)
+
         )
     }
 
 
-    fun startVideoSession(characteristics: Characteristics) {
-        //neeed pause?!
+    fun startVideoSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
+        previewSurface = Surface(glSurfaceTexture)
+        val imageReader =
+            ImageReader.newInstance(
+                characteristics.resolution.width,
+                characteristics.resolution.height,
+                when(characteristics.imgFormat){
+                    ImgFormat.JPEG->ImageFormat.JPEG
+                    ImgFormat.JPEGRAW->ImageFormat.RAW12
+                    ImgFormat.RAW->ImageFormat.RAW12
+                },
+                //ImageFormat.YUV_420_888,
+                30
+            ).apply {
+                    setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+                }
+        captureSurface = imageReader.surface
         createCaptureSession(
             listOf(
                 previewSurface,
@@ -2382,22 +2403,22 @@ class CameraRepository(
         //////////worked
 
 
-     /*   if (enable) {
+        /*   if (enable) {
 
-            encoder.start(createFile("mp4"))
-            captureRequest?.addTarget(videoSurface)
-            captureRequest?.let {
-                //sessio?.stopRepeating()
-                sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-            }
-        } else {
-            encoder.stop()
-            captureRequest?.removeTarget(videoSurface)
-            captureRequest?.let {
-                // sessio?.stopRepeating()
-                sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-            }
-        }*/
+               encoder.start(createFile("mp4"))
+               captureRequest?.addTarget(videoSurface)
+               captureRequest?.let {
+                   //sessio?.stopRepeating()
+                   sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+               }
+           } else {
+               encoder.stop()
+               captureRequest?.removeTarget(videoSurface)
+               captureRequest?.let {
+                   // sessio?.stopRepeating()
+                   sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+               }
+           }*/
 
     }
 

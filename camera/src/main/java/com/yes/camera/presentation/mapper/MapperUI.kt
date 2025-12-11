@@ -22,6 +22,7 @@ import com.yes.camera.presentation.model.WbItem
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.views.ImmutableCollection
 import com.yes.camera.utils.ResourceProvider
+import com.yes.shared.domain.Dimensions
 import kotlin.math.abs
 
 class MapperUI(
@@ -505,6 +506,7 @@ class MapperUI(
             focusMode = focusMode,
             shutterRange = LongRange(0, 0),
             resolutionItems = emptyList(),
+            resolution = Dimensions(0,0),
             touchPoint = characteristics.settings.touchPoint
         )
         val r = t

@@ -24,7 +24,7 @@ class OpenCameraUseCase(
         val settingsCharacteristics=settingsRepository.getCharacteristics()
 
         val cameraCharacteristics=cameraRepository.openCamera(
-            params.glSurfaceTexture,
+
             settingsCharacteristics.backCamera?:true
         )
      //   val tmp=cameraCharacteristics.filterNotNull().first().resolutionItems
@@ -38,7 +38,10 @@ class OpenCameraUseCase(
         )*/
         ////
         settingsCharacteristics.backCamera?.let {
-            cameraRepository.startVideoSession(settingsCharacteristics)
+            cameraRepository.startVideoSession(
+                params.glSurfaceTexture,
+                settingsCharacteristics
+            )
         }?:run{
             settingsRepository.setBackCamera(true)
         //    val cameraCharacteristicsValue=cameraCharacteristics.filterNotNull().first()
@@ -52,6 +55,7 @@ class OpenCameraUseCase(
             val tmp=settingsRepository.subscribeResolutionValue().first()
             val t=tmp
             cameraRepository.startVideoSession(
+                params.glSurfaceTexture,
                 settingsRepository.getCharacteristics()
             )
         }
