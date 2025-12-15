@@ -1,7 +1,6 @@
 package com.yes.settings.presentation.ui.views
 
 import android.net.Uri
-import android.widget.GridLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
@@ -15,12 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -35,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -262,7 +256,18 @@ fun SettingsScreenSuccess(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {}
+                    .clickable {
+                        options = settings.imgFormatItems
+                        selectedOption = settings.imgFormatValue
+                        showDialog = true
+                        onConfirmAction = {
+                            settings = settings.copy(
+                                imgFormatValue = selectedOption
+                            )
+                            //  settings.resolutionValue = selectedOption  // Сброс
+                            showDialog = false
+                        }
+                    }
             ) {
                 Text(
                     text = "Image format",
@@ -270,7 +275,7 @@ fun SettingsScreenSuccess(
                     color = Color.White
                 )
                 Text(
-                    text = "Jpeg + RAW",
+                    text = settings.imgFormatValue,
                     fontSize = 18.sp,
                     color = Color.Green
                 )

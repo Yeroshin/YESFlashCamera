@@ -1,12 +1,11 @@
 package com.yes.settings.presentation.model
 
 import com.yes.settings.presentation.ui.views.ImmutableCollection
-import com.yes.shared.domain.Dimensions
 
 data class SettingsUI(
     val resolutionValue: String = "",
     val resolutionItems: ImmutableCollection<String> = ImmutableCollection(emptyList()),
     val fullScreen: Boolean = false,
-    val imgFormat:String,
-    val imgFormatItems:List<String>
+    val imgFormatValue:String,
+    val imgFormatItems:ImmutableCollection<String>
 )

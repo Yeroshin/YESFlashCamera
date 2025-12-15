@@ -21,5 +21,6 @@ data class Characteristics(
     val resolutionItems: List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null,
     val fullscreen: Boolean? = null,
-    val imgFormat: ImgFormat =ImgFormat.JPEG
+    val imgFormat: ImgFormat =ImgFormat.JPEG,
+    val filePath: String=""
 )

@@ -2,12 +2,14 @@ package com.yes.camera.data.repository
 
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
+import android.os.Environment
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.BACKCAMERA
+import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FILEPATH
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FOCUSMODE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FOCUSVALUE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.FULLSCREEN
@@ -25,7 +27,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import java.io.File
 
 class SettingsRepository(
     private val settingsDataSource: SettingsDataSource
@@ -42,6 +46,7 @@ class SettingsRepository(
         val FOCUSMODE = intPreferencesKey("focusMode")
         val TOUCHPOINT = stringPreferencesKey("touchPoint")
         val FULLSCREEN = booleanPreferencesKey("fullScreen")
+        val FILEPATH=stringPreferencesKey("filePath")
     }
 
     suspend fun setCharacteristics(characteristics: Characteristics) {
@@ -75,6 +80,9 @@ class SettingsRepository(
             fullscreen = subscribeFullScreen().first(),
             resolution = getResolutionValue()?: run {
                 throw IllegalArgumentException("ResolutionValue must not be null")
+            },
+            filePath = getFilePath()?: run {
+                throw IllegalArgumentException("Filepath must not be null")
             }
             //  touchPoint = getTouchPoint()
         )
@@ -262,6 +270,11 @@ class SettingsRepository(
             ?.split(",")
             ?.map { it.toFloat() }
             ?.toFloatArray()
+    }
+    private suspend fun getFilePath(): String? {
+        val dcimDir: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        val path:String = dcimDir.absolutePath
+        return settingsDataSource.subscribe(FILEPATH, path).first()
     }
 
     ///////////////////////

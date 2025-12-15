@@ -16,14 +16,14 @@ class MapperUI {
                 }?:run { emptyList() }
             ),
             fullScreen = settings.fullScreen?:run { true },
-            imgFormat = when(settings.imageFormat){
+            imgFormatValue = when(settings.imageFormat){
                 ImgFormat.JPEG->"JPEG"
                 ImgFormat.RAW->"RAW"
                 ImgFormat.JPEGRAW->"JPEG+RAW"
                 null->"JPEG"
             },
-            imgFormatItems = listOf(
-                "JPEG","RAW","JPEG+RAW"
+            imgFormatItems = ImmutableCollection(
+                list= listOf("JPEG","RAW","JPEG+RAW")
             )
         )
     }
@@ -33,7 +33,13 @@ class MapperUI {
             resolutionItems = settingsUI.resolutionItems.list.mapNotNull {
                it.toDimensions()
             },
-            fullScreen = settingsUI.fullScreen
+            fullScreen = settingsUI.fullScreen,
+            imageFormat =when(settingsUI.imgFormatValue){
+                "JPEG"->ImgFormat.JPEG
+                "RAW"->ImgFormat.RAW
+                "JPEG+RAW"->ImgFormat.JPEGRAW
+                else -> ImgFormat.JPEG
+            }
         )
     }
     private fun String.toDimensions(): Dimensions? {

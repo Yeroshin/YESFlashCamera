@@ -36,11 +36,10 @@ import android.os.Looper
 import android.util.Log
 import android.view.Surface
 import android.widget.Toast
-import android.window.SurfaceSyncGroup
 import androidx.annotation.RequiresApi
 import com.yes.camera.domain.model.Characteristics
-import com.yes.shared.domain.Dimensions
 import com.yes.camera.utils.ImageComparator
+import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
@@ -52,6 +51,8 @@ import kotlinx.coroutines.flow.update
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.lang.Math.log
 import java.nio.ByteBuffer
 import java.util.Date
@@ -76,7 +77,7 @@ class CameraRepository(
 
     private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)
-    private lateinit var cameraDevice: CameraDevice
+    private var cameraDevice: CameraDevice? = null
 
     /*  private val previewSurface by lazy {
           Surface(glSurfaceTexture)
@@ -96,6 +97,34 @@ class CameraRepository(
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        var image: Image? = null
+        try {
+            image = reader.acquireLatestImage()
+            image?.let {
+                // Получить буфер
+                val buffer: ByteBuffer = it.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
+
+                // Указать путь к файлу
+                val filename = "saved_image.jpg"
+                val directory =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val file = File(directory, filename)
+
+                // Записать байты в файл
+                FileOutputStream(file).use { output ->
+                    output.write(bytes)
+                }
+
+                println("Изображение сохранено по пути: ${file.absolutePath}")
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            image?.close()
+        }
+
 
         /* if (running){
              val image = reader.acquireNextImage()
@@ -115,12 +144,12 @@ class CameraRepository(
              }
          }*/
         // val image = reader.acquireNextImage()
-        reader.acquireNextImage()?.let {
-            val ybytes = ByteArray(it.planes[0].buffer.capacity())
-            it.planes[0].buffer.get(ybytes)
-            _outputBuffer.value = ybytes
-            it.close()
-        }
+        /* reader.acquireNextImage()?.let {
+             val ybytes = ByteArray(it.planes[0].buffer.capacity())
+             it.planes[0].buffer.get(ybytes)
+             _outputBuffer.value = ybytes
+             it.close()
+         }*/
         //  image?.close()
         /* if (running) {
              val image = reader.acquireNextImage()
@@ -388,6 +417,7 @@ class CameraRepository(
 
                     override fun onDisconnected(camera: CameraDevice) {
                         camera.close()
+                        cameraDevice = null
                     }
 
                     override fun onError(camera: CameraDevice, error: Int) {
@@ -401,7 +431,7 @@ class CameraRepository(
     }
 
     fun closeCamera() {
-        cameraDevice.close()
+        cameraDevice?.close()
         previewSurface.release()
         _characteristicsFlow.update { null }
     }
@@ -474,23 +504,25 @@ class CameraRepository(
         )
     }
 
-
+    private lateinit var imageReader: ImageReader
+    private lateinit var filePath:String
     fun startVideoSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
+        filePath=characteristics.filePath
         previewSurface = Surface(glSurfaceTexture)
-        val imageReader =
+        imageReader =
             ImageReader.newInstance(
                 characteristics.resolution.width,
                 characteristics.resolution.height,
-                when(characteristics.imgFormat){
-                    ImgFormat.JPEG->ImageFormat.JPEG
-                    ImgFormat.JPEGRAW->ImageFormat.RAW12
-                    ImgFormat.RAW->ImageFormat.RAW12
+                when (characteristics.imgFormat) {
+                    ImgFormat.JPEG -> ImageFormat.JPEG
+                    ImgFormat.JPEGRAW -> ImageFormat.RAW_SENSOR
+                    ImgFormat.RAW -> ImageFormat.RAW_SENSOR
                 },
                 //ImageFormat.YUV_420_888,
                 30
-            ).apply {
+            )/*.apply {
                     setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
-                }
+                }*/
         captureSurface = imageReader.surface
         createCaptureSession(
             listOf(
@@ -535,7 +567,7 @@ class CameraRepository(
                 }
             }
         )
-        cameraDevice.createCaptureSession(config)
+        cameraDevice?.createCaptureSession(config)
     }
 
     var frameTime: Long = 0
@@ -1895,26 +1927,31 @@ class CameraRepository(
         block: (captureRequest: CaptureRequest.Builder) -> CaptureRequest.Builder
     ) {
         try {
-            val captureBuilder = cameraDevice.createCaptureRequest(templateType)
+            cameraDevice?.createCaptureRequest(templateType)
                 .apply {
                     targets.forEach {
-                        addTarget(it)
+                        this?.addTarget(it)
                     }
-                    block(this)
+                    this?.let { block(it) }
+                    if (isRepeating) {
+                        sessio?.stopRepeating()
+                        sessio?.abortCaptures()
+                        this?.build()?.let {
+                            sessio?.setRepeatingRequest(
+                                it,
+                                captureCallback, mBackgroundHandler
+                            )
+                        }
+                    } else {
+                        this?.build()?.let {
+                            sessio?.capture(
+                                it,
+                                captureCallback, mBackgroundHandler
+                            )
+                        }
+                    }
                 }
-            if (isRepeating) {
-                sessio?.stopRepeating()
-                sessio?.abortCaptures()
-                sessio?.setRepeatingRequest(
-                    captureBuilder.build(),
-                    captureCallback, mBackgroundHandler
-                )
-            } else {
-                sessio?.capture(
-                    captureBuilder.build(),
-                    captureCallback, mBackgroundHandler
-                )
-            }
+
         } catch (e: CameraAccessException) {
             Toast
                 .makeText(
@@ -2374,7 +2411,34 @@ class CameraRepository(
     ////////////////////////////////////////////////
     ////////////////////////////////////////////////
     ////////////////////////////////////////////////
+    private val listener = ImageReader.OnImageAvailableListener {
+        val image = imageReader.acquireLatestImage()
+        if (image != null) {
+            //////////////////
+            val buffer: ByteBuffer = image.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer[bytes]
+            var output: FileOutputStream? = null
+            try {
+                output = FileOutputStream(filePath)
+                output?.write(bytes)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            } finally {
+                image.close()
+                output?.close()
+
+            }
+            //////////////////
+            image.close()
+            imageReader.setOnImageAvailableListener(null, null) // отключение слушателя
+        }
+
+    }
     fun singleCapture(enable: Boolean) {
+
+
+       // imageReader.setOnImageAvailableListener(listener, null)
         //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
         /*if (enable) {
