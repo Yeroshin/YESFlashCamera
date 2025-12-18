@@ -77,7 +77,7 @@ class SettingsRepository(
             wbMode = getWbMode(),
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
-            fullscreen = subscribeFullScreen().first(),
+            fullscreen = getFullScreen(),
             resolution = getResolutionValue()?: run {
                 throw IllegalArgumentException("ResolutionValue must not be null")
             },
@@ -116,7 +116,7 @@ class SettingsRepository(
 
     }
 
-     suspend fun getBackCamera(): Boolean? {
+     private suspend fun getBackCamera(): Boolean? {
         return settingsDataSource.subscribe(BACKCAMERA, null).first()
     }
 

@@ -1,5 +1,7 @@
 package com.yes.camera.domain.usecase
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.domain.model.Characteristics
@@ -18,6 +20,7 @@ class SubscribeCameraSettingsUseCase(
     private val settingsRepository: SettingsRepository
 ) : UseCase<Unit, Flow<Pair<Characteristics,MutableMap<Int, Int>?>>>(dispatcher) {
     private val scope = CoroutineScope(dispatcher)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override suspend fun run(): Flow<Pair<Characteristics, MutableMap<Int, Int>?>> {
        val histogramFlow= cameraRepository.subscribeOutputBuffer()
            .map { buffer ->
@@ -42,16 +45,17 @@ class SubscribeCameraSettingsUseCase(
            }
            .stateIn(scope)
 
-       val cameraCharacteristicsFlow=cameraRepository.subscribeCameraCharacteristics().filterNotNull()
-        val settingsFlow=settingsRepository.subscribeSettings()
+       val cameraCharacteristicsFlow=cameraRepository.subscribeCameraSettings().filterNotNull()
+       // val settingsFlow=settingsRepository.subscribeSettings()
+
       //  val combinedCameraFlow: Flow<Pair<Characteristics?, MutableMap<Int, Int>?>>
        return combine(
-           histogramFlow,cameraCharacteristicsFlow, settingsFlow
-        ) {histogram, characteristics, settings ->
-
-            Pair(characteristics.copy(
-                fullscreen = settings.fullscreen,
-                resolution = settings.resolution
+           histogramFlow,cameraCharacteristicsFlow
+        ) {histogram, cameraCharacteristics,->
+           val characteristics=settingsRepository.getCharacteristics()
+            Pair(cameraCharacteristics.copy(
+                fullscreen = characteristics.fullscreen,
+                resolution = characteristics.resolution
             ), histogram)
         }
       //  return combinedCameraFlow

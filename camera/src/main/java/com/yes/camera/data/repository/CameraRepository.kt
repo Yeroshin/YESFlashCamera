@@ -95,142 +95,7 @@ class CameraRepository(
      }*/
 
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        var image: Image? = null
-        try {
-            image = reader.acquireLatestImage()
-            image?.let {
-                // Получить буфер
-                val buffer: ByteBuffer = it.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
 
-                // Указать путь к файлу
-                val filename = "saved_image.jpg"
-                val directory =
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                val file = File(directory, filename)
-
-                // Записать байты в файл
-                FileOutputStream(file).use { output ->
-                    output.write(bytes)
-                }
-
-                println("Изображение сохранено по пути: ${file.absolutePath}")
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            image?.close()
-        }
-
-
-        /* if (running){
-             val image = reader.acquireNextImage()
-             if (image!= null) {
-                 val buffer = image.planes[0].buffer
-                 val bytes = ByteArray(buffer.remaining())
-                 buffer.get(bytes)
-
-                 try {
-                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
-                     sink.write(byteBuffer.array())
-                 } catch (e: IOException) {
-                     println()
-                 } finally {
-                     image.close() // Освобождаем изображение
-                 }
-             }
-         }*/
-        // val image = reader.acquireNextImage()
-        /* reader.acquireNextImage()?.let {
-             val ybytes = ByteArray(it.planes[0].buffer.capacity())
-             it.planes[0].buffer.get(ybytes)
-             _outputBuffer.value = ybytes
-             it.close()
-         }*/
-        //  image?.close()
-        /* if (running) {
-             val image = reader.acquireNextImage()
-             image?.let {
-                 // val tmp =yuv420ToBitmap(it)
-                 //  _event.value = convertYUV420_888to420p(it)
-                 ///////////////////
-                 val uvPos = it.width * image.height
-                 val uvSize = it.width / 2 * image.height / 2
-
-              //   fps1.get("before")
-                 /////////////////////////////////
-                /* val yPlane = it.planes[0].buffer
-                 val uPlane = it.planes[1].buffer
-                 val vPlane = it.planes[2].buffer*/
-
-                 //val buffer = image.planes[0].buffer
-                 ////////////////
-               /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
-                 it.planes[0].buffer.get(randomAccessFile)
-                 val ubytes = ByteArray(uvSize)
-                 it.planes[1].buffer.get(ubytes,0,uvSize)
-                 val vbytes = ByteArray(uvSize)
-                 it.planes[2].buffer.get(vbytes,0,uvSize)*/
-               //  fps1.get("middle")
-                 ///////////////////
-
-             /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
-                 it.planes[1].buffer.limit(uvSize)
-                 val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
-                 it.planes[2].buffer.limit(uvSize)
-                 val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
-                 /////////////////
-                /* val b = randomAccessFile?.write(ubytes)
-                 val c = randomAccessFile?.write(vbytes)*/
-                /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
-                 val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
-                 //////////////////////////////////
-                 //    randomAccessFile?.seek(0)
-                 // copyImage(image)
-                 _event.tryEmit(getByteBufferYUVPlanes(image))
-               //  fps1.get("after")
-                 /////////////////////////
-
-                 /*  bufferedOutputStream?.write(
-                       imageToYUVPlanes(image)
-                   )
-                   bufferedOutputStream?.flush()*/
-                 ///////////////////////
-                 // _event.tryEmit(getYUVPlanes(it))
-                 it.close()
-
-             }
-         } else if (finished) {
-             /////////////////
-            /* randomAccessFile?.close()
-             FFmpegKitConfig.closeFFmpegPipe(pipe1)
-             finished = false*/
-             /////////////////
-             //job.cancel()
-             /*   process?.destroy()
-                process?.waitFor()
-                FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
-             ///////////////////
-             /*  pipe1?.let {
-                   FFmpegKitConfig.closeFFmpegPipe(it)
-               }
-             //  process?.waitFor()
-               process?.destroy()*/
-             //   FFmpegKit.cancel()
-             // process?.outputStream?.flush()
-             //  process?.outputStream?.close()
-             //  finished = false
-         } else {
-             reader.acquireLatestImage()?.close()
-             // fps1.get("fps")
-         }*/
-        //  fps1.get("fps")
-        /////////////////
-
-    }
     private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
         priority = Thread.MAX_PRIORITY
         start()
@@ -254,7 +119,7 @@ class CameraRepository(
     private val characteristicsFlow: StateFlow<Characteristics?> =
         _characteristicsFlow
 
-    fun subscribeCameraCharacteristics(): StateFlow<Characteristics?> {
+    fun subscribeCameraSettings(): StateFlow<Characteristics?> {
         return characteristicsFlow
     }
 
@@ -503,9 +368,179 @@ class CameraRepository(
 
         )
     }
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        var image: Image? = null
+        try {
+            image = reader.acquireLatestImage()
+            image?.let {
+                // Получить буфер
+                val buffer: ByteBuffer = it.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
 
+                // Указать путь к файлу
+                val filename = "saved_image.jpg"
+                val directory =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val file = File(directory, filename)
+
+                // Записать байты в файл
+                FileOutputStream(file).use { output ->
+                    output.write(bytes)
+                }
+
+                println("Изображение сохранено по пути: ${file.absolutePath}")
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            image?.close()
+        }
+
+
+        /* if (running){
+             val image = reader.acquireNextImage()
+             if (image!= null) {
+                 val buffer = image.planes[0].buffer
+                 val bytes = ByteArray(buffer.remaining())
+                 buffer.get(bytes)
+
+                 try {
+                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                     sink.write(byteBuffer.array())
+                 } catch (e: IOException) {
+                     println()
+                 } finally {
+                     image.close() // Освобождаем изображение
+                 }
+             }
+         }*/
+        // val image = reader.acquireNextImage()
+        /* reader.acquireNextImage()?.let {
+             val ybytes = ByteArray(it.planes[0].buffer.capacity())
+             it.planes[0].buffer.get(ybytes)
+             _outputBuffer.value = ybytes
+             it.close()
+         }*/
+        //  image?.close()
+        /* if (running) {
+             val image = reader.acquireNextImage()
+             image?.let {
+                 // val tmp =yuv420ToBitmap(it)
+                 //  _event.value = convertYUV420_888to420p(it)
+                 ///////////////////
+                 val uvPos = it.width * image.height
+                 val uvSize = it.width / 2 * image.height / 2
+
+              //   fps1.get("before")
+                 /////////////////////////////////
+                /* val yPlane = it.planes[0].buffer
+                 val uPlane = it.planes[1].buffer
+                 val vPlane = it.planes[2].buffer*/
+
+                 //val buffer = image.planes[0].buffer
+                 ////////////////
+               /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
+                 it.planes[0].buffer.get(randomAccessFile)
+                 val ubytes = ByteArray(uvSize)
+                 it.planes[1].buffer.get(ubytes,0,uvSize)
+                 val vbytes = ByteArray(uvSize)
+                 it.planes[2].buffer.get(vbytes,0,uvSize)*/
+               //  fps1.get("middle")
+                 ///////////////////
+
+             /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
+                 it.planes[1].buffer.limit(uvSize)
+                 val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
+                 it.planes[2].buffer.limit(uvSize)
+                 val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
+                 /////////////////
+                /* val b = randomAccessFile?.write(ubytes)
+                 val c = randomAccessFile?.write(vbytes)*/
+                /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
+                 val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
+                 //////////////////////////////////
+                 //    randomAccessFile?.seek(0)
+                 // copyImage(image)
+                 _event.tryEmit(getByteBufferYUVPlanes(image))
+               //  fps1.get("after")
+                 /////////////////////////
+
+                 /*  bufferedOutputStream?.write(
+                       imageToYUVPlanes(image)
+                   )
+                   bufferedOutputStream?.flush()*/
+                 ///////////////////////
+                 // _event.tryEmit(getYUVPlanes(it))
+                 it.close()
+
+             }
+         } else if (finished) {
+             /////////////////
+            /* randomAccessFile?.close()
+             FFmpegKitConfig.closeFFmpegPipe(pipe1)
+             finished = false*/
+             /////////////////
+             //job.cancel()
+             /*   process?.destroy()
+                process?.waitFor()
+                FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
+             ///////////////////
+             /*  pipe1?.let {
+                   FFmpegKitConfig.closeFFmpegPipe(it)
+               }
+             //  process?.waitFor()
+               process?.destroy()*/
+             //   FFmpegKit.cancel()
+             // process?.outputStream?.flush()
+             //  process?.outputStream?.close()
+             //  finished = false
+         } else {
+             reader.acquireLatestImage()?.close()
+             // fps1.get("fps")
+         }*/
+        //  fps1.get("fps")
+        /////////////////
+
+    }
     private lateinit var imageReader: ImageReader
     private lateinit var filePath:String
+    private val listener = ImageReader.OnImageAvailableListener {
+        imageReader.acquireLatestImage()?.let {image->
+            //////////////////
+            if (capture){
+                capture=false
+                val buffer: ByteBuffer = image.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
+               // var output: FileOutputStream? = null
+                val directory =context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+               // val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                try {
+                    val file = File(
+                        directory,
+                        "img.jpg"
+                    )
+
+                    // Записать байты в файл
+                    FileOutputStream(file).use { output ->
+                        output.write(bytes)
+                    }
+
+                  /*  output = FileOutputStream(filePath+"img")
+                    output.write(bytes)*/
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                } finally {
+                  //  output?.close()
+                }
+            }
+            //////////////////
+            image.close()
+        }
+
+    }
     fun startVideoSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
         filePath=characteristics.filePath
         previewSurface = Surface(glSurfaceTexture)
@@ -513,16 +548,21 @@ class CameraRepository(
             ImageReader.newInstance(
                 characteristics.resolution.width,
                 characteristics.resolution.height,
+
                 when (characteristics.imgFormat) {
-                    ImgFormat.JPEG -> ImageFormat.JPEG
+                    ImgFormat.JPEG -> ImageFormat.YUV_420_888
+                   // ImgFormat.JPEG -> ImageFormat.JPEG
                     ImgFormat.JPEGRAW -> ImageFormat.RAW_SENSOR
                     ImgFormat.RAW -> ImageFormat.RAW_SENSOR
                 },
                 //ImageFormat.YUV_420_888,
-                30
-            )/*.apply {
-                    setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
-                }*/
+                3//30
+            ).apply {
+                   // setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+                setOnImageAvailableListener(listener, imageReaderHandler)
+
+            }
+
         captureSurface = imageReader.surface
         createCaptureSession(
             listOf(
@@ -2411,33 +2451,11 @@ class CameraRepository(
     ////////////////////////////////////////////////
     ////////////////////////////////////////////////
     ////////////////////////////////////////////////
-    private val listener = ImageReader.OnImageAvailableListener {
-        val image = imageReader.acquireLatestImage()
-        if (image != null) {
-            //////////////////
-            val buffer: ByteBuffer = image.planes[0].buffer
-            val bytes = ByteArray(buffer.remaining())
-            buffer[bytes]
-            var output: FileOutputStream? = null
-            try {
-                output = FileOutputStream(filePath)
-                output?.write(bytes)
-            } catch (e: IOException) {
-                e.printStackTrace()
-            } finally {
-                image.close()
-                output?.close()
 
-            }
-            //////////////////
-            image.close()
-            imageReader.setOnImageAvailableListener(null, null) // отключение слушателя
-        }
-
-    }
+    private var capture:Boolean=false
     fun singleCapture(enable: Boolean) {
 
-
+capture=true
        // imageReader.setOnImageAvailableListener(listener, null)
         //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
