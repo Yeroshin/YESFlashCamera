@@ -1,12 +1,14 @@
 package com.yes.camera.presentation.model
 
+import androidx.camera.core.AspectRatio
 import com.yes.camera.presentation.ui.custom.compose.RadioButton
 import com.yes.camera.presentation.ui.views.ImmutableCollection
+import com.yes.shared.domain.Dimensions
 
 data class CharacteristicsUI(
     val settings: Settings = Settings(),
     val items: Items = Items(),
-    val histogramData: ByteArray = ByteArray(0),
+    val histogramData: MutableMap<Int, Int> = mutableMapOf(),
 )/* {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -62,7 +64,8 @@ data class Settings(
     val touchPoint: FloatArray? = null,
 
     val fullScreen: Boolean = false,
-    val resolution:String?=null
+    val resolution:String?=null,
+    val aspectRatio: Dimensions?=null
 )
 
 

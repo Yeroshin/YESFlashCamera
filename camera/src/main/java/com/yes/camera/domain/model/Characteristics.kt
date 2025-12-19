@@ -22,5 +22,6 @@ data class Characteristics(
     val touchPoint: FloatArray? = null,
     val fullscreen: Boolean? = null,
     val imgFormat: ImgFormat =ImgFormat.JPEG,
-    val filePath: String=""
+    val filePath: String="",
+    val histogramData: MutableMap<Int, Int> = mutableMapOf(),
 )

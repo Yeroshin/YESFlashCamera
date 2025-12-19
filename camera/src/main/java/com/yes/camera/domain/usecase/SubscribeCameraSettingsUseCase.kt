@@ -18,10 +18,10 @@ class SubscribeCameraSettingsUseCase(
     dispatcher: CoroutineDispatcher,
     private val cameraRepository: CameraRepository,
     private val settingsRepository: SettingsRepository
-) : UseCase<Unit, Flow<Pair<Characteristics,MutableMap<Int, Int>?>>>(dispatcher) {
+) : UseCase<Unit, Flow<Characteristics>>(dispatcher) {
     private val scope = CoroutineScope(dispatcher)
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    override suspend fun run(): Flow<Pair<Characteristics, MutableMap<Int, Int>?>> {
+    override suspend fun run(): Flow<Characteristics> {
        val histogramFlow= cameraRepository.subscribeOutputBuffer()
            .map { buffer ->
 
@@ -49,14 +49,16 @@ class SubscribeCameraSettingsUseCase(
        // val settingsFlow=settingsRepository.subscribeSettings()
 
       //  val combinedCameraFlow: Flow<Pair<Characteristics?, MutableMap<Int, Int>?>>
+
        return combine(
            histogramFlow,cameraCharacteristicsFlow
         ) {histogram, cameraCharacteristics,->
-           val characteristics=settingsRepository.getCharacteristics()
-            Pair(cameraCharacteristics.copy(
-                fullscreen = characteristics.fullscreen,
-                resolution = characteristics.resolution
-            ), histogram)
+           val settingsCharacteristics=settingsRepository.getCharacteristics()
+            cameraCharacteristics.copy(
+                fullscreen = settingsCharacteristics.fullscreen,
+                resolution = settingsCharacteristics.resolution,
+               histogramData = histogram
+            )
         }
       //  return combinedCameraFlow
        /* return cameraRepository.subscribeOutputBuffer()

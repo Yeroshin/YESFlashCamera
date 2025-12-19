@@ -126,12 +126,10 @@ fun orew() {
     CameraScreenSuccess(
         context = context,
         renderer = renderer,
-        characteristics = characteristics,
+        characteristicsInit = characteristics,
         onSettingsClick = {},
         onStartVideoRecord = {},
         onCharacteristicChanged = {},
-        histogram = mutableMapOf(),
-        fullscreen = false
     )
 }
 
@@ -150,12 +148,10 @@ fun CameraScreenSuccess(
     context: Context,
     renderer: GLRenderer,
     // characteristicsInitial: CharacteristicsUI,
-    characteristics: CharacteristicsUI,
+    characteristicsInit: CharacteristicsUI,
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
-    histogram: MutableMap<Int, Int>?,
-    fullscreen: Boolean
 ) {
     val immut = MapImmutableCollection(
         mapOf(
@@ -189,6 +185,9 @@ fun CameraScreenSuccess(
      }*/
     val context = LocalContext.current
     /////////////////////
+    var characteristics by remember(characteristicsInit) {
+        mutableStateOf(characteristicsInit)
+    }
     var settings by remember(characteristics.settings) {
         mutableStateOf(characteristics.settings)
     }
@@ -344,7 +343,7 @@ fun CameraScreenSuccess(
         remember(characteristics.items.wbModeItems) {
             characteristics.items.wbModeItems?.let {
                 ImmutableCollection(
-                    characteristics.items.wbModeItems
+                    characteristics.items.wbModeItems!!
                     /* listOf(
                          IconRadioItem(WbItem.AUTO, "Auto", R.drawable.wb_auto),
                          IconRadioItem(WbItem.INCANDESCENT, "Auto", R.drawable.wb_cloudy),
@@ -769,6 +768,84 @@ fun CameraScreenSuccess(
         ///////////preview
         Box() {
 
+
+            AndroidView(
+                modifier = Modifier
+                    .padding(
+                        top = if (settings.fullScreen) {
+                            0.dp
+                        } else {
+                            84.dp
+                        }
+                    )
+                    .onSizeChanged { size ->
+                        surfaceViewSize = size
+                    },
+                //  .align(Alignment.Center),
+                factory = {
+                    AutoFitSurfaceView(
+                        context,
+                        null
+                    ).apply {
+                        // autoFitSurfaceView = it
+                        // setFullscreen(true)
+                        setFullscreen(settings.fullScreen)
+                        // setAspectRatio(1280, 960)
+                        setAspectRatio(
+                            settings.aspectRatio?.width ?: 3,
+                            settings.aspectRatio?.height ?: 2
+                        )
+                        setEGLContextClientVersion(3)
+                        setRenderer(
+                            renderer
+                        )
+                        viewTreeObserver.addOnGlobalLayoutListener {
+                            surfaceViewSize = IntSize(width, height)
+                            val normalizedX =
+                                (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
+                            val normalizedY =
+                                -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
+                            renderer.handleTouchPress(
+                                normalizedX, normalizedY
+                            )
+                            renderer.configureMagnifier(
+                                1f
+                            )
+                        }
+                        setOnTouchListener { v, event ->
+                            v.performClick()
+
+                            val normalizedX =
+                                (event.x / v.width.toFloat()) * 2f - 1f
+                            val normalizedY =
+                                -((event.y / v.height.toFloat()) * 2f - 1f)
+
+                            when (event.action) {
+                                MotionEvent.ACTION_DOWN -> {
+                                    renderer.handleTouchPress(
+                                        normalizedX, normalizedY
+                                    )
+
+                                }
+
+                                MotionEvent.ACTION_MOVE -> {
+                                    renderer.handleTouchDrag(
+                                        normalizedX, normalizedY
+                                    )
+                                }
+
+                                MotionEvent.ACTION_UP -> {
+                                    touchPoint = floatArrayOf(
+                                        event.x / v.width,
+                                        event.y / v.height
+                                    )
+                                }
+                            }
+                            true
+                        }
+                    }
+                }
+            )
             ShutterBox(
                 isOpen = isOpen,
                 onToggle = {
@@ -776,131 +853,19 @@ fun CameraScreenSuccess(
                 },
                 modifier = Modifier
                     .padding(
-                        top = if (fullscreen) {
+                        top = if (settings.fullScreen) {
                             0.dp
                         } else {
                             84.dp
                         }
                     )
-            ) {
-                AndroidView(
-                    modifier = Modifier
-                        /* .padding(
-                             top = if (fullscreen) {
-                                 0.dp
-                             } else {
-                                 84.dp
-                             }
-                         )*/
-                        .onSizeChanged { size ->
-                            surfaceViewSize = size
-                        },
-                    //  .align(Alignment.Center),
-                    factory = {
-                        AutoFitSurfaceView(
-                            context,
-                            null
-                        ).apply {
-                            // autoFitSurfaceView = it
-                            // setFullscreen(true)
-                            setFullscreen(fullscreen)
-                            setAspectRatio(1280, 960)
-                            setEGLContextClientVersion(3)
-                            setRenderer(
-                                renderer
-                            )
-                            viewTreeObserver.addOnGlobalLayoutListener {
-                                surfaceViewSize = IntSize(width, height)
-                                val normalizedX =
-                                    (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
-                                val normalizedY =
-                                    -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
-                                renderer.handleTouchPress(
-                                    normalizedX, normalizedY
-                                )
-                                renderer.configureMagnifier(
-                                    1f
-                                )
-                            }
-                            setOnTouchListener { v, event ->
-                                v.performClick()
-
-                                val normalizedX =
-                                    (event.x / v.width.toFloat()) * 2f - 1f
-                                val normalizedY =
-                                    -((event.y / v.height.toFloat()) * 2f - 1f)
-
-                                when (event.action) {
-                                    MotionEvent.ACTION_DOWN -> {
-                                        renderer.handleTouchPress(
-                                            normalizedX, normalizedY
-                                        )
-
-                                    }
-
-                                    MotionEvent.ACTION_MOVE -> {
-                                        renderer.handleTouchDrag(
-                                            normalizedX, normalizedY
-                                        )
-                                    }
-
-                                    MotionEvent.ACTION_UP -> {
-                                        touchPoint = floatArrayOf(
-                                            event.x / v.width,
-                                            event.y / v.height
-                                        )
-                                    }
-                                }
-                                true
-                            }
-                        }
-                    }
-                )
-            }
+            ) {}
 
             /////////////
 
             //////////////
 
-            ////////////////////////resolution
-            characteristics.settings.resolution?.let {
-                Text(
-                    modifier = Modifier
-                        .padding(
-                            top = 98.dp,
-                            start = 18.dp
-                        ),
-                    textAlign = TextAlign.Start,
-                    text = it,
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        shadow = Shadow(
-                            color = Color.DarkGray,
-                            offset = Offset(5.0f, 5.0f),
-                            blurRadius = 5f
-                        )
-                    )
-                )
-            }
 
-            ////////////////////////histogram
-            Histogram(
-                Modifier
-
-                    .padding(
-                        start = 16.dp,
-                        bottom = if (fullscreen) {
-                            200.dp
-                        } else {
-                            16.dp
-                        }
-                    )
-                    .align(Alignment.BottomStart),
-                histogram,
-                150.dp,
-                80.dp
-            )
         }
         ////////////////radio group
         /*  Column(
@@ -919,7 +884,42 @@ fun CameraScreenSuccess(
                 settingsRadioGroupSelectedSettingsRadioGroupItem = value as SettingsRadioGroupItem?
             }
         )
+        /////////////////////////
+        ////////////////////////resolution
+        characteristics.settings.resolution?.let {
+            Text(
+                modifier = Modifier
+                    .padding(
+                        top = 98.dp,
+                        end = 18.dp
+                    )
+                    .align(Alignment.TopEnd),
+                textAlign = TextAlign.End,
+                text = it,
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    shadow = Shadow(
+                        color = Color.DarkGray,
+                        offset = Offset(5.0f, 5.0f),
+                        blurRadius = 5f
+                    )
+                )
+            )
+        }
 
+        ////////////////////////histogram
+        Histogram(
+            Modifier
+                .padding(
+                    start = 16.dp,
+                    top = 98.dp
+                )
+                .align(Alignment.TopStart),
+            characteristics.histogramData,
+            150.dp,
+            80.dp
+        )
         //////////////////////////bottom buttons
         var isCheck by remember { mutableStateOf(false) }
 

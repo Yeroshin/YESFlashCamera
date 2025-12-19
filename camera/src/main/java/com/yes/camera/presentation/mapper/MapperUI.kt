@@ -312,15 +312,17 @@ class MapperUI(
             focusValue = focusValue,
             focusPosition = focusPosition,
             fullScreen = characteristics.fullscreen?:run { false },
-           resolution = characteristics.resolution?.width.toString() + "x" + characteristics.resolution?.height.toString(),
-        /*  shutterItems = supportedShutterSpeeds,
+           resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
+        aspectRatio = characteristics.resolution
+            /*  shutterItems = supportedShutterSpeeds,
               isoItems = supportedIsoValues,*/
 
         )
 
         return CharacteristicsUI(
             settings = settings,
-            items = items
+            items = items,
+            histogramData = characteristics.histogramData
             /*  shutterItems= standardShutterSpeeds
                   .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
                   .map { SettingsItemUI(it.second )},
@@ -524,9 +526,9 @@ class MapperUI(
           )*/
     }
 
-    fun map(histogramData: ByteArray): CharacteristicsUI {
+   /* fun map(histogramData: ByteArray): CharacteristicsUI {
         return CharacteristicsUI(
             histogramData = histogramData
         )
-    }
+    }*/
 }

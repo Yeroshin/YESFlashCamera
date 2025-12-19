@@ -52,14 +52,14 @@ fun ShutterBox(
     }
     Box(
         modifier = modifier
-            .wrapContentSize()
-           // .fillMaxSize() // Растягиваем на весь доступный размер; измените на нужный (например, .size(300.dp))
+           // .wrapContentSize()
+            .fillMaxSize() // Растягиваем на весь доступный размер; измените на нужный (например, .size(300.dp))
             .onGloballyPositioned { coordinates ->
                 parentSize.value = coordinates.size.toSize() // Получаем размер в px
             }
     ) {
 
-        content()
+       // content()
 
         val heightPx = parentSize.value.height
         if (heightPx > 0f) { // Избегаем анимации до получения размера

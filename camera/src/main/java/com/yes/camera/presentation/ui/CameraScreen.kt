@@ -39,7 +39,7 @@ fun CameraScreen(
         is CameraContract.CameraState.Success -> CameraScreenSuccess(
             context = context,
             renderer = renderer,
-            characteristics = state.characteristics ,
+            characteristicsInit = state.characteristics ,
             onSettingsClick ={
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnCloseCamera
@@ -56,8 +56,7 @@ fun CameraScreen(
                     CameraContract.Event.OnSetCharacteristics(characteristics)
                 )
             },
-            histogram = viewState.value.histogram,
-            fullscreen = state.characteristics.settings.fullScreen
+
         )
     }
 
