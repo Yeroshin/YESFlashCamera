@@ -1,6 +1,8 @@
 package com.yes.camera.data.repository
 
+import android.R.attr.data
 import android.annotation.SuppressLint
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -18,16 +20,21 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.RggbChannelVector
 import android.hardware.camera2.params.SessionConfiguration
+import android.hardware.camera2.params.StreamConfigurationMap
 import android.icu.text.SimpleDateFormat
 import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaRecorder
+import android.media.MediaScannerConnection
+import android.media.MediaScannerConnection.MediaScannerConnectionClient
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
@@ -37,6 +44,7 @@ import android.util.Log
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.core.content.PackageManagerCompat.LOG_TAG
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
@@ -97,7 +105,7 @@ class CameraRepository(
 
 
     private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
-        priority = Thread.MAX_PRIORITY
+       // priority = Thread.MAX_PRIORITY
         start()
     }
     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
@@ -511,30 +519,11 @@ class CameraRepository(
             //////////////////
             if (capture){
                 capture=false
-                val buffer: ByteBuffer = image.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
-               // var output: FileOutputStream? = null
-                val directory =context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-               // val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                try {
-                    val file = File(
-                        directory,
-                        "img.jpg"
-                    )
-
-                    // Записать байты в файл
-                    FileOutputStream(file).use { output ->
-                        output.write(bytes)
-                    }
-
-                  /*  output = FileOutputStream(filePath+"img")
-                    output.write(bytes)*/
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                } finally {
-                  //  output?.close()
-                }
+                ImageSaver.saveImage(
+                    context,
+                    image,
+                    File(filePath)
+                )
             }
             //////////////////
             image.close()
@@ -544,6 +533,14 @@ class CameraRepository(
     fun startVideoSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
         filePath=characteristics.filePath
         previewSurface = Surface(glSurfaceTexture)
+        //////////////
+        val characteristic = cameraManager.getCameraCharacteristics("0")
+        val streamMap: StreamConfigurationMap? = characteristic.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+
+// Проверить поддерживаемые output-формати
+        val supportedFormats = streamMap?.outputFormats
+
+        ///////////////
         imageReader =
             ImageReader.newInstance(
                 characteristics.resolution.width,
@@ -557,11 +554,11 @@ class CameraRepository(
                 },
                 //ImageFormat.YUV_420_888,
                 3//30
-            ).apply {
+            )
                    // setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
-                setOnImageAvailableListener(listener, imageReaderHandler)
+        imageReader.setOnImageAvailableListener(listener, imageReaderHandler)
 
-            }
+
 
         captureSurface = imageReader.surface
         createCaptureSession(
@@ -1644,7 +1641,6 @@ class CameraRepository(
     private var autoAE = false
     private var previousWbValue: Int? = null
     private var wb = false
-    private var characteristicsLast: Characteristics? = null
     private var touchPoint: FloatArray? = null
     fun startCaptureRequest(characteristics: Characteristics) {
         /* captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
@@ -3524,7 +3520,97 @@ capture=true
         )
     }
 }
+object ImageSaver{
+    lateinit var characteristics:CameraCharacteristics
+    lateinit var captureResult:CaptureResult
+    private val Image.nv21ByteArray
+        get() = ByteArray(width * height * 3 / 2).also {
+            val vPlane = planes[2]
+            val y = planes[0].buffer.apply { rewind() }
+            val u = planes[1].buffer.apply { rewind() }
+            val v = vPlane.buffer.apply { rewind() }
+            y.get(it, 0, y.capacity()) // copy Y components
+            if (vPlane.pixelStride == 2) {
+                // Both of U and V are interleaved data, so copying V makes VU series but last U
+                v.get(it, y.capacity(), v.capacity())
+                it[it.size - 1] = u.get(u.capacity() - 1) // put last U
+            } else { // vPlane.pixelStride == 1
+                var offset = it.size - 1
+                var i = v.capacity()
+                while (i-- != 0) { // make VU interleaved data into ByteArray
+                    it[offset - 0] = u[i]
+                    it[offset - 1] = v[i]
+                    offset -= 2
+                }
+            }
+        }
 
+
+    private fun NV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        val yuv = YuvImage(nv21, NV21, width, height, null)
+        yuv.compressToJpeg(Rect(0, 0, width, height), 90, out)  // Quality 90 for balance
+        return out.toByteArray()
+    }
+    fun saveImage(
+        context:Context,
+        image:Image,
+        file: File,
+    ) {
+
+        var success = false
+        when (val format: Int = image.format) {
+            ImageFormat.YUV_420_888 -> {
+                val yuvBytes=image.nv21ByteArray
+                val jpegBytes = NV21toJPEG(yuvBytes, image.width, image.height)
+
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                try {
+                    val file = File(directory, "img.jpg")
+                    FileOutputStream(file).use { output -> output.write(jpegBytes) }
+                    Log.i("CameraRepository", "JPEG saved to ${file.absolutePath}")
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+
+            ImageFormat.RAW_SENSOR -> {
+                val dngCreator = DngCreator(characteristics, captureResult)
+                var output: FileOutputStream? = null
+                try {
+                    output = FileOutputStream(file)
+                    dngCreator.writeImage(output, image)
+                    success = true
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                } finally {
+                    image.close()
+                    output?.close()
+                }
+            }
+
+            else -> {
+                Log.e(TAG, "Cannot save image, unexpected image format:$format")
+            }
+        }
+        // If saving the file succeeded, update MediaStore.
+        if (success) {
+            MediaScannerConnection.scanFile(context,
+                arrayOf<String>(file.path),  /*mimeTypes*/
+                null,
+                object : MediaScannerConnectionClient {
+                    override fun onMediaScannerConnected() {
+                        // Do nothing
+                    }
+
+                    override fun onScanCompleted(path: String, uri: Uri) {
+                        Log.i(TAG, "Scanned $path:")
+                        Log.i(TAG, "-> uri=$uri")
+                    }
+                })
+        }
+    }
+}
 object ColorTemperatureConverter {
     fun rggbToNormalized(rggb: RggbChannelVector): RggbChannelVector {
         var r = rggb.red
