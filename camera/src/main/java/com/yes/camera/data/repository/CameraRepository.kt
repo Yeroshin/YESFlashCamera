@@ -516,6 +516,10 @@ class CameraRepository(
     private lateinit var filePath:String
     private val listener = ImageReader.OnImageAvailableListener {
         imageReader.acquireLatestImage()?.let {image->
+            //histogram
+            val ybytes = ByteArray(image.planes[0].buffer.capacity())
+            image.planes[0].buffer.get(ybytes)
+            _outputBuffer.value = ybytes
             //////////////////
             if (capture){
                 capture=false
@@ -2659,9 +2663,6 @@ capture=true
 
     }
 
-    //8294400
-    //4147199
-    //4147199
     val capacity = 26_000_000
     var yBuffer: ByteBuffer = ByteBuffer.allocate(capacity)
     val uBuffer: ByteBuffer = ByteBuffer.allocate(capacity / 2)
