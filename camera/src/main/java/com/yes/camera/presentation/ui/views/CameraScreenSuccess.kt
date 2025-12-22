@@ -69,7 +69,7 @@ import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 
-@Composable
+/*@Composable
 @Preview
 fun orew() {
     val standardShutterSpeeds = mapOf(
@@ -130,7 +130,7 @@ fun orew() {
         onStartVideoRecord = {},
         onCharacteristicChanged = {},
     )
-}
+}*/
 
 @Stable
 data class ImmutableCollection<T>(
@@ -151,6 +151,7 @@ fun CameraScreenSuccess(
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
+     fullScreen:Boolean
 ) {
     val immut = MapImmutableCollection(
         mapOf(
@@ -783,7 +784,7 @@ fun CameraScreenSuccess(
                     ).apply {
                         // autoFitSurfaceView = it
                         // setFullscreen(true)
-                        setFullscreen(characteristics.fullScreen)
+                        setFullscreen(fullScreen)
                         // setAspectRatio(1280, 960)
                         setAspectRatio(
                             characteristics.aspectRatio?.width ?: 3,

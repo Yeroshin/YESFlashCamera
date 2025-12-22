@@ -56,7 +56,7 @@ fun CameraScreen(
                     CameraContract.Event.OnSetCharacteristics(characteristics)
                 )
             },
-
+            fullScreen = state.characteristics.fullScreen
         )
     }
 
