@@ -14,10 +14,8 @@ import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
-import com.yes.camera.presentation.model.Items
-import com.yes.camera.presentation.model.Settings
 import com.yes.camera.presentation.model.TextItem
-import com.yes.camera.presentation.model.TextSelectorItemUI
+
 import com.yes.camera.presentation.model.WbItem
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.views.ImmutableCollection
@@ -88,17 +86,6 @@ class MapperUI(
          9000,
          10000
      )
-   /* private val standardWbValues = listOf(
-        CONTROL_AWB_MODE_AUTO,
-        CONTROL_AWB_MODE_INCANDESCENT,
-        CONTROL_AWB_MODE_FLUORESCENT,
-        CONTROL_AWB_MODE_WARM_FLUORESCENT,
-        CONTROL_AWB_MODE_DAYLIGHT,
-        CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
-        CONTROL_AWB_MODE_TWILIGHT,
-        CONTROL_AWB_MODE_SHADE
-
-    )*/
    private fun generateFocusValues(min: Float, max: Float, step: Float): List<Float> {
        val size = ((max - min) / step).toInt() + 1
        return List(size) { i -> min + i * step }
@@ -126,14 +113,14 @@ class MapperUI(
     fun map(characteristics: Characteristics): CharacteristicsUI {
 
 
-        val supportedShutterSpeeds = standardShutterSpeeds
+     /*   val supportedShutterSpeeds = standardShutterSpeeds
             .entries
             .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
             .sortedBy { it.key }
             .map { TextSelectorItemUI(it.value) }
         val supportedIsoValues = standardIsoValues
             .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
-            .map { TextSelectorItemUI(it.toString()) }
+            .map { TextSelectorItemUI(it.toString()) }*/
         val shutterValue = characteristics.shutterValue?.let {
             standardShutterSpeeds.entries
                 .minByOrNull { (key, _) ->
@@ -203,7 +190,26 @@ class MapperUI(
             }
             focusValues.indexOf(closestValue)
         }?:0
-        val items = Items(
+
+
+
+
+
+        return CharacteristicsUI(
+            shutterValue = shutterValue,
+            shutterPosition = shutterPosition,
+
+            isoValue = isoValue.toString(),
+            isoPosition = isoPosition,
+
+            wbValue = wbValue,
+            wbPosition = wbPosition,
+
+            focusValue = focusValue,
+            focusPosition = focusPosition,
+            fullScreen = characteristics.fullscreen?:run { false },
+            resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
+            aspectRatio = characteristics.resolution,
             shutterItems = ImmutableCollection(
                 standardShutterSpeeds
                     .toSortedMap(compareByDescending { it })
@@ -216,28 +222,6 @@ class MapperUI(
                     TextItem( it.toString())
                 }
             ),
-            ///worked for icon
-           /* wbItems =  ImmutableCollection(
-            standardWbValues.map {
-                IconItem(
-                    0F,
-                    when (it) {
-                        CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
-                        CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
-                        CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.wb_iridescent
-                        CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.wb_iridescent
-                        CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
-                        CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_shade
-                        CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
-                        CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
-                        else -> {
-                            R.drawable.wb_shade
-                        }
-                    },
-                    false
-                )
-            }
-            )*/
             wbManualItems = ImmutableCollection(
                 standardWbValues.map {
                     TextItem(
@@ -284,221 +268,72 @@ class MapperUI(
 
             magnifierItems = ImmutableCollection(
                 listOf(
-                TextItem( "1"),
-                TextItem( "2"),
-                TextItem( "3"),
-                TextItem( "4"),
-                TextItem( "5"),
-                TextItem( "6"),
-                TextItem( "7"),
-                TextItem( "8"),
-                TextItem( "9"),
-                TextItem( "10"),
-            )
-            )
-        )
-
-
-        val settings = Settings(
-            shutterValue = shutterValue,
-            shutterPosition = shutterPosition,
-
-            isoValue = isoValue.toString(),
-            isoPosition = isoPosition,
-
-            wbValue = wbValue,
-            wbPosition = wbPosition,
-
-            focusValue = focusValue,
-            focusPosition = focusPosition,
-            fullScreen = characteristics.fullscreen?:run { false },
-           resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
-        aspectRatio = characteristics.resolution
-            /*  shutterItems = supportedShutterSpeeds,
-              isoItems = supportedIsoValues,*/
-
-        )
-
-        return CharacteristicsUI(
-            settings = settings,
-            items = items,
+                    TextItem( "1"),
+                    TextItem( "2"),
+                    TextItem( "3"),
+                    TextItem( "4"),
+                    TextItem( "5"),
+                    TextItem( "6"),
+                    TextItem( "7"),
+                    TextItem( "8"),
+                    TextItem( "9"),
+                    TextItem( "10"),
+                )
+            ),
             histogramData = characteristics.histogramData
-            /*  shutterItems= standardShutterSpeeds
-                  .filter { it.first in characteristics.shutterRange.first ..characteristics.shutterRange.last }
-                  .map { SettingsItemUI(it.second )},
-              isoItems = standardIsoValues
-                  .filter { it in characteristics.isoRange.first .. characteristics.isoRange.last }
-                  .map { SettingsItemUI(it.toString() )},*/
-            /*  characteristics = mapOf(
-                  Item.SHUTTER to Characteristic(
-                      value = 0,
-                      title = "Shutter",
-                     /* items= listOf(
-                          SettingsItemUI("1/32000"),
-                          SettingsItemUI("1/16000"),
-                          SettingsItemUI("1/8000"),
-                          SettingsItemUI("1/4000"),
-                          SettingsItemUI("1/2000"),
-                          SettingsItemUI("1/1000"),
-                          SettingsItemUI("1/500"),
-                          SettingsItemUI("1/250"),
-                          SettingsItemUI("1/125"),
-                          SettingsItemUI("1/60"),
-                          SettingsItemUI("1/30"),
-                          SettingsItemUI("1/15"),
-                          SettingsItemUI("1/8"),
-                          SettingsItemUI("1/4"),
-                          SettingsItemUI("1/2"),
-                          SettingsItemUI("1"),
-                          SettingsItemUI("2"),
-                          SettingsItemUI("4"),
-                          SettingsItemUI("8"),
-                      )*/
-                      items = standardShutterSpeeds
-                          .keys // Преобразуем Map в List пар
-                          .sortedDescending()  // Сортируем по ключам (первый элемент пары)
-                          .map { SettingsItemUI(standardShutterSpeeds[it]!!) }
-                  ),
-                  Item.ISO to Characteristic(
-                      value = 0,
-                      title = "Shutter",
-                      items= listOf(
-                          SettingsItemUI("50"),
-                          SettingsItemUI("100"),
-                          SettingsItemUI("200"),
-                          SettingsItemUI("400"),
-                          SettingsItemUI("800"),
-                          SettingsItemUI("1600"),
-                          SettingsItemUI("3200"),
-                          SettingsItemUI("6400"),
-                          SettingsItemUI("12800"),
-                          SettingsItemUI("25600"),
-                          SettingsItemUI("51200"),
-                          SettingsItemUI("102400"),
-                          SettingsItemUI("204800"),
-                          SettingsItemUI("409600"),
-                          SettingsItemUI("819200"),
-                          SettingsItemUI("1638400"),
-                          SettingsItemUI("3280000"),
-                          SettingsItemUI("4560000"),
-                      )
-                  ),
-                  Item.FOCUS to Characteristic(
-                      value = 0,
-                      title = "Focus",
-                      items= listOf(
-                          SettingsItemUI("0.2"),
-                          SettingsItemUI("1"),
-                          SettingsItemUI("2"),
-                          SettingsItemUI("3"),
-                          SettingsItemUI("4"),
-                          SettingsItemUI("5"),
-                          SettingsItemUI("6"),
-                          SettingsItemUI("7"),
-                          SettingsItemUI("8"),
-                          SettingsItemUI("9"),
-                          SettingsItemUI("9.5"),
-                          SettingsItemUI("10"),
-                          SettingsItemUI("11"),
-                          SettingsItemUI("12"),
-                          SettingsItemUI("13"),
-                          SettingsItemUI("14"),
-                          SettingsItemUI("15"),
-
-                      )
-                  ),
-                  Item.MAGNIFIER to Characteristic(
-                      value = 0,
-                      title = "Focus",
-                      items = listOf(
-                          SettingsItemUI("1"),
-                          SettingsItemUI("2"),
-                          SettingsItemUI("3"),
-                          SettingsItemUI("4"),
-                          SettingsItemUI("5"),
-                          SettingsItemUI("6"),
-                          SettingsItemUI("7"),
-                          SettingsItemUI("8"),
-                          SettingsItemUI("9"),
-                          SettingsItemUI("10"),
-                      )
-                  )
-              )*/
-
         )
     }
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
-        //  val isoValue = standardIsoValues[characteristics.settings.isoPosition]
-        /*  val shutterValue = characteristics.items.shutterItems?.let {
-              it[characteristics.settings.shutterPosition].value
-          }*/
-
-
-        val isoValue = characteristics.settings.isoValue?.toIntOrNull()
+        val isoValue = characteristics.isoValue?.toIntOrNull()
         val shutterValue = standardShutterSpeeds.entries.firstOrNull {
-            it.value == characteristics.settings.shutterValue
+            it.value == characteristics.shutterValue
         }?.key
-          val wbValue=characteristics.settings.wbValue?.filter { it.isDigit() }?.toIntOrNull()
-        val wbMode=wbValue?.let{null}?:run {
-            when(characteristics.settings.wbMode){
+        val wbValue = characteristics.wbValue?.filter { it.isDigit() }?.toIntOrNull()
+        val wbMode = wbValue?.let { null } ?: run {
+            when (characteristics.wbMode) {
                 WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
-                WbItem.INCANDESCENT->CONTROL_AWB_MODE_INCANDESCENT
-                WbItem.FLUORESCENT->CONTROL_AWB_MODE_FLUORESCENT
-                WbItem.WARM_FLUORESCENT->CONTROL_AWB_MODE_WARM_FLUORESCENT
-                WbItem.DAYLIGHT->CONTROL_AWB_MODE_DAYLIGHT
-                WbItem.CLOUDY_DAYLIGHT->CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
-                WbItem.TWILIGHT->CONTROL_AWB_MODE_TWILIGHT
-                WbItem.SHADE->CONTROL_AWB_MODE_SHADE
-                else -> {null}
+                WbItem.INCANDESCENT -> CONTROL_AWB_MODE_INCANDESCENT
+                WbItem.FLUORESCENT -> CONTROL_AWB_MODE_FLUORESCENT
+                WbItem.WARM_FLUORESCENT -> CONTROL_AWB_MODE_WARM_FLUORESCENT
+                WbItem.DAYLIGHT -> CONTROL_AWB_MODE_DAYLIGHT
+                WbItem.CLOUDY_DAYLIGHT -> CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+                WbItem.TWILIGHT -> CONTROL_AWB_MODE_TWILIGHT
+                WbItem.SHADE -> CONTROL_AWB_MODE_SHADE
+                else -> {
+                    null
+                }
             }
         }
-        //worked for icon
-      /*  val wbValue = when (characteristics.settings.wbValue) {
-            R.drawable.wb_auto-> CONTROL_AWB_MODE_AUTO
-            R.drawable.wb_incandescent->CONTROL_AWB_MODE_INCANDESCENT
-            R.drawable.wb_iridescent->CONTROL_AWB_MODE_FLUORESCENT
-            R.drawable.wb_iridescent->CONTROL_AWB_MODE_WARM_FLUORESCENT
-            R.drawable.wb_sunny->CONTROL_AWB_MODE_DAYLIGHT
-            R.drawable.wb_shade->CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
-            R.drawable.wb_twilight->CONTROL_AWB_MODE_TWILIGHT
-            R.drawable.wb_shade-> CONTROL_AWB_MODE_SHADE
-            else -> {
-                CONTROL_AWB_MODE_AUTO
-            }
-        }*/
-
-
-
-
-
-        // val focusValue = characteristics.settings.focusValue.toInt()
-        val tem = shutterValue
-        var focusMode:Int?=null
-        val focusValue:Float? = characteristics.settings.focusValue?.toFloatOrNull()
-            ?: when(characteristics.settings.focusMode){
-                    FocusItem.MACRO -> {
-                        characteristics.items.focusItems?.fastMapNotNull {
-                            it.text.toFloatOrNull()
-                        }?.maxOrNull()
-
-                    }
-                    FocusItem.CONTINUOUS -> {
-                        focusMode= CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                        null
-                    }
-                    FocusItem.TOUCH -> {
-                        focusMode= -1
-                        null
-                    }
-                    FocusItem.INFINITE ->characteristics.items.focusItems?.fastMapNotNull {
+        var focusMode: Int? = null
+        val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
+            ?: when (characteristics.focusMode) {
+                FocusItem.MACRO -> {
+                    characteristics.focusItems?.fastMapNotNull {
                         it.text.toFloatOrNull()
-                    }?.minOrNull()
-                    null -> null
+                    }?.maxOrNull()
+
                 }
 
+                FocusItem.CONTINUOUS -> {
+                    focusMode = CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                    null
+                }
 
-        val t = Characteristics(
+                FocusItem.TOUCH -> {
+                    focusMode = -1
+                    null
+                }
+
+                FocusItem.INFINITE -> characteristics.focusItems?.fastMapNotNull {
+                    it.text.toFloatOrNull()
+                }?.minOrNull()
+
+                null -> null
+            }
+
+
+        return Characteristics(
             isoValue = isoValue,
             isoRange = IntRange(0, 0),
             shutterValue = shutterValue,
@@ -508,27 +343,8 @@ class MapperUI(
             focusMode = focusMode,
             shutterRange = LongRange(0, 0),
             resolutionItems = emptyList(),
-            resolution = Dimensions(0,0),
-            touchPoint = characteristics.settings.touchPoint
+            resolution = Dimensions(0, 0),
+            touchPoint = characteristics.touchPoint
         )
-        val r = t
-        return t
-        /*  return Characteristics(
-              isoValue = isoValue,
-              isoRange = IntRange(0, 0),
-              shutterValue = shutterValue as Long,
-              wbValue=wbValue.toInt(),
-              focusValue = focusValue ?: 0f,
-              minFocusValue = 0f,
-              shutterRange = LongRange(0, 0),
-              resolutions = emptyList(),
-              touchPoint = characteristics.settings.touchPoint
-          )*/
     }
-
-   /* fun map(histogramData: ByteArray): CharacteristicsUI {
-        return CharacteristicsUI(
-            histogramData = histogramData
-        )
-    }*/
 }

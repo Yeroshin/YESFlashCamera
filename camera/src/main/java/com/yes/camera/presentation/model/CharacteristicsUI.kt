@@ -6,8 +6,31 @@ import com.yes.camera.presentation.ui.views.ImmutableCollection
 import com.yes.shared.domain.Dimensions
 
 data class CharacteristicsUI(
-    val settings: Settings = Settings(),
-    val items: Items = Items(),
+    val backCamera: Boolean? = null,
+    val shutterValue: String? = null,
+    val shutterPosition: Int = 0,
+    val isoValue: String? = null,
+    val isoPosition: Int = 0,
+    val wbValue: String? = null,
+    val wbPosition: Int = 0,
+    val wbMode: WbItem? = null,
+    val focusValue: String? = null,
+    val focusPosition: Int = 0,
+    val focusMode: FocusItem? = null,
+    val magnifierValue: String? = null,
+    val magnifierPosition: Int = 0,
+    val touchPoint: FloatArray? = null,
+    val fullScreen: Boolean = false,
+    val resolution:String?=null,
+    val aspectRatio: Dimensions?=null,
+
+    val shutterItems: ImmutableCollection<TextItem>? = null,
+    val isoItems: ImmutableCollection<TextItem>? = null,
+    val wbManualItems: ImmutableCollection<TextItem>? = null,
+    val wbModeItems: List<RadioButton>? = null,
+    val focusItems: List<TextItem>? = null,
+    val magnifierItems: ImmutableCollection<TextItem>? = null,
+
     val histogramData: MutableMap<Int, Int> = mutableMapOf(),
 )/* {
     override fun equals(other: Any?): Boolean {
@@ -31,42 +54,7 @@ data class CharacteristicsUI(
     }
 }*/
 
-data class Items(
-    val shutterItems: ImmutableCollection<TextItem>? = null,
-    val isoItems: ImmutableCollection<TextItem>? = null,
-    val wbManualItems: ImmutableCollection<TextItem>? = null,
-    val wbModeItems: List<RadioButton>? = null,
-    val focusItems: List<TextItem>? = null,
-    val magnifierItems: ImmutableCollection<TextItem>? = null,
-)
 
-
-data class Settings(
-    val backCamera: Boolean? = null,
-
-    val shutterValue: String? = null,
-    val shutterPosition: Int = 0,
-
-    val isoValue: String? = null,
-    val isoPosition: Int = 0,
-
-    val wbValue: String? = null,
-    val wbPosition: Int = 0,
-    val wbMode: WbItem? = null,
-
-    val focusValue: String? = null,
-    val focusPosition: Int = 0,
-    val focusMode: FocusItem? = null,
-
-    val magnifierValue: String? = null,
-    val magnifierPosition: Int = 0,
-
-    val touchPoint: FloatArray? = null,
-
-    val fullScreen: Boolean = false,
-    val resolution:String?=null,
-    val aspectRatio: Dimensions?=null
-)
 
 
 sealed interface Item
