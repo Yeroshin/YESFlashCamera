@@ -1217,10 +1217,10 @@ fun CameraScreenSuccess(
     }
 
     var magnifierValue by remember {
-        mutableStateOf("0")
+        mutableStateOf("1")
     }
     var magnifierPosition by remember {
-        mutableStateOf(0)
+        mutableIntStateOf(0)
     }
     var settingsRadioGroupSelectedSettingsRadioGroupItem: SettingsRadioGroupItem? by remember {
         mutableStateOf(SettingsRadioGroupItem.SHUTTER)

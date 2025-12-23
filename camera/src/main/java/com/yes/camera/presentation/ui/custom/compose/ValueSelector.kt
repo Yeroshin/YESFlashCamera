@@ -37,7 +37,7 @@ import com.yes.camera.presentation.ui.views.MapImmutableCollection
 
 
 
-
+/*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
@@ -176,6 +176,154 @@ fun ValueSelector(
     }
 }
 
+
+@Composable
+private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
+*/
+//////////////////////////
+///////////////////////////
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ValueSelector(
+    modifier: Modifier,
+    position: Int,
+    items: ImmutableCollection<SelectorItem>?,
+    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
+    //  updatedPosition: Int? = null,
+    //   onPositionUpdated: () -> Unit = {}
+) {
+    val listState = rememberLazyListState()
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    // Adapter с делегатами
+    val adapter = remember {
+        CompositeAdapter(
+            MapImmutableCollection(
+                mapOf<Class<*>, CompositeAdapter.AdapterDelegate<*>>(
+                    TextItem::class.java to TextSelectorItemUI(),
+                    IconItem::class.java to IconSelectorItemUI()
+                )
+            ).map
+        )
+    }
+
+    // Кэшируем ширину списка и элемента
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+    var itemWidthPx by remember { mutableIntStateOf(0) }
+
+    // Текущее выбранное значение
+    var curIndex by remember { mutableIntStateOf(position) }
+
+    // Управление автоматической прокруткой
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
+
+    // Обновляем выбранную позицию при обновлении извне
+    LaunchedEffect(position) {
+        if (position != listState.firstVisibleItemIndex && position >= 0) {
+            isProgrammaticScroll = true
+            try {
+                listState.animateScrollToItem(position, scrollOffset = itemWidthPx / 2)
+                curIndex = position
+                onSelectedItemChanged(position, false)
+                //  onPositionUpdated()
+            } finally {
+                isProgrammaticScroll = false
+            }
+        }
+    }
+
+    // Обработка изменения позиции через состояние ленты
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        if (!isProgrammaticScroll) {
+            val index = listState.firstVisibleItemIndex
+            if (index != curIndex) {
+                curIndex = index
+                onSelectedItemChanged(index, true)
+            }
+        }
+    }
+
+    // Обработка изменений массива элементов
+    val itemsHashKey = remember(items) {
+        items?.list?.joinToString { item ->
+            when (item) {
+                is IconItem -> "icon:${item.icon}:${item.passed}"
+                is TextItem -> "text:${item.text}:${item.passed}"
+                else -> item.hashCode().toString()
+            }
+        }?.hashCode()
+    }
+
+    // Плавная прокрутка при изменении элементов
+    LaunchedEffect(itemsHashKey, itemWidthPx) {
+        items?.list?.let { itemList ->
+            val validIndex = if (curIndex in itemList.indices) curIndex else 0
+            if (validIndex != listState.firstVisibleItemIndex && itemWidthPx > 0) {
+                isProgrammaticScroll = true
+                try {
+                    listState.animateScrollToItem(validIndex, scrollOffset = itemWidthPx / 2)
+                } finally {
+                    isProgrammaticScroll = false
+                }
+            }
+        }
+    }
+
+    // Передача данных об passing состояниях
+    val preparedItems = remember(curIndex, items) {
+        items?.list?.mapIndexed { index, item ->
+            val passed = index <= curIndex
+            when (item) {
+                is TextItem -> item.copy(passed = passed)
+                is IconItem -> item.copy(passed = passed)
+                else -> item
+            }
+        } ?: emptyList()
+    }
+
+    // Основная UI
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+    ) {
+        LazyRow(
+            state = listState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .wrapContentHeight()
+                .onGloballyPositioned { coordinates ->
+                    rowWidthPx = coordinates.size.width
+                },
+            contentPadding = PaddingValues(horizontal = pixelsToDp(rowWidthPx / 2)),
+            flingBehavior = flingBehavior
+        ) {
+            // Устанавливаем ширину каждого элемента
+            val itemModifier = Modifier
+                .width(48.dp)
+                .onGloballyPositioned { coordinates ->
+                    itemWidthPx = coordinates.size.width
+                }
+
+            // Отрисовка элементов
+            items(preparedItems.size) { index ->
+                val item = preparedItems[index]
+                adapter.Content(item, itemModifier)
+            }
+        }
+
+        // Вставка стрелки или другого индикатора (по необходимости)
+        VectorShadow(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .size(14.dp),
+            vectorColor = Color.Green,
+            shadowColor = Color.DarkGray,
+            resId = R.drawable.arrow_drop_up
+        )
+    }
+}
 
 @Composable
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
