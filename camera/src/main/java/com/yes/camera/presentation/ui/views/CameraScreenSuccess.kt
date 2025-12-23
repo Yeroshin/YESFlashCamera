@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.ui.views
 
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.MotionEvent
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +57,7 @@ import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.custom.compose.RecordButton
+import com.yes.camera.presentation.ui.custom.compose.ShutterBox
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
@@ -124,6 +127,10 @@ fun orew() {
     )
 }*/
 
+
+/////////////////////////////////////////
+//////////////////////////////////////////
+/*
 @Stable
 data class ImmutableCollection<T>(
     val list: List<T>
@@ -816,20 +823,20 @@ fun CameraScreenSuccess(
                     autoFitSurfaceView
                 }
             )
-            /*  ShutterBox(
-                  isOpen = isOpen,
+              ShutterBox(
+                  isOpen = shutterBoxIsOpen,
                   onToggle = {
-                      isOpen = !isOpen
+                      shutterBoxIsOpen = !shutterBoxIsOpen
                   },
                   modifier = Modifier
                       .padding(
-                          top = if (settings.fullScreen) {
+                          top = if (fullScreen) {
                               0.dp
                           } else {
                               84.dp
                           }
                       )
-              ) {}*/
+              ) {}
 
             /////////////
 
@@ -1170,6 +1177,684 @@ fun CameraScreenSuccess(
 
         }
 
+    }
+}
+*/
+
+//////////////////////////////////
+//////////////////////////////////
+
+
+@Stable
+data class ImmutableCollection<T>(
+    val list: List<T>
+)
+
+@Immutable
+data class MapImmutableCollection<T, R>(
+    val map: Map<T, R>
+)
+
+@Composable
+fun CameraScreenSuccess(
+    context: Context,
+    renderer: GLRenderer,
+    // characteristicsInitial: CharacteristicsUI,
+    characteristicsInit: CharacteristicsUI,
+    onSettingsClick: () -> Unit,
+    onStartVideoRecord: (enabled: Boolean) -> Unit,
+    onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
+    fullScreen: Boolean
+) {
+    val context = LocalContext.current
+    /////////////////////
+    var characteristics by remember(characteristicsInit) {
+        mutableStateOf(characteristicsInit)
+    }
+
+    var settingsRequest by remember {
+        mutableStateOf(characteristics)
+    }
+
+    var magnifierValue by remember {
+        mutableStateOf("0")
+    }
+    var magnifierPosition by remember {
+        mutableStateOf(0)
+    }
+    var settingsRadioGroupSelectedSettingsRadioGroupItem: SettingsRadioGroupItem? by remember {
+        mutableStateOf(SettingsRadioGroupItem.SHUTTER)
+    }
+
+    var selectorRadioGroupSelectedItem: SelectorRadioGroupItem? by remember {
+        mutableStateOf(null)
+    }
+    var wbSelectorRadioGroupSelectedItem: SelectorRadioGroupItem? by remember {
+        mutableStateOf(null)
+    }
+    var focusSelectorRadioGroupSelectedItem: SelectorRadioGroupItem? by remember {
+        mutableStateOf(null)
+    }
+
+    LaunchedEffect(selectorRadioGroupSelectedItem) {
+        if (selectorRadioGroupSelectedItem != null) {
+            settingsRequest = when (selectorRadioGroupSelectedItem) {
+                WbItem.AUTO -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.AUTO
+                    )
+                }
+
+                WbItem.INCANDESCENT -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.INCANDESCENT
+                    )
+                }
+
+                WbItem.FLUORESCENT -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.FLUORESCENT
+                    )
+                }
+
+                WbItem.WARM_FLUORESCENT -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.WARM_FLUORESCENT
+                    )
+                }
+
+                WbItem.DAYLIGHT -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.DAYLIGHT
+                    )
+                }
+
+                WbItem.CLOUDY_DAYLIGHT -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.CLOUDY_DAYLIGHT
+                    )
+                }
+
+                WbItem.TWILIGHT -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.TWILIGHT
+                    )
+                }
+
+                WbItem.SHADE -> {
+                    wbSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        wbValue = null,
+                        wbMode = WbItem.SHADE
+                    )
+                }
+
+                FocusItem.MACRO -> {
+                    focusSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        focusValue = null,
+                        focusMode = FocusItem.MACRO
+                    )
+                }
+
+                FocusItem.CONTINUOUS -> {
+                    focusSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        focusValue = null,
+                        focusMode = FocusItem.CONTINUOUS
+                    )
+                }
+
+                FocusItem.TOUCH -> {
+                    focusSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        focusValue = null,
+                        focusMode = FocusItem.TOUCH
+                    )
+                }
+
+                FocusItem.INFINITE -> {
+                    focusSelectorRadioGroupSelectedItem = selectorRadioGroupSelectedItem
+                    characteristics.copy(
+                        focusValue = null,
+                        focusMode = FocusItem.INFINITE
+                    )
+                }
+
+                else -> {
+                    characteristics.copy()
+                }
+            }
+        }
+    }
+
+    val wbRadioGroupItems: ImmutableCollection<RadioButton>? =
+        remember(characteristics.wbModeItems) {
+            characteristics.wbModeItems?.let {
+                ImmutableCollection(
+                    characteristics.wbModeItems!!
+                )
+            }
+        }
+
+    val focusRadioGroupItems: ImmutableCollection<RadioButton> =
+        remember {
+            ImmutableCollection(
+                listOf(
+                    IconRadioItem(FocusItem.MACRO, "Auto", R.drawable.macro_auto),
+                    IconRadioItem(FocusItem.CONTINUOUS, "Auto", R.drawable.continuous),
+                    IconRadioItem(FocusItem.TOUCH, "Auto", R.drawable.touch),
+                    IconRadioItem(FocusItem.INFINITE, "Auto", R.drawable.infinity),
+                )
+            )
+        }
+
+    val settingsRadioGroupItems: ImmutableCollection<RadioButton> =
+        remember(characteristics, magnifierValue) {
+            ImmutableCollection(
+                listOf(
+                    TextRadioItem(
+                        SettingsRadioGroupItem.SHUTTER,
+                        characteristics.shutterValue,
+                        "SHUTTER"
+                    ),
+                    TextRadioItem(SettingsRadioGroupItem.ISO, characteristics.isoValue, "ISO"),
+                    TextRadioItem(SettingsRadioGroupItem.WB, characteristics.wbValue, "WB"),
+                    TextRadioItem(
+                        SettingsRadioGroupItem.FOCUS,
+                        characteristics.focusValue,
+                        "FOCUS"
+                    ),
+                    TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, magnifierValue, "MAGNIFIER")
+                )
+            )
+        }
+
+    var autoItems by remember {
+        mutableStateOf(
+            mutableMapOf(
+                SettingsRadioGroupItem.SHUTTER to false,
+                SettingsRadioGroupItem.ISO to false,
+                SettingsRadioGroupItem.WB to false,
+                SettingsRadioGroupItem.FOCUS to false,
+                SettingsRadioGroupItem.MAGNIFIER to false
+            )
+        )
+    }
+
+    val isSelectorVisible = remember { mutableStateOf(true) }
+    var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
+
+    var selectorItems: ImmutableCollection<SelectorItem>? by remember {
+        mutableStateOf(null)
+    }
+    var selectorRadioGroupItems: ImmutableCollection<RadioButton>? by remember {
+        mutableStateOf(null)
+    }
+
+    LaunchedEffect(
+        key1 = characteristics,
+        key2 = settingsRadioGroupSelectedSettingsRadioGroupItem
+    ) {
+        val newValue = characteristics
+        isRadioGroupSelectorVisible = false
+        isSelectorVisible.value = true
+        selectorItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+            SettingsRadioGroupItem.SHUTTER -> {
+                ImmutableCollection(characteristics.shutterItems?.list?.map { it as SelectorItem }
+                    ?: emptyList())
+            }
+
+            SettingsRadioGroupItem.ISO -> {
+                ImmutableCollection(characteristics.isoItems?.list?.map { it as SelectorItem }
+                    ?: emptyList())
+            }
+
+            SettingsRadioGroupItem.WB -> {
+                if (autoItems[SettingsRadioGroupItem.WB] == true) {
+                    isRadioGroupSelectorVisible = true
+                    isSelectorVisible.value = false
+                }
+                ImmutableCollection(characteristics.wbManualItems?.list?.map { it as SelectorItem }
+                    ?: emptyList())
+            }
+
+            SettingsRadioGroupItem.FOCUS -> {
+                if (autoItems[SettingsRadioGroupItem.FOCUS] == true) {
+                    isRadioGroupSelectorVisible = true
+                    isSelectorVisible.value = false
+                }
+                ImmutableCollection(characteristics.focusItems ?: emptyList())
+            }
+
+            SettingsRadioGroupItem.MAGNIFIER -> {
+                ImmutableCollection(characteristics.magnifierItems?.list?.map { it as SelectorItem }
+                    ?: emptyList())
+            }
+
+            null -> characteristics.shutterItems?.let {
+                ImmutableCollection(characteristics.shutterItems?.list?.map { it as SelectorItem }
+                    ?: emptyList())
+            }
+        }
+        selectorRadioGroupItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+            SettingsRadioGroupItem.SHUTTER -> {
+                null
+            }
+
+            SettingsRadioGroupItem.ISO -> {
+                null
+            }
+
+            SettingsRadioGroupItem.WB -> {
+                wbRadioGroupItems
+            }
+
+            SettingsRadioGroupItem.FOCUS -> {
+                focusRadioGroupItems
+            }
+
+            SettingsRadioGroupItem.MAGNIFIER -> {
+                null
+            }
+
+            null -> null
+        }
+    }
+
+    var touchPoint by remember {
+        mutableStateOf(FloatArray(0))
+    }
+
+    LaunchedEffect(touchPoint) {
+        if (touchPoint.isNotEmpty()) {
+            settingsRequest = settingsRequest.copy(
+                focusValue = if (autoItems[SettingsRadioGroupItem.FOCUS] == true) {
+                    "A"
+                } else {
+                    characteristics.focusValue
+                },
+                touchPoint = touchPoint,
+            )
+        }
+    }
+
+    var selectorSelectedItemIndex by remember {
+        mutableStateOf(0)
+    }
+
+    LaunchedEffect(selectorSelectedItemIndex) {
+        val selected = settingsRadioGroupSelectedSettingsRadioGroupItem
+        if (selected != null) {
+            autoItems = autoItems.toMutableMap().apply {
+                compute(selected) { _, value -> false }
+            }
+        }
+
+        settingsRequest = when (selected) {
+            SettingsRadioGroupItem.SHUTTER -> {
+                if (autoItems[selected] == false) {
+                    characteristics.copy(
+                        shutterValue = characteristics.shutterItems?.list?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: ""
+                    )
+                } else {
+                    characteristics.copy(shutterValue = "")
+                }
+            }
+
+            SettingsRadioGroupItem.ISO -> {
+                if (autoItems[selected] == false) {
+                    characteristics.copy(
+                        isoValue = characteristics.isoItems?.list?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: ""
+                    )
+                } else {
+                    characteristics.copy(isoValue = "")
+                }
+            }
+
+            SettingsRadioGroupItem.WB -> {
+                if (autoItems[selected] == false) {
+                    characteristics.copy(
+                        wbValue = characteristics.wbManualItems?.list?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: "0"
+                    )
+                } else {
+                    characteristics.copy(wbValue = "0")
+                }
+            }
+
+            SettingsRadioGroupItem.FOCUS -> {
+                if (autoItems[selected] == false) {
+                    characteristics.copy(
+                        focusValue = characteristics.focusItems?.get(
+                            selectorSelectedItemIndex
+                        )?.text ?: "0"
+                    )
+                } else {
+                    characteristics.copy(focusValue = "")
+                }
+            }
+
+            SettingsRadioGroupItem.MAGNIFIER -> {
+                if (autoItems[selected] == false) {
+                    magnifierPosition = selectorSelectedItemIndex
+                    magnifierValue =
+                        characteristics.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                            ?.text ?: ""
+                    renderer.configureMagnifier(
+                        characteristics.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                            ?.text?.toFloat() ?: 0f
+                    )
+                } else {
+                    magnifierValue = "1"
+                    magnifierPosition = 0
+                    renderer.configureMagnifier(0f)
+                }
+                characteristics.copy()
+            }
+
+            null -> characteristics.copy()
+        }
+    }
+
+    var settingsRequestSkipCounter by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(settingsRequest) {
+        if (settingsRequestSkipCounter < 2) {
+            settingsRequestSkipCounter++
+        } else {
+            onCharacteristicChanged(settingsRequest)
+        }
+    }
+
+    var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val autoClick = remember(characteristics) {
+        {
+            val selected = settingsRadioGroupSelectedSettingsRadioGroupItem
+            if (selected != null) {
+                autoItems = autoItems.toMutableMap().apply {
+                    compute(selected) { _, value -> !(value ?: false) }
+                }
+            }
+            isRadioGroupSelectorVisible = false
+            isSelectorVisible.value = true
+            if (autoItems[selected] == true) {
+                settingsRequest = when (selected) {
+                    SettingsRadioGroupItem.SHUTTER -> {
+                        characteristics.copy(shutterValue = "")
+                    }
+
+                    SettingsRadioGroupItem.ISO -> {
+                        characteristics.copy(isoValue = "")
+                    }
+
+                    SettingsRadioGroupItem.WB -> {
+                        isRadioGroupSelectorVisible = true
+                        isSelectorVisible.value = false
+                        characteristics.copy(wbValue = "")
+                    }
+
+                    SettingsRadioGroupItem.FOCUS -> {
+                        isRadioGroupSelectorVisible = true
+                        isSelectorVisible.value = false
+                        characteristics.copy(focusValue = "")
+                    }
+
+                    SettingsRadioGroupItem.MAGNIFIER -> {
+                        val normalizedX = 0.0f
+                        val normalizedY = 0.0f
+                        renderer.handleTouchPress(normalizedX, normalizedY)
+                        magnifierValue = "1"
+                        magnifierPosition = 0
+                        renderer.configureMagnifier(1f)
+                        characteristics.copy(magnifierPosition = 0)
+                    }
+
+                    null -> characteristics.copy()
+                }
+            }
+        }
+    }
+
+    var shutterBoxIsOpen by remember { mutableStateOf(true) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        ///////////preview
+        Box() {
+            var autoFitSurfaceView by remember {
+                mutableStateOf(
+                    AutoFitSurfaceView(context, null).apply {
+                        setEGLContextClientVersion(3)
+                        setRenderer(renderer)
+                        viewTreeObserver.addOnGlobalLayoutListener {
+                            surfaceViewSize = IntSize(width, height)
+                            val normalizedX = (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
+                            val normalizedY = -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
+                            renderer.handleTouchPress(normalizedX, normalizedY)
+                            renderer.configureMagnifier(1f)
+                        }
+                        setOnTouchListener { v, event ->
+                            v.performClick()
+                            val normalizedX = (event.x / v.width.toFloat()) * 2f - 1f
+                            val normalizedY = -((event.y / v.height.toFloat()) * 2f - 1f)
+                            when (event.action) {
+                                MotionEvent.ACTION_DOWN -> {
+                                    renderer.handleTouchPress(normalizedX, normalizedY)
+                                }
+
+                                MotionEvent.ACTION_MOVE -> {
+                                    renderer.handleTouchDrag(normalizedX, normalizedY)
+                                }
+
+                                MotionEvent.ACTION_UP -> {
+                                    touchPoint = floatArrayOf(event.x / v.width, event.y / v.height)
+                                }
+                            }
+                            true
+                        }
+                    }
+                )
+            }
+
+            LaunchedEffect(fullScreen) {
+                autoFitSurfaceView.setFullscreen(fullScreen)
+                autoFitSurfaceView.setAspectRatio(
+                    characteristics.aspectRatio?.width ?: 3,
+                    characteristics.aspectRatio?.height ?: 2
+                )
+            }
+
+            AndroidView(
+                modifier = Modifier
+                    .padding(
+                        top = if (characteristics.fullScreen) {
+                            0.dp
+                        } else {
+                            84.dp
+                        }
+                    )
+                    .onSizeChanged { size ->
+                        surfaceViewSize = size
+                    },
+                factory = { autoFitSurfaceView }
+            )
+
+            ShutterBox(
+                isOpen = shutterBoxIsOpen,
+                onToggle = { shutterBoxIsOpen = !shutterBoxIsOpen },
+                modifier = Modifier.padding(
+                    top = if (fullScreen) 0.dp else 84.dp
+                )
+            ) {}
+        }
+
+        ////////////////radio group
+        RadioGroup(
+            modifier = Modifier
+                .padding(4.dp)
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            items = settingsRadioGroupItems,
+            onOptionSelected = { value ->
+                settingsRadioGroupSelectedSettingsRadioGroupItem = value as SettingsRadioGroupItem?
+            }
+        )
+
+        /////////////////////////resolution
+        characteristics.resolution?.let {
+            Text(
+                modifier = Modifier
+                    .padding(top = 98.dp, end = 18.dp)
+                    .align(Alignment.TopEnd),
+                textAlign = TextAlign.End,
+                text = it,
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    shadow = Shadow(color = Color.DarkGray, offset = Offset(5.0f, 5.0f), blurRadius = 5f)
+                )
+            )
+        }
+
+        ////////////////////////histogram
+        Histogram(
+            Modifier
+                .padding(start = 16.dp, top = 98.dp)
+                .align(Alignment.TopStart),
+            characteristics.histogramData,
+            150.dp,
+            80.dp
+        )
+
+        //////////////////////////bottom buttons
+        var isCheck by remember { mutableStateOf(false) }
+
+        Column(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            //selector row
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ///////////auto
+                VectorShadow(
+                    modifier = Modifier.size(32.dp),
+                    vectorColor = if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) Color.Green else Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.auto,
+                    onClick = autoClick
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp)
+                        .height(50.dp)
+                ) {
+                    ///////////value selector
+                    if (isSelectorVisible.value) {
+                        ValueSelector(
+                            modifier = Modifier.height(42.dp),
+                            position = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
+                                SettingsRadioGroupItem.SHUTTER -> characteristics.shutterPosition
+                                SettingsRadioGroupItem.ISO -> characteristics.isoPosition
+                                SettingsRadioGroupItem.WB -> characteristics.wbPosition
+                                SettingsRadioGroupItem.FOCUS -> characteristics.focusPosition
+                                SettingsRadioGroupItem.MAGNIFIER -> magnifierPosition
+                                null -> 0
+                            },
+                            items = selectorItems,
+                            onSelectedItemChanged = { index, manual ->
+                                if (manual) {
+                                    selectorSelectedItemIndex = index
+                                }
+                            }
+                        )
+                    }
+
+                    //selector radio group
+                    if (isRadioGroupSelectorVisible) {
+                        RadioGroup(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .fillMaxWidth(),
+                            items = selectorRadioGroupItems,
+                            selectedOption = when (selectorRadioGroupItems?.list?.firstOrNull()?.id) {
+                                is WbItem -> wbSelectorRadioGroupSelectedItem
+                                is FocusItem -> focusSelectorRadioGroupSelectedItem
+                                else -> null
+                            },
+                            onOptionSelected = { value ->
+                                selectorRadioGroupSelectedItem = value as SelectorRadioGroupItem
+                            }
+                        )
+                    }
+                }
+            }
+
+            //////////////////////////capture
+            Row(
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(56.dp)
+            ) {
+                ///settings
+                VectorShadow(
+                    Modifier.size(32.dp),
+                    vectorColor = Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.settings,
+                    onClick = onSettingsClick
+                )
+
+                //////////////////camera flip
+                VectorShadow(
+                    Modifier.size(32.dp),
+                    vectorColor = Color.White,
+                    shadowColor = Color.DarkGray,
+                    resId = R.drawable.flip_camera_android,
+                )
+
+                /////capture
+                val startVideoRecord = remember { onStartVideoRecord }
+                RecordButton(
+                    modifier = Modifier.size(96.dp),
+                    isChecked = false,
+                    onClick = { isCheck ->
+                        shutterBoxIsOpen = !shutterBoxIsOpen
+                        startVideoRecord(isCheck)
+                    }
+                )
+            }
+        }
     }
 }
 

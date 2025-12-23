@@ -6,6 +6,13 @@ import android.os.HandlerThread
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -171,7 +178,21 @@ class MainActivity : ComponentActivity() {
             FlashCameraTheme {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "Camera") {
-                    composable("Camera") {
+                    composable("Camera",
+                        enterTransition = {
+                            scaleIn(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeIn(tween(300))
+                        },
+                        exitTransition = {
+                            scaleOut(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeOut(tween(300))
+                        },
+                        popEnterTransition = {
+                            scaleIn(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeIn(tween(300))
+                        },
+                        popExitTransition = {
+                            scaleOut(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeOut(tween(300))
+                        }
+
+                    ) {
                         CameraScreen(
                             LocalContext.current,
                             cameraViewModel,
@@ -180,7 +201,20 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    composable("Settings") {
+                    composable("Settings",
+                        enterTransition = {
+                            scaleIn(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeIn(tween(300))
+                        },
+                        exitTransition = {
+                            scaleOut(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeOut(tween(300))
+                        },
+                        popEnterTransition = {
+                            scaleIn(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeIn(tween(300))
+                        },
+                        popExitTransition = {
+                            scaleOut(animationSpec = tween(300), transformOrigin = TransformOrigin(0.5f, 0.5f)) + fadeOut(tween(300))
+                        }
+                    ) {
                         SettingsScreen(
                             settingsViewModel,
                             onBackClick = {

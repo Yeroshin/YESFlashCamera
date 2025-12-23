@@ -43,7 +43,7 @@ import com.yes.camera.presentation.ui.views.MapImmutableCollection
 fun ValueSelector(
     modifier: Modifier,
     position: Int,
-    items: ImmutableCollection<SelectorItem>?,
+    items: ImmutableCollection< SelectorItem>?,
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
   //  updatedPosition: Int? = null,
  //   onPositionUpdated: () -> Unit = {}
