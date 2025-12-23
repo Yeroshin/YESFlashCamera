@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -35,12 +34,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
@@ -62,7 +59,6 @@ import com.yes.camera.presentation.ui.custom.compose.TextRadioItem
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
 import com.yes.camera.presentation.ui.custom.compose.RecordButton
-import com.yes.camera.presentation.ui.custom.compose.ShutterBox
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
@@ -151,7 +147,7 @@ fun CameraScreenSuccess(
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onCharacteristicChanged: (characteristics: CharacteristicsUI) -> Unit,
-     fullScreen:Boolean
+    fullScreen: Boolean
 ) {
     val immut = MapImmutableCollection(
         mapOf(
@@ -208,7 +204,7 @@ fun CameraScreenSuccess(
     }*/
 
     LaunchedEffect(characteristics) {
-        snapshotFlow { characteristics}
+        snapshotFlow { characteristics }
             // .distinctUntilChanged() // Важно! Фильтрует одинаковые значения
             .collect { newValue ->
                 characteristics = newValue
@@ -374,10 +370,18 @@ fun CameraScreenSuccess(
         remember(characteristics, magnifierValue) {
             ImmutableCollection(
                 listOf(
-                    TextRadioItem(SettingsRadioGroupItem.SHUTTER, characteristics.shutterValue, "SHUTTER"),
+                    TextRadioItem(
+                        SettingsRadioGroupItem.SHUTTER,
+                        characteristics.shutterValue,
+                        "SHUTTER"
+                    ),
                     TextRadioItem(SettingsRadioGroupItem.ISO, characteristics.isoValue, "ISO"),
                     TextRadioItem(SettingsRadioGroupItem.WB, characteristics.wbValue, "WB"),
-                    TextRadioItem(SettingsRadioGroupItem.FOCUS, characteristics.focusValue, "FOCUS"),
+                    TextRadioItem(
+                        SettingsRadioGroupItem.FOCUS,
+                        characteristics.focusValue,
+                        "FOCUS"
+                    ),
                     TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, magnifierValue, "MAGNIFIER")
 
                 )
@@ -400,7 +404,7 @@ fun CameraScreenSuccess(
     val isSelectorVisible = remember { mutableStateOf(true) }
     var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
     LaunchedEffect(autoItems, characteristics) {
-        snapshotFlow {characteristics }
+        snapshotFlow { characteristics }
             .collect {
                 if (autoItems[settingsRadioGroupSelectedSettingsRadioGroupItem] == true) {
                     when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
@@ -674,7 +678,7 @@ fun CameraScreenSuccess(
             return@LaunchedEffect
         }
         onCharacteristicChanged(
-             settingsRequest
+            settingsRequest
         )
     }
     var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
@@ -755,6 +759,8 @@ fun CameraScreenSuccess(
 
     }
     var isOpen by remember { mutableStateOf(true) }
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -762,34 +768,21 @@ fun CameraScreenSuccess(
     ) {
         ///////////preview
         Box() {
+            var autoFitSurfaceView by remember {
 
-
-            AndroidView(
-                modifier = Modifier
-                    .padding(
-                        top = if (characteristics.fullScreen) {
-                            0.dp
-                        } else {
-                            84.dp
-                        }
-                    )
-                    .onSizeChanged { size ->
-                        surfaceViewSize = size
-                    },
-                //  .align(Alignment.Center),
-                factory = {
+                mutableStateOf(
                     AutoFitSurfaceView(
                         context,
                         null
                     ).apply {
                         // autoFitSurfaceView = it
                         // setFullscreen(true)
-                        setFullscreen(fullScreen)
+                        //  setFullscreen(fullScreen)
                         // setAspectRatio(1280, 960)
-                        setAspectRatio(
-                            characteristics.aspectRatio?.width ?: 3,
-                            characteristics.aspectRatio?.height ?: 2
-                        )
+                        /* setAspectRatio(
+                             characteristics.aspectRatio?.width ?: 3,
+                             characteristics.aspectRatio?.height ?: 2
+                         )*/
                         setEGLContextClientVersion(3)
                         setRenderer(
                             renderer
@@ -839,22 +832,49 @@ fun CameraScreenSuccess(
                             true
                         }
                     }
-                }
-            )
-          /*  ShutterBox(
-                isOpen = isOpen,
-                onToggle = {
-                    isOpen = !isOpen
-                },
+                )
+            }
+
+            LaunchedEffect(fullScreen) {
+                autoFitSurfaceView.setFullscreen(fullScreen)
+                autoFitSurfaceView.setAspectRatio(
+                    characteristics.aspectRatio?.width ?: 3,
+                    characteristics.aspectRatio?.height ?: 2
+                )
+            }
+            AndroidView(
                 modifier = Modifier
                     .padding(
-                        top = if (settings.fullScreen) {
+                        top = if (characteristics.fullScreen) {
                             0.dp
                         } else {
                             84.dp
+
                         }
+
                     )
-            ) {}*/
+                    .onSizeChanged { size ->
+                        surfaceViewSize = size
+                    },
+                //  .align(Alignment.Center),
+                factory = {
+                    autoFitSurfaceView
+                }
+            )
+            /*  ShutterBox(
+                  isOpen = isOpen,
+                  onToggle = {
+                      isOpen = !isOpen
+                  },
+                  modifier = Modifier
+                      .padding(
+                          top = if (settings.fullScreen) {
+                              0.dp
+                          } else {
+                              84.dp
+                          }
+                      )
+              ) {}*/
 
             /////////////
 
