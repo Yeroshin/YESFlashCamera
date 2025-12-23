@@ -49,6 +49,7 @@ import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
+import com.yes.shared.utils.CameraThreadManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.channels.BufferOverflow
@@ -70,7 +71,7 @@ import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
 
-
+/*
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class CameraRepository(
     private val context: Context,
@@ -3519,6 +3520,1487 @@ capture=true
             (red / 255) * 2, (green / 255),
             (green / 255), (blue / 255) * 2
         )
+    }
+}
+object ImageSaver{
+    lateinit var characteristics:CameraCharacteristics
+    lateinit var captureResult:CaptureResult
+    private val Image.nv21ByteArray
+        get() = ByteArray(width * height * 3 / 2).also {
+            val vPlane = planes[2]
+            val y = planes[0].buffer.apply { rewind() }
+            val u = planes[1].buffer.apply { rewind() }
+            val v = vPlane.buffer.apply { rewind() }
+            y.get(it, 0, y.capacity()) // copy Y components
+            if (vPlane.pixelStride == 2) {
+                // Both of U and V are interleaved data, so copying V makes VU series but last U
+                v.get(it, y.capacity(), v.capacity())
+                it[it.size - 1] = u.get(u.capacity() - 1) // put last U
+            } else { // vPlane.pixelStride == 1
+                var offset = it.size - 1
+                var i = v.capacity()
+                while (i-- != 0) { // make VU interleaved data into ByteArray
+                    it[offset - 0] = u[i]
+                    it[offset - 1] = v[i]
+                    offset -= 2
+                }
+            }
+        }
+
+
+    private fun NV21toJPEG(nv21: ByteArray, width: Int, height: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        val yuv = YuvImage(nv21, NV21, width, height, null)
+        yuv.compressToJpeg(Rect(0, 0, width, height), 90, out)  // Quality 90 for balance
+        return out.toByteArray()
+    }
+    fun saveImage(
+        context:Context,
+        image:Image,
+        file: File,
+    ) {
+
+        var success = false
+        when (val format: Int = image.format) {
+            ImageFormat.YUV_420_888 -> {
+                val yuvBytes=image.nv21ByteArray
+                val jpegBytes = NV21toJPEG(yuvBytes, image.width, image.height)
+
+                val directory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                try {
+                    val file = File(directory, "img.jpg")
+                    FileOutputStream(file).use { output -> output.write(jpegBytes) }
+                    Log.i("CameraRepository", "JPEG saved to ${file.absolutePath}")
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+
+            ImageFormat.RAW_SENSOR -> {
+                val dngCreator = DngCreator(characteristics, captureResult)
+                var output: FileOutputStream? = null
+                try {
+                    output = FileOutputStream(file)
+                    dngCreator.writeImage(output, image)
+                    success = true
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                } finally {
+                    image.close()
+                    output?.close()
+                }
+            }
+
+            else -> {
+                Log.e(TAG, "Cannot save image, unexpected image format:$format")
+            }
+        }
+        // If saving the file succeeded, update MediaStore.
+        if (success) {
+            MediaScannerConnection.scanFile(context,
+                arrayOf<String>(file.path),  /*mimeTypes*/
+                null,
+                object : MediaScannerConnectionClient {
+                    override fun onMediaScannerConnected() {
+                        // Do nothing
+                    }
+
+                    override fun onScanCompleted(path: String, uri: Uri) {
+                        Log.i(TAG, "Scanned $path:")
+                        Log.i(TAG, "-> uri=$uri")
+                    }
+                })
+        }
+    }
+}
+object ColorTemperatureConverter {
+    fun rggbToNormalized(rggb: RggbChannelVector): RggbChannelVector {
+        var r = rggb.red
+        var g1 = rggb.greenEven
+        var g2 = rggb.greenOdd
+        var b = rggb.blue
+
+        r /= 127.5f
+        g1 /= 255f
+        g2 /= 255f
+        b /= 127.5f
+
+        val normalizedRggb = RggbChannelVector(r + 1, g1 + 1, g2 + 1, b + 1)
+        return normalizedRggb
+    }
+
+    fun normalizedRggbToRggb(normalizedRggb: RggbChannelVector): RggbChannelVector {
+        var r = normalizedRggb.red - 1
+        var g1 = normalizedRggb.greenEven - 1
+        var g2 = normalizedRggb.greenOdd - 1
+        var b = normalizedRggb.blue - 1
+
+        r *= 127.5f
+        g1 *= 255f
+        g2 *= 255f
+        b *= 127.5f
+
+        return RggbChannelVector(r, g1, g2, b)
+    }
+
+    fun rgbNormalizedToKelvin(normalizedRggb: RggbChannelVector): Int {
+        val rggb = normalizedRggbToRggb(normalizedRggb)
+
+        return rgbToKelvin(rggb)
+    }
+
+    fun rgbToKelvin(rgb: RggbChannelVector): Int {
+        val r = rgb.red
+        val b = rgb.blue
+
+        var temperature = 0f
+        var testRGB: RggbChannelVector
+        val epsilon = 0.4f
+        var minTemperature = 1000f
+        var maxTemperature = 40000f
+        while (maxTemperature - minTemperature > epsilon) {
+            temperature = (maxTemperature + minTemperature) / 2
+            testRGB = kelvinToRgb(temperature)
+            if ((testRGB.blue / testRGB.red) >= (b / r)) {
+                maxTemperature = temperature
+            } else {
+                minTemperature = temperature
+            }
+        }
+        return Math.round(temperature)
+    }
+
+    fun kelvinToNormalizedRgb(kelvin: Float): RggbChannelVector {
+        val rggb = kelvinToRgb(kelvin)
+
+        return rggbToNormalized(rggb)
+    }
+
+    fun kelvinToRgb(kelvin: Float): RggbChannelVector {
+        val temperature = (kelvin / 100.0)
+        var red: Double
+        var green: Double
+        var blue: Double
+        if (temperature < 66.0) {
+            red = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 351.97690566805693`,
+            // b -> 0.114206453784165`,
+            // c -> -40.25366309332127
+            //x -> (kelvin/100) - 55}
+            red = temperature - 55.0
+            red = 351.97690566805693 + 0.114206453784165 * red - 40.25366309332127 * ln(red)
+            if (red < 0) red = 0.0
+            if (red > 255) red = 255.0
+        }
+        /* Calculate green */
+        if (temperature < 66.0) {
+            // a + b x + c Log[x] /.
+            // {a -> -155.25485562709179`,
+            // b -> -0.44596950469579133`,
+            // c -> 104.49216199393888`,
+            // x -> (kelvin/100) - 2}
+            green = temperature - 2
+            green =
+                -155.25485562709179 - 0.44596950469579133 * green + 104.49216199393888 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 325.4494125711974`,
+            // b -> 0.07943456536662342`,
+            // c -> -28.0852963507957`,
+            // x -> (kelvin/100) - 50}
+            green = temperature - 50.0
+            green = 325.4494125711974 + 0.07943456536662342 * green - 28.0852963507957 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        }
+        /* Calculate blue */
+        if (temperature >= 66.0) {
+            blue = 255.0
+        } else {
+            if (temperature <= 20.0) {
+                blue = 0.0
+            } else {
+                // a + b x + c Log[x] /.
+                // {a -> -254.76935184120902`,
+                // b -> 0.8274096064007395`,
+                // c -> 115.67994401066147`,
+                // x -> kelvin/100 - 10}
+                blue = temperature - 10
+                blue =
+                    -254.76935184120902 + 0.8274096064007395 * blue + 115.67994401066147 * ln(
+                        blue
+                    )
+                if (blue < 0) blue = 0.0
+                if (blue > 255) blue = 255.0
+            }
+        }
+        val r = Math.round(red).toFloat()
+        val g = Math.round(green).toFloat()
+        val b = Math.round(blue).toFloat()
+        return RggbChannelVector(r, g, g, b)
+    }
+}
+
+*/
+
+//////////////////////////////////
+//////////////////////////////////
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+class CameraRepository(
+    private val manager: CameraThreadManager,
+    private val context: Context,
+    private val cameraManager: CameraManager,
+    private val encoder: MediaEncoder
+) {
+    var sessio: CameraCaptureSession? = null
+    //  private var captureResult: CaptureResult? = null
+
+    private var captureRequest: CaptureRequest.Builder? = null
+    // private var glSurfaceTexture: SurfaceTexture? = null
+
+   /* private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
+    private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)*/
+   private val mBackgroundHandler = manager.mBackgroundHandler
+    private var cameraDevice: CameraDevice? = null
+
+    /*  private val previewSurface by lazy {
+          Surface(glSurfaceTexture)
+      }*/
+    private lateinit var previewSurface: Surface
+    private lateinit var captureSurface: Surface
+
+    /* private val previewSurfaceConfiguration by lazy {
+         OutputConfiguration(previewSurface).apply {
+             //  enableSurfaceSharing()
+         }
+     }
+     private val videoSurface by lazy {
+         encoder.configure(640, 480)
+     }*/
+
+
+
+    private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+        // priority = Thread.MAX_PRIORITY
+        start()
+    }
+    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    val rWidth = 4096
+    val rHeight = 3072
+
+    /* @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+     private val imageReader =
+         ImageReader.newInstance(rWidth, rHeight, ImageFormat.YUV_420_888, 30).apply {
+             setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+         }
+     private val captureSurface by lazy {
+         imageReader.surface
+     }*/
+
+
+    private val _characteristicsFlow: MutableStateFlow<Characteristics?> =
+        MutableStateFlow(null)
+    private val characteristicsFlow: StateFlow<Characteristics?> =
+        _characteristicsFlow
+
+    fun subscribeCameraSettings(): StateFlow<Characteristics?> {
+        return characteristicsFlow
+    }
+    private val byteArray = ByteArray(120000)
+    private val _outputBuffer: MutableStateFlow<ByteArray> = MutableStateFlow(byteArray)
+    private val outputBuffer: StateFlow<ByteArray> = _outputBuffer
+    fun subscribeOutputBuffer(): StateFlow<ByteArray> {
+        return outputBuffer
+    }
+    /*  private val _event: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
+      private val event = _event*/
+    /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
+      private val event = _event*/
+    private val _event: MutableSharedFlow<LightYUVPlanes?> = MutableSharedFlow(
+        extraBufferCapacity = 100,
+        onBufferOverflow = BufferOverflow.SUSPEND
+    )
+    private val event = _event
+    val comparator = ImageComparator()
+
+    //  var prevImage: Bitmap? = null
+    var prevImage: YuvImage? = null
+
+    //enable this comparator!!
+    /* init {
+         /* CoroutineScope(Dispatchers.IO).launch {
+              event.collect {image->
+                  image?.let {
+                      prevImage?.let {
+                          val dif=comparator.compareImageValues(it,image)
+                          if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                              println("capturd")
+                              // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                          }
+                          Log.e("","dif:${
+                              dif
+                          }")
+                          prevImage=image
+                      }?:run{
+                          prevImage=image
+                      }
+                  }
+              }
+
+          }*/
+         /* CoroutineScope(Dispatchers.IO).launch {
+              event.collect { yuvImage ->
+                  yuvImage?.let {
+                      /* val yuvBytes = ByteArrayOutputStream()
+                        val bytes=it.getJpegDataWithQuality(100)
+                       val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                       prevImage?.let {prev->
+                           val dif=comparator.compareImageValues(prev,bitmap)
+                           if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                               println("capture")
+                               // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                           }
+                           Log.e("","dif:${
+                               dif
+                           }")
+                           prevImage=bitmap
+                       }?:run{
+                           prevImage=bitmap
+                       }*/
+                      prevImage?.let { prev ->
+                          val dif = comparator.compareImageValues(prev, yuvImage)
+                          if (dif > 36) {//1/15s worked;1/8s relible(1/15s )
+                              println("capture")
+                              // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                          }
+                          Log.e(
+                              "", "dif:${
+                                  dif
+                              }"
+                          )
+                          //   prevImage=bitmap
+                      } ?: run {
+                          //  prevImage=bitmap
+                      }
+                  }
+                  /*    byteArray?.let {
+                     YuvImage(it, NV21, yuv420_888.width, yuv420_888.height, null) }
+                 }
+
+                      .getJpegDataWithQuality(100)
+                      prevImage?.let {
+                          val dif=comparator.compareImageValues(it,image)
+                          if (dif>36){//1/15s worked;1/8s relible(1/15s )
+                               println("capturd")
+                               // Toast.makeText(context,"capture",Toast.LENGTH_SHORT).show()
+                           }
+                           Log.e("","dif:${
+                               dif
+                           }")
+                           prevImage=image
+                      }?:run{
+                          prevImage=image
+                      }*/
+              }
+          }*/
+     }*/
+    private fun getCameraByFacing(facing: Int): String? {
+        return cameraManager.cameraIdList.firstOrNull { cameraId ->
+            cameraManager.getCameraCharacteristics(cameraId)
+                .get(CameraCharacteristics.LENS_FACING) == facing
+        }
+
+        /*  cameraManager.cameraIdList.forEach {
+              val characteristics = cameraManager.getCameraCharacteristics(it)
+              if (characteristics.get(CameraCharacteristics.LENS_FACING) == facing) {
+                  return it
+              }
+          }
+          return null*/
+    }
+
+    /*  fun openBackCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
+          this.glSurfaceTexture = glSurfaceTexture
+          // getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+          getCameraByFacing(CameraCharacteristics.LENS_FACING_BACK)?.let {
+              openCamera(
+                  it
+              )
+          }
+          return characteristicsFlow
+      }
+
+      fun openFrontCamera(glSurfaceTexture: SurfaceTexture): StateFlow<Characteristics?> {
+          this.glSurfaceTexture = glSurfaceTexture
+          getCameraByFacing(CameraCharacteristics.LENS_FACING_FRONT)?.let {
+              openCamera(
+                  it
+              )
+          }
+          return characteristicsFlow
+      }
+  */
+    var opened: Boolean = false
+
+    @SuppressLint("MissingPermission")
+    fun openCamera(
+
+        backCamera: Boolean
+    ): StateFlow<Characteristics?> {
+
+        //  this.glSurfaceTexture = glSurfaceTexture
+        val facing = if (backCamera) {
+            CameraCharacteristics.LENS_FACING_BACK
+        } else {
+            CameraCharacteristics.LENS_FACING_FRONT
+        }
+        getCameraByFacing(facing)?.let {
+
+            cameraManager.openCamera(
+                it,
+                object : CameraDevice.StateCallback() {
+
+                    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+                    override fun onOpened(camera: CameraDevice) {
+                        cameraDevice = camera
+                        // startVideoSession(characteristics)
+                        _characteristicsFlow.update {
+                            getCameraCharacteristics(camera.id)
+                        }
+                    }
+
+                    override fun onDisconnected(camera: CameraDevice) {
+                        camera.close()
+                        cameraDevice = null
+                    }
+
+                    override fun onError(camera: CameraDevice, error: Int) {
+                        println()
+                    }
+                },
+                mBackgroundHandler
+            )
+        }
+        return characteristicsFlow
+    }
+
+    fun closeCamera() {
+        cameraDevice?.close()
+        previewSurface.release()
+        _characteristicsFlow.update { null }
+    }
+
+
+    private fun getCameraCharacteristics(id: String): Characteristics {
+        val characteristics = cameraManager.getCameraCharacteristics(id)
+
+        val config = characteristics.get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
+        )
+
+        val config2 = characteristics.get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION
+        )
+        val у = config2?.getOutputSizes(ImageFormat.RAW_SENSOR)
+        // If image format is provided, use it to determine supported sizes; or else use target class
+        // val allSizes = config?.getOutputSizes(ImageReader::class.java)
+        val e = config?.getOutputSizes(MediaCodec::class.java)
+        val v = config?.getOutputSizes(ImageFormat.YUV_420_888)
+        val t = config?.getOutputSizes(ImageFormat.RAW_SENSOR)
+        val allSizes = config?.getOutputSizes(ImageFormat.JPEG)
+        allSizes?.maxBy { it.height * it.width }
+        val iso = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val minFocusDistance =
+            characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val maxFocusDistance =
+            characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+
+        /////////////////
+        val availablePixelModes =
+            characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+        val g =
+            characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
+        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        val sizes = map?.getOutputSizes(MediaRecorder::class.java)
+        // Check AF supported
+        val activeArraySize =
+            characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        val maxRegionsAf = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
+        val awbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
+/////////////////
+        /////////////////
+        val resolutionItems = allSizes?.map {
+            Dimensions(
+                it.width, it.height
+            )
+        } ?: listOf(
+            Dimensions(0, 0)
+        )
+        val r = resolutionItems
+        return Characteristics(
+            isoValue = 0,
+            isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
+            shutterValue = 0,
+            shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
+            wbItems = awbModes,
+            minFocusValue = minFocusDistance ?: 0f,
+            maxFocusValue = maxFocusDistance ?: 0f,
+            resolutionItems = allSizes?.map {
+                Dimensions(
+                    it.width, it.height
+                )
+            } ?: listOf(
+                Dimensions(0, 0)
+            ),
+            resolution = Dimensions(0, 0)
+
+        )
+    }
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+        var image: Image? = null
+        try {
+            image = reader.acquireLatestImage()
+            image?.let {
+                // Получить буфер
+                val buffer: ByteBuffer = it.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
+
+                // Указать путь к файлу
+                val filename = "saved_image.jpg"
+                val directory =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val file = File(directory, filename)
+
+                // Записать байты в файл
+                FileOutputStream(file).use { output ->
+                    output.write(bytes)
+                }
+
+                println("Изображение сохранено по пути: ${file.absolutePath}")
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            image?.close()
+        }
+
+
+        /* if (running){
+             val image = reader.acquireNextImage()
+             if (image!= null) {
+                 val buffer = image.planes[0].buffer
+                 val bytes = ByteArray(buffer.remaining())
+                 buffer.get(bytes)
+
+                 try {
+                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                     sink.write(byteBuffer.array())
+                 } catch (e: IOException) {
+                     println()
+                 } finally {
+                     image.close() // Освобождаем изображение
+                 }
+             }
+         }*/
+        // val image = reader.acquireNextImage()
+        /* reader.acquireNextImage()?.let {
+             val ybytes = ByteArray(it.planes[0].buffer.capacity())
+             it.planes[0].buffer.get(ybytes)
+             _outputBuffer.value = ybytes
+             it.close()
+         }*/
+        //  image?.close()
+        /* if (running) {
+             val image = reader.acquireNextImage()
+             image?.let {
+                 val tmp =yuv420ToBitmap(it)
+                 //  _event.value = convertYUV420_888to420p(it)
+                 ///////////////////
+                 val uvPos = it.width * image.height
+                 val uvSize = it.width / 2 * image.height / 2
+
+              //   fps1.get("before")
+                 /////////////////////////////////
+                /* val yPlane = it.planes[0].buffer
+                 val uPlane = it.planes[1].buffer
+                 val vPlane = it.planes[2].buffer*/
+
+                 //val buffer = image.planes[0].buffer
+                 ////////////////
+               /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
+                 it.planes[0].buffer.get(randomAccessFile)
+                 val ubytes = ByteArray(uvSize)
+                 it.planes[1].buffer.get(ubytes,0,uvSize)
+                 val vbytes = ByteArray(uvSize)
+                 it.planes[2].buffer.get(vbytes,0,uvSize)*/
+               //  fps1.get("middle")
+                 ///////////////////
+
+             /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
+                 it.planes[1].buffer.limit(uvSize)
+                 val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
+                 it.planes[2].buffer.limit(uvSize)
+                 val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
+                 /////////////////
+                /* val b = randomAccessFile?.write(ubytes)
+                 val c = randomAccessFile?.write(vbytes)*/
+                /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
+                 val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
+                 //////////////////////////////////
+                 //    randomAccessFile?.seek(0)
+                 // copyImage(image)
+                 _event.tryEmit(getByteBufferYUVPlanes(image))
+               //  fps1.get("after")
+                 /////////////////////////
+
+                 /*  bufferedOutputStream?.write(
+                       imageToYUVPlanes(image)
+                   )
+                   bufferedOutputStream?.flush()*/
+                 ///////////////////////
+                 // _event.tryEmit(getYUVPlanes(it))
+                 it.close()
+
+             }
+         } else if (finished) {
+             /////////////////
+            /* randomAccessFile?.close()
+             FFmpegKitConfig.closeFFmpegPipe(pipe1)
+             finished = false*/
+             /////////////////
+             //job.cancel()
+             /*   process?.destroy()
+                process?.waitFor()
+                FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
+             ///////////////////
+             /*  pipe1?.let {
+                   FFmpegKitConfig.closeFFmpegPipe(it)
+               }
+             //  process?.waitFor()
+               process?.destroy()*/
+             //   FFmpeg.cancel()
+             // process?.outputStream?.flush()
+             //  process?.outputStream?.close()
+             //  finished = false
+         } else {
+             reader.acquireLatestImage()?.close()
+             // fps1.get("fps")
+         }*/
+        //  fps1.get("fps")
+        /////////////////
+
+    }
+    private lateinit var imageReader: ImageReader
+    private lateinit var filePath:String
+    private val listener = ImageReader.OnImageAvailableListener {
+        imageReader.acquireLatestImage()?.let {image->
+            //histogram
+            val ybytes = ByteArray(image.planes[0].buffer.capacity())
+            image.planes[0].buffer.get(ybytes)
+            _outputBuffer.value = ybytes
+            //////////////////
+            if (capture){
+                capture=false
+                ImageSaver.saveImage(
+                    context,
+                    image,
+                    File(filePath)
+                )
+            }
+            //////////////////
+            image.close()
+        }
+
+    }
+    fun startVideoSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
+        filePath=characteristics.filePath
+        previewSurface = Surface(glSurfaceTexture)
+        //////////////
+        val characteristic = cameraManager.getCameraCharacteristics("0")
+        val streamMap: StreamConfigurationMap? = characteristic.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+
+// Проверить поддерживаемые output-формати
+        val supportedFormats = streamMap?.outputFormats
+
+        ///////////////
+        imageReader =
+            ImageReader.newInstance(
+                characteristics.resolution.width,
+                characteristics.resolution.height,
+
+                when (characteristics.imgFormat) {
+                    ImgFormat.JPEG -> ImageFormat.YUV_420_888
+                    // ImgFormat.JPEG -> ImageFormat.JPEG
+                    ImgFormat.JPEGRAW -> ImageFormat.RAW_SENSOR
+                    ImgFormat.RAW -> ImageFormat.RAW_SENSOR
+                },
+                //ImageFormat.YUV_420_888,
+                3//30
+            )
+        // setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
+        imageReader.setOnImageAvailableListener(listener, imageReaderHandler)
+
+
+
+        captureSurface = imageReader.surface
+        createCaptureSession(
+            listOf(
+                previewSurface,
+                //   encoder.configure(640,480),
+                captureSurface
+            ),
+            characteristics
+        )
+
+    }
+
+    private fun createCaptureSession(surfaces: List<Surface>, characteristics: Characteristics) {
+        val configs = mutableListOf<OutputConfiguration>()
+        /* captureRequest =
+             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
+        ////////preview
+        for (surface in surfaces) {
+            //  captureRequest?.addTarget(surface)
+            configs.add(
+                OutputConfiguration(surface)
+            )
+        }
+
+        val config = SessionConfiguration(
+            SessionConfiguration.SESSION_REGULAR,
+            configs,
+            Dispatchers.IO.asExecutor(),
+            object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    try {
+                        sessio = session
+                        startCaptureRequest(characteristics)
+                        // startPreviewCaptureRequest()
+                    } catch (e: CameraAccessException) {
+                        e.printStackTrace()
+                    }
+                }
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    println()
+                }
+            }
+        )
+        cameraDevice?.createCaptureSession(config)
+    }
+
+
+    var capture = false
+
+    fun singleCapture(enable: Boolean) {
+
+        capture=true
+        // imageReader.setOnImageAvailableListener(listener, null)
+        //   singleCapture = true
+        // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
+        /*if (enable) {
+            mMediaRecorder.start()
+        } else {
+            mMediaRecorder.stop()
+        }*/
+
+
+        /* if (enable) {
+             mpses = startFFmpeg()
+         } else {
+             mpses?.cancel()
+         }*/
+        /* if (enable) {
+             running = enable
+             finished = !enable
+             mpses = startFFmpeg()
+             //startTimer()
+
+         } else {
+             running = false
+             finished = true
+             mpses?.cancel()
+         }*/
+        //////////worked
+
+
+        /*   if (enable) {
+
+               encoder.start(createFile("mp4"))
+               captureRequest?.addTarget(videoSurface)
+               captureRequest?.let {
+                   //sessio?.stopRepeating()
+                   sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+               }
+           } else {
+               encoder.stop()
+               captureRequest?.removeTarget(videoSurface)
+               captureRequest?.let {
+                   // sessio?.stopRepeating()
+                   sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+               }
+           }*/
+
+    }
+    fun startCaptureRequest(characteristics: Characteristics) {
+        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        captureRequest?.addTarget(previewSurface)
+        captureRequest?.addTarget(captureSurface)
+        captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+        captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+        captureRequest?.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+        captureRequest?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+        captureRequest?.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+        captureRequest?.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF)
+
+        // Apply characteristics immediately without delay
+        setInputCharacteristics(characteristics)
+
+        captureRequest?.let { builder ->
+            try {
+                sessio?.setRepeatingRequest(builder.build(), captureCallback, mBackgroundHandler)
+            } catch (e: CameraAccessException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    var frameTime: Long = 0
+    var autoShutter: Long? = null
+    var autoIso: Int? = null
+
+    //  var wb:Int?=0
+    var autoWhiteBalanceGains: RggbChannelVector? = null
+    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            super.onCaptureCompleted(session, request, result)
+            //////////////////////////
+            val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
+            val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+            //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
+            autoIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
+            autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+            /* val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)*/
+            val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
+            val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
+            autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
+            val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
+            _characteristicsFlow.update { current ->
+                current?.copy(
+                    focusValue = focusDistance,
+                    wbValue = kelvin,
+                    shutterValue = exposureTime ?: autoShutter,
+                    isoValue = iso ?: autoIso
+                )
+            }
+            /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
+                  shutterValue = exposureTimeNs,
+                  isoValue = iso
+              )*/
+            //  }
+            ///////////////////wb
+            val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+            val tmpautoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+
+            val wbState = result.get(CaptureResult.CONTROL_AWB_STATE)
+            val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
+            if (wb) {
+                when (wbState) {
+                    CaptureResult.CONTROL_AWB_STATE_CONVERGED -> {
+                        wb = false
+                        val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+                        val tmpautoWhiteBalanceGains =
+                            result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+                        val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
+                        println()
+                    }
+                }
+            }
+
+            ///////////////////focus
+            val afState = result[CaptureResult.CONTROL_AF_STATE]!!
+
+            //  if (request.tag == "focus"){
+            if (focus) {
+                when (afState) {
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                        Toast.makeText(context, "FOCUSED", Toast.LENGTH_SHORT).show()
+                        captureRequest?.set(
+                            CaptureRequest.CONTROL_AF_TRIGGER,
+                            CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                        )
+                        focus = false
+                        captureRequest?.let {
+                            sessio?.capture(it.build(), null, null)
+                        }
+                    }
+
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                        Toast.makeText(context, "not focused", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+
+                /*  captureRequest =
+                      cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                  captureRequest?.addTarget(previewSurface)
+                  captureRequest?.addTarget(captureSurface)*/
+
+                /*  captureRequest?.set(
+                      CaptureRequest.CONTROL_AF_TRIGGER,
+                       CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                  )*/
+                /* captureRequest?.set(
+                     CaptureRequest.CONTROL_AF_TRIGGER,
+                     CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
+                 )
+              //   captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                 captureRequest?.let {
+                     sessio?.stopRepeating()
+                     sessio?.setRepeatingRequest(it.build(), null, null)
+                 }*/
+                /*  captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                  captureRequest?.addTarget(previewSurface)
+                  captureRequest?.addTarget(captureSurface)
+                  captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+
+                  captureRequest?.let {
+                      sessio?.stopRepeating()
+                     sessio?.setRepeatingRequest(it.build(), null, null)
+                 }*/
+                /*  when (afState) {
+
+                      CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                          val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+
+                          captureRequest =
+                              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                          captureRequest?.addTarget(previewSurface)
+                          captureRequest?.addTarget(captureSurface)
+                          val focusArea = Rect(1, 1, 920, 1230)
+
+
+                        /*  captureRequest?.set(
+                              CaptureRequest.CONTROL_AF_MODE,
+                              CaptureRequest.CONTROL_AF_MODE_OFF
+                          )*/
+                       /*   captureRequest?.set(
+                              CaptureRequest.CONTROL_AF_TRIGGER,
+                              CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                          )*/
+                          captureRequest?.set(
+                              CaptureRequest.CONTROL_AF_TRIGGER,
+                              null
+                          )
+                        /*  captureRequest?.set(
+                              CaptureRequest.CONTROL_AF_REGIONS,
+                              afRegions
+                              // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
+                          )*/
+                          captureRequest?.let {
+                             // sessio?.stopRepeating()
+                              sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                          }
+                          println()
+                      }
+                      CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                          println()
+                      }
+              }
+                   when (afState) {
+
+                       CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                          /* val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+                           captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                           captureRequest?.addTarget(previewSurface)
+                           captureRequest?.addTarget(captureSurface)
+                           val focusArea = Rect(1, 1, 920, 1230)
+
+
+                          /* captureRequest?.set(
+                               CaptureRequest.CONTROL_AF_MODE,
+                               CaptureRequest.CONTROL_AF_MODE_OFF
+                           )*/
+                           captureRequest?.set(
+                               CaptureRequest.CONTROL_AF_TRIGGER,
+                               CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                           )
+                          /* captureRequest?.set(
+                               CaptureRequest.CONTROL_AF_REGIONS,
+                               afRegions
+                               // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
+                           )*/
+                           captureRequest?.let {
+                               sessio?.stopRepeating()
+                               sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                           }*/
+
+                       }
+                       CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                           println()
+                       }
+                   }*/
+
+            }
+
+            /*  captureRequest?.let {
+                  //  sessio?.stopRepeating()
+                  //  sessio?.capture(it.build(), this, mBackgroundHandler)
+                    sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+              }*/
+            /* when (afState) {
+                 CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                     // Здесь вы можете выполнить действие в зависимости от результата фокусировки
+                     Log.e("f","FOCUSED")
+                     println("FOCUSED!!!!")
+                     val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+
+                     captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
+                     captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
+
+                     captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
+                     captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                     captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, null);// As documentation says AF_trigger can be null in some device
+
+
+                     captureRequest?.let {
+                         sessio?.stopRepeating()
+                         sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
+                     }
+                     /*  captureRequest?.let {
+                             //  sessio?.stopRepeating()
+                           //  sessio?.capture(it.build(), this, mBackgroundHandler)
+                             sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                         }*/
+                 }
+                 CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+
+                     println("not focused")
+                     captureRequest?.set(
+                         CaptureRequest.CONTROL_AF_TRIGGER,
+                         CaptureRequest.CONTROL_AF_TRIGGER_START
+                     )
+                     /*  captureRequest?.let {
+                             //  sessio?.stopRepeating()
+                             sessio?.capture(it.build(), this, mBackgroundHandler)
+                         }*/
+                 }
+                 CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
+
+                     println("scan")
+                     //   captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+                     /*  captureRequest?.let {
+                                 //  sessio?.stopRepeating()
+                                 sessio?.capture(it.build(), this, mBackgroundHandler)
+                             }*/
+                     /*  captureRequest?.set(
+                             CaptureRequest.CONTROL_AF_TRIGGER,
+                             CameraMetadata.CONTROL_AF_TRIGGER_START
+                         );
+                         captureRequest?.let {
+                             sessio?.setRepeatingRequest(it.build(), this, null);
+                         }*/
+
+                     ////////////////////////
+                     val currentTime = System.currentTimeMillis()
+                     if (frameTime != 0L) {
+                         val fps = 1000.0 / (currentTime - frameTime)
+                         //   Log.e("CaptureSession", "FPS: $fps")
+                         //  println("FPS: $fps")
+                     }
+                     frameTime = currentTime
+                     /////////////////////////
+                 }
+                 else -> {
+                     // Обработка других состояний, если необходимо
+                     println("Состояние фокуса: $afState")
+                 }
+             }*/
+        }
+
+        override fun onCaptureProgressed(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            partialResult: CaptureResult
+        ) {
+            // Получение состояний фокуса
+            val focusState = partialResult.get(CaptureResult.CONTROL_AF_STATE)
+            focusState?.let {
+                when (focusState) {
+                    CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {}
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {}
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {}
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {}
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {}
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    fun startPreviewCaptureRequest() {
+        /*  captureRequest =
+              cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+          captureRequest?.addTarget(previewSurface)
+          captureRequest?.addTarget(captureSurface)*/
+        //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        /*  ///test
+          captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+          captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+          captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);*/
+
+        //////////////////
+        /*   captureRequest?.set(
+               CaptureRequest.CONTROL_AE_MODE,
+               CaptureRequest.CONTROL_AE_MODE_OFF
+           )*/
+        //////////settings
+        /* captureRequest?.set(
+             CaptureRequest.EDGE_MODE,
+             CaptureRequest.EDGE_MODE_OFF
+         )
+         captureRequest?.set(
+             CaptureRequest.NOISE_REDUCTION_MODE,
+             CaptureRequest.NOISE_REDUCTION_MODE_OFF
+         )
+         captureRequest?.set(
+             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+         )*/
+
+
+        // previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.2f)
+        //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+
+        // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
+        /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
+         captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)*/
+        /*  captureRequest?.let {
+
+              sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
+          }*/
+
+        ////////////////////
+        submitRequest(
+            CameraDevice.TEMPLATE_PREVIEW,
+            listOf(
+                previewSurface,
+                captureSurface
+            ),
+            true
+        ) { builder ->
+            builder.apply {
+                set(
+                    CaptureRequest.EDGE_MODE,
+                    CaptureRequest.EDGE_MODE_OFF
+                )
+                set(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                )
+                set(
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+                )
+            }
+        }
+    }
+
+    private fun submitRequest(
+        template: Int,
+        targets: List<Surface>,
+        repeat: Boolean,
+        block: (CaptureRequest.Builder) -> Unit = {}
+    ) {
+        val builder = cameraDevice?.createCaptureRequest(template)
+        targets.forEach { builder?.addTarget(it) }
+        block(builder!!)
+        val request = builder.build()
+        if (repeat) {
+            sessio?.setRepeatingRequest(request, captureCallback, mBackgroundHandler)
+        } else {
+            sessio?.capture(request, captureCallback, mBackgroundHandler)
+        }
+    }
+
+
+    private val METERING_RECTANGLE_SIZE = 0.15f
+    private fun meteringRectangle(touchPoint: FloatArray): MeteringRectangle {
+        val characteristics = cameraManager.getCameraCharacteristics("0")
+        val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)!!
+        val sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
+
+        val halfMeteringRectWidth = (METERING_RECTANGLE_SIZE * sensorSize.width())
+        val halfMeteringRectHeight = (METERING_RECTANGLE_SIZE * sensorSize.height())
+
+
+        /////////////////////////
+        val x = touchPoint[0] * sensorSize.height()
+        val y = touchPoint[1] * sensorSize.width()
+
+
+        //////////////////////////
+        // Normalize the [x,y] touch point in the view port to values in the range of [0,1]
+        //   val normalizedPoint = floatArrayOf(event.x / previewSize.height, event.y / previewSize.width)
+
+        // Scale and rotate the normalized point such that it maps to the sensor region
+        Matrix().apply {
+            postRotate(-sensorOrientation.toFloat(), 0.5f, 0.5f)
+            postScale(sensorSize.width().toFloat(), sensorSize.height().toFloat())
+            mapPoints(touchPoint)
+        }
+
+        val meteringRegion = Rect(
+            (touchPoint[0] - halfMeteringRectWidth).toInt().coerceIn(0, sensorSize.width()),
+            (touchPoint[1] - halfMeteringRectHeight).toInt().coerceIn(0, sensorSize.height()),
+            (touchPoint[0] + halfMeteringRectWidth).toInt().coerceIn(0, sensorSize.width()),
+            (touchPoint[1] + halfMeteringRectHeight).toInt().coerceIn(0, sensorSize.height())
+        )
+
+        return MeteringRectangle(meteringRegion, MeteringRectangle.METERING_WEIGHT_MAX)
+    }
+
+    var focus = false
+    var wb = false
+
+    fun rgbToKelvin(rgb: RggbChannelVector): Int {
+        val r = rgb.red
+        val b = rgb.blue
+
+        var temperature = 0f
+        var testRGB: RggbChannelVector
+        val epsilon = 0.4f
+        var minTemperature = 1000f
+        var maxTemperature = 40000f
+        while (maxTemperature - minTemperature > epsilon) {
+            temperature = (maxTemperature + minTemperature) / 2
+            testRGB = kelvinToRgb(temperature)!!
+            if ((testRGB.blue / testRGB.red) >= (b / r)) {
+                maxTemperature = temperature
+            } else {
+                minTemperature = temperature
+            }
+        }
+        return Math.round(temperature)
+    }
+
+    fun convertTemperatureToRggb(temperature_kelvin: Int): RggbChannelVector? {
+        val temperature = temperature_kelvin / 100.0f
+        var red: Float
+        var green: Float
+        var blue: Float
+
+        if (temperature <= 66) {
+            red = 255f
+        } else {
+            red = temperature - 60
+            red = (329.698727446 * (red.toDouble().pow(0.1332047592))).toFloat()
+            if (red < 0) {
+                red = 0f
+            }
+            if (red > 255) {
+                red = 255f
+            }
+        }
+
+        if (temperature <= 66) {
+            green = temperature
+            green = (99.4708025861 * ln(temperature.toDouble()) - 161.1195681661).toFloat()
+            if (green < 0) {
+                green = 0f
+            }
+            if (green > 255) {
+                green = 255f
+            }
+        } else {
+            green = temperature - 60
+            green = (288.1221695283 * (green.toDouble().pow(0.0755148492))).toFloat()
+            if (green < 0) {
+                green = 0f
+            }
+            if (green > 255) {
+                green = 255f
+            }
+        }
+
+        if (temperature >= 66) {
+            blue = 255f
+        } else if (temperature <= 19) {
+            blue = 0f
+        } else {
+            blue = temperature - 10
+            blue = (138.5177312231 * ln(blue.toDouble()) - 305.0447927307).toFloat()
+            if (blue < 0) {
+                blue = 0f
+            }
+            if (blue > 255) {
+                blue = 255f
+            }
+        }
+
+
+        return RggbChannelVector(
+            (red / 255) * 2, (green / 255),
+            (green / 255), (blue / 255) * 2
+        )
+    }
+
+    data class LightYUVPlanes(
+        val width: Int,
+        val height: Int,
+        val yRowStride: Int,
+        val uRowStride: Int,
+        val vRowStride: Int,
+        val uPixelStride: Int,
+        val vPixelStride: Int
+    )
+
+    // Updated setInputCharacteristics function to reduce delay
+    fun setInputCharacteristics(characteristics: Characteristics) {
+        // Directly update the existing captureRequest instead of creating new ones
+        captureRequest?.apply {
+            set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+            set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
+            set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+            characteristics.wbValue?.let { wb ->
+                set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
+            }
+            // Apply metering rectangles if provided
+            characteristics.touchPoint?.let { point ->
+                val meteringRect = meteringRectangle(point)
+                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
+                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
+                set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
+            }
+        }
+
+        // Update characteristics flow immediately
+        _characteristicsFlow.update { current ->
+            current?.copy(
+                isoValue = characteristics.isoValue,
+                shutterValue = characteristics.shutterValue,
+                focusValue = characteristics.focusValue,
+                wbValue = characteristics.wbValue
+            )
+        }
+
+        // Set the updated request as repeating for immediate effect
+        captureRequest?.let { builder ->
+            try {
+                sessio?.setRepeatingRequest(builder.build(), captureCallback, mBackgroundHandler)
+            } catch (e: CameraAccessException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun kelvinToColorCorrectionGains(kelvin: Int): RggbChannelVector {
+        val scaledTemp = (kelvin.coerceIn(1000, 40000) / 100)
+
+        val red = when {
+            scaledTemp <= 66 -> 255f
+            else -> 329.698727446f * (scaledTemp - 60).toFloat().pow(-0.1332047592f)
+        }.coerceIn(0f, 255f)
+
+        val green = when {
+            scaledTemp <= 66 -> 99.4708025861f * ln(scaledTemp.toFloat()) - 161.1195681661f
+            else -> 288.1221695283f * (scaledTemp - 60).toFloat().pow(-0.0755148492f)
+        }.coerceIn(0f, 255f)
+
+        val blue = when {
+            scaledTemp >= 66 -> 255f
+            scaledTemp <= 19 -> 0f
+            else -> 138.5177312231f * ln((scaledTemp - 10).toFloat()) - 305.0447927307f
+        }.coerceIn(0f, 255f)
+
+        return RggbChannelVector(
+            (red / 255f) * 2f,
+            green / 255f,
+            green / 255f,
+            (blue / 255f) * 2f
+        )
+    }
+    fun kelvinToRgb(kelvin: Float): RggbChannelVector? {
+        val temperature = (kelvin / 100.0)
+        var red: Double
+        var green: Double
+        var blue: Double
+        if (temperature < 66.0) {
+            red = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 351.97690566805693`,
+            // b -> 0.114206453784165`,
+            // c -> -40.25366309332127
+            //x -> (kelvin/100) - 55}
+            red = temperature - 55.0
+            red = 351.97690566805693 + 0.114206453784165 * red - 40.25366309332127 * ln(red)
+            if (red < 0) red = 0.0
+            if (red > 255) red = 255.0
+        }
+        /* Calculate green */
+        if (temperature < 66.0) {
+            // a + b x + c Log[x] /.
+            // {a -> -155.25485562709179`,
+            // b -> -0.44596950469579133`,
+            // c -> 104.49216199393888`,
+            // x -> (kelvin/100) - 2}
+            green = temperature - 2
+            green =
+                -155.25485562709179 - 0.44596950469579133 * green + 104.49216199393888 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> 325.4494125711974`,
+            // b -> 0.07943456536662342`,
+            // c -> -28.0852963507957`,
+            // x -> (kelvin/100) - 50}
+            green = temperature - 50.0
+            green = 325.4494125711974 + 0.07943456536662342 * green - 28.0852963507957 * ln(green)
+            if (green < 0) green = 0.0
+            if (green > 255) green = 255.0
+        }
+        /* Calculate blue */
+        if (temperature >= 66.0) {
+            blue = 255.0
+        } else {
+            if (temperature <= 20.0) {
+                blue = 0.0
+            } else {
+                // a + b x + c Log[x] /.
+                // {a -> -254.76935184120902`,
+                // b -> 0.8274096064007395`,
+                // c -> 115.67994401066147`,
+                // x -> kelvin/100 - 10}
+                blue = temperature - 10
+                blue =
+                    -254.76935184120902 + 0.8274096064007395 * blue + 115.67994401066147 * ln(
+                        blue
+                    )
+                if (blue < 0) blue = 0.0
+                if (blue > 255) blue = 255.0
+            }
+        }
+        val r = Math.round(red).toFloat()
+        val g = Math.round(green).toFloat()
+        val b = Math.round(blue).toFloat()
+        return RggbChannelVector(r, g, g, b)
     }
 }
 object ImageSaver{

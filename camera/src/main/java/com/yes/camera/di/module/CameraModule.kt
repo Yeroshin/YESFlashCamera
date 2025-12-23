@@ -19,8 +19,10 @@ import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.camera.utils.AndroidResourceProvider
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.data.dataSource.SettingsDataSource
+import com.yes.shared.di.module.CameraDispatcher
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
+import com.yes.shared.utils.CameraThreadManager
 import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.CoroutineDispatcher
@@ -52,7 +54,7 @@ class CameraModule {
 
     @Provides
     fun providesSubscribeHistogramUseCase(
-        @IoDispatcher dispatcher: CoroutineDispatcher,
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
         settingsRepository: SettingsRepository
     ): SubscribeCameraSettingsUseCase {
@@ -66,10 +68,12 @@ class CameraModule {
     @CameraScope
     @Provides
     fun providesCameraRepository(
+        manager: CameraThreadManager,
         context: Context,
         encoder: MediaEncoder
     ): CameraRepository {
         return CameraRepository(
+            manager,
             context,
             context.getSystemService(CAMERA_SERVICE) as CameraManager,
             encoder
@@ -78,7 +82,7 @@ class CameraModule {
 
     @Provides
     fun providesOpenCameraUseCase(
-        @IoDispatcher dispatcher: CoroutineDispatcher,
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
         settingsRepository: SettingsRepository
     ): OpenCameraUseCase {
@@ -90,7 +94,7 @@ class CameraModule {
     }
     @Provides
     fun providesCloseCameraUseCase(
-        @IoDispatcher dispatcher: CoroutineDispatcher,
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
     ): CloseCameraUseCase {
         return CloseCameraUseCase(
@@ -110,7 +114,7 @@ class CameraModule {
 
     @Provides
     fun providesSetCharacteristicsUseCase(
-        @IoDispatcher dispatcher: CoroutineDispatcher,
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
         settingsRepository: SettingsRepository
     ): SetInputCharacteristicsUseCase {
@@ -123,7 +127,7 @@ class CameraModule {
 
     @Provides
     fun providesSetRecordVideoUseCase(
-        @IoDispatcher dispatcher: CoroutineDispatcher,
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository
     ): RecordVideoUseCase {
         return RecordVideoUseCase(

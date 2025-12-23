@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.yes.shared.data.dataSource.SettingsDataSource
+import com.yes.shared.di.module.CameraDispatcher
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.di.module.MainDispatcher
 import com.yes.shared.di.module.SharedModule
@@ -20,6 +21,9 @@ import javax.inject.Singleton
 interface SharedComponent {
     @IoDispatcher
     fun providesIoDispatcher(): CoroutineDispatcher
+
+    @CameraDispatcher
+    fun providesCameraDispatcher(): CoroutineDispatcher
 
     @MainDispatcher
     fun providesMainDispatcher(): CoroutineDispatcher

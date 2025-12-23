@@ -8,12 +8,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.yes.shared.data.dataSource.SettingsDataSource
+import com.yes.shared.utils.CameraThreadManager
 import dagger.Module
 import dagger.Provides
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.android.asCoroutineDispatcher
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -22,6 +24,15 @@ private const val USER_PREFERENCES = "YES_preferences"
 class SharedModule(
     private val context: Context
 ) {
+
+     // Для shared экземпляра
+    @Provides
+    fun providesCameraThreadManager(): CameraThreadManager = CameraThreadManager()
+    @CameraDispatcher
+    @Provides
+    fun providesCameraDispatcher(manager: CameraThreadManager): CoroutineDispatcher =
+        manager.mBackgroundHandler.asCoroutineDispatcher()
+
     @Provides
     fun providesContext(): Context {
         return context
@@ -57,6 +68,10 @@ class SharedModule(
     }
 
 }
+@Retention(AnnotationRetention.BINARY)
+@Qualifier
+annotation class CameraDispatcher
+
 @Retention(AnnotationRetention.BINARY)
 @Qualifier
 annotation class DefaultDispatcher
