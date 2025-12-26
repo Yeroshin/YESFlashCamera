@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.vm
 
 import android.graphics.SurfaceTexture
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.yes.camera.domain.usecase.CloseCameraUseCase
@@ -13,8 +14,9 @@ import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
 
-
+@Stable
 class CameraViewModel(
     private val mapper: MapperUI,
     private val openCameraUseCase: OpenCameraUseCase,

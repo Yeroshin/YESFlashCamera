@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.contract
 
 import android.graphics.SurfaceTexture
+import androidx.compose.runtime.Stable
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseViewModel.*
 
@@ -18,6 +19,7 @@ class CameraContract {
         ): Event()
 
     }
+    @Stable
     data class State(
         val state:CameraState,
     ) : UiState

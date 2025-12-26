@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -194,7 +195,7 @@ class MainActivity : ComponentActivity() {
 
                     ) {
                         CameraScreen(
-                            LocalContext.current,
+                          //  LocalContext.current,
                             cameraViewModel,
                             onSettingsClick = {
                                 navController.navigate("Settings")
