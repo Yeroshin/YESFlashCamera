@@ -46,7 +46,7 @@ class SettingsRepository(
         val FOCUSMODE = intPreferencesKey("focusMode")
         val TOUCHPOINT = stringPreferencesKey("touchPoint")
         val FULLSCREEN = booleanPreferencesKey("fullScreen")
-        val FILEPATH=stringPreferencesKey("filePath")
+        val FILEPATH = stringPreferencesKey("filePath")
     }
 
     suspend fun setCharacteristics(characteristics: Characteristics) {
@@ -78,30 +78,33 @@ class SettingsRepository(
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
             fullscreen = getFullScreen(),
-            resolution = getResolutionValue()?: run {
-                throw IllegalArgumentException("ResolutionValue must not be null")
+            resolution = getResolutionValue() ?: run {
+                Dimensions(0, 0)
             },
-            filePath = getFilePath()?: run {
+            filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
             //  touchPoint = getTouchPoint()
         )
     }
-    suspend fun subscribeSettings():Flow<Characteristics>{
+
+    suspend fun subscribeSettings(): Flow<Characteristics> {
         return combine(
             subscribeFullScreen(),
             subscribeResolutionValue().filterNotNull()
-        ) {fullscreen,resolution ->
+        ) { fullscreen, resolution ->
             Characteristics(
                 fullscreen = fullscreen,
                 resolution = resolution
             )
         }
     }
+
     suspend fun getFullScreen(): Boolean? {
         return settingsDataSource.subscribe(FULLSCREEN, null).first()
     }
-     suspend fun subscribeFullScreen(): Flow<Boolean?> {
+
+    suspend fun subscribeFullScreen(): Flow<Boolean?> {
         return settingsDataSource.subscribe(FULLSCREEN, null)
     }
 
@@ -116,7 +119,7 @@ class SettingsRepository(
 
     }
 
-     private suspend fun getBackCamera(): Boolean? {
+    private suspend fun getBackCamera(): Boolean? {
         return settingsDataSource.subscribe(BACKCAMERA, null).first()
     }
 
@@ -148,30 +151,35 @@ class SettingsRepository(
 
     suspend fun setResolutionValue(dimension: Dimensions?) {
         dimension?.let { it ->
-            settingsDataSource.set(it.width.toString() + "x" + it.height.toString(), RESOLUTIONVALUE)
+            settingsDataSource.set(
+                it.width.toString() + "x" + it.height.toString(),
+                RESOLUTIONVALUE
+            )
         } ?: run {
             settingsDataSource.remove(RESOLUTIONVALUE)
         }
 
     }
+
     suspend fun getResolutionValue(): Dimensions? {
         return settingsDataSource.subscribe(RESOLUTIONVALUE, null).first()
             ?.split("x")
+            ?.takeIf { it.size == 2 }
+            ?.let { parts ->
+                Dimensions(parts[0].toInt(), parts[1].toInt())
+            }
+
+
+    }
+
+    suspend fun subscribeResolutionValue(): Flow<Dimensions?> {
+        return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
+            .map {
+                it?.split("x")
                     ?.takeIf { it.size == 2 }
                     ?.let { parts ->
                         Dimensions(parts[0].toInt(), parts[1].toInt())
                     }
-
-
-    }
-    suspend fun subscribeResolutionValue():Flow< Dimensions?> {
-        return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
-            .map {
-                it?.split("x")
-                ?.takeIf { it.size == 2 }
-                ?.let { parts ->
-                    Dimensions(parts[0].toInt(), parts[1].toInt())
-                }
             }
 
     }
@@ -271,9 +279,11 @@ class SettingsRepository(
             ?.map { it.toFloat() }
             ?.toFloatArray()
     }
+
     private suspend fun getFilePath(): String? {
-        val dcimDir: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-        val path:String = dcimDir.absolutePath
+        val dcimDir: File =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        val path: String = dcimDir.absolutePath
         return settingsDataSource.subscribe(FILEPATH, path).first()
     }
 

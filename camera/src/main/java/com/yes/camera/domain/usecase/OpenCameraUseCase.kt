@@ -2,15 +2,11 @@ package com.yes.camera.domain.usecase
 
 import android.graphics.SurfaceTexture
 import android.os.Build
-import android.view.TextureView
 import androidx.annotation.RequiresApi
 import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.SettingsRepository
-import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.domain.UseCase
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
@@ -38,7 +34,7 @@ class OpenCameraUseCase(
         )*/
         ////
         settingsCharacteristics.backCamera?.let {
-            cameraRepository.startVideoSession(
+            cameraRepository.startPreviewSession(
                 params.glSurfaceTexture,
                 settingsCharacteristics
             )
@@ -54,7 +50,7 @@ class OpenCameraUseCase(
             )
             val tmp=settingsRepository.subscribeResolutionValue().first()
             val t=tmp
-            cameraRepository.startVideoSession(
+            cameraRepository.startPreviewSession(
                 params.glSurfaceTexture,
                 settingsRepository.getCharacteristics()
             )

@@ -26,9 +26,11 @@ class SharedModule(
 ) {
 
      // Для shared экземпляра
+     @Singleton
     @Provides
     fun providesCameraThreadManager(): CameraThreadManager = CameraThreadManager()
     @CameraDispatcher
+    @Singleton
     @Provides
     fun providesCameraDispatcher(manager: CameraThreadManager): CoroutineDispatcher =
         manager.mBackgroundHandler.asCoroutineDispatcher()

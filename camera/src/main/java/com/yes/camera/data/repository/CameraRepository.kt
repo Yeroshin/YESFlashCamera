@@ -1,11 +1,8 @@
 package com.yes.camera.data.repository
 
-import android.R.attr.data
 import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
 import android.graphics.Matrix
@@ -17,7 +14,6 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.DngCreator
@@ -27,7 +23,6 @@ import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.RggbChannelVector
 import android.hardware.camera2.params.SessionConfiguration
 import android.hardware.camera2.params.StreamConfigurationMap
-import android.icu.text.SimpleDateFormat
 import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
@@ -39,12 +34,10 @@ import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
-import android.os.Looper
 import android.util.Log
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.content.PackageManagerCompat.LOG_TAG
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
@@ -57,17 +50,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.Math.log
 import java.nio.ByteBuffer
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
 
@@ -4220,7 +4207,7 @@ class CameraRepository(
         }
 
     }
-    fun startVideoSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
+    fun startPreviewSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
         filePath=characteristics.filePath
         previewSurface = Surface(glSurfaceTexture)
         //////////////
