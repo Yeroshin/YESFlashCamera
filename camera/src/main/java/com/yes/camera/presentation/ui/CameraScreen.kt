@@ -35,7 +35,8 @@ import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.camera.presentation.ui.views.CameraScreenSuccess
 import com.yes.camera.presentation.vm.CameraViewModel
-import com.yes.shared.presentation.ui.PermissionsHelper
+import com.yes.shared.presentation.ui.PermissionManager
+
 
 /*
 @Composable
@@ -102,97 +103,61 @@ fun CameraScreen(
 
 @Composable
 fun CameraScreen(
-  //  context: Context,
     cameraViewModel: CameraViewModel,
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val permissions = remember {
-        if (Build.VERSION.SDK_INT >= 33) {
-            listOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            )
-        } else {
-            listOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            )
-        }
-    }
 
-    // Инициализируем состояние разрешений сразу на основе реального статуса (без null)
-    val cameraPermissionGranted = remember {
-        val granted = permissions.all { perm ->
-            ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
-        }
-        mutableStateOf(granted)
-    }
-
-    var requestCounter by remember { mutableIntStateOf(0) }
-
-    // PermissionsHelper показывается только если разрешения не предоставлены
-    if (!cameraPermissionGranted.value) {
-        PermissionsHelper(
-            permissions = permissions,
-            onPermissionsResult = { granted, _ ->
-                // Обновляем состояние после результата запроса
-                val newGranted = Manifest.permission.CAMERA in granted
-                cameraPermissionGranted.value = newGranted
-            },
-            rationaleMessage = "Разрешение на камеру требуется для работы с камерой. Пожалуйста, предоставьте доступ.",
-            requestCounter = requestCounter
-        )
-    }
-
-    // Инициализируем renderer и события только если разрешение предоставлено
-    if (cameraPermissionGranted.value) {
-        val renderer = remember {
-            GLRenderer(context) { surfaceTexture ->
-                surfaceTexture.setDefaultBufferSize(1920, 1080)
-                cameraViewModel.setEvent(
-                    CameraContract.Event.OnOpenCamera(true, surfaceTexture)
-                )
+    PermissionManager(
+        permissions = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.READ_MEDIA_IMAGES
+        ),
+        onPermissionsGranted = {
+            // Всё содержимое из оригинальной ветки if (permissionsGranted)
+            val renderer = remember {
+                GLRenderer(context) { surfaceTexture ->
+                    surfaceTexture.setDefaultBufferSize(1920, 1080)
+                    cameraViewModel.setEvent(
+                        CameraContract.Event.OnOpenCamera(true, surfaceTexture)
+                    )
+                }
             }
-        }
 
-        // Теперь логика состояний (рекомпозиция только здесь, если состояние VM меняется)
-        val viewState = cameraViewModel.uiState.collectAsState()
-        when (val state = viewState.value.state) {
-            CameraContract.CameraState.Idle -> { /* Показать idle UI если нужно */ }
-            CameraContract.CameraState.Loading -> { /* Показать лоадер */ }
-            is CameraContract.CameraState.Success -> {
-                CameraScreenSuccess(
-                    context = context,
-                    renderer = renderer,
-                    characteristicsInit = state.characteristics,
-                    onSettingsClick = {
-                        cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
-                        onSettingsClick()
-                    },
-                    onStartVideoRecord = { enabled ->
-                        cameraViewModel.setEvent(CameraContract.Event.OnStartVideoRecord(enabled))
-                    },
-                    onCharacteristicChanged = { characteristics ->
-                        cameraViewModel.setEvent(
-                            CameraContract.Event.OnSetCharacteristics(characteristics)
-                        )
-                    },
-                    fullScreen = state.characteristics.fullScreen
-                )
+            val viewState = cameraViewModel.uiState.collectAsState()
+            when (val state = viewState.value.state) {
+                CameraContract.CameraState.Idle -> {
+                    /* Показать idle UI если нужно */
+                }
+                CameraContract.CameraState.Loading -> {
+                    /* Показать лоадер */
+                }
+                is CameraContract.CameraState.Success -> {
+                    CameraScreenSuccess(
+                        context = context,
+                        renderer = renderer,
+                        characteristicsInit = state.characteristics,
+                        onSettingsClick = {
+                            cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
+                            onSettingsClick()
+                        },
+                        onStartVideoRecord = { enabled ->
+                            cameraViewModel.setEvent(CameraContract.Event.OnStartVideoRecord(enabled))
+                        },
+                        onCharacteristicChanged = { characteristics ->
+                            cameraViewModel.setEvent(
+                                CameraContract.Event.OnSetCharacteristics(characteristics)
+                            )
+                        },
+                        fullScreen = state.characteristics.fullScreen
+                    )
+                }
             }
+        },
+        onPermissionsDenied = {
+            Text("Cannot proceed without permissions.")
         }
-    } else {
-        // Экран ошибки с кнопкой для повторного запроса
-        CameraScreenError(
-            onRetryPermission = {
-                requestCounter++  // Увеличиваем счетчик для повторного запуска LaunchedEffect
-            },
-            onSettingsClick = onSettingsClick
-        )
-    }
+    )
 }
 
 
@@ -200,7 +165,7 @@ fun CameraScreen(
 // Композит для экрана ошибки
 @Composable
 fun CameraScreenError(
-    onRetryPermission: () -> Unit,
+  //  onRetryPermission: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     Column(
@@ -214,9 +179,9 @@ fun CameraScreenError(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetryPermission) {
+      /*  Button(onClick = onRetryPermission) {
             Text("Запросить разрешение снова")
-        }
+        }*/
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onSettingsClick) {
             Text("Вернуться в настройки")
