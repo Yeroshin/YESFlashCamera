@@ -1,7 +1,8 @@
 package com.yes.camera.data.repository
 
 import android.annotation.SuppressLint
-import android.content.ContentValues.TAG
+import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
@@ -27,24 +28,21 @@ import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaRecorder
-import android.media.MediaScannerConnection
-import android.media.MediaScannerConnection.MediaScannerConnectionClient
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import com.google.android.gms.common.util.concurrent.HandlerExecutor
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
-import com.yes.shared.domain.ImgFormat
 import com.yes.shared.utils.CameraThreadManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asExecutor
+import com.yes.shared.utils.FileNameGenerator
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +52,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import kotlin.math.ln
 import kotlin.math.pow
@@ -3750,16 +3749,18 @@ class CameraRepository(
     private var captureRequest: CaptureRequest.Builder? = null
     // private var glSurfaceTexture: SurfaceTexture? = null
 
-   /* private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
-    private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)*/
-   private val mBackgroundHandler = manager.mBackgroundHandler
+    /* private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
+     private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)*/
+    private val mBackgroundHandler = manager.mBackgroundHandler
     private var cameraDevice: CameraDevice? = null
 
     /*  private val previewSurface by lazy {
           Surface(glSurfaceTexture)
       }*/
     private lateinit var previewSurface: Surface
+    private lateinit var histogramSurface: Surface
     private lateinit var captureSurface: Surface
+    private lateinit var captureSurfaceRaw: Surface
 
     /* private val previewSurfaceConfiguration by lazy {
          OutputConfiguration(previewSurface).apply {
@@ -3769,7 +3770,6 @@ class CameraRepository(
      private val videoSurface by lazy {
          encoder.configure(640, 480)
      }*/
-
 
 
     private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
@@ -3798,12 +3798,14 @@ class CameraRepository(
     fun subscribeCameraSettings(): StateFlow<Characteristics?> {
         return characteristicsFlow
     }
+
     private val byteArray = ByteArray(120000)
     private val _outputBuffer: MutableStateFlow<ByteArray> = MutableStateFlow(byteArray)
     private val outputBuffer: StateFlow<ByteArray> = _outputBuffer
     fun subscribeOutputBuffer(): StateFlow<ByteArray> {
         return outputBuffer
     }
+
     /*  private val _event: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
       private val event = _event*/
     /*  private val _event: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
@@ -4049,6 +4051,7 @@ class CameraRepository(
 
         )
     }
+
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         var image: Image? = null
@@ -4185,64 +4188,96 @@ class CameraRepository(
         /////////////////
 
     }
+    private lateinit var histogramImageReader: ImageReader
     private lateinit var imageReader: ImageReader
-    private lateinit var filePath:String
-    private val listener = ImageReader.OnImageAvailableListener {
-        imageReader.acquireLatestImage()?.let {image->
+    private lateinit var imageReaderRaw: ImageReader
+    private lateinit var filePath: String
+    private val histogramListener = ImageReader.OnImageAvailableListener {
+        histogramImageReader.acquireLatestImage()?.let { image ->
             //histogram
             val ybytes = ByteArray(image.planes[0].buffer.capacity())
             image.planes[0].buffer.get(ybytes)
             _outputBuffer.value = ybytes
-            //////////////////
-            if (capture){
-                capture=false
-                ImageSaver.saveImage(
-                    context,
-                    image,
-                    File(filePath)
-                )
-            }
+            image.close()
+        }
+
+    }
+    private val listener = ImageReader.OnImageAvailableListener {
+        imageReader.acquireLatestImage()?.let { image ->
+            //histogram
+           /* val ybytes = ByteArray(image.planes[0].buffer.capacity())
+            image.planes[0].buffer.get(ybytes)
+            _outputBuffer.value = ybytes*/
+
+            ImageSaver.saveImage(
+                context,
+                image,
+                FileNameGenerator().generateFileName()
+            )
+
+            image.close()
+        }
+
+    }
+    private val listenerRaw = ImageReader.OnImageAvailableListener {
+        imageReaderRaw.acquireLatestImage()?.let { image ->
+
             //////////////////
             image.close()
         }
 
     }
-    fun startPreviewSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
-        filePath=characteristics.filePath
+
+    fun startSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
+        filePath = characteristics.filePath
         previewSurface = Surface(glSurfaceTexture)
         //////////////
         val characteristic = cameraManager.getCameraCharacteristics("0")
-        val streamMap: StreamConfigurationMap? = characteristic.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        val streamMap: StreamConfigurationMap? =
+            characteristic.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
 
 // Проверить поддерживаемые output-формати
         val supportedFormats = streamMap?.outputFormats
-
+        histogramImageReader =
+            ImageReader.newInstance(
+                320,
+                240,
+                ImageFormat.YUV_420_888,
+                3
+            )
+        histogramImageReader.setOnImageAvailableListener(histogramListener, imageReaderHandler)
         ///////////////
         imageReader =
             ImageReader.newInstance(
                 characteristics.resolution.width,
                 characteristics.resolution.height,
-
-                when (characteristics.imgFormat) {
-                    ImgFormat.JPEG -> ImageFormat.YUV_420_888
-                    // ImgFormat.JPEG -> ImageFormat.JPEG
-                    ImgFormat.JPEGRAW -> ImageFormat.RAW_SENSOR
-                    ImgFormat.RAW -> ImageFormat.RAW_SENSOR
-                },
-                //ImageFormat.YUV_420_888,
-                3//30
+                ImageFormat.YUV_420_888,
+                3
             )
-        // setOnImageAvailableListener(imageAvailableListener, imageReaderHandler)
         imageReader.setOnImageAvailableListener(listener, imageReaderHandler)
+        ///////////////////
+        imageReaderRaw =
+            ImageReader.newInstance(
+                characteristics.resolution.width,
+                characteristics.resolution.height,
+                ImageFormat.YUV_420_888,
+                // ImageFormat.RAW_SENSOR,
+                3
+            )
+        imageReaderRaw.setOnImageAvailableListener(listenerRaw, imageReaderHandler)
+        //////////////////
 
-
-
+        histogramSurface=histogramImageReader.surface
         captureSurface = imageReader.surface
+        captureSurfaceRaw = imageReaderRaw.surface
+
         createCaptureSession(
             listOf(
                 previewSurface,
+                histogramSurface,
                 //   encoder.configure(640,480),
-                captureSurface
+                captureSurface,
+                captureSurfaceRaw
             ),
             characteristics
         )
@@ -4264,12 +4299,13 @@ class CameraRepository(
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
-            Dispatchers.IO.asExecutor(),
+            HandlerExecutor(mBackgroundHandler.looper),
+            //Dispatchers.IO.asExecutor(),
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
                         sessio = session
-                        startCaptureRequest(characteristics)
+                        startPreviewCaptureRequest(characteristics)
                         // startPreviewCaptureRequest()
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
@@ -4285,11 +4321,11 @@ class CameraRepository(
     }
 
 
-    var capture = false
+    private var capture = false
 
     fun singleCapture(enable: Boolean) {
-
-        capture=true
+        startCaptureRequest()
+        // capture = true
         // imageReader.setOnImageAvailableListener(listener, null)
         //   singleCapture = true
         // imageReader.setOnImageAvailableListener(imageAvailableListener, mBackgroundHandler)
@@ -4337,24 +4373,93 @@ class CameraRepository(
            }*/
 
     }
-    fun startCaptureRequest(characteristics: Characteristics) {
+
+
+    private lateinit var lastCharacteristics: Characteristics
+    fun startPreviewCaptureRequest(characteristics: Characteristics) {
+        lastCharacteristics = characteristics
         captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+
         captureRequest?.addTarget(previewSurface)
-        captureRequest?.addTarget(captureSurface)
-        captureRequest?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-        captureRequest?.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-        captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-        captureRequest?.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-        captureRequest?.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
-        captureRequest?.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
-        captureRequest?.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF)
-
-        // Apply characteristics immediately without delay
-        setInputCharacteristics(characteristics)
-
-        captureRequest?.let { builder ->
+        captureRequest?.addTarget(histogramSurface)
+        //  captureRequest?.addTarget(captureSurface)
+        captureRequest?.apply {
+            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+            set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+            set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+            set(
+                CaptureRequest.NOISE_REDUCTION_MODE,
+                CaptureRequest.NOISE_REDUCTION_MODE_OFF
+            )
+            set(
+                CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+            )
+            set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+            set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
+            set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+            characteristics.wbValue?.let { wb ->
+                set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
+            }
+            // Apply metering rectangles if provided
+            characteristics.touchPoint?.let { point ->
+                val meteringRect = meteringRectangle(point)
+                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
+                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
+                set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
+            }
             try {
-                sessio?.setRepeatingRequest(builder.build(), captureCallback, mBackgroundHandler)
+                sessio?.setRepeatingRequest(
+                    build(),
+                    repeatingCaptureCallback,
+                    mBackgroundHandler
+                )
+            } catch (e: CameraAccessException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun startCaptureRequest() {
+        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+
+        // captureRequest?.addTarget(previewSurface)
+        captureRequest?.addTarget(captureSurface)
+        captureRequest?.apply {
+            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+            set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+            set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+            set(
+                CaptureRequest.NOISE_REDUCTION_MODE,
+                CaptureRequest.NOISE_REDUCTION_MODE_OFF
+            )
+            set(
+                CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+            )
+            set(CaptureRequest.SENSOR_SENSITIVITY, lastCharacteristics.isoValue)
+            set(CaptureRequest.SENSOR_EXPOSURE_TIME, lastCharacteristics.shutterValue)
+            set(CaptureRequest.LENS_FOCUS_DISTANCE, lastCharacteristics.focusValue)
+            lastCharacteristics.wbValue?.let { wb ->
+                set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
+            }
+            // Apply metering rectangles if provided
+            lastCharacteristics.touchPoint?.let { point ->
+                val meteringRect = meteringRectangle(point)
+                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
+                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
+                set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
+            }
+            try {
+                sessio?.capture(
+                    build(),
+                    captureCallback,
+                    mBackgroundHandler
+                )
             } catch (e: CameraAccessException) {
                 e.printStackTrace()
             }
@@ -4367,7 +4472,8 @@ class CameraRepository(
 
     //  var wb:Int?=0
     var autoWhiteBalanceGains: RggbChannelVector? = null
-    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+    private var lastTotalCaptureResult: TotalCaptureResult? = null
+    private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
             request: CaptureRequest,
@@ -4639,74 +4745,38 @@ class CameraRepository(
             }
         }
     }
+    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            super.onCaptureCompleted(session, request, result)
+            //////////////////////////
+            lastTotalCaptureResult = result
+            startPreviewCaptureRequest(lastCharacteristics)
+        }
 
-    fun startPreviewCaptureRequest() {
-        /*  captureRequest =
-              cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-          captureRequest?.addTarget(previewSurface)
-          captureRequest?.addTarget(captureSurface)*/
-        //  previewCaptureBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        /*  ///test
-          captureRequest?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-          captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-          captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);*/
-
-        //////////////////
-        /*   captureRequest?.set(
-               CaptureRequest.CONTROL_AE_MODE,
-               CaptureRequest.CONTROL_AE_MODE_OFF
-           )*/
-        //////////settings
-        /* captureRequest?.set(
-             CaptureRequest.EDGE_MODE,
-             CaptureRequest.EDGE_MODE_OFF
-         )
-         captureRequest?.set(
-             CaptureRequest.NOISE_REDUCTION_MODE,
-             CaptureRequest.NOISE_REDUCTION_MODE_OFF
-         )
-         captureRequest?.set(
-             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
-             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-         )*/
-
-
-        // previewCaptureBuilder?.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.2f)
-        //  previewCaptureBuilder?.set(CaptureRequest.CONTROL_MODE, CameraMetadata.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
-
-        // previewCaptureBuilder?.set(CaptureRequest.CONTROL_ZOOM_RATIO, 10F)
-        /* captureRequest?.set(CaptureRequest.SENSOR_SENSITIVITY, 1600)
-         captureRequest?.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 33_333_333L)*/
-        /*  captureRequest?.let {
-
-              sessio?.setRepeatingRequest(it.build(), captureCallback, mBackgroundHandler)
-          }*/
-
-        ////////////////////
-        submitRequest(
-            CameraDevice.TEMPLATE_PREVIEW,
-            listOf(
-                previewSurface,
-                captureSurface
-            ),
-            true
-        ) { builder ->
-            builder.apply {
-                set(
-                    CaptureRequest.EDGE_MODE,
-                    CaptureRequest.EDGE_MODE_OFF
-                )
-                set(
-                    CaptureRequest.NOISE_REDUCTION_MODE,
-                    CaptureRequest.NOISE_REDUCTION_MODE_OFF
-                )
-                set(
-                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
-                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-                )
+        override fun onCaptureProgressed(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            partialResult: CaptureResult
+        ) {
+            // Получение состояний фокуса
+            val focusState = partialResult.get(CaptureResult.CONTROL_AF_STATE)
+            focusState?.let {
+                when (focusState) {
+                    CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {}
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {}
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {}
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {}
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {}
+                    else -> {}
+                }
             }
         }
     }
+
 
     private fun submitRequest(
         template: Int,
@@ -4719,9 +4789,9 @@ class CameraRepository(
         block(builder!!)
         val request = builder.build()
         if (repeat) {
-            sessio?.setRepeatingRequest(request, captureCallback, mBackgroundHandler)
+            sessio?.setRepeatingRequest(request, repeatingCaptureCallback, mBackgroundHandler)
         } else {
-            sessio?.capture(request, captureCallback, mBackgroundHandler)
+            sessio?.capture(request, repeatingCaptureCallback, mBackgroundHandler)
         }
     }
 
@@ -4857,44 +4927,6 @@ class CameraRepository(
         val vPixelStride: Int
     )
 
-    // Updated setInputCharacteristics function to reduce delay
-    fun setInputCharacteristics(characteristics: Characteristics) {
-        // Directly update the existing captureRequest instead of creating new ones
-        captureRequest?.apply {
-            set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
-            set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
-            set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-            characteristics.wbValue?.let { wb ->
-                set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
-            }
-            // Apply metering rectangles if provided
-            characteristics.touchPoint?.let { point ->
-                val meteringRect = meteringRectangle(point)
-                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
-                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
-                set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
-            }
-        }
-
-        // Update characteristics flow immediately
-        _characteristicsFlow.update { current ->
-            current?.copy(
-                isoValue = characteristics.isoValue,
-                shutterValue = characteristics.shutterValue,
-                focusValue = characteristics.focusValue,
-                wbValue = characteristics.wbValue
-            )
-        }
-
-        // Set the updated request as repeating for immediate effect
-        captureRequest?.let { builder ->
-            try {
-                sessio?.setRepeatingRequest(builder.build(), captureCallback, mBackgroundHandler)
-            } catch (e: CameraAccessException) {
-                e.printStackTrace()
-            }
-        }
-    }
 
     fun kelvinToColorCorrectionGains(kelvin: Int): RggbChannelVector {
         val scaledTemp = (kelvin.coerceIn(1000, 40000) / 100)
@@ -4922,6 +4954,7 @@ class CameraRepository(
             (blue / 255f) * 2f
         )
     }
+
     fun kelvinToRgb(kelvin: Float): RggbChannelVector? {
         val temperature = (kelvin / 100.0)
         var red: Double
@@ -4990,9 +5023,10 @@ class CameraRepository(
         return RggbChannelVector(r, g, g, b)
     }
 }
-object ImageSaver{
-    lateinit var characteristics:CameraCharacteristics
-    lateinit var captureResult:CaptureResult
+
+object ImageSaver {
+    lateinit var characteristics: CameraCharacteristics
+    lateinit var captureResult: CaptureResult
     private val Image.nv21ByteArray
         get() = ByteArray(width * height * 3 / 2).also {
             val vPlane = planes[2]
@@ -5022,65 +5056,99 @@ object ImageSaver{
         yuv.compressToJpeg(Rect(0, 0, width, height), 90, out)  // Quality 90 for balance
         return out.toByteArray()
     }
-    fun saveImage(
-        context:Context,
-        image:Image,
-        file: File,
-    ) {
 
-        var success = false
-        when (val format: Int = image.format) {
-            ImageFormat.YUV_420_888 -> {
-                val yuvBytes=image.nv21ByteArray
-                val jpegBytes = NV21toJPEG(yuvBytes, image.width, image.height)
 
-                val directory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-                try {
-                    val file = File(directory, "img.jpg")
-                    FileOutputStream(file).use { output -> output.write(jpegBytes) }
-                    Log.i("CameraRepository", "JPEG saved to ${file.absolutePath}")
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
-            }
+    private const val TAG = "CameraRepository"  // Для логирования
 
-            ImageFormat.RAW_SENSOR -> {
-                val dngCreator = DngCreator(characteristics, captureResult)
-                var output: FileOutputStream? = null
-                try {
-                    output = FileOutputStream(file)
-                    dngCreator.writeImage(output, image)
-                    success = true
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                } finally {
-                    image.close()
-                    output?.close()
-                }
-            }
-
-            else -> {
-                Log.e(TAG, "Cannot save image, unexpected image format:$format")
-            }
+    // Перегруженная функция для сохранения JPEG (YUV_420_888) - без лишних параметров
+    fun saveImage(context: Context, image: Image, displayName: String) {
+        if (image.format != ImageFormat.YUV_420_888) {
+            Log.e(TAG, "Unexpected format for JPEG save: ${image.format}")
+            image.close()
+            return
         }
-        // If saving the file succeeded, update MediaStore.
-        if (success) {
-            MediaScannerConnection.scanFile(context,
-                arrayOf<String>(file.path),  /*mimeTypes*/
-                null,
-                object : MediaScannerConnectionClient {
-                    override fun onMediaScannerConnected() {
-                        // Do nothing
-                    }
 
-                    override fun onScanCompleted(path: String, uri: Uri) {
-                        Log.i(TAG, "Scanned $path:")
-                        Log.i(TAG, "-> uri=$uri")
-                    }
-                })
+        var output: OutputStream? = null
+        try {
+            val yuvBytes = image.nv21ByteArray
+            val jpegBytes = NV21toJPEG(yuvBytes, image.width, image.height)
+
+            val contentResolver: ContentResolver = context.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.jpg")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/FlashCamera")
+            }
+
+            val uri =
+                contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            uri?.let {
+                output = contentResolver.openOutputStream(it)
+                output?.write(jpegBytes)
+                Log.i(TAG, "JPEG saved to $displayName.jpg")
+            } ?: Log.e(TAG, "Failed to create URI for JPEG")
+        } catch (e: IOException) {
+            Log.e(TAG, "Error saving JPEG: ${e.message}")
+            e.printStackTrace()
+        } finally {
+            image.close()
+            output?.close()
         }
     }
+
+    // Перегруженная функция для сохранения RAW (RAW_SENSOR) - с дополнительными параметрами
+    fun saveImage(
+        context: Context,
+        image: Image,
+        displayName: String,
+        cameraCharacteristics: CameraCharacteristics,
+        captureResult: CaptureResult?
+    ) {
+        if (image.format != ImageFormat.RAW_SENSOR) {
+            Log.e(TAG, "Unexpected format for RAW save: ${image.format}")
+            image.close()
+            return
+        }
+
+        if (captureResult == null) {
+            Log.e(TAG, "Cannot save RAW: captureResult is null")
+            image.close()
+            return
+        }
+
+        var output: OutputStream? = null
+        var dngCreator: DngCreator? = null
+        try {
+            dngCreator = DngCreator(cameraCharacteristics, captureResult)
+
+            val contentResolver: ContentResolver = context.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.dng")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/FlashCamera")
+            }
+
+            val uri =
+                contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            uri?.let {
+                output = contentResolver.openOutputStream(it)
+                output?.let { os ->
+                    dngCreator?.writeImage(os, image)
+                    Log.i(TAG, "DNG saved to $displayName.dng")
+                }
+            } ?: Log.e(TAG, "Failed to create URI for DNG")
+        } catch (e: IOException) {
+            Log.e(TAG, "Error saving DNG: ${e.message}")
+            e.printStackTrace()
+        } finally {
+            image.close()
+            output?.close()
+            dngCreator?.close()
+        }
+    }
+
 }
+
 object ColorTemperatureConverter {
     fun rggbToNormalized(rggb: RggbChannelVector): RggbChannelVector {
         var r = rggb.red
@@ -5171,7 +5239,9 @@ object ColorTemperatureConverter {
             // x -> (kelvin/100) - 2}
             green = temperature - 2
             green =
-                -155.25485562709179 - 0.44596950469579133 * green + 104.49216199393888 * ln(green)
+                -155.25485562709179 - 0.44596950469579133 * green + 104.49216199393888 * ln(
+                    green
+                )
             if (green < 0) green = 0.0
             if (green > 255) green = 255.0
         } else {
@@ -5181,7 +5251,8 @@ object ColorTemperatureConverter {
             // c -> -28.0852963507957`,
             // x -> (kelvin/100) - 50}
             green = temperature - 50.0
-            green = 325.4494125711974 + 0.07943456536662342 * green - 28.0852963507957 * ln(green)
+            green =
+                325.4494125711974 + 0.07943456536662342 * green - 28.0852963507957 * ln(green)
             if (green < 0) green = 0.0
             if (green > 255) green = 255.0
         }

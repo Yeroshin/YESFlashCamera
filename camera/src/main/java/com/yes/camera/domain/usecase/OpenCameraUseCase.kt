@@ -34,7 +34,7 @@ class OpenCameraUseCase(
         )*/
         ////
         settingsCharacteristics.backCamera?.let {
-            cameraRepository.startPreviewSession(
+            cameraRepository.startSession(
                 params.glSurfaceTexture,
                 settingsCharacteristics
             )
@@ -50,7 +50,7 @@ class OpenCameraUseCase(
             )
             val tmp=settingsRepository.subscribeResolutionValue().first()
             val t=tmp
-            cameraRepository.startPreviewSession(
+            cameraRepository.startSession(
                 params.glSurfaceTexture,
                 settingsRepository.getCharacteristics()
             )

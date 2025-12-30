@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlin.math.exp
+import kotlin.time.Duration.Companion.milliseconds
 
 class SubscribeCameraSettingsUseCase(
     dispatcher: CoroutineDispatcher,
@@ -49,7 +51,7 @@ class SubscribeCameraSettingsUseCase(
             .map { buffer ->
                 // Шаг 1: Построим гистограмму из полного буфера (без пропусков для большей точности).
                 // Оптимизация: Если буфер большой, можно использовать шаг (например, step 10), но для идеальной гистограммы - полный проход.
-                val stepValue = 100  // Измените на 10, 50 или другое для скорости, если буфер большой
+                val stepValue = 100 // Измените на 10, 50 или другое для скорости, если буфер большой
                 val histogram = IntArray(256) { 0 }
                 for (i in buffer.indices step stepValue) {
                     val value = buffer[i].toInt() and 0xFF
@@ -67,8 +69,8 @@ class SubscribeCameraSettingsUseCase(
                     smoothedMap[index] = value
                 }
                 smoothedMap
-            }
-       val cameraCharacteristicsFlow=cameraRepository.subscribeCameraSettings().filterNotNull()
+            }.sample(17.milliseconds)
+        val cameraCharacteristicsFlow=cameraRepository.subscribeCameraSettings().filterNotNull()
        // val settingsFlow=settingsRepository.subscribeSettings()
 
       //  val combinedCameraFlow: Flow<Pair<Characteristics?, MutableMap<Int, Int>?>>
