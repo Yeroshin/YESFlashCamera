@@ -15,6 +15,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.DngCreator
@@ -54,6 +55,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
 
@@ -4189,10 +4191,10 @@ class CameraRepository(
 
     }
     private lateinit var histogramImageReader: ImageReader
-    private lateinit var imageReader: ImageReader
+    private lateinit var imageReaderJpeg: ImageReader
     private lateinit var imageReaderRaw: ImageReader
     private lateinit var filePath: String
-    private val histogramListener = ImageReader.OnImageAvailableListener {
+    private val listenerHistogram = ImageReader.OnImageAvailableListener {
         histogramImageReader.acquireLatestImage()?.let { image ->
             //histogram
             val ybytes = ByteArray(image.planes[0].buffer.capacity())
@@ -4202,12 +4204,12 @@ class CameraRepository(
         }
 
     }
-    private val listener = ImageReader.OnImageAvailableListener {
-        imageReader.acquireLatestImage()?.let { image ->
+    private val listenerJpeg = ImageReader.OnImageAvailableListener {
+        imageReaderJpeg.acquireLatestImage()?.let { image ->
             //histogram
-           /* val ybytes = ByteArray(image.planes[0].buffer.capacity())
-            image.planes[0].buffer.get(ybytes)
-            _outputBuffer.value = ybytes*/
+            /* val ybytes = ByteArray(image.planes[0].buffer.capacity())
+             image.planes[0].buffer.get(ybytes)
+             _outputBuffer.value = ybytes*/
 
             ImageSaver.saveImage(
                 context,
@@ -4245,16 +4247,16 @@ class CameraRepository(
                 ImageFormat.YUV_420_888,
                 3
             )
-        histogramImageReader.setOnImageAvailableListener(histogramListener, imageReaderHandler)
+        histogramImageReader.setOnImageAvailableListener(listenerHistogram, imageReaderHandler)
         ///////////////
-        imageReader =
+        imageReaderJpeg =
             ImageReader.newInstance(
                 characteristics.resolution.width,
                 characteristics.resolution.height,
                 ImageFormat.YUV_420_888,
                 3
             )
-        imageReader.setOnImageAvailableListener(listener, imageReaderHandler)
+        imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, imageReaderHandler)
         ///////////////////
         imageReaderRaw =
             ImageReader.newInstance(
@@ -4267,8 +4269,8 @@ class CameraRepository(
         imageReaderRaw.setOnImageAvailableListener(listenerRaw, imageReaderHandler)
         //////////////////
 
-        histogramSurface=histogramImageReader.surface
-        captureSurface = imageReader.surface
+        histogramSurface = histogramImageReader.surface
+        captureSurface = imageReaderJpeg.surface
         captureSurfaceRaw = imageReaderRaw.surface
 
         createCaptureSession(
@@ -4319,9 +4321,6 @@ class CameraRepository(
         )
         cameraDevice?.createCaptureSession(config)
     }
-
-
-    private var capture = false
 
     fun singleCapture(enable: Boolean) {
         startCaptureRequest()
@@ -4376,6 +4375,10 @@ class CameraRepository(
 
 
     private lateinit var lastCharacteristics: Characteristics
+    private var autoAE = false
+    private var previousWbValue: Int? = null
+    private var wb = false
+    private var touchPoint: FloatArray? = null
     fun startPreviewCaptureRequest(characteristics: Characteristics) {
         lastCharacteristics = characteristics
         captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
@@ -4383,12 +4386,49 @@ class CameraRepository(
         captureRequest?.addTarget(previewSurface)
         captureRequest?.addTarget(histogramSurface)
         //  captureRequest?.addTarget(captureSurface)
+        /*  captureRequest?.apply {
+              set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+              set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+              set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+              set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+              set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+              set(
+                  CaptureRequest.NOISE_REDUCTION_MODE,
+                  CaptureRequest.NOISE_REDUCTION_MODE_OFF
+              )
+              set(
+                  CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                  CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+              )
+              set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+              set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
+              set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+              characteristics.wbValue?.let { wb ->
+                  set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
+              }
+              // Apply metering rectangles if provided
+              characteristics.touchPoint?.let { point ->
+                  val meteringRect = meteringRectangle(point)
+                  set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
+                  set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
+                  set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
+              }
+              try {
+                  sessio?.setRepeatingRequest(
+                      build(),
+                      repeatingCaptureCallback,
+                      mBackgroundHandler
+                  )
+              } catch (e: CameraAccessException) {
+                  e.printStackTrace()
+              }
+          }*/
+
         captureRequest?.apply {
-            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-            set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-            set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
+            set(
+                CaptureRequest.EDGE_MODE,
+                CaptureRequest.EDGE_MODE_OFF
+            )
             set(
                 CaptureRequest.NOISE_REDUCTION_MODE,
                 CaptureRequest.NOISE_REDUCTION_MODE_OFF
@@ -4397,18 +4437,170 @@ class CameraRepository(
                 CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
                 CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
             )
-            set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
-            set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
-            set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-            characteristics.wbValue?.let { wb ->
-                set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
+
+            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+            characteristics.focusValue?.let {
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+            } ?: run {
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
             }
-            // Apply metering rectangles if provided
-            characteristics.touchPoint?.let { point ->
-                val meteringRect = meteringRectangle(point)
-                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
-                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
-                set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
+
+            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
+
+
+            /////wb
+
+            previousWbValue = characteristics.wbValue
+
+            //  wb=true
+            characteristics.wbValue?.let { wb ->
+                ////////////////////////////
+                val rggb = ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
+                val kelvin = ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
+                ////////////////////////////
+
+
+                val rggbVector = kelvinToColorCorrectionGains(wb)
+                val kelvin1 = colorCorrectionGainsToKelvin(rggbVector)
+                val kelvin2 = ColorTemperatureConverter.rgbNormalizedToKelvin(rggbVector)
+                //////////////////////
+                val rgb = convertTemperatureToRggb(wb)
+                val k = rgbToKelvin(rgb!!)
+                set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                set(
+                    CaptureRequest.COLOR_CORRECTION_GAINS,
+                    //rggbVector
+                    rgb
+                )
+                set(
+                    CaptureRequest.COLOR_CORRECTION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
+                )
+            } ?: run {
+                characteristics.wbMode?.let {
+                    wb = true
+                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode)
+                }
+            }
+            /////////////// exposure
+            characteristics.isoValue?.let {
+
+            }
+          /*  if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                autoAE = false
+                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                set(
+                    CaptureRequest.SENSOR_EXPOSURE_TIME,
+                    characteristics.shutterValue
+                )
+                set(
+                    CaptureRequest.SENSOR_SENSITIVITY,
+                    characteristics.isoValue
+                )
+                /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
+            } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
+                autoAE = true
+                //  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                set(
+                    CaptureRequest.SENSOR_EXPOSURE_TIME,
+                    autoShutter
+                )
+                set(
+                    CaptureRequest.SENSOR_SENSITIVITY,
+                    autoIso
+                )
+            } else if (characteristics.isoValue == null) {
+                autoAE = false
+                //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                characteristics.shutterValue?.let { shutterValue ->
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    autoShutter?.let { autoShutter ->
+                        autoIso?.let { autoIso ->
+                            set(
+                                CaptureRequest.SENSOR_EXPOSURE_TIME,
+                                characteristics.shutterValue
+                            )
+                            val isoValue = autoIso * (autoShutter / shutterValue)
+                            set(
+                                CaptureRequest.SENSOR_SENSITIVITY,
+                                isoValue.toInt()
+                            )
+                        }
+
+                    }
+                }
+
+            } else {
+                autoAE = false
+                //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                //   set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                autoShutter?.let { autoShutter ->
+                    autoIso?.let { autoIso ->
+                        set(
+                            CaptureRequest.SENSOR_SENSITIVITY,
+                            characteristics.isoValue.toInt()
+                        )
+                        val ttmp = characteristics.isoValue
+                        val shutterValue = autoShutter * (autoIso / characteristics.isoValue)
+                        set(
+                            CaptureRequest.SENSOR_EXPOSURE_TIME,
+                            shutterValue
+                        )
+                    }
+
+                }
+
+
+            }*/
+            /////////////////////////////////////////focus
+            characteristics.focusValue?.let {
+                set(CaptureRequest.LENS_FOCUS_DISTANCE, it)
+            }?: run {
+                when (characteristics.focusMode) {
+                    -1 -> {
+                        if (!characteristics.touchPoint.contentEquals(touchPoint)) {
+                            touchPoint = characteristics.touchPoint
+                            characteristics.touchPoint?.let { touchPoint ->
+                                captureRequest?.apply {
+                                    focus = true
+                                    // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                                    // set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                                    //  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                                    val r = meteringRectangle(touchPoint)
+                                    val focusArea = Rect(1, 1, 300, 300)
+                                    set(
+                                        CaptureRequest.CONTROL_AF_REGIONS,
+                                        arrayOf(r)
+                                    )
+                                    /*    set(
+                                            CaptureRequest.CONTROL_AE_REGIONS,
+                                            arrayOf(r)
+                                        )*/
+                                    set(
+                                        CaptureRequest.CONTROL_AF_TRIGGER,
+                                        CaptureRequest.CONTROL_AF_TRIGGER_START
+                                    )
+
+
+                                }
+                            }
+                        }
+                    }
+
+                    CONTROL_AF_MODE_CONTINUOUS_PICTURE -> {
+                        set(
+                            CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                        )
+                    }
+                }
+
             }
             try {
                 sessio?.setRepeatingRequest(
@@ -4420,7 +4612,9 @@ class CameraRepository(
                 e.printStackTrace()
             }
         }
+
     }
+
 
     private fun startCaptureRequest() {
         captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
@@ -4467,8 +4661,8 @@ class CameraRepository(
     }
 
     var frameTime: Long = 0
-    var autoShutter: Long? = null
-    var autoIso: Int? = null
+    var currentShutter: Long? = null
+    var currentIso: Int? = null
 
     //  var wb:Int?=0
     var autoWhiteBalanceGains: RggbChannelVector? = null
@@ -4484,8 +4678,8 @@ class CameraRepository(
             val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
             val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
             //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
-            autoIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
-            autoShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+            currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
+            currentShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
             /* val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
              val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)*/
             val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
@@ -4497,8 +4691,8 @@ class CameraRepository(
                 current?.copy(
                     focusValue = focusDistance,
                     wbValue = kelvin,
-                    shutterValue = exposureTime ?: autoShutter,
-                    isoValue = iso ?: autoIso
+                    shutterValue = exposureTime ?: currentShutter,
+                    isoValue = iso ?: currentIso
                 )
             }
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
@@ -4526,8 +4720,8 @@ class CameraRepository(
             }
 
             ///////////////////focus
-            val afState = result[CaptureResult.CONTROL_AF_STATE]!!
-
+         //   val afState = result[CaptureResult.CONTROL_AF_STATE]!!
+            val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             //  if (request.tag == "focus"){
             if (focus) {
                 when (afState) {
@@ -4778,22 +4972,22 @@ class CameraRepository(
     }
 
 
-    private fun submitRequest(
-        template: Int,
-        targets: List<Surface>,
-        repeat: Boolean,
-        block: (CaptureRequest.Builder) -> Unit = {}
-    ) {
-        val builder = cameraDevice?.createCaptureRequest(template)
-        targets.forEach { builder?.addTarget(it) }
-        block(builder!!)
-        val request = builder.build()
-        if (repeat) {
-            sessio?.setRepeatingRequest(request, repeatingCaptureCallback, mBackgroundHandler)
-        } else {
-            sessio?.capture(request, repeatingCaptureCallback, mBackgroundHandler)
-        }
-    }
+    /*  private fun submitRequest(
+          template: Int,
+          targets: List<Surface>,
+          repeat: Boolean,
+          block: (CaptureRequest.Builder) -> Unit = {}
+      ) {
+          val builder = cameraDevice?.createCaptureRequest(template)
+          targets.forEach { builder?.addTarget(it) }
+          block(builder!!)
+          val request = builder.build()
+          if (repeat) {
+              sessio?.setRepeatingRequest(request, repeatingCaptureCallback, mBackgroundHandler)
+          } else {
+              sessio?.capture(request, repeatingCaptureCallback, mBackgroundHandler)
+          }
+      }*/
 
 
     private val METERING_RECTANGLE_SIZE = 0.15f
@@ -4833,7 +5027,7 @@ class CameraRepository(
     }
 
     var focus = false
-    var wb = false
+
 
     fun rgbToKelvin(rgb: RggbChannelVector): Int {
         val r = rgb.red
@@ -4927,8 +5121,40 @@ class CameraRepository(
         val vPixelStride: Int
     )
 
+    /////////////////
+    fun colorCorrectionGainsToKelvin(rggb: RggbChannelVector): Int {
+        val targetRed = rggb.red
+        val targetBlue = rggb.blue
+        var bestKelvin = 6500
+        var minError = Float.MAX_VALUE
 
-    fun kelvinToColorCorrectionGains(kelvin: Int): RggbChannelVector {
+        // Коэффициенты для поиска (можно оптимизировать)
+        val searchParams = listOf(
+            Triple(1000, 40000, 500),  // Грубый поиск
+            Triple(-500, 500, 50),     // Средняя точность
+            Triple(-50, 50, 1)         // Точное уточнение
+        )
+
+        searchParams.forEach { (startOffset, endOffset, step) ->
+            val searchStart = (bestKelvin + startOffset).coerceAtLeast(1000)
+            val searchEnd = (bestKelvin + endOffset).coerceAtMost(40000)
+
+            for (kelvin in searchStart..searchEnd step step) {
+                val gains = kelvinToColorCorrectionGains(kelvin)
+                val error = abs(gains.red - targetRed) + abs(gains.blue - targetBlue)
+
+                if (error < minError) {
+                    minError = error
+                    bestKelvin = kelvin
+                }
+            }
+        }
+
+        return bestKelvin
+    }
+
+    /////////////////
+    private fun kelvinToColorCorrectionGains(kelvin: Int): RggbChannelVector {
         val scaledTemp = (kelvin.coerceIn(1000, 40000) / 100)
 
         val red = when {
