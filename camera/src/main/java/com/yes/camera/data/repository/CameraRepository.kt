@@ -4711,13 +4711,13 @@ class CameraRepository(
         }
     }
 
-    private fun startTimer(shutter:Long?,iso:Int?){
+    private fun startTimer(shutter: Long?, iso: Int?) {
         Timer().schedule(1000L) {
             // 1. Проверяем, жива ли еще сессия
             cameraSession ?: run { return@schedule }
             startPreviewCaptureRequest(
                 lastCharacteristics.copy(
-                    shutterValue =shutter,
+                    shutterValue = shutter,
                     isoValue = iso
                 )
             )
@@ -4978,6 +4978,7 @@ class CameraRepository(
              }*/
 
             //////////////ae
+
             val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
             if (ae) {
                 when (aeState) {
@@ -4989,6 +4990,7 @@ class CameraRepository(
                     //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
                     CaptureResult.CONTROL_AE_STATE_CONVERGED, CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
                         ae = false
+
                         // Замер завершен! Теперь можно делать основной снимок или
                         // считывать значения для вашего "приоритета ISO".
                         /////////////////ae
@@ -5037,18 +5039,16 @@ class CameraRepository(
                         )
 
                         cameraSession?.capture(captureRequest.build(), null, null)
-                      /*  startTimer(
-                            shutter=lastCharacteristics.shutterValue,
-                            iso=lastCharacteristics.isoValue
-                        )*/
+                        /*  startTimer(
+                              shutter=lastCharacteristics.shutterValue,
+                              iso=lastCharacteristics.isoValue
+                          )*/
                         startPreviewCaptureRequest(
                             lastCharacteristics.copy(
                                 shutterValue = shutterValue,
                                 isoValue = isoValue
                             )
                         )
-
-
 
 
                     }
@@ -5064,6 +5064,8 @@ class CameraRepository(
                     isoValue = iso ?: currentIso
                 )
             }
+
+
         }
 
         override fun onCaptureProgressed(
