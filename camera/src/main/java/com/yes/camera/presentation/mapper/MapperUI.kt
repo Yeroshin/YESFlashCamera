@@ -66,12 +66,6 @@ class MapperUI(
         1638400,
         3280000,
         4560000
-        /*  2048,
-         4096,
-         8192,
-         1638,
-         3280,
-         4560*/
     )
 
      private val standardWbValues = listOf(

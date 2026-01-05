@@ -40,7 +40,8 @@ import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.google.android.gms.common.util.concurrent.HandlerExecutor
-import com.yes.camera.data.repository.AutoExposure.applyShutterPriorityWithClassicSteps
+import com.yes.camera.data.repository.AutoExposure.getIsoPriorityWithClassicSteps
+import com.yes.camera.data.repository.AutoExposure.getShutterPriorityWithClassicSteps
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
@@ -4512,7 +4513,7 @@ class CameraRepository(
                     )
                 } ?: run {
                     try {
-                        ae=true
+                        ae = true
                         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                         // 1. Устанавливаем триггер запуска Precapture
                         set(
@@ -4520,16 +4521,23 @@ class CameraRepository(
                             CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
                         )
 
-                        // 2. Отправляем одиночный запрос для активации триггера
-                       // cameraSession?.capture(build(),  repeatingCaptureCallback, mBackgroundHandler)
-
-                        // 3. После отправки триггера ОБЯЗАТЕЛЬНО сбрасываем его в IDLE для последующих запросов
-
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
                     }
                 }
+            } ?: run {
+                try {
+                    ae = true
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                    // 1. Устанавливаем триггер запуска Precapture
+                    set(
+                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
+                    )
 
+                } catch (e: CameraAccessException) {
+                    e.printStackTrace()
+                }
             }
             /*  if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                   // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -4700,6 +4708,19 @@ class CameraRepository(
             } catch (e: CameraAccessException) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun startTimer(shutter:Long?,iso:Int?){
+        Timer().schedule(1000L) {
+            // 1. Проверяем, жива ли еще сессия
+            cameraSession ?: run { return@schedule }
+            startPreviewCaptureRequest(
+                lastCharacteristics.copy(
+                    shutterValue =shutter,
+                    isoValue = iso
+                )
+            )
         }
     }
 
@@ -4958,7 +4979,7 @@ class CameraRepository(
 
             //////////////ae
             val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
-            if(ae){
+            if (ae) {
                 when (aeState) {
                     CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
                         // Замер в процессе, ждем дальше
@@ -4966,8 +4987,8 @@ class CameraRepository(
 
                     //   CaptureResult.CONTROL_AE_STATE_CONVERGED,
                     //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
-                    CaptureResult.CONTROL_AE_STATE_CONVERGED->{
-                        ae=false
+                    CaptureResult.CONTROL_AE_STATE_CONVERGED, CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
+                        ae = false
                         // Замер завершен! Теперь можно делать основной снимок или
                         // считывать значения для вашего "приоритета ISO".
                         /////////////////ae
@@ -4980,38 +5001,54 @@ class CameraRepository(
                         //  cameraDevice.
                         // Вызываем вашу функцию пересчета (из предыдущего ответа)
                         // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
-                        val shutterPriorityValue = applyShutterPriorityWithClassicSteps(
-                            requestBuilder = captureRequest,
-                            cameraCharacteristics = cameraCharacteristics,
-                            lastAeIso = currentIso,
-                            lastAeExposureNs = currentExposureNs,
-                            targetIso = lastCharacteristics.isoValue!!,
-                            evCompensationIndex = 0
-                        )
+
+                        val shutterValue = lastCharacteristics.isoValue?.let { isoValue ->
+                            getShutterPriorityWithClassicSteps(
+                                requestBuilder = captureRequest,
+                                cameraCharacteristics = cameraCharacteristics,
+                                lastAeIso = currentIso,
+                                lastAeExposureNs = currentExposureNs,
+                                targetIso = isoValue,
+                                evCompensationIndex = 0
+                            )
+                        } ?: run {
+                            lastCharacteristics.shutterValue ?: run {
+                                currentExposureNs
+                            }
+                        }
+                        val isoValue = lastCharacteristics.shutterValue?.let { shutterValue ->
+                            getIsoPriorityWithClassicSteps(
+                                requestBuilder = captureRequest,
+                                cameraCharacteristics = cameraCharacteristics,
+                                lastAeIso = currentIso,
+                                lastAeExposureNs = currentExposureNs,
+                                targetExposureNs = shutterValue,
+                                evCompensationIndex = 0
+                            )
+                        } ?: run {
+                            lastCharacteristics.isoValue ?: run {
+                                currentIso
+                            }
+                        }
+
                         captureRequest.set(
                             CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                             CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
                         )
 
                         cameraSession?.capture(captureRequest.build(), null, null)
-
+                      /*  startTimer(
+                            shutter=lastCharacteristics.shutterValue,
+                            iso=lastCharacteristics.isoValue
+                        )*/
                         startPreviewCaptureRequest(
                             lastCharacteristics.copy(
-                                shutterValue = shutterPriorityValue,
-                                isoValue = lastCharacteristics.isoValue!!
+                                shutterValue = shutterValue,
+                                isoValue = isoValue
                             )
                         )
 
-                        /*   Timer().schedule(1000L) {
-                               // 1. Проверяем, жива ли еще сессия
-                               cameraSession?:run {return@schedule  }
-                               startPreviewCaptureRequest(
-                                   lastCharacteristics.copy(
-                                       shutterValue = null
-                                   )
-                               )
 
-                           }*/
 
 
                     }
@@ -5048,65 +5085,66 @@ class CameraRepository(
             }
         }
     }
-   /* private val aePrecaptureCallback = object : CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
-        ) {
-            val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 
-            when (aeState) {
-                CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
-                    // Замер в процессе, ждем дальше
-                }
+    /* private val aePrecaptureCallback = object : CameraCaptureSession.CaptureCallback() {
+         override fun onCaptureCompleted(
+             session: CameraCaptureSession,
+             request: CaptureRequest,
+             result: TotalCaptureResult
+         ) {
+             val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 
-                CaptureResult.CONTROL_AE_STATE_CONVERGED,
-              //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
-                CaptureResult.CONTROL_AE_STATE_CONVERGED->{
-                    // Замер завершен! Теперь можно делать основной снимок или
-                    // считывать значения для вашего "приоритета ISO".
-                    /////////////////ae
+             when (aeState) {
+                 CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
+                     // Замер в процессе, ждем дальше
+                 }
 
-
-                    // Получаем эталонные данные от системы
-                    val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
-                    val currentExposureNs =
-                        result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
-                    //  cameraDevice.
-                    // Вызываем вашу функцию пересчета (из предыдущего ответа)
-                    // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
-                    val shutterPriorityValue = applyShutterPriorityWithClassicSteps(
-
-                        cameraCharacteristics = cameraCharacteristics,
-                        lastAeIso = currentIso,
-                        lastAeExposureNs = currentExposureNs,
-                        targetIso = lastCharacteristics.isoValue!!,
-                        evCompensationIndex = 0
-                    )
-                    startPreviewCaptureRequest(
-                        lastCharacteristics.copy(
-                            shutterValue = shutterPriorityValue,
-                            isoValue = lastCharacteristics.isoValue!!
-                        )
-                    )
-
-                    /*   Timer().schedule(1000L) {
-                           // 1. Проверяем, жива ли еще сессия
-                           cameraSession?:run {return@schedule  }
-                           startPreviewCaptureRequest(
-                               lastCharacteristics.copy(
-                                   shutterValue = null
-                               )
-                           )
-
-                       }*/
+                 CaptureResult.CONTROL_AE_STATE_CONVERGED,
+               //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
+                 CaptureResult.CONTROL_AE_STATE_CONVERGED->{
+                     // Замер завершен! Теперь можно делать основной снимок или
+                     // считывать значения для вашего "приоритета ISO".
+                     /////////////////ae
 
 
-                }
-            }
-        }
-    }*/
+                     // Получаем эталонные данные от системы
+                     val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
+                     val currentExposureNs =
+                         result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
+                     //  cameraDevice.
+                     // Вызываем вашу функцию пересчета (из предыдущего ответа)
+                     // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
+                     val shutterPriorityValue = applyShutterPriorityWithClassicSteps(
+
+                         cameraCharacteristics = cameraCharacteristics,
+                         lastAeIso = currentIso,
+                         lastAeExposureNs = currentExposureNs,
+                         targetIso = lastCharacteristics.isoValue!!,
+                         evCompensationIndex = 0
+                     )
+                     startPreviewCaptureRequest(
+                         lastCharacteristics.copy(
+                             shutterValue = shutterPriorityValue,
+                             isoValue = lastCharacteristics.isoValue!!
+                         )
+                     )
+
+                     /*   Timer().schedule(1000L) {
+                            // 1. Проверяем, жива ли еще сессия
+                            cameraSession?:run {return@schedule  }
+                            startPreviewCaptureRequest(
+                                lastCharacteristics.copy(
+                                    shutterValue = null
+                                )
+                            )
+
+                        }*/
+
+
+                 }
+             }
+         }
+     }*/
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -5195,7 +5233,7 @@ class CameraRepository(
     }
 
     var focus = false
-    var ae=false
+    var ae = false
 
 
     fun rgbToKelvin(rgb: RggbChannelVector): Int {
@@ -5680,8 +5718,8 @@ object ColorTemperatureConverter {
 }
 
 object AutoExposure {
-    fun applyShutterPriorityWithClassicSteps(
-           requestBuilder: CaptureRequest.Builder,
+    fun getShutterPriorityWithClassicSteps(
+        requestBuilder: CaptureRequest.Builder,
         cameraCharacteristics: CameraCharacteristics,
         lastAeIso: Int,           // ISO, полученное от AE до фиксации
         lastAeExposureNs: Long,   // Выдержка, полученная от AE до фиксации (в наносекундах)
@@ -5723,13 +5761,65 @@ object AutoExposure {
 
         // 7. Применение параметров в запрос
         // Выключаем AE, чтобы ручные значения SENSOR_* вступили в силу
-          requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+        requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
         /*  requestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, targetIso)
-          requestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutterNs)
+          requestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutterNs)*/
 
-          // Установка Frame Duration важна, чтобы FPS не ограничивал длинную выдержку
-          val frameDurationNs = clampedShutterNs + 100_000L // небольшой запас
-          requestBuilder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurationNs)*/
+        // Установка Frame Duration важна, чтобы FPS не ограничивал длинную выдержку
+        val frameDurationNs = clampedShutterNs + 100_000L // небольшой запас
+        requestBuilder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurationNs)
         return clampedShutterNs
+    }
+
+    fun getIsoPriorityWithClassicSteps(
+        requestBuilder: CaptureRequest.Builder,
+        cameraCharacteristics: CameraCharacteristics,
+        lastAeIso: Int,           // ISO из авто-режима
+        lastAeExposureNs: Long,   // Выдержка из авто-режима (нс)
+        targetExposureNs: Long,   // Выдержка, которую МЫ хотим зафиксировать (нс)
+        evCompensationIndex: Int  // Текущая экспокоррекция (напр. -3, 0, 3)
+    ): Int {
+        // 1. Список классических значений ISO
+        val classicIsoValues = listOf(
+            50, 100, 200, 400, 800, 1600, 3200, 6400, 12800
+        )
+
+        // 2. Расчет множителя экспокоррекции (EV)
+        val aeStep = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP)
+            ?: Rational(1, 3)
+        val evValue = evCompensationIndex * aeStep.toDouble()
+        val evMultiplier = 2.0.pow(evValue)
+
+        // 3. Расчет идеального теоретического ISO
+        // Формула: ISO_new = ISO_old * (T_old / T_new) * 2^EV
+        // Если мы укорачиваем выдержку (T_new меньше T_old), ISO должно вырасти.
+        val idealIso = lastAeIso.toDouble() *
+                (lastAeExposureNs.toDouble() / targetExposureNs.toDouble()) *
+                evMultiplier
+
+        // 4. Поиск ближайшего классического значения ISO
+        val closestClassicIso = classicIsoValues.minByOrNull { abs(it - idealIso) }
+            ?: idealIso.toInt()
+
+        // 5. Валидация по возможностям сенсора (Sensitivity Range)
+        val isoRange: Range<Int>? =
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val clampedIso = isoRange?.let {
+            closestClassicIso.coerceIn(it.lower, it.upper)
+        } ?: closestClassicIso
+
+        // 6. Применение параметров в запрос
+        // Выключаем AE, чтобы ручное управление ISO и выдержкой заработало
+        requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+
+        // В данном режиме targetExposureNs — константа, заданная пользователем
+        /* requestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, targetExposureNs)
+         requestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)*/
+
+        // Устанавливаем длительность кадра (не меньше выдержки)
+        val frameDurationNs = targetExposureNs + 100_000L
+        requestBuilder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurationNs)
+
+        return clampedIso
     }
 }
