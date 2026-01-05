@@ -24,7 +24,6 @@ import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.RggbChannelVector
 import android.hardware.camera2.params.SessionConfiguration
-import android.hardware.camera2.params.StreamConfigurationMap
 import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
@@ -35,10 +34,13 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Range
+import android.util.Rational
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.google.android.gms.common.util.concurrent.HandlerExecutor
+import com.yes.camera.data.repository.AutoExposure.applyShutterPriorityWithClassicSteps
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
@@ -55,6 +57,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
+import java.util.Timer
+import kotlin.concurrent.schedule
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
@@ -3745,16 +3749,16 @@ class CameraRepository(
     private val cameraManager: CameraManager,
     private val encoder: MediaEncoder
 ) {
-    var sessio: CameraCaptureSession? = null
+    var cameraSession: CameraCaptureSession? = null
     //  private var captureResult: CaptureResult? = null
 
-    private var captureRequest: CaptureRequest.Builder? = null
+    private lateinit var captureRequest: CaptureRequest.Builder
     // private var glSurfaceTexture: SurfaceTexture? = null
 
     /* private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
      private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)*/
     private val mBackgroundHandler = manager.mBackgroundHandler
-    private var cameraDevice: CameraDevice? = null
+    private lateinit var cameraDevice: CameraDevice
 
     /*  private val previewSurface by lazy {
           Surface(glSurfaceTexture)
@@ -3967,7 +3971,7 @@ class CameraRepository(
 
                     override fun onDisconnected(camera: CameraDevice) {
                         camera.close()
-                        cameraDevice = null
+                        //  cameraDevice = null
                     }
 
                     override fun onError(camera: CameraDevice, error: Int) {
@@ -3981,20 +3985,21 @@ class CameraRepository(
     }
 
     fun closeCamera() {
-        cameraDevice?.close()
+        cameraDevice.close()
         previewSurface.release()
+        cameraSession = null
         _characteristicsFlow.update { null }
     }
 
-
+    private lateinit var cameraCharacteristics: CameraCharacteristics
     private fun getCameraCharacteristics(id: String): Characteristics {
-        val characteristics = cameraManager.getCameraCharacteristics(id)
+        cameraCharacteristics = cameraManager.getCameraCharacteristics(id)
 
-        val config = characteristics.get(
+        val config = cameraCharacteristics.get(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP
         )
 
-        val config2 = characteristics.get(
+        val config2 = cameraCharacteristics.get(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION
         )
         val у = config2?.getOutputSizes(ImageFormat.RAW_SENSOR)
@@ -4005,25 +4010,26 @@ class CameraRepository(
         val t = config?.getOutputSizes(ImageFormat.RAW_SENSOR)
         val allSizes = config?.getOutputSizes(ImageFormat.JPEG)
         allSizes?.maxBy { it.height * it.width }
-        val iso = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-        val exposure = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val iso = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        val exposure =
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val minFocusDistance =
-            characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+            cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val maxFocusDistance =
-            characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+            cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
 
         /////////////////
         val availablePixelModes =
-            characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+            cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
         val g =
-            characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
-        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
+        val map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(MediaRecorder::class.java)
         // Check AF supported
         val activeArraySize =
-            characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
-        val maxRegionsAf = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
-        val awbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        val maxRegionsAf = cameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)
+        val awbModes = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
 /////////////////
         /////////////////
         val resolutionItems = allSizes?.map {
@@ -4196,10 +4202,12 @@ class CameraRepository(
     private lateinit var filePath: String
     private val listenerHistogram = ImageReader.OnImageAvailableListener {
         histogramImageReader.acquireLatestImage()?.let { image ->
+
             //histogram
             val ybytes = ByteArray(image.planes[0].buffer.capacity())
             image.planes[0].buffer.get(ybytes)
             _outputBuffer.value = ybytes
+            //  val middleGray=AutoExposure.applyShutterPriorityWithClassicSteps()
             image.close()
         }
 
@@ -4234,12 +4242,12 @@ class CameraRepository(
         filePath = characteristics.filePath
         previewSurface = Surface(glSurfaceTexture)
         //////////////
-        val characteristic = cameraManager.getCameraCharacteristics("0")
-        val streamMap: StreamConfigurationMap? =
-            characteristic.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        /* val characteristic = cameraManager.getCameraCharacteristics("0")
+         val streamMap: StreamConfigurationMap? =
+             characteristic.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
 
-// Проверить поддерживаемые output-формати
-        val supportedFormats = streamMap?.outputFormats
+ // Проверить поддерживаемые output-формати
+         val supportedFormats = streamMap?.outputFormats*/
         histogramImageReader =
             ImageReader.newInstance(
                 320,
@@ -4247,7 +4255,10 @@ class CameraRepository(
                 ImageFormat.YUV_420_888,
                 3
             )
-        histogramImageReader.setOnImageAvailableListener(listenerHistogram, imageReaderHandler)
+        histogramImageReader.setOnImageAvailableListener(
+            listenerHistogram,
+            mBackgroundHandler/*imageReaderHandler*/
+        )
         ///////////////
         imageReaderJpeg =
             ImageReader.newInstance(
@@ -4306,7 +4317,7 @@ class CameraRepository(
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
-                        sessio = session
+                        cameraSession = session
                         startPreviewCaptureRequest(characteristics)
                         // startPreviewCaptureRequest()
                     } catch (e: CameraAccessException) {
@@ -4319,7 +4330,7 @@ class CameraRepository(
                 }
             }
         )
-        cameraDevice?.createCaptureSession(config)
+        cameraDevice.createCaptureSession(config)
     }
 
     fun singleCapture(enable: Boolean) {
@@ -4379,12 +4390,14 @@ class CameraRepository(
     private var previousWbValue: Int? = null
     private var wb = false
     private var touchPoint: FloatArray? = null
-    fun startPreviewCaptureRequest(characteristics: Characteristics) {
+    fun startPreviewCaptureRequest(
+        characteristics: Characteristics,
+    ) {
         lastCharacteristics = characteristics
-        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 
-        captureRequest?.addTarget(previewSurface)
-        captureRequest?.addTarget(histogramSurface)
+        captureRequest.addTarget(previewSurface)
+        captureRequest.addTarget(histogramSurface)
         //  captureRequest?.addTarget(captureSurface)
         /*  captureRequest?.apply {
               set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -4424,7 +4437,7 @@ class CameraRepository(
               }
           }*/
 
-        captureRequest?.apply {
+        captureRequest.apply {
             set(
                 CaptureRequest.EDGE_MODE,
                 CaptureRequest.EDGE_MODE_OFF
@@ -4446,8 +4459,8 @@ class CameraRepository(
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
             }
 
-            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-            set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
+
+            // set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
 
 
             /////wb
@@ -4485,83 +4498,113 @@ class CameraRepository(
                 }
             }
             /////////////// exposure
-            characteristics.isoValue?.let {
-
-            }
-          /*  if (characteristics.isoValue != null && characteristics.shutterValue != null) {
-                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                autoAE = false
-                // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                set(
-                    CaptureRequest.SENSOR_EXPOSURE_TIME,
-                    characteristics.shutterValue
-                )
-                set(
-                    CaptureRequest.SENSOR_SENSITIVITY,
-                    characteristics.isoValue
-                )
-                /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                         set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
-            } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
-                autoAE = true
-                //  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                set(
-                    CaptureRequest.SENSOR_EXPOSURE_TIME,
-                    autoShutter
-                )
-                set(
-                    CaptureRequest.SENSOR_SENSITIVITY,
-                    autoIso
-                )
-            } else if (characteristics.isoValue == null) {
-                autoAE = false
-                //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+            characteristics.isoValue?.let { isoValue ->
                 characteristics.shutterValue?.let { shutterValue ->
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                    autoShutter?.let { autoShutter ->
-                        autoIso?.let { autoIso ->
-                            set(
-                                CaptureRequest.SENSOR_EXPOSURE_TIME,
-                                characteristics.shutterValue
-                            )
-                            val isoValue = autoIso * (autoShutter / shutterValue)
-                            set(
-                                CaptureRequest.SENSOR_SENSITIVITY,
-                                isoValue.toInt()
-                            )
-                        }
+                    set(CaptureRequest.SENSOR_FRAME_DURATION, shutterValue + 100_000L)
+                    set(
+                        CaptureRequest.SENSOR_EXPOSURE_TIME,
+                        shutterValue
+                    )
+                    set(
+                        CaptureRequest.SENSOR_SENSITIVITY,
+                        isoValue
+                    )
+                } ?: run {
+                    try {
+                        ae=true
+                        set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                        // 1. Устанавливаем триггер запуска Precapture
+                        set(
+                            CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                            CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
+                        )
 
+                        // 2. Отправляем одиночный запрос для активации триггера
+                       // cameraSession?.capture(build(),  repeatingCaptureCallback, mBackgroundHandler)
+
+                        // 3. После отправки триггера ОБЯЗАТЕЛЬНО сбрасываем его в IDLE для последующих запросов
+
+                    } catch (e: CameraAccessException) {
+                        e.printStackTrace()
                     }
                 }
 
-            } else {
-                autoAE = false
-                //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-                //   set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                autoShutter?.let { autoShutter ->
-                    autoIso?.let { autoIso ->
-                        set(
-                            CaptureRequest.SENSOR_SENSITIVITY,
-                            characteristics.isoValue.toInt()
-                        )
-                        val ttmp = characteristics.isoValue
-                        val shutterValue = autoShutter * (autoIso / characteristics.isoValue)
-                        set(
-                            CaptureRequest.SENSOR_EXPOSURE_TIME,
-                            shutterValue
-                        )
-                    }
+            }
+            /*  if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+                  // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                  autoAE = false
+                  // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                  //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                  set(
+                      CaptureRequest.SENSOR_EXPOSURE_TIME,
+                      characteristics.shutterValue
+                  )
+                  set(
+                      CaptureRequest.SENSOR_SENSITIVITY,
+                      characteristics.isoValue
+                  )
+                  /* set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                           set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)*/
+              } else if (characteristics.isoValue == null && characteristics.shutterValue == null) {
+                  autoAE = true
+                  //  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                  //  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                  set(
+                      CaptureRequest.SENSOR_EXPOSURE_TIME,
+                      autoShutter
+                  )
+                  set(
+                      CaptureRequest.SENSOR_SENSITIVITY,
+                      autoIso
+                  )
+              } else if (characteristics.isoValue == null) {
+                  autoAE = false
+                  //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                  characteristics.shutterValue?.let { shutterValue ->
+                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                      autoShutter?.let { autoShutter ->
+                          autoIso?.let { autoIso ->
+                              set(
+                                  CaptureRequest.SENSOR_EXPOSURE_TIME,
+                                  characteristics.shutterValue
+                              )
+                              val isoValue = autoIso * (autoShutter / shutterValue)
+                              set(
+                                  CaptureRequest.SENSOR_SENSITIVITY,
+                                  isoValue.toInt()
+                              )
+                          }
 
-                }
+                      }
+                  }
+
+              } else {
+                  autoAE = false
+                  //   set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
+                  //   set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                  autoShutter?.let { autoShutter ->
+                      autoIso?.let { autoIso ->
+                          set(
+                              CaptureRequest.SENSOR_SENSITIVITY,
+                              characteristics.isoValue.toInt()
+                          )
+                          val ttmp = characteristics.isoValue
+                          val shutterValue = autoShutter * (autoIso / characteristics.isoValue)
+                          set(
+                              CaptureRequest.SENSOR_EXPOSURE_TIME,
+                              shutterValue
+                          )
+                      }
+
+                  }
 
 
-            }*/
+              }*/
             /////////////////////////////////////////focus
             characteristics.focusValue?.let {
                 set(CaptureRequest.LENS_FOCUS_DISTANCE, it)
-            }?: run {
+            } ?: run {
                 when (characteristics.focusMode) {
                     -1 -> {
                         if (!characteristics.touchPoint.contentEquals(touchPoint)) {
@@ -4603,7 +4646,7 @@ class CameraRepository(
 
             }
             try {
-                sessio?.setRepeatingRequest(
+                cameraSession?.setRepeatingRequest(
                     build(),
                     repeatingCaptureCallback,
                     mBackgroundHandler
@@ -4617,11 +4660,11 @@ class CameraRepository(
 
 
     private fun startCaptureRequest() {
-        captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 
         // captureRequest?.addTarget(previewSurface)
-        captureRequest?.addTarget(captureSurface)
-        captureRequest?.apply {
+        captureRequest.addTarget(captureSurface)
+        captureRequest.apply {
             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
             set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
@@ -4649,7 +4692,7 @@ class CameraRepository(
                 set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
             }
             try {
-                sessio?.capture(
+                cameraSession?.capture(
                     build(),
                     captureCallback,
                     mBackgroundHandler
@@ -4659,6 +4702,7 @@ class CameraRepository(
             }
         }
     }
+
 
     var frameTime: Long = 0
     var currentShutter: Long? = null
@@ -4687,14 +4731,7 @@ class CameraRepository(
             autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
             val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
             val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
-            _characteristicsFlow.update { current ->
-                current?.copy(
-                    focusValue = focusDistance,
-                    wbValue = kelvin,
-                    shutterValue = exposureTime ?: currentShutter,
-                    isoValue = iso ?: currentIso
-                )
-            }
+
             /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
                   shutterValue = exposureTimeNs,
                   isoValue = iso
@@ -4720,7 +4757,7 @@ class CameraRepository(
             }
 
             ///////////////////focus
-         //   val afState = result[CaptureResult.CONTROL_AF_STATE]!!
+            //   val afState = result[CaptureResult.CONTROL_AF_STATE]!!
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             //  if (request.tag == "focus"){
             if (focus) {
@@ -4733,7 +4770,7 @@ class CameraRepository(
                         )
                         focus = false
                         captureRequest?.let {
-                            sessio?.capture(it.build(), null, null)
+                            cameraSession?.capture(it.build(), null, null)
                         }
                     }
 
@@ -4918,6 +4955,78 @@ class CameraRepository(
                      println("Состояние фокуса: $afState")
                  }
              }*/
+
+            //////////////ae
+            val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+            if(ae){
+                when (aeState) {
+                    CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
+                        // Замер в процессе, ждем дальше
+                    }
+
+                    //   CaptureResult.CONTROL_AE_STATE_CONVERGED,
+                    //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
+                    CaptureResult.CONTROL_AE_STATE_CONVERGED->{
+                        ae=false
+                        // Замер завершен! Теперь можно делать основной снимок или
+                        // считывать значения для вашего "приоритета ISO".
+                        /////////////////ae
+
+
+                        // Получаем эталонные данные от системы
+                        val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
+                        val currentExposureNs =
+                            result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
+                        //  cameraDevice.
+                        // Вызываем вашу функцию пересчета (из предыдущего ответа)
+                        // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
+                        val shutterPriorityValue = applyShutterPriorityWithClassicSteps(
+                            requestBuilder = captureRequest,
+                            cameraCharacteristics = cameraCharacteristics,
+                            lastAeIso = currentIso,
+                            lastAeExposureNs = currentExposureNs,
+                            targetIso = lastCharacteristics.isoValue!!,
+                            evCompensationIndex = 0
+                        )
+                        captureRequest.set(
+                            CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                            CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
+                        )
+
+                        cameraSession?.capture(captureRequest.build(), null, null)
+
+                        startPreviewCaptureRequest(
+                            lastCharacteristics.copy(
+                                shutterValue = shutterPriorityValue,
+                                isoValue = lastCharacteristics.isoValue!!
+                            )
+                        )
+
+                        /*   Timer().schedule(1000L) {
+                               // 1. Проверяем, жива ли еще сессия
+                               cameraSession?:run {return@schedule  }
+                               startPreviewCaptureRequest(
+                                   lastCharacteristics.copy(
+                                       shutterValue = null
+                                   )
+                               )
+
+                           }*/
+
+
+                    }
+                }
+            }
+
+            /////////////update
+            _characteristicsFlow.update { current ->
+                current?.copy(
+                    focusValue = focusDistance,
+                    wbValue = kelvin,
+                    shutterValue = exposureTime ?: currentShutter,
+                    isoValue = iso ?: currentIso
+                )
+            }
         }
 
         override fun onCaptureProgressed(
@@ -4939,6 +5048,65 @@ class CameraRepository(
             }
         }
     }
+   /* private val aePrecaptureCallback = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+
+            when (aeState) {
+                CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
+                    // Замер в процессе, ждем дальше
+                }
+
+                CaptureResult.CONTROL_AE_STATE_CONVERGED,
+              //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
+                CaptureResult.CONTROL_AE_STATE_CONVERGED->{
+                    // Замер завершен! Теперь можно делать основной снимок или
+                    // считывать значения для вашего "приоритета ISO".
+                    /////////////////ae
+
+
+                    // Получаем эталонные данные от системы
+                    val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
+                    val currentExposureNs =
+                        result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
+                    //  cameraDevice.
+                    // Вызываем вашу функцию пересчета (из предыдущего ответа)
+                    // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
+                    val shutterPriorityValue = applyShutterPriorityWithClassicSteps(
+
+                        cameraCharacteristics = cameraCharacteristics,
+                        lastAeIso = currentIso,
+                        lastAeExposureNs = currentExposureNs,
+                        targetIso = lastCharacteristics.isoValue!!,
+                        evCompensationIndex = 0
+                    )
+                    startPreviewCaptureRequest(
+                        lastCharacteristics.copy(
+                            shutterValue = shutterPriorityValue,
+                            isoValue = lastCharacteristics.isoValue!!
+                        )
+                    )
+
+                    /*   Timer().schedule(1000L) {
+                           // 1. Проверяем, жива ли еще сессия
+                           cameraSession?:run {return@schedule  }
+                           startPreviewCaptureRequest(
+                               lastCharacteristics.copy(
+                                   shutterValue = null
+                               )
+                           )
+
+                       }*/
+
+
+                }
+            }
+        }
+    }*/
     private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
             session: CameraCaptureSession,
@@ -5027,6 +5195,7 @@ class CameraRepository(
     }
 
     var focus = false
+    var ae=false
 
 
     fun rgbToKelvin(rgb: RggbChannelVector): Int {
@@ -5507,5 +5676,60 @@ object ColorTemperatureConverter {
         val g = Math.round(green).toFloat()
         val b = Math.round(blue).toFloat()
         return RggbChannelVector(r, g, g, b)
+    }
+}
+
+object AutoExposure {
+    fun applyShutterPriorityWithClassicSteps(
+           requestBuilder: CaptureRequest.Builder,
+        cameraCharacteristics: CameraCharacteristics,
+        lastAeIso: Int,           // ISO, полученное от AE до фиксации
+        lastAeExposureNs: Long,   // Выдержка, полученная от AE до фиксации (в наносекундах)
+        targetIso: Int,           // ISO, которое мы хотим зафиксировать
+        evCompensationIndex: Int  // Индекс компенсации экспозиции (напр. -2, 0, 2)
+    ): Long {
+        // 1. Список классических значений выдержки в секундах (знаменатели)
+        val classicShutterSpeeds = listOf(
+            1 / 8000.0, 1 / 4000.0, 1 / 2000.0, 1 / 1000.0, 1 / 500.0, 1 / 250.0, 1 / 125.0,
+            1 / 60.0, 1 / 30.0, 1 / 15.0, 1 / 8.0, 1 / 4.0, 1 / 2.0, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0
+        )
+
+        // 2. Получаем шаг компенсации (обычно 1/3 или 1/2 стопа)
+        val aeStep = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP)
+            ?: Rational(1, 3)
+        val evValue = evCompensationIndex * aeStep.toDouble()
+        val evMultiplier = 2.0.pow(evValue)
+
+        // 3. Рассчитываем теоретически идеальную выдержку в секундах
+        // Формула: T_ideal = T_auto * (ISO_auto / ISO_target) * 2^EV
+        val lastAeExposureSec = lastAeExposureNs / 1_000_000_000.0
+        val idealShutterSec =
+            lastAeExposureSec * (lastAeIso.toDouble() / targetIso.toDouble()) * evMultiplier
+
+        // 4. Поиск ближайшего классического значения из списка
+        val closestClassicShutterSec =
+            classicShutterSpeeds.minByOrNull { abs(it - idealShutterSec) }
+                ?: idealShutterSec
+
+        // 5. Перевод в наносекунды для Camera2 API
+        val finalShutterNs = (closestClassicShutterSec * 1_000_000_000L).toLong()
+
+        // 6. Валидация по возможностям сенсора устройства
+        val sensorRangeNs: Range<Long>? =
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val clampedShutterNs = sensorRangeNs?.let {
+            finalShutterNs.coerceIn(it.lower, it.upper)
+        } ?: finalShutterNs
+
+        // 7. Применение параметров в запрос
+        // Выключаем AE, чтобы ручные значения SENSOR_* вступили в силу
+          requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+        /*  requestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, targetIso)
+          requestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutterNs)
+
+          // Установка Frame Duration важна, чтобы FPS не ограничивал длинную выдержку
+          val frameDurationNs = clampedShutterNs + 100_000L // небольшой запас
+          requestBuilder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurationNs)*/
+        return clampedShutterNs
     }
 }
