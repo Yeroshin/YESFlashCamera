@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -182,17 +183,20 @@ private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp()
 */
 //////////////////////////
 ///////////////////////////
-
+/*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
     modifier: Modifier,
     position: Int,
-    items: ImmutableCollection<SelectorItem>?,
+    itemsInit: ImmutableCollection<SelectorItem>?,
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
     //  updatedPosition: Int? = null,
     //   onPositionUpdated: () -> Unit = {}
 ) {
+    var items by remember(itemsInit) {
+        mutableStateOf(itemsInit)
+    }
     val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
 
@@ -326,4 +330,112 @@ fun ValueSelector(
 }
 
 @Composable
+private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }*/
+
+
+/////////////////////////////
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ValueSelector(
+    modifier: Modifier,
+    position: Int,
+    itemsInit: List<SelectorItem>?, // Используем стандартный List для простоты примера
+    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    val adapter = remember {
+        // Предполагается ваша реализация CompositeAdapter
+        mapOf(
+            TextItem::class.java to TextSelectorItemUI(),
+            IconItem::class.java to IconSelectorItemUI() // Должен быть обновлен аналогично
+        )
+    }
+
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+    var itemWidthPx by remember { mutableIntStateOf(0) }
+    var curIndex by remember { mutableIntStateOf(position) }
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
+
+    // Синхронизация внешней позиции
+    LaunchedEffect(position) {
+        if (position != listState.firstVisibleItemIndex && position >= 0) {
+            isProgrammaticScroll = true
+            try {
+                listState.animateScrollToItem(position, scrollOffset = itemWidthPx / 2)
+                curIndex = position
+            } finally {
+                isProgrammaticScroll = false
+            }
+        }
+    }
+
+    // Синхронизация при скролле пользователем
+    // Используем snapshotFlow для более стабильного отслеживания в 2026 году
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
+            if (!isProgrammaticScroll && index != curIndex) {
+                curIndex = index
+                onSelectedItemChanged(index, true)
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+    ) {
+        LazyRow(
+            state = listState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .wrapContentHeight()
+                .onGloballyPositioned { rowWidthPx = it.size.width },
+            contentPadding = PaddingValues(horizontal = pixelsToDp(rowWidthPx / 2)),
+            flingBehavior = flingBehavior
+        ) {
+            val itemModifier = Modifier
+                .width(48.dp)
+                .onGloballyPositioned { itemWidthPx = it.size.width }
+
+            items(
+                count = itemsInit?.size ?: 0,
+                key = { index ->
+                    // Ключ крайне важен для предотвращения рекомпозиций всего списка
+                    when (val it = itemsInit!![index]) {
+                        is TextItem -> it.id
+                        is IconItem -> it.id
+                        else -> index
+                    }
+                }
+            ) { index ->
+                val item = itemsInit!![index]
+                val isPassed = index <= curIndex
+
+                // Вызываем напрямую из мапы адаптеров
+                val delegate = adapter[item::class.java]
+                @Suppress("UNCHECKED_CAST")
+                (delegate as? CompositeAdapter.AdapterDelegate<SelectorItem>)?.Content(
+                    item = item,
+                    isPassed = isPassed,
+                    modifier = itemModifier
+                )
+            }
+        }
+
+        VectorShadow(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .size(14.dp),
+            vectorColor = Color.Green,
+            shadowColor = Color.DarkGray,
+            resId = R.drawable.arrow_drop_up
+        )
+    }
+}
+
+@Composable
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
+

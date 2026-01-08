@@ -16,13 +16,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
 import com.yes.shared.utils.XmlParser
 import org.xmlpull.v1.XmlPullParser
-
+/*
 fun parseVector(
     context: Context,
     resId: Int
@@ -158,4 +159,102 @@ fun VectorShadow(
         }
     }
 
+}
+
+*/
+
+//////////////////////////////
+@Composable
+fun VectorShadow(
+    modifier: Modifier,
+    resId: Int,
+    vectorColor: Color = Color.Red,
+    shadowColor: Color = Color.Black,
+    shadowBlur: Float = 10f,
+    shadowOffsetX: Float = 0.95f,
+    shadowOffsetY: Float = 0.95f,
+    scale: Float = 0.85f,
+    onClick: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
+
+    // 1. Парсим строку пути только при смене resId
+    val pathData = remember(resId) {
+        XmlParser(context, resId).parse("path", "pathData")
+    }
+
+    // 2. Создаем чистые объекты Path.
+    // ВАЖНО: мы не будем их трансформировать внутри Canvas!
+    val basePath = remember(pathData) {
+        PathParser().parsePathString(pathData).toPath()
+    }
+
+    // 3. Кэшируем Paint, чтобы не создавать объекты каждую наносекунду
+    val shadowPaint = remember(shadowColor, shadowBlur) {
+        Paint().apply {
+            color = shadowColor
+            asFrameworkPaint().apply {
+                maskFilter = BlurMaskFilter(shadowBlur, BlurMaskFilter.Blur.NORMAL)
+            }
+        }
+    }
+
+    val vectorPaint = remember(vectorColor) {
+        Paint().apply { color = vectorColor }
+    }
+
+    val finalModifier = modifier
+        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+        .fillMaxSize()
+
+    Canvas(modifier = finalModifier) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+
+        if (canvasWidth == 0f || canvasHeight == 0f) return@Canvas
+
+        drawIntoCanvas { canvas ->
+            val nativeCanvas = canvas.nativeCanvas
+
+            // Получаем границы пути ОДИН РАЗ
+            val bounds = basePath.getBounds()
+
+            // Считаем масштаб (сохраняя пропорции)
+            val scaleFactor = if (bounds.width >= bounds.height) {
+                (canvasWidth / bounds.width) * scale
+            } else {
+                (canvasHeight / bounds.height) * scale
+            }
+
+            // --- Отрисовка Тени ---
+            // Вместо path.transform() используем возможности Canvas (save/translate/scale)
+            nativeCanvas.save()
+
+            // Смещение тени
+            val offsetX = (1 - shadowOffsetX) * canvasWidth
+            val offsetY = (1 - shadowOffsetY) * canvasHeight
+            val sdx = ((canvasWidth - bounds.width * scaleFactor) / 2) + offsetX
+            val sdy = ((canvasHeight - bounds.height * scaleFactor) / 2) + offsetY
+
+            nativeCanvas.translate(sdx, sdy)
+            nativeCanvas.scale(scaleFactor, scaleFactor)
+            nativeCanvas.translate(-bounds.left, -bounds.top)
+
+            canvas.drawPath(basePath, shadowPaint)
+            nativeCanvas.restore()
+
+            // --- Отрисовка Вектора ---
+            nativeCanvas.save()
+
+            val vdx = (canvasWidth - bounds.width * scaleFactor) / 2
+            val vdy = (canvasHeight - bounds.height * scaleFactor) / 2
+
+            nativeCanvas.translate(vdx, vdy)
+            nativeCanvas.scale(scaleFactor, scaleFactor)
+            nativeCanvas.translate(-bounds.left, -bounds.top)
+
+            canvas.drawPath(basePath, vectorPaint)
+            nativeCanvas.restore()
+        }
+    }
 }

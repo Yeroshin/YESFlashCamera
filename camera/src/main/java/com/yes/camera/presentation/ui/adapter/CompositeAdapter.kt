@@ -6,12 +6,21 @@ import androidx.compose.ui.Modifier
 class CompositeAdapter(private val delegates: Map<Class<*>, AdapterDelegate<*>>) {
     interface AdapterDelegate<T> {
         @Composable
-        fun Content(item: T,modifier: Modifier)
+        fun Content(
+            item: T,
+            isPassed: Boolean,
+            modifier: Modifier
+        )
     }
+
     @Composable
-    fun <T:Any> Content(item: T,modifier: Modifier) {
+    fun <T : Any> Content(
+        item: T,
+        isPassed: Boolean,
+        modifier: Modifier
+    ) {
 
         val delegate = delegates[item::class.java] as AdapterDelegate<T>
-        delegate.Content(item,modifier)
+        delegate.Content(item,isPassed, modifier)
     }
 }

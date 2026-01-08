@@ -1396,7 +1396,7 @@ fun CameraScreenSuccess(
         )
     }
 
-    val isSelectorVisible = remember { mutableStateOf(true) }
+    var isSelectorVisible by remember { mutableStateOf(true) }
     var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
 
     var selectorItems: ImmutableCollection<SelectorItem>? by remember {
@@ -1412,7 +1412,7 @@ fun CameraScreenSuccess(
     ) {
         val newValue = characteristics
         isRadioGroupSelectorVisible = false
-        isSelectorVisible.value = true
+        isSelectorVisible = true
         selectorItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
             SettingsRadioGroupItem.SHUTTER -> {
                 ImmutableCollection(characteristics.shutterItems?.list?.map { it as SelectorItem }
@@ -1427,7 +1427,7 @@ fun CameraScreenSuccess(
             SettingsRadioGroupItem.WB -> {
                 if (autoItems[SettingsRadioGroupItem.WB] == true) {
                     isRadioGroupSelectorVisible = true
-                    isSelectorVisible.value = false
+                    isSelectorVisible = false
                 }
                 ImmutableCollection(characteristics.wbManualItems?.list?.map { it as SelectorItem }
                     ?: emptyList())
@@ -1436,7 +1436,7 @@ fun CameraScreenSuccess(
             SettingsRadioGroupItem.FOCUS -> {
                 if (autoItems[SettingsRadioGroupItem.FOCUS] == true) {
                     isRadioGroupSelectorVisible = true
-                    isSelectorVisible.value = false
+                    isSelectorVisible = false
                 }
                 ImmutableCollection(characteristics.focusItems ?: emptyList())
             }
@@ -1597,7 +1597,7 @@ fun CameraScreenSuccess(
                 }
             }
             isRadioGroupSelectorVisible = false
-            isSelectorVisible.value = true
+            isSelectorVisible = true
             if (autoItems[selected] == true) {
                 settingsRequest = when (selected) {
                     SettingsRadioGroupItem.SHUTTER -> {
@@ -1610,13 +1610,13 @@ fun CameraScreenSuccess(
 
                     SettingsRadioGroupItem.WB -> {
                         isRadioGroupSelectorVisible = true
-                        isSelectorVisible.value = false
+                        isSelectorVisible = false
                         characteristics.copy(wbValue = "")
                     }
 
                     SettingsRadioGroupItem.FOCUS -> {
                         isRadioGroupSelectorVisible = true
-                        isSelectorVisible.value = false
+                        isSelectorVisible = false
                         characteristics.copy(focusValue = "")
                     }
 
@@ -1780,7 +1780,7 @@ fun CameraScreenSuccess(
                         .height(50.dp)
                 ) {
                     ///////////value selector
-                    if (isSelectorVisible.value) {
+                    if (isSelectorVisible) {
                         ValueSelector(
                             modifier = Modifier.height(42.dp),
                             position = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
@@ -1791,7 +1791,7 @@ fun CameraScreenSuccess(
                                 SettingsRadioGroupItem.MAGNIFIER -> magnifierPosition
                                 null -> 0
                             },
-                            items = selectorItems,
+                            itemsInit = selectorItems?.list,
                             onSelectedItemChanged = { index, manual ->
                                 if (manual) {
                                     selectorSelectedItemIndex = index

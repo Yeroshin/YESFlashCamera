@@ -207,19 +207,25 @@ class MapperUI(
             shutterItems = ImmutableCollection(
                 standardShutterSpeeds
                     .toSortedMap(compareByDescending { it })
-                    .map {
-                        TextItem( it.value.toString())
+                    .entries
+                    .mapIndexed {index, entry ->
+                        TextItem(
+                            entry.value.toString(),
+                            index
+                        )
                     }
             ),
             isoItems = ImmutableCollection(
-                standardIsoValues.map {
-                    TextItem( it.toString())
+                standardIsoValues.mapIndexed {index, entry ->
+                    TextItem( entry.toString(),
+                        index)
                 }
             ),
             wbManualItems = ImmutableCollection(
-                standardWbValues.map {
+                standardWbValues.mapIndexed {index, entry ->
                     TextItem(
-                        it.toString() + "K"
+                        entry.toString() + "K",
+                        index
                     )
                 }
             ),
@@ -256,22 +262,23 @@ class MapperUI(
 
 
             },
-            focusItems =focusValues.map {
-                TextItem(it.toString())
+            focusItems =focusValues.mapIndexed {index, entry ->
+                TextItem(entry.toString(),
+                    index)
             },
 
             magnifierItems = ImmutableCollection(
                 listOf(
-                    TextItem( "1"),
-                    TextItem( "2"),
-                    TextItem( "3"),
-                    TextItem( "4"),
-                    TextItem( "5"),
-                    TextItem( "6"),
-                    TextItem( "7"),
-                    TextItem( "8"),
-                    TextItem( "9"),
-                    TextItem( "10"),
+                    TextItem( "1",0),
+                    TextItem( "2",1),
+                    TextItem( "3",2),
+                    TextItem( "4",3),
+                    TextItem( "5",4,),
+                    TextItem( "6",5),
+                    TextItem( "7",6,),
+                    TextItem( "8",7),
+                    TextItem( "9",8),
+                    TextItem( "10",9),
                 )
             ),
             histogramData = characteristics.histogramData

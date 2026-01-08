@@ -26,7 +26,7 @@ import com.yes.camera.presentation.model.IconItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.TextSelectorItemUI
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
-
+/*
 class IconSelectorItemUI: CompositeAdapter.AdapterDelegate<IconItem> {
     @Composable
     override fun Content(
@@ -102,3 +102,49 @@ class IconSelectorItemUI: CompositeAdapter.AdapterDelegate<IconItem> {
     }
 }
 
+*/
+////////////////////////
+class IconSelectorItemUI : CompositeAdapter.AdapterDelegate<IconItem> {
+
+    @Composable
+    override fun Content(
+        item: IconItem,
+        isPassed: Boolean, // Состояние передается извне
+        modifier: Modifier,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier.wrapContentHeight()
+        ) {
+            // Кэшируем общие параметры стиля
+            val commonColor = if (isPassed) Color.Green else Color.White
+            val commonShadow = remember {
+                Shadow(
+                    color = Color.DarkGray,
+                    offset = Offset(5.0f, 5.0f),
+                    blurRadius = 5f
+                )
+            }
+
+            // Иконка с тенью
+            VectorShadow(
+                vectorColor = commonColor,
+                modifier = Modifier
+                    .height(18.dp)
+                    .width(24.dp),
+                resId = item.icon
+            )
+
+            // Разделитель
+            Text(
+                text = "|",
+                textAlign = TextAlign.Center,
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    color = commonColor,
+                    shadow = commonShadow
+                )
+            )
+        }
+    }
+}
