@@ -29,7 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.yes.camera.presentation.model.Item
 import com.yes.camera.presentation.model.WbItem
-import com.yes.camera.presentation.ui.views.ImmutableCollection
+
 
 @Immutable
 abstract class RadioButton(open val id: Item) {
@@ -44,7 +44,7 @@ abstract class RadioButton(open val id: Item) {
 fun RadioGroup(
     modifier: Modifier,
     onOptionSelected: ((value: Item?) -> Unit),
-    items: ImmutableCollection<RadioButton>? = null,
+    items: List<RadioButton>? = null,
     selectedOption: Item? = null
 
     ) {
@@ -53,7 +53,7 @@ fun RadioGroup(
       }*/
 
     var selected by remember(selectedOption) {
-        mutableStateOf(selectedOption?:run { items?.list?.get(0)?.id})
+        mutableStateOf(selectedOption?:run { items?.get(0)?.id})
     }
 
     //  val visibleStates = remember { items.map { mutableStateOf(false) } }
@@ -81,7 +81,7 @@ fun RadioGroup(
         // horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
 
-        items?.list?.forEachIndexed { index, item ->
+        items?.forEachIndexed { index, item ->
             key(item.id) {
                 Box(
 
@@ -166,3 +166,4 @@ fun RadioGroup(
 }
 }
 }*/
+

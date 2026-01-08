@@ -204,7 +204,7 @@ class MapperUI(
             fullScreen = characteristics.fullscreen?:run { false },
             resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
             aspectRatio = characteristics.resolution,
-            shutterItems = ImmutableCollection(
+            shutterItems =
                 standardShutterSpeeds
                     .toSortedMap(compareByDescending { it })
                     .entries
@@ -214,21 +214,21 @@ class MapperUI(
                             index
                         )
                     }
-            ),
-            isoItems = ImmutableCollection(
+            ,
+            isoItems =
                 standardIsoValues.mapIndexed {index, entry ->
                     TextItem( entry.toString(),
                         index)
                 }
-            ),
-            wbManualItems = ImmutableCollection(
+            ,
+            wbManualItems =
                 standardWbValues.mapIndexed {index, entry ->
                     TextItem(
                         entry.toString() + "K",
                         index
                     )
                 }
-            ),
+            ,
             wbModeItems = characteristics.wbItems?.toList()?.mapNotNull { mode->
 
                 when(mode){
@@ -267,7 +267,7 @@ class MapperUI(
                     index)
             },
 
-            magnifierItems = ImmutableCollection(
+            magnifierItems =
                 listOf(
                     TextItem( "1",0),
                     TextItem( "2",1),
@@ -280,7 +280,7 @@ class MapperUI(
                     TextItem( "9",8),
                     TextItem( "10",9),
                 )
-            ),
+            ,
             histogramData = characteristics.histogramData
         )
     }

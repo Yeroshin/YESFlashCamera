@@ -1342,18 +1342,18 @@ fun CameraScreenSuccess(
         }
     }
 
-    val wbRadioGroupItems: ImmutableCollection<RadioButton>? =
+    val wbRadioGroupItems: List<RadioButton>? =
         remember(characteristics.wbModeItems) {
             characteristics.wbModeItems?.let {
-                ImmutableCollection(
+
                     characteristics.wbModeItems!!
-                )
+
             }
         }
 
-    val focusRadioGroupItems: ImmutableCollection<RadioButton> =
+    val focusRadioGroupItems: List<RadioButton> by
         remember {
-            ImmutableCollection(
+            mutableStateOf(
                 listOf(
                     IconRadioItem(FocusItem.MACRO, "Auto", R.drawable.macro_auto),
                     IconRadioItem(FocusItem.CONTINUOUS, "Auto", R.drawable.continuous),
@@ -1363,9 +1363,9 @@ fun CameraScreenSuccess(
             )
         }
 
-    val settingsRadioGroupItems: ImmutableCollection<RadioButton> =
+    val settingsRadioGroupItems: List<RadioButton> =
         remember(characteristics, magnifierValue) {
-            ImmutableCollection(
+
                 listOf(
                     TextRadioItem(
                         SettingsRadioGroupItem.SHUTTER,
@@ -1381,7 +1381,7 @@ fun CameraScreenSuccess(
                     ),
                     TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, magnifierValue, "MAGNIFIER")
                 )
-            )
+
         }
 
     var autoItems by remember {
@@ -1399,10 +1399,10 @@ fun CameraScreenSuccess(
     var isSelectorVisible by remember { mutableStateOf(true) }
     var isRadioGroupSelectorVisible by remember { mutableStateOf(false) }
 
-    var selectorItems: ImmutableCollection<SelectorItem>? by remember {
+    var selectorItems: List<SelectorItem>? by remember {
         mutableStateOf(null)
     }
-    var selectorRadioGroupItems: ImmutableCollection<RadioButton>? by remember {
+    var selectorRadioGroupItems: List<RadioButton>? by remember {
         mutableStateOf(null)
     }
 
@@ -1415,13 +1415,13 @@ fun CameraScreenSuccess(
         isSelectorVisible = true
         selectorItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
             SettingsRadioGroupItem.SHUTTER -> {
-                ImmutableCollection(characteristics.shutterItems?.list?.map { it as SelectorItem }
-                    ?: emptyList())
+                characteristics.shutterItems?.map { it as SelectorItem }
+                    ?: emptyList()
             }
 
             SettingsRadioGroupItem.ISO -> {
-                ImmutableCollection(characteristics.isoItems?.list?.map { it as SelectorItem }
-                    ?: emptyList())
+                characteristics.isoItems?.map { it as SelectorItem }
+                    ?: emptyList()
             }
 
             SettingsRadioGroupItem.WB -> {
@@ -1429,8 +1429,8 @@ fun CameraScreenSuccess(
                     isRadioGroupSelectorVisible = true
                     isSelectorVisible = false
                 }
-                ImmutableCollection(characteristics.wbManualItems?.list?.map { it as SelectorItem }
-                    ?: emptyList())
+                characteristics.wbManualItems?.map { it as SelectorItem }
+                    ?: emptyList()
             }
 
             SettingsRadioGroupItem.FOCUS -> {
@@ -1438,17 +1438,17 @@ fun CameraScreenSuccess(
                     isRadioGroupSelectorVisible = true
                     isSelectorVisible = false
                 }
-                ImmutableCollection(characteristics.focusItems ?: emptyList())
+                characteristics.focusItems ?: emptyList()
             }
 
             SettingsRadioGroupItem.MAGNIFIER -> {
-                ImmutableCollection(characteristics.magnifierItems?.list?.map { it as SelectorItem }
-                    ?: emptyList())
+                characteristics.magnifierItems?.map { it as SelectorItem }
+                    ?: emptyList()
             }
 
             null -> characteristics.shutterItems?.let {
-                ImmutableCollection(characteristics.shutterItems?.list?.map { it as SelectorItem }
-                    ?: emptyList())
+                characteristics.shutterItems?.map { it as SelectorItem }
+                    ?: emptyList()
             }
         }
         selectorRadioGroupItems = when (settingsRadioGroupSelectedSettingsRadioGroupItem) {
@@ -1509,7 +1509,7 @@ fun CameraScreenSuccess(
             SettingsRadioGroupItem.SHUTTER -> {
                 if (autoItems[selected] == false) {
                     characteristics.copy(
-                        shutterValue = characteristics.shutterItems?.list?.get(
+                        shutterValue = characteristics.shutterItems?.get(
                             selectorSelectedItemIndex
                         )?.text ?: ""
                     )
@@ -1521,7 +1521,7 @@ fun CameraScreenSuccess(
             SettingsRadioGroupItem.ISO -> {
                 if (autoItems[selected] == false) {
                     characteristics.copy(
-                        isoValue = characteristics.isoItems?.list?.get(
+                        isoValue = characteristics.isoItems?.get(
                             selectorSelectedItemIndex
                         )?.text ?: ""
                     )
@@ -1533,7 +1533,7 @@ fun CameraScreenSuccess(
             SettingsRadioGroupItem.WB -> {
                 if (autoItems[selected] == false) {
                     characteristics.copy(
-                        wbValue = characteristics.wbManualItems?.list?.get(
+                        wbValue = characteristics.wbManualItems?.get(
                             selectorSelectedItemIndex
                         )?.text ?: "0"
                     )
@@ -1558,10 +1558,10 @@ fun CameraScreenSuccess(
                 if (autoItems[selected] == false) {
                     magnifierPosition = selectorSelectedItemIndex
                     magnifierValue =
-                        characteristics.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                        characteristics.magnifierItems?.get(selectorSelectedItemIndex)
                             ?.text ?: ""
                     renderer.configureMagnifier(
-                        characteristics.magnifierItems?.list?.get(selectorSelectedItemIndex)
+                        characteristics.magnifierItems?.get(selectorSelectedItemIndex)
                             ?.text?.toFloat() ?: 0f
                     )
                 } else {
@@ -1791,7 +1791,7 @@ fun CameraScreenSuccess(
                                 SettingsRadioGroupItem.MAGNIFIER -> magnifierPosition
                                 null -> 0
                             },
-                            itemsInit = selectorItems?.list,
+                            items = selectorItems,
                             onSelectedItemChanged = { index, manual ->
                                 if (manual) {
                                     selectorSelectedItemIndex = index
@@ -1807,7 +1807,7 @@ fun CameraScreenSuccess(
                                 .padding(4.dp)
                                 .fillMaxWidth(),
                             items = selectorRadioGroupItems,
-                            selectedOption = when (selectorRadioGroupItems?.list?.firstOrNull()?.id) {
+                            selectedOption = when (selectorRadioGroupItems?.firstOrNull()?.id) {
                                 is WbItem -> wbSelectorRadioGroupSelectedItem
                                 is FocusItem -> focusSelectorRadioGroupSelectedItem
                                 else -> null

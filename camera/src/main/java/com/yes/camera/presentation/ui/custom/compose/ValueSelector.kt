@@ -32,8 +32,7 @@ import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
 import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
-import com.yes.camera.presentation.ui.views.ImmutableCollection
-import com.yes.camera.presentation.ui.views.MapImmutableCollection
+
 
 
 
@@ -334,6 +333,7 @@ private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp()
 
 
 /////////////////////////////
+/*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
@@ -439,3 +439,77 @@ fun ValueSelector(
 @Composable
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
 
+*/
+//////////////////
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ValueSelector(
+    modifier: Modifier,
+    position: Int,
+    items: List<SelectorItem>?,
+    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit
+) {
+    if (items.isNullOrEmpty()) return
+
+    val listState = rememberLazyListState()
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+    var itemWidthPx by remember { mutableIntStateOf(0) }
+    var isProgrammaticScroll by remember { mutableStateOf(false) }
+
+    val textDelegate = remember { TextSelectorItemUI() }
+    val iconDelegate = remember { IconSelectorItemUI() }
+
+    // Синхронизация скролла при изменении внешней позиции или списка
+    LaunchedEffect(position, items) {
+        if (position in items.indices && position != listState.firstVisibleItemIndex) {
+            isProgrammaticScroll = true
+            try {
+                listState.animateScrollToItem(position, scrollOffset = itemWidthPx / 2)
+            } finally {
+                isProgrammaticScroll = false
+            }
+        }
+    }
+
+    // Отслеживание ручного выбора
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
+            if (!isProgrammaticScroll && index in items.indices) {
+                onSelectedItemChanged(index, true)
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { rowWidthPx = it.size.width }
+    ) {
+        LazyRow(
+            state = listState,
+            flingBehavior = flingBehavior,
+            contentPadding = PaddingValues(
+                horizontal = with(LocalDensity.current) { (rowWidthPx / 2).toDp() }
+            )
+        ) {
+            items(
+                count = items.size,
+                key = { index -> items[index].id }
+            ) { index ->
+                val item = items[index]
+                val itemModifier = Modifier
+                    .width(48.dp)
+                    .onGloballyPositioned { itemWidthPx = it.size.width }
+
+                val isPassed = index <= position
+
+                when (item) {
+                    is TextItem -> textDelegate.Content(item, isPassed, itemModifier)
+                    is IconItem -> iconDelegate.Content(item, isPassed, itemModifier)
+                }
+            }
+        }
+    }
+}

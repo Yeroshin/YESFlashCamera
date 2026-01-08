@@ -1,8 +1,9 @@
 package com.yes.camera.presentation.model
 
 import androidx.camera.core.AspectRatio
+import com.google.common.collect.ImmutableCollection
 import com.yes.camera.presentation.ui.custom.compose.RadioButton
-import com.yes.camera.presentation.ui.views.ImmutableCollection
+
 import com.yes.shared.domain.Dimensions
 
 data class CharacteristicsUI(
@@ -24,12 +25,12 @@ data class CharacteristicsUI(
     val resolution:String?=null,
     val aspectRatio: Dimensions?=null,
 
-    val shutterItems: ImmutableCollection<TextItem>? = null,
-    val isoItems: ImmutableCollection<TextItem>? = null,
-    val wbManualItems: ImmutableCollection<TextItem>? = null,
+    val shutterItems: List<TextItem>? = null,
+    val isoItems: List<TextItem>? = null,
+    val wbManualItems: List<TextItem>? = null,
     val wbModeItems: List<RadioButton>? = null,
     val focusItems: List<TextItem>? = null,
-    val magnifierItems: ImmutableCollection<TextItem>? = null,
+    val magnifierItems: List<TextItem>? = null,
 
     val histogramData: MutableMap<Int, Int> = mutableMapOf(),
 )/* {
