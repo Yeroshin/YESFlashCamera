@@ -32,7 +32,16 @@ class CameraViewModel(
     init {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
+            onError = {
+                println(it.message)
+                setState {
+                    copy(
+                        state = CameraState.Error(
+                            error = it
+                        )
+                    )
+                }
+            },
             block = {
                 subscribeCameraSettingsUseCase()
                     .collect { characteristics ->
@@ -115,7 +124,16 @@ class CameraViewModel(
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
+            onError = {
+                println(it.message)
+                setState {
+                    copy(
+                        state = CameraState.Error(
+                            error = it
+                        )
+                    )
+                }
+            },
             block = {
                 val camera = setInputCharacteristicsUseCase(
                     SetInputCharacteristicsUseCase.Params(
@@ -137,7 +155,9 @@ class CameraViewModel(
     private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
+            onError = {
+                println(it.message)
+            },
             block = {
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)

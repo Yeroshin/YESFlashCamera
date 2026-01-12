@@ -34,6 +34,7 @@ import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.camera.presentation.ui.views.CameraScreenSuccess
+import com.yes.camera.presentation.ui.views.ErrorScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.shared.presentation.ui.PermissionManager
 
@@ -111,7 +112,7 @@ fun CameraScreen(
     PermissionManager(
         permissions = arrayOf(
             Manifest.permission.CAMERA,
-            Manifest.permission.READ_MEDIA_IMAGES
+          //  Manifest.permission.READ_MEDIA_IMAGES
         ),
         onPermissionsGranted = {
             // Всё содержимое из оригинальной ветки if (permissionsGranted)
@@ -151,6 +152,10 @@ fun CameraScreen(
                         },
                         fullScreen = state.characteristics.fullScreen
                     )
+                }
+
+                is CameraContract.CameraState.Error -> {
+                    ErrorScreen(error =state.error ){}
                 }
             }
         },

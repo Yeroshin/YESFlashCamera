@@ -69,6 +69,8 @@ class SettingsRepository(
         val focusValue = getFocusValue()
         val focusMode = getFocusMode()*/
         //  val touchPoint = getTouchPoint()
+     //   throw IllegalArgumentException("Filepath must not be null")
+
         return Characteristics(
             backCamera = getBackCamera(),
             isoValue = getIsoValue(),

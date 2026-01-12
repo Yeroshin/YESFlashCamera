@@ -25,6 +25,9 @@ class CameraContract {
     ) : UiState
 
     sealed class CameraState {
+        data class Error(
+            val error:Throwable,
+        ): CameraState()
         data object Idle : CameraState()
         data object Loading : CameraState()
         data class Success(

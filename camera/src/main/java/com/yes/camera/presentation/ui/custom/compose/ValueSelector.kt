@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,9 +33,7 @@ import com.yes.camera.presentation.model.TextItem
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
 import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
-
-
-
+import kotlin.math.abs
 
 
 /*
@@ -449,6 +448,7 @@ fun ValueSelector(
     items: List<SelectorItem>?,
     onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit
 ) {
+
     if (items.isNullOrEmpty()) return
 
     val listState = rememberLazyListState()
@@ -463,6 +463,7 @@ fun ValueSelector(
 
     // Синхронизация скролла при изменении внешней позиции или списка
     LaunchedEffect(position, items) {
+
         if (position in items.indices && position != listState.firstVisibleItemIndex) {
             isProgrammaticScroll = true
             try {
@@ -472,14 +473,32 @@ fun ValueSelector(
             }
         }
     }
-
+    var currentPosition by remember {
+        mutableStateOf(0)
+    }
     // Отслеживание ручного выбора
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
+            currentPosition=index
             if (!isProgrammaticScroll && index in items.indices) {
                 onSelectedItemChanged(index, true)
             }
         }
+    }
+    var centerIndex by remember { mutableStateOf<Int?>(null) }
+    var centerX by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(listState.isScrollInProgress) {
+        snapshotFlow { listState.layoutInfo }
+            .collect {
+                val visibleItemsInfo = it.visibleItemsInfo
+                if (visibleItemsInfo.isNotEmpty()) {
+                    val minOffsetItem = visibleItemsInfo.minByOrNull { itemInfo ->
+                        val itemCenter = itemInfo.offset + itemInfo.size / 2
+                        abs(centerX - itemCenter)
+                    }
+                    centerIndex = minOffsetItem?.index
+                }
+            }
     }
 
     Box(
@@ -500,10 +519,11 @@ fun ValueSelector(
             ) { index ->
                 val item = items[index]
                 val itemModifier = Modifier
+
                     .width(48.dp)
                     .onGloballyPositioned { itemWidthPx = it.size.width }
 
-                val isPassed = index <= position
+                val isPassed = index <= currentPosition
 
                 when (item) {
                     is TextItem -> textDelegate.Content(item, isPassed, itemModifier)
@@ -511,5 +531,13 @@ fun ValueSelector(
                 }
             }
         }
+        VectorShadow(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .size(14.dp),
+            vectorColor = Color.Green,
+            shadowColor = Color.DarkGray,
+            resId = R.drawable.arrow_drop_up
+        )
     }
 }

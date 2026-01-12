@@ -59,22 +59,5 @@ abstract class BaseViewModel<Event : UiEvent, State : UiState, Effect : UiEffect
     }
 
     override val useCaseCoroutineScope = viewModelScope
-    override fun withUseCaseScope(
-        loadingUpdater: ((Boolean) -> Unit)?,
-        onError: ((Throwable) -> Unit)?,
-        onComplete: (() -> Unit)?,
-        block: suspend () -> Unit
-    ) {
 
-        super.withUseCaseScope(
-            loadingUpdater = {
-                loadingUpdater?.invoke(it)
-            },
-            onError = {
-                onError?.invoke(it)
-            },
-            onComplete = onComplete,
-            block = block
-        )
-    }
 }

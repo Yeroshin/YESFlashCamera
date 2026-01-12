@@ -142,7 +142,9 @@ class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
             // Шрифт сбрасывается только если изменился ID или текст
             var fontSize by remember(item.id, item.text) { mutableStateOf(initialFontSize) }
 
-            val commonColor = if (isPassed) Color.Green else Color.White
+          //  val commonColor = if (isPassed) Color.Green else Color.White
+            val commonColor =if (isPassed) Color.Green else Color.White
+
             val commonShadow = remember {
                 Shadow(
                     color = Color.DarkGray,
@@ -152,7 +154,9 @@ class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
             }
 
             Text(
-                modifier = Modifier.padding(2.dp),
+                modifier = modifier.padding(2.dp)
+                    ,
+
                 maxLines = 1,
                 textAlign = TextAlign.Center,
                 text = item.text,

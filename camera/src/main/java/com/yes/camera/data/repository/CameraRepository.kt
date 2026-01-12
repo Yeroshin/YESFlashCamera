@@ -47,11 +47,15 @@ import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.utils.CameraThreadManager
 import com.yes.shared.utils.FileNameGenerator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -3766,7 +3770,7 @@ class CameraRepository(
       }*/
     private lateinit var previewSurface: Surface
     private lateinit var histogramSurface: Surface
-    private lateinit var captureSurface: Surface
+    private lateinit var captureSurfaceJpeg: Surface
     private lateinit var captureSurfaceRaw: Surface
 
     /* private val previewSurfaceConfiguration by lazy {
@@ -4197,12 +4201,12 @@ class CameraRepository(
         /////////////////
 
     }
-    private lateinit var histogramImageReader: ImageReader
+    private lateinit var imageReaderHistogram: ImageReader
     private lateinit var imageReaderJpeg: ImageReader
     private lateinit var imageReaderRaw: ImageReader
     private lateinit var filePath: String
     private val listenerHistogram = ImageReader.OnImageAvailableListener {
-        histogramImageReader.acquireLatestImage()?.let { image ->
+        imageReaderHistogram.acquireLatestImage()?.let { image ->
 
             //histogram
             val ybytes = ByteArray(image.planes[0].buffer.capacity())
@@ -4249,17 +4253,18 @@ class CameraRepository(
 
  // Проверить поддерживаемые output-формати
          val supportedFormats = streamMap?.outputFormats*/
-        histogramImageReader =
+        imageReaderHistogram =
             ImageReader.newInstance(
                 320,
                 240,
                 ImageFormat.YUV_420_888,
                 3
             )
-        histogramImageReader.setOnImageAvailableListener(
+        imageReaderHistogram.setOnImageAvailableListener(
             listenerHistogram,
             mBackgroundHandler/*imageReaderHandler*/
         )
+        histogramSurface = imageReaderHistogram.surface
         ///////////////
         imageReaderJpeg =
             ImageReader.newInstance(
@@ -4269,6 +4274,7 @@ class CameraRepository(
                 3
             )
         imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, imageReaderHandler)
+        captureSurfaceJpeg = imageReaderJpeg.surface
         ///////////////////
         imageReaderRaw =
             ImageReader.newInstance(
@@ -4279,24 +4285,26 @@ class CameraRepository(
                 3
             )
         imageReaderRaw.setOnImageAvailableListener(listenerRaw, imageReaderHandler)
+        captureSurfaceRaw = imageReaderRaw.surface
         //////////////////
 
-        histogramSurface = histogramImageReader.surface
-        captureSurface = imageReaderJpeg.surface
-        captureSurfaceRaw = imageReaderRaw.surface
+
+
+
 
         createCaptureSession(
             listOf(
                 previewSurface,
                 histogramSurface,
                 //   encoder.configure(640,480),
-                captureSurface,
+                captureSurfaceJpeg,
                 captureSurfaceRaw
             ),
             characteristics
         )
 
     }
+    val myScope = CoroutineScope(Dispatchers.Main + Job())
 
     private fun createCaptureSession(surfaces: List<Surface>, characteristics: Characteristics) {
         val configs = mutableListOf<OutputConfiguration>()
@@ -4319,7 +4327,11 @@ class CameraRepository(
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
                         cameraSession = session
-                        startPreviewCaptureRequest(characteristics)
+
+                        myScope.launch {
+                            startPreviewCaptureRequest(characteristics)
+                        }
+
                         // startPreviewCaptureRequest()
                     } catch (e: CameraAccessException) {
                         e.printStackTrace()
@@ -4335,7 +4347,11 @@ class CameraRepository(
     }
 
     fun singleCapture(enable: Boolean) {
-        startCaptureRequest()
+        //enable this
+       // startCaptureRequest()
+
+
+        ///////////////////////
         // capture = true
         // imageReader.setOnImageAvailableListener(listener, null)
         //   singleCapture = true
@@ -4391,14 +4407,15 @@ class CameraRepository(
     private var previousWbValue: Int? = null
     private var wb = false
     private var touchPoint: FloatArray? = null
-    fun startPreviewCaptureRequest(
+    suspend   fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
+
         lastCharacteristics = characteristics
         captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 
         captureRequest.addTarget(previewSurface)
-        captureRequest.addTarget(histogramSurface)
+      //  captureRequest.addTarget(histogramSurface)
         //  captureRequest?.addTarget(captureSurface)
         /*  captureRequest?.apply {
               set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -4453,13 +4470,15 @@ class CameraRepository(
             )
 
             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-            characteristics.focusValue?.let {
+
+            /////////////?
+          /*  characteristics.focusValue?.let {
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                 set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
             } ?: run {
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-            }
-
+            }*/
+////////////////////
 
             // set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
 
@@ -4653,6 +4672,7 @@ class CameraRepository(
                 }
 
             }
+
             try {
                 cameraSession?.setRepeatingRequest(
                     build(),
@@ -4671,7 +4691,7 @@ class CameraRepository(
         captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 
         // captureRequest?.addTarget(previewSurface)
-        captureRequest.addTarget(captureSurface)
+        captureRequest.addTarget(captureSurfaceJpeg)
         captureRequest.apply {
             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
             set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
@@ -4711,7 +4731,7 @@ class CameraRepository(
         }
     }
 
-    private fun startTimer(shutter: Long?, iso: Int?) {
+  /*  private fun startTimer(shutter: Long?, iso: Int?) {
         Timer().schedule(1000L) {
             // 1. Проверяем, жива ли еще сессия
             cameraSession ?: run { return@schedule }
@@ -4722,7 +4742,7 @@ class CameraRepository(
                 )
             )
         }
-    }
+    }*/
 
 
     var frameTime: Long = 0
@@ -5043,12 +5063,21 @@ class CameraRepository(
                               shutter=lastCharacteristics.shutterValue,
                               iso=lastCharacteristics.isoValue
                           )*/
-                        startPreviewCaptureRequest(
+
+                        myScope.launch {
+                            startPreviewCaptureRequest(
+                                lastCharacteristics.copy(
+                                    shutterValue = shutterValue,
+                                    isoValue = isoValue
+                                )
+                            )
+                        }
+                      /*  startPreviewCaptureRequest(
                             lastCharacteristics.copy(
                                 shutterValue = shutterValue,
                                 isoValue = isoValue
                             )
-                        )
+                        )*/
 
 
                     }
@@ -5060,8 +5089,8 @@ class CameraRepository(
                 current?.copy(
                     focusValue = focusDistance,
                     wbValue = kelvin,
-                    shutterValue = exposureTime ?: currentShutter,
-                    isoValue = iso ?: currentIso
+                    shutterValue =  currentShutter,
+                    isoValue = currentIso
                 )
             }
 
@@ -5156,7 +5185,10 @@ class CameraRepository(
             super.onCaptureCompleted(session, request, result)
             //////////////////////////
             lastTotalCaptureResult = result
-            startPreviewCaptureRequest(lastCharacteristics)
+            myScope.launch {
+                startPreviewCaptureRequest(lastCharacteristics)
+            }
+
         }
 
         override fun onCaptureProgressed(
