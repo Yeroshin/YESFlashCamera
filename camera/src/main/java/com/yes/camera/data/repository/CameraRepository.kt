@@ -50,6 +50,7 @@ import com.yes.shared.utils.FileNameGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -3783,11 +3784,11 @@ class CameraRepository(
      }*/
 
 
-    private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+   /* private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
         // priority = Thread.MAX_PRIORITY
         start()
     }
-    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)
+    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)*/
     val rWidth = 4096
     val rHeight = 3072
 
@@ -3960,7 +3961,6 @@ class CameraRepository(
             CameraCharacteristics.LENS_FACING_FRONT
         }
         getCameraByFacing(facing)?.let {
-
             cameraManager.openCamera(
                 it,
                 object : CameraDevice.StateCallback() {
@@ -3981,6 +3981,15 @@ class CameraRepository(
 
                     override fun onError(camera: CameraDevice, error: Int) {
                         println()
+                        camera.close()
+                        val errorMessage = when (error) {
+                            ERROR_CAMERA_IN_USE -> "Камера уже используется другим приложением"
+                            ERROR_MAX_CAMERAS_IN_USE -> "Достигнут предел одновременно открытых камер"
+                            ERROR_CAMERA_DISABLED -> "Доступ к камере заблокирован политикой безопасности"
+                            ERROR_CAMERA_DEVICE -> "Критическая ошибка сенсора (код 4). Требуется перезапуск"
+                            ERROR_CAMERA_SERVICE -> "Ошибка системного сервиса камер"
+                            else -> "Неизвестная ошибка камеры: $error"
+                        }
                     }
                 },
                 mBackgroundHandler
@@ -4253,7 +4262,7 @@ class CameraRepository(
 
  // Проверить поддерживаемые output-формати
          val supportedFormats = streamMap?.outputFormats*/
-        imageReaderHistogram =
+      /*  imageReaderHistogram =
             ImageReader.newInstance(
                 320,
                 240,
@@ -4285,32 +4294,27 @@ class CameraRepository(
                 3
             )
         imageReaderRaw.setOnImageAvailableListener(listenerRaw, imageReaderHandler)
-        captureSurfaceRaw = imageReaderRaw.surface
+        captureSurfaceRaw = imageReaderRaw.surface*/
         //////////////////
-
-
-
 
 
         createCaptureSession(
             listOf(
                 previewSurface,
-                histogramSurface,
+              /*  histogramSurface,
                 //   encoder.configure(640,480),
                 captureSurfaceJpeg,
-                captureSurfaceRaw
+                captureSurfaceRaw*/
             ),
             characteristics
         )
 
     }
+
     val myScope = CoroutineScope(Dispatchers.Main + Job())
 
     private fun createCaptureSession(surfaces: List<Surface>, characteristics: Characteristics) {
         val configs = mutableListOf<OutputConfiguration>()
-        /* captureRequest =
-             cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
-        ////////preview
         for (surface in surfaces) {
             //  captureRequest?.addTarget(surface)
             configs.add(
@@ -4321,8 +4325,8 @@ class CameraRepository(
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
-            HandlerExecutor(mBackgroundHandler.looper),
-            //Dispatchers.IO.asExecutor(),
+          //  HandlerExecutor(mBackgroundHandler.looper),
+            Dispatchers.IO.asExecutor(),
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
@@ -4348,7 +4352,7 @@ class CameraRepository(
 
     fun singleCapture(enable: Boolean) {
         //enable this
-       // startCaptureRequest()
+        // startCaptureRequest()
 
 
         ///////////////////////
@@ -4407,7 +4411,7 @@ class CameraRepository(
     private var previousWbValue: Int? = null
     private var wb = false
     private var touchPoint: FloatArray? = null
-    suspend   fun startPreviewCaptureRequest(
+    suspend fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
 
@@ -4415,7 +4419,7 @@ class CameraRepository(
         captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 
         captureRequest.addTarget(previewSurface)
-      //  captureRequest.addTarget(histogramSurface)
+        //  captureRequest.addTarget(histogramSurface)
         //  captureRequest?.addTarget(captureSurface)
         /*  captureRequest?.apply {
               set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
@@ -4472,12 +4476,12 @@ class CameraRepository(
             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
 
             /////////////?
-          /*  characteristics.focusValue?.let {
-                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-            } ?: run {
-                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-            }*/
+              characteristics.focusValue?.let {
+                  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                  set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+              } ?: run {
+                  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+              }
 ////////////////////
 
             // set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
@@ -4681,6 +4685,8 @@ class CameraRepository(
                 )
             } catch (e: CameraAccessException) {
                 e.printStackTrace()
+                 throw IllegalArgumentException(e)
+
             }
         }
 
@@ -4731,18 +4737,18 @@ class CameraRepository(
         }
     }
 
-  /*  private fun startTimer(shutter: Long?, iso: Int?) {
-        Timer().schedule(1000L) {
-            // 1. Проверяем, жива ли еще сессия
-            cameraSession ?: run { return@schedule }
-            startPreviewCaptureRequest(
-                lastCharacteristics.copy(
-                    shutterValue = shutter,
-                    isoValue = iso
-                )
-            )
-        }
-    }*/
+    /*  private fun startTimer(shutter: Long?, iso: Int?) {
+          Timer().schedule(1000L) {
+              // 1. Проверяем, жива ли еще сессия
+              cameraSession ?: run { return@schedule }
+              startPreviewCaptureRequest(
+                  lastCharacteristics.copy(
+                      shutterValue = shutter,
+                      isoValue = iso
+                  )
+              )
+          }
+      }*/
 
 
     var frameTime: Long = 0
@@ -4805,14 +4811,14 @@ class CameraRepository(
                 when (afState) {
                     CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
                         Toast.makeText(context, "FOCUSED", Toast.LENGTH_SHORT).show()
-                        captureRequest?.set(
+                        captureRequest.set(
                             CaptureRequest.CONTROL_AF_TRIGGER,
                             CaptureRequest.CONTROL_AF_TRIGGER_IDLE
                         )
                         focus = false
-                        captureRequest?.let {
-                            cameraSession?.capture(it.build(), null, null)
-                        }
+
+                        cameraSession?.capture(captureRequest.build(), null, null)
+
                     }
 
                     CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
@@ -5072,12 +5078,12 @@ class CameraRepository(
                                 )
                             )
                         }
-                      /*  startPreviewCaptureRequest(
-                            lastCharacteristics.copy(
-                                shutterValue = shutterValue,
-                                isoValue = isoValue
-                            )
-                        )*/
+                        /*  startPreviewCaptureRequest(
+                              lastCharacteristics.copy(
+                                  shutterValue = shutterValue,
+                                  isoValue = isoValue
+                              )
+                          )*/
 
 
                     }
@@ -5089,7 +5095,7 @@ class CameraRepository(
                 current?.copy(
                     focusValue = focusDistance,
                     wbValue = kelvin,
-                    shutterValue =  currentShutter,
+                    shutterValue = currentShutter,
                     isoValue = currentIso
                 )
             }

@@ -118,7 +118,7 @@ fun CameraScreen(
             // Всё содержимое из оригинальной ветки if (permissionsGranted)
             val renderer = remember {
                 GLRenderer(context) { surfaceTexture ->
-                    surfaceTexture.setDefaultBufferSize(4096,3072/*1920, 1080*/)
+                    surfaceTexture.setDefaultBufferSize(1280, 720/*,4096,3072*//*1920, 1080*/)
                     cameraViewModel.setEvent(
                         CameraContract.Event.OnOpenCamera(true, surfaceTexture)
                     )

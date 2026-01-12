@@ -1683,8 +1683,9 @@ fun CameraScreenSuccess(
             LaunchedEffect(fullScreen) {
                 autoFitSurfaceView.setFullscreen(fullScreen)
                 autoFitSurfaceView.setAspectRatio(
-                    characteristics.aspectRatio?.width ?: 3,
-                    characteristics.aspectRatio?.height ?: 2
+                    1280, 720
+                    /*characteristics.aspectRatio?.width ?: 3,
+                    characteristics.aspectRatio?.height ?: 2*/
                 )
             }
 
