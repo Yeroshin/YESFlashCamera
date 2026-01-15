@@ -33,7 +33,8 @@ class SharedModule(
     @Singleton
     @Provides
     fun providesCameraDispatcher(manager: CameraThreadManager): CoroutineDispatcher =
-        manager.mBackgroundHandler.asCoroutineDispatcher()
+       // manager.mBackgroundHandler.asCoroutineDispatcher()
+        manager.dispatcher
 
     @Provides
     fun providesContext(): Context {

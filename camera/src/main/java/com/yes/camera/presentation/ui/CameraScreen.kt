@@ -4,6 +4,7 @@ import ads_mobile_sdk.h6
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.SurfaceTexture
 import android.os.Build
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
@@ -108,7 +109,9 @@ fun CameraScreen(
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
-
+    var surface:SurfaceTexture? by remember {
+        mutableStateOf(null)
+    }
     PermissionManager(
         permissions = arrayOf(
             Manifest.permission.CAMERA,
@@ -118,6 +121,7 @@ fun CameraScreen(
             // Всё содержимое из оригинальной ветки if (permissionsGranted)
             val renderer = remember {
                 GLRenderer(context) { surfaceTexture ->
+                    surface=surfaceTexture
                     surfaceTexture.setDefaultBufferSize(1280, 720/*,4096,3072*//*1920, 1080*/)
                     cameraViewModel.setEvent(
                         CameraContract.Event.OnOpenCamera(true, surfaceTexture)
@@ -155,7 +159,14 @@ fun CameraScreen(
                 }
 
                 is CameraContract.CameraState.Error -> {
-                    ErrorScreen(error =state.error ){}
+                    ErrorScreen(error =state.error ){
+                        surface?.let {
+                            cameraViewModel.setEvent(
+                                CameraContract.Event.OnOpenCamera(true, it)
+                            )
+                        }
+
+                    }
                 }
             }
         },

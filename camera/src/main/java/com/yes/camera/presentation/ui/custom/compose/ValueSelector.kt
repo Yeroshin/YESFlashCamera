@@ -2,6 +2,7 @@ package com.yes.camera.presentation.ui.custom.compose
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -456,37 +458,43 @@ fun ValueSelector(
 
     var rowWidthPx by remember { mutableIntStateOf(0) }
     var itemWidthPx by remember { mutableIntStateOf(0) }
-    var isProgrammaticScroll by remember { mutableStateOf(false) }
+    //   var isProgrammaticScroll by remember { mutableStateOf(false) }
 
     val textDelegate = remember { TextSelectorItemUI() }
     val iconDelegate = remember { IconSelectorItemUI() }
 
     // Синхронизация скролла при изменении внешней позиции или списка
-    LaunchedEffect(position, items) {
-
-        if (position in items.indices && position != listState.firstVisibleItemIndex) {
-            isProgrammaticScroll = true
-            try {
-                listState.animateScrollToItem(position, scrollOffset = itemWidthPx / 2)
-            } finally {
-                isProgrammaticScroll = false
-            }
-        }
+    LaunchedEffect(position) {
+        listState.animateScrollToItem(position, scrollOffset = itemWidthPx / 2)
     }
     var currentPosition by remember {
         mutableIntStateOf(0)
     }
+    var isManual by remember { mutableStateOf(false) }
     // Отслеживание ручного выбора
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
-            currentPosition=index
-            if (!isProgrammaticScroll && index in items.indices) {
+            currentPosition = index
+            if (isManual) {
                 onSelectedItemChanged(index, true)
             }
         }
     }
-    var centerIndex by remember { mutableStateOf<Int?>(null) }
-    var centerX by remember { mutableFloatStateOf(0f) }
+
+
+// 1. Отслеживаем источник: ручной или программный
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .collect { scrolling ->
+                // Если скролл идет и есть Drag — значит ручной.
+                // Если скролл идет, а Drag нет — значит программный или инерция (fling).
+                isManual = scrolling && isDragged
+            }
+    }
+
+    var centerIndex by remember { mutableIntStateOf(0) }
+    val centerX by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(listState.isScrollInProgress) {
         snapshotFlow { listState.layoutInfo }
             .collect {
@@ -496,7 +504,7 @@ fun ValueSelector(
                         val itemCenter = itemInfo.offset + itemInfo.size / 2
                         abs(centerX - itemCenter)
                     }
-                    centerIndex = minOffsetItem?.index
+                    centerIndex = minOffsetItem?.index?:0
                 }
             }
     }
@@ -523,7 +531,7 @@ fun ValueSelector(
                     .width(48.dp)
                     .onGloballyPositioned { itemWidthPx = it.size.width }
 
-                val isPassed = index <= currentPosition
+                val isPassed = remember(index) { derivedStateOf { index <= centerIndex } }.value
 
                 when (item) {
                     is TextItem -> textDelegate.Content(item, isPassed, itemModifier)

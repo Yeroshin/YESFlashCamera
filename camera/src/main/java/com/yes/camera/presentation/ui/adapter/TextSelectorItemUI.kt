@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -143,7 +144,10 @@ class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
             var fontSize by remember(item.id, item.text) { mutableStateOf(initialFontSize) }
 
           //  val commonColor = if (isPassed) Color.Green else Color.White
-            val commonColor =if (isPassed) Color.Green else Color.White
+            val commonColor =
+                    if (isPassed) Color.Green else Color.White
+
+
 
             val commonShadow = remember {
                 Shadow(
@@ -154,9 +158,7 @@ class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
             }
 
             Text(
-                modifier = modifier.padding(2.dp)
-                    ,
-
+                modifier = modifier.padding(2.dp),
                 maxLines = 1,
                 textAlign = TextAlign.Center,
                 text = item.text,

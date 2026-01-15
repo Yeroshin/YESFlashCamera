@@ -68,12 +68,12 @@ class CameraModule {
     @CameraScope
     @Provides
     fun providesCameraRepository(
-        manager: CameraThreadManager,
+        cameraThreadManager:CameraThreadManager,
         context: Context,
         encoder: MediaEncoder
     ): CameraRepository {
         return CameraRepository(
-            manager,
+            cameraThreadManager,
             context,
             context.getSystemService(CAMERA_SERVICE) as CameraManager,
             encoder

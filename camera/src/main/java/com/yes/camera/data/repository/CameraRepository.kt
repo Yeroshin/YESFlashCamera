@@ -47,6 +47,7 @@ import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.utils.CameraThreadManager
 import com.yes.shared.utils.FileNameGenerator
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -3750,7 +3751,7 @@ object ColorTemperatureConverter {
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class CameraRepository(
-    private val manager: CameraThreadManager,
+    private val cameraThreadManager: CameraThreadManager,
     private val context: Context,
     private val cameraManager: CameraManager,
     private val encoder: MediaEncoder
@@ -3763,7 +3764,7 @@ class CameraRepository(
 
     /* private val mBackgroundThread = HandlerThread("CameraThread").apply { start() }
      private val mBackgroundHandler: Handler = Handler(mBackgroundThread.looper)*/
-    private val mBackgroundHandler = manager.mBackgroundHandler
+    //  private val mBackgroundHandler = manager.mBackgroundHandler
     private lateinit var cameraDevice: CameraDevice
 
     /*  private val previewSurface by lazy {
@@ -3784,11 +3785,11 @@ class CameraRepository(
      }*/
 
 
-   /* private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
-        // priority = Thread.MAX_PRIORITY
-        start()
-    }
-    private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)*/
+    /* private val imageReaderHandlerThread = HandlerThread("ImageReaderThread").apply {
+         // priority = Thread.MAX_PRIORITY
+         start()
+     }
+     private val imageReaderHandler = Handler(imageReaderHandlerThread.looper)*/
     val rWidth = 4096
     val rHeight = 3072
 
@@ -3992,7 +3993,7 @@ class CameraRepository(
                         }
                     }
                 },
-                mBackgroundHandler
+                cameraThreadManager.handler
             )
         }
         return characteristicsFlow
@@ -4216,13 +4217,14 @@ class CameraRepository(
     private lateinit var filePath: String
     private val listenerHistogram = ImageReader.OnImageAvailableListener {
         imageReaderHistogram.acquireLatestImage()?.let { image ->
-
-            //histogram
-            val ybytes = ByteArray(image.planes[0].buffer.capacity())
-            image.planes[0].buffer.get(ybytes)
-            _outputBuffer.value = ybytes
-            //  val middleGray=AutoExposure.applyShutterPriorityWithClassicSteps()
-            image.close()
+            cameraThreadManager.analysisExecutor.execute {
+                //histogram
+                val ybytes = ByteArray(image.planes[0].buffer.capacity())
+                image.planes[0].buffer.get(ybytes)
+                _outputBuffer.value = ybytes
+                //  val middleGray=AutoExposure.applyShutterPriorityWithClassicSteps()
+                image.close()
+            }
         }
 
     }
@@ -4232,14 +4234,15 @@ class CameraRepository(
             /* val ybytes = ByteArray(image.planes[0].buffer.capacity())
              image.planes[0].buffer.get(ybytes)
              _outputBuffer.value = ybytes*/
+            cameraThreadManager.ioExecutor.execute {
+                ImageSaver.saveImage(
+                    context,
+                    image,
+                    FileNameGenerator().generateFileName()
+                )
 
-            ImageSaver.saveImage(
-                context,
-                image,
-                FileNameGenerator().generateFileName()
-            )
-
-            image.close()
+                image.close()
+            }
         }
 
     }
@@ -4262,7 +4265,7 @@ class CameraRepository(
 
  // Проверить поддерживаемые output-формати
          val supportedFormats = streamMap?.outputFormats*/
-      /*  imageReaderHistogram =
+        imageReaderHistogram =
             ImageReader.newInstance(
                 320,
                 240,
@@ -4271,7 +4274,7 @@ class CameraRepository(
             )
         imageReaderHistogram.setOnImageAvailableListener(
             listenerHistogram,
-            mBackgroundHandler/*imageReaderHandler*/
+            cameraThreadManager.handler/*imageReaderHandler*/
         )
         histogramSurface = imageReaderHistogram.surface
         ///////////////
@@ -4282,7 +4285,7 @@ class CameraRepository(
                 ImageFormat.YUV_420_888,
                 3
             )
-        imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, imageReaderHandler)
+        imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
         captureSurfaceJpeg = imageReaderJpeg.surface
         ///////////////////
         imageReaderRaw =
@@ -4293,18 +4296,18 @@ class CameraRepository(
                 // ImageFormat.RAW_SENSOR,
                 3
             )
-        imageReaderRaw.setOnImageAvailableListener(listenerRaw, imageReaderHandler)
-        captureSurfaceRaw = imageReaderRaw.surface*/
+        imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
+        captureSurfaceRaw = imageReaderRaw.surface
         //////////////////
 
 
         createCaptureSession(
             listOf(
                 previewSurface,
-              /*  histogramSurface,
-                //   encoder.configure(640,480),
-                captureSurfaceJpeg,
-                captureSurfaceRaw*/
+                /*  histogramSurface,
+                  //   encoder.configure(640,480),
+                  captureSurfaceJpeg,
+                  captureSurfaceRaw*/
             ),
             characteristics
         )
@@ -4325,8 +4328,9 @@ class CameraRepository(
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
-          //  HandlerExecutor(mBackgroundHandler.looper),
-            Dispatchers.IO.asExecutor(),
+            cameraThreadManager.executor,
+            //   HandlerExecutor(mBackgroundHandler.looper),
+            //  Dispatchers.IO.asExecutor(),
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) {
                     try {
@@ -4476,12 +4480,12 @@ class CameraRepository(
             set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
 
             /////////////?
-              characteristics.focusValue?.let {
-                  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                  set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-              } ?: run {
-                  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-              }
+            characteristics.focusValue?.let {
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+            } ?: run {
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+            }
 ////////////////////
 
             // set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
@@ -4681,11 +4685,11 @@ class CameraRepository(
                 cameraSession?.setRepeatingRequest(
                     build(),
                     repeatingCaptureCallback,
-                    mBackgroundHandler
+                    cameraThreadManager.handler
                 )
             } catch (e: CameraAccessException) {
                 e.printStackTrace()
-                 throw IllegalArgumentException(e)
+                throw IllegalArgumentException(e)
 
             }
         }
@@ -4729,7 +4733,7 @@ class CameraRepository(
                 cameraSession?.capture(
                     build(),
                     captureCallback,
-                    mBackgroundHandler
+                    cameraThreadManager.handler
                 )
             } catch (e: CameraAccessException) {
                 e.printStackTrace()
