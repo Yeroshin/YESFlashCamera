@@ -28,7 +28,9 @@ class SharedModule(
      // Для shared экземпляра
      @Singleton
     @Provides
-    fun providesCameraThreadManager(): CameraThreadManager = CameraThreadManager()
+    fun providesCameraThreadManager(): CameraThreadManager {
+     return CameraThreadManager()
+     }
     @CameraDispatcher
     @Singleton
     @Provides

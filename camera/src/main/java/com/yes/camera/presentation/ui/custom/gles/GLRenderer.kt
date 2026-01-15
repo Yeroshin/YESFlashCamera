@@ -31,6 +31,8 @@ import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMV
+import android.os.Handler
+import android.util.Log
 
 import com.yes.camera.R
 import com.yes.camera.utils.Geometry
@@ -44,6 +46,7 @@ import javax.microedition.khronos.opengles.GL10
 
 class GLRenderer(
     private val context: Context,
+    private val cameraHandler: Handler,
     private val callback: (surfaceTexture: SurfaceTexture) -> Unit
 ) : GLSurfaceView.Renderer {
 
@@ -241,6 +244,7 @@ class GLRenderer(
 
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        Log.d("DEBUG", "onSurfaceCreated called")
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
         if (checkSupport()) {
             createSurfaceTexture()
@@ -323,10 +327,14 @@ class GLRenderer(
 
     private fun createSurfaceTexture() {
         surfaceTexture = SurfaceTexture(createOESTextureObject()).apply {
+            setOnFrameAvailableListener({
+                // Будим GL-поток для отрисовки кадра
+                glSurfaceView?.requestRender()
+            }, cameraHandler)
             callback(this)
         }
     }
-
+    var glSurfaceView: GLSurfaceView? = null
     private fun createOESTextureObject(): Int {
         val textureHandle = IntArray(1)
 

@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.views
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.opengl.GLSurfaceView
 import android.view.MotionEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -1643,51 +1644,23 @@ fun CameraScreenSuccess(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        ///////////preview
+        ///////////preview]
+
+
         Box() {
-            var autoFitSurfaceView by remember {
-                mutableStateOf(
-                    AutoFitSurfaceView(context, null).apply {
-                        setEGLContextClientVersion(3)
-                        setRenderer(renderer)
-                        viewTreeObserver.addOnGlobalLayoutListener {
-                            surfaceViewSize = IntSize(width, height)
-                            val normalizedX = (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
-                            val normalizedY = -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
-                            renderer.handleTouchPress(normalizedX, normalizedY)
-                            renderer.configureMagnifier(1f)
-                        }
-                        setOnTouchListener { v, event ->
-                            v.performClick()
-                            val normalizedX = (event.x / v.width.toFloat()) * 2f - 1f
-                            val normalizedY = -((event.y / v.height.toFloat()) * 2f - 1f)
-                            when (event.action) {
-                                MotionEvent.ACTION_DOWN -> {
-                                    renderer.handleTouchPress(normalizedX, normalizedY)
-                                }
 
-                                MotionEvent.ACTION_MOVE -> {
-                                    renderer.handleTouchDrag(normalizedX, normalizedY)
-                                }
 
-                                MotionEvent.ACTION_UP -> {
-                                    touchPoint = floatArrayOf(event.x / v.width, event.y / v.height)
-                                }
-                            }
-                            true
-                        }
-                    }
-                )
-            }
 
-            LaunchedEffect(fullScreen) {
+
+
+          /*  LaunchedEffect(fullScreen) {
                 autoFitSurfaceView.setFullscreen(fullScreen)
                 autoFitSurfaceView.setAspectRatio(
                     1280, 720
                     /*characteristics.aspectRatio?.width ?: 3,
                     characteristics.aspectRatio?.height ?: 2*/
                 )
-            }
+            }*/
 
             AndroidView(
                 modifier = Modifier
@@ -1701,7 +1674,51 @@ fun CameraScreenSuccess(
                     .onSizeChanged { size ->
                         surfaceViewSize = size
                     },
-                factory = { autoFitSurfaceView }
+                factory = { AutoFitSurfaceView(context, null).apply {
+                    setEGLContextClientVersion(3)
+                    setRenderer(renderer)
+                    renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+                    viewTreeObserver.addOnGlobalLayoutListener {
+                        surfaceViewSize = IntSize(width, height)
+                        val normalizedX =
+                            (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
+                        val normalizedY =
+                            -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
+                        renderer.handleTouchPress(normalizedX, normalizedY)
+                        renderer.configureMagnifier(1f)
+                    }
+                    setOnTouchListener { v, event ->
+                        v.performClick()
+                        val normalizedX = (event.x / v.width.toFloat()) * 2f - 1f
+                        val normalizedY = -((event.y / v.height.toFloat()) * 2f - 1f)
+                        when (event.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                renderer.handleTouchPress(normalizedX, normalizedY)
+                            }
+
+                            MotionEvent.ACTION_MOVE -> {
+                                renderer.handleTouchDrag(normalizedX, normalizedY)
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                touchPoint = floatArrayOf(event.x / v.width, event.y / v.height)
+                            }
+                        }
+                        true
+                    }
+                    renderer.glSurfaceView = this
+                } },
+                        update = { view ->
+                    // 2. В блоке update меняем только параметры, НЕ ПЕРЕСОЗДАВАЯ View
+                    view.setFullscreen(characteristics.fullScreen)
+                            view.setAspectRatio(
+                                1280, 720
+                                /*characteristics.aspectRatio?.width ?: 3,
+                                characteristics.aspectRatio?.height ?: 2*/
+                            )
+                    // Если нужно менять Aspect Ratio динамически:
+                    // view.setAspectRatio(...)
+                }
             )
 
             ShutterBox(

@@ -10,7 +10,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import javax.inject.Inject
 
-class CameraThreadManager @Inject constructor() {
+class CameraThreadManager  {
      val cameraThread = HandlerThread("CameraThread").apply { start() }
     // 1. Для методов, требующих Handler (setRepeatingRequest)
     val handler = Handler(cameraThread.looper)

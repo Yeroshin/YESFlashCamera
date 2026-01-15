@@ -8,6 +8,7 @@ import com.yes.shared.di.module.CameraDispatcher
 import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.di.module.MainDispatcher
 import com.yes.shared.di.module.SharedModule
+import com.yes.shared.utils.CameraThreadManager
 import dagger.Component
 import kotlinx.coroutines.CoroutineDispatcher
 import javax.inject.Singleton
@@ -24,6 +25,8 @@ interface SharedComponent {
 
     @CameraDispatcher
     fun providesCameraDispatcher(): CoroutineDispatcher
+
+    fun providesCameraThreadManager(): CameraThreadManager
 
     @MainDispatcher
     fun providesMainDispatcher(): CoroutineDispatcher

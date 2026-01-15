@@ -123,6 +123,7 @@ class GLESFrameCapture(
     }
 
 }
+@Deprecated("used for learning purpose")
 class SurfacePanel(context: Context?) : GLSurfaceView(context) {
 
     val renderer= GLESFrameCapture(1024, 768)

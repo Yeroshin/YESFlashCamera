@@ -38,6 +38,7 @@ import com.yes.camera.presentation.ui.views.CameraScreenSuccess
 import com.yes.camera.presentation.ui.views.ErrorScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.shared.presentation.ui.PermissionManager
+import com.yes.shared.utils.CameraThreadManager
 
 
 /*
@@ -112,6 +113,7 @@ fun CameraScreen(
     var surface:SurfaceTexture? by remember {
         mutableStateOf(null)
     }
+    val cameraThreadManager = remember { CameraThreadManager() }
     PermissionManager(
         permissions = arrayOf(
             Manifest.permission.CAMERA,
@@ -120,9 +122,13 @@ fun CameraScreen(
         onPermissionsGranted = {
             // Всё содержимое из оригинальной ветки if (permissionsGranted)
             val renderer = remember {
-                GLRenderer(context) { surfaceTexture ->
+                GLRenderer(
+                    context = context,
+                    cameraHandler = cameraThreadManager.handler
+                ) { surfaceTexture ->
+
                     surface=surfaceTexture
-                    surfaceTexture.setDefaultBufferSize(1280, 720/*,4096,3072*//*1920, 1080*/)
+                    surfaceTexture.setDefaultBufferSize(640, 480/*,4096,3072*//*1920, 1080*/)
                     cameraViewModel.setEvent(
                         CameraContract.Event.OnOpenCamera(true, surfaceTexture)
                     )

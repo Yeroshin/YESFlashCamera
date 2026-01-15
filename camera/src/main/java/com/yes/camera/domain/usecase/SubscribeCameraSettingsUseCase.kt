@@ -22,7 +22,7 @@ class SubscribeCameraSettingsUseCase(
     private val cameraRepository: CameraRepository,
     private val settingsRepository: SettingsRepository
 ) : UseCase<Unit, Flow<Characteristics>>(dispatcher) {
-    private val scope = CoroutineScope(dispatcher)
+
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override suspend fun run(): Flow<Characteristics> {
       /* val histogramFlow= cameraRepository.subscribeOutputBuffer()
