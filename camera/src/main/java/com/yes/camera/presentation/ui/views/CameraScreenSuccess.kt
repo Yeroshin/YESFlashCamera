@@ -1821,7 +1821,7 @@ fun CameraScreenSuccess(
                 }
             }
 
-            //////////////////////////capture
+            //////////////////////////BOTTOM BUTTONS
             Row(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,

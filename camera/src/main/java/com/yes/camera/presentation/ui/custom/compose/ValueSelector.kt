@@ -474,7 +474,7 @@ fun ValueSelector(
         }
     }
     var currentPosition by remember {
-        mutableStateOf(0)
+        mutableIntStateOf(0)
     }
     // Отслеживание ручного выбора
     LaunchedEffect(listState) {
