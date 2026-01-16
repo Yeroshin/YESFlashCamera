@@ -4390,12 +4390,12 @@ class CameraRepository(
         captureRequest.addTarget(captureSurfaceRaw)*/
 
         // НИКАКИХ ручных настроек ISO/Shutter для теста
-        captureRequest.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
+       captureRequest.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
         cameraSession?.setRepeatingRequest(captureRequest.build(), repeatingCaptureCallback, cameraThreadManager.handler)
 
         //////////////////////
 
-      /*  lastCharacteristics = characteristics
+        lastCharacteristics = characteristics
         captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         if (previewSurface.isValid) {
             Log.e("Camera", "Preview Surface is  valid!")
@@ -4406,44 +4406,8 @@ class CameraRepository(
         captureRequest.addTarget(previewSurface)
         //  captureRequest.addTarget(histogramSurface)
         //  captureRequest?.addTarget(captureSurface)
-        /*  captureRequest?.apply {
-              set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
-              set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-              set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-              set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-              set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF)
-              set(
-                  CaptureRequest.NOISE_REDUCTION_MODE,
-                  CaptureRequest.NOISE_REDUCTION_MODE_OFF
-              )
-              set(
-                  CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
-                  CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
-              )
-              set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
-              set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
-              set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-              characteristics.wbValue?.let { wb ->
-                  set(CaptureRequest.COLOR_CORRECTION_GAINS, kelvinToColorCorrectionGains(wb))
-              }
-              // Apply metering rectangles if provided
-              characteristics.touchPoint?.let { point ->
-                  val meteringRect = meteringRectangle(point)
-                  set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
-                  set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRect))
-                  set(CaptureRequest.CONTROL_AWB_REGIONS, arrayOf(meteringRect))
-              }
-              try {
-                  sessio?.setRepeatingRequest(
-                      build(),
-                      repeatingCaptureCallback,
-                      mBackgroundHandler
-                  )
-              } catch (e: CameraAccessException) {
-                  e.printStackTrace()
-              }
-          }*/
 
+/*
         captureRequest.apply {
             set(
                 CaptureRequest.EDGE_MODE,
@@ -4672,8 +4636,8 @@ class CameraRepository(
                 throw IllegalArgumentException(e)
 
             }
-        }*/
-
+        }
+*/
     }
 
     fun singleCapture(enable: Boolean) {
@@ -4805,7 +4769,7 @@ class CameraRepository(
             super.onCaptureCompleted(session, request, result)
             //////////////////////////
 
-           myScope.launch(cameraThreadManager.dispatcher) {
+         //  myScope.launch(cameraThreadManager.dispatcher) {
                 val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
                 val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
                 //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
@@ -5141,7 +5105,7 @@ class CameraRepository(
                         isoValue = currentIso
                     )
                 }
-            }
+          //  }
 
 
         }

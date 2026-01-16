@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
@@ -441,7 +442,8 @@ fun ValueSelector(
 private fun pixelsToDp(pixels: Int) = with(LocalDensity.current) { pixels.toDp() }
 
 */
-//////////////////
+//////////////////worked
+/*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
@@ -539,6 +541,104 @@ fun ValueSelector(
                 }
             }
         }
+        VectorShadow(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .size(14.dp),
+            vectorColor = Color.Green,
+            shadowColor = Color.DarkGray,
+            resId = R.drawable.arrow_drop_up
+        )
+    }
+}
+*/
+///////////////
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ValueSelector(
+    modifier: Modifier,
+    position: Int,
+    items: List<SelectorItem>?,
+    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit
+) {
+    if (items.isNullOrEmpty()) return
+
+    val listState = rememberLazyListState()
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val density = LocalDensity.current
+
+    // Фиксированные размеры (48.dp берем из константы, чтобы не мерить каждый раз)
+    val itemWidthPx = remember(density) { with(density) { 48.dp.toPx() }.toInt() }
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+
+    val textDelegate = remember { TextSelectorItemUI() }
+    val iconDelegate = remember { IconSelectorItemUI() }
+
+    // 1. Объединенный snapshotFlow для всех расчетов (оптимально для 2026)
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+
+    // Используем derivedStateOf для центрального индекса, чтобы не спамить рекомпозициями
+    val centerIndex by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
+            if (visibleItems.isEmpty()) return@derivedStateOf 0
+
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            visibleItems.minByOrNull { item ->
+                abs(item.offset + item.size / 2 - viewportCenter)
+            }?.index ?: 0
+        }
+    }
+
+    // 2. Синхронизация внешней позиции (только если она реально изменилась)
+    LaunchedEffect(position) {
+        if (centerIndex != position) {
+            listState.animateScrollToItem(position, scrollOffset = -rowWidthPx / 2 + itemWidthPx / 2)
+        }
+    }
+
+    // 3. Коллбэк для ручного выбора
+    LaunchedEffect(centerIndex) {
+        if (isDragged) {
+            onSelectedItemChanged(centerIndex, true)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .onSizeChanged { rowWidthPx = it.width } // Быстрее чем onGloballyPositioned
+    ) {
+        LazyRow(
+            state = listState,
+            flingBehavior = flingBehavior,
+            // Отступ для центрирования первого и последнего элементов
+            contentPadding = PaddingValues(
+                horizontal = with(density) { (rowWidthPx / 2 - itemWidthPx / 2).coerceAtLeast(0).toDp() }
+            )
+        ) {
+            items(
+                count = items.size,
+                key = { index -> items[index].id }
+            ) { index ->
+                val item = items[index]
+
+                // Используем локальный derivedStateOf для каждого элемента
+                val isPassed = remember(index) {
+                    derivedStateOf { index <= centerIndex }
+                }.value
+
+                // Модификатор теперь константный, не пересоздается при скролле
+                val itemModifier = Modifier.width(48.dp)
+
+                when (item) {
+                    is TextItem -> textDelegate.Content(item, isPassed, itemModifier)
+                    is IconItem -> iconDelegate.Content(item, isPassed, itemModifier)
+                }
+            }
+        }
+
         VectorShadow(
             Modifier
                 .align(Alignment.BottomCenter)

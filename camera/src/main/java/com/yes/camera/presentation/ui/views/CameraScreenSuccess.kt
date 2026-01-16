@@ -48,6 +48,7 @@ import com.yes.camera.presentation.model.FocusItem
 import com.yes.camera.presentation.model.SettingsRadioGroupItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SelectorRadioGroupItem
+import com.yes.camera.presentation.model.TextItem
 
 import com.yes.camera.presentation.model.WbItem
 import com.yes.camera.presentation.ui.custom.compose.Histogram
@@ -1347,41 +1348,41 @@ fun CameraScreenSuccess(
         remember(characteristics.wbModeItems) {
             characteristics.wbModeItems?.let {
 
-                    characteristics.wbModeItems!!
+                characteristics.wbModeItems!!
 
             }
         }
 
     val focusRadioGroupItems: List<RadioButton> by
-        remember {
-            mutableStateOf(
-                listOf(
-                    IconRadioItem(FocusItem.MACRO, "Auto", R.drawable.macro_auto),
-                    IconRadioItem(FocusItem.CONTINUOUS, "Auto", R.drawable.continuous),
-                    IconRadioItem(FocusItem.TOUCH, "Auto", R.drawable.touch),
-                    IconRadioItem(FocusItem.INFINITE, "Auto", R.drawable.infinity),
-                )
+    remember {
+        mutableStateOf(
+            listOf(
+                IconRadioItem(FocusItem.MACRO, "Auto", R.drawable.macro_auto),
+                IconRadioItem(FocusItem.CONTINUOUS, "Auto", R.drawable.continuous),
+                IconRadioItem(FocusItem.TOUCH, "Auto", R.drawable.touch),
+                IconRadioItem(FocusItem.INFINITE, "Auto", R.drawable.infinity),
             )
-        }
+        )
+    }
 
     val settingsRadioGroupItems: List<RadioButton> =
         remember(characteristics, magnifierValue) {
 
-                listOf(
-                    TextRadioItem(
-                        SettingsRadioGroupItem.SHUTTER,
-                        characteristics.shutterValue,
-                        "SHUTTER"
-                    ),
-                    TextRadioItem(SettingsRadioGroupItem.ISO, characteristics.isoValue, "ISO"),
-                    TextRadioItem(SettingsRadioGroupItem.WB, characteristics.wbValue, "WB"),
-                    TextRadioItem(
-                        SettingsRadioGroupItem.FOCUS,
-                        characteristics.focusValue,
-                        "FOCUS"
-                    ),
-                    TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, magnifierValue, "MAGNIFIER")
-                )
+            listOf(
+                TextRadioItem(
+                    SettingsRadioGroupItem.SHUTTER,
+                    characteristics.shutterValue,
+                    "SHUTTER"
+                ),
+                TextRadioItem(SettingsRadioGroupItem.ISO, characteristics.isoValue, "ISO"),
+                TextRadioItem(SettingsRadioGroupItem.WB, characteristics.wbValue, "WB"),
+                TextRadioItem(
+                    SettingsRadioGroupItem.FOCUS,
+                    characteristics.focusValue,
+                    "FOCUS"
+                ),
+                TextRadioItem(SettingsRadioGroupItem.MAGNIFIER, magnifierValue, "MAGNIFIER")
+            )
 
         }
 
@@ -1645,23 +1646,7 @@ fun CameraScreenSuccess(
             .background(Color.Black)
     ) {
         ///////////preview]
-
-
         Box() {
-
-
-
-
-
-          /*  LaunchedEffect(fullScreen) {
-                autoFitSurfaceView.setFullscreen(fullScreen)
-                autoFitSurfaceView.setAspectRatio(
-                    1280, 720
-                    /*characteristics.aspectRatio?.width ?: 3,
-                    characteristics.aspectRatio?.height ?: 2*/
-                )
-            }*/
-
             AndroidView(
                 modifier = Modifier
                     .padding(
@@ -1673,51 +1658,59 @@ fun CameraScreenSuccess(
                     )
                     .onSizeChanged { size ->
                         surfaceViewSize = size
-                    },
-                factory = { AutoFitSurfaceView(context, null).apply {
-                    setEGLContextClientVersion(3)
-                    setRenderer(renderer)
-                    renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
-                    viewTreeObserver.addOnGlobalLayoutListener {
-                        surfaceViewSize = IntSize(width, height)
+                        ///////////
+                        //   surfaceViewSize = IntSize(width, height)
                         val normalizedX =
                             (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
                         val normalizedY =
                             -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
                         renderer.handleTouchPress(normalizedX, normalizedY)
                         renderer.configureMagnifier(1f)
-                    }
-                    setOnTouchListener { v, event ->
-                        v.performClick()
-                        val normalizedX = (event.x / v.width.toFloat()) * 2f - 1f
-                        val normalizedY = -((event.y / v.height.toFloat()) * 2f - 1f)
-                        when (event.action) {
-                            MotionEvent.ACTION_DOWN -> {
-                                renderer.handleTouchPress(normalizedX, normalizedY)
-                            }
+                        /////////////
+                    },
+                factory = {
+                    AutoFitSurfaceView(context, null).apply {
+                        setEGLContextClientVersion(3)
+                        setRenderer(renderer)
+                        renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+                       /* viewTreeObserver.addOnGlobalLayoutListener {
+                            surfaceViewSize = IntSize(width, height)
+                            val normalizedX =
+                                (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
+                            val normalizedY =
+                                -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
+                            renderer.handleTouchPress(normalizedX, normalizedY)
+                            renderer.configureMagnifier(1f)
+                        }*/
+                        setOnTouchListener { v, event ->
+                            v.performClick()
+                            val normalizedX = (event.x / v.width.toFloat()) * 2f - 1f
+                            val normalizedY = -((event.y / v.height.toFloat()) * 2f - 1f)
+                            when (event.action) {
+                                MotionEvent.ACTION_DOWN -> {
+                                    renderer.handleTouchPress(normalizedX, normalizedY)
+                                }
 
-                            MotionEvent.ACTION_MOVE -> {
-                                renderer.handleTouchDrag(normalizedX, normalizedY)
-                            }
+                                MotionEvent.ACTION_MOVE -> {
+                                    renderer.handleTouchDrag(normalizedX, normalizedY)
+                                }
 
-                            MotionEvent.ACTION_UP -> {
-                                touchPoint = floatArrayOf(event.x / v.width, event.y / v.height)
+                                MotionEvent.ACTION_UP -> {
+                                    touchPoint = floatArrayOf(event.x / v.width, event.y / v.height)
+                                }
                             }
+                            true
                         }
-                        true
+                        renderer.glSurfaceView = this
                     }
-                    renderer.glSurfaceView = this
-                } },
-                        update = { view ->
-                    // 2. В блоке update меняем только параметры, НЕ ПЕРЕСОЗДАВАЯ View
-                    view.setFullscreen(characteristics.fullScreen)
-                            view.setAspectRatio(
-                                1280, 720
-                                /*characteristics.aspectRatio?.width ?: 3,
-                                characteristics.aspectRatio?.height ?: 2*/
-                            )
-                    // Если нужно менять Aspect Ratio динамически:
-                    // view.setAspectRatio(...)
+                },
+                update = { view ->
+                   view.setFullscreen(characteristics.fullScreen)
+                    view.setAspectRatio(
+                       // 1280, 720
+                        characteristics.aspectRatio?.width ?: 3,
+                        characteristics.aspectRatio?.height ?: 2
+                    )
                 }
             )
 
@@ -1753,7 +1746,11 @@ fun CameraScreenSuccess(
                 style = TextStyle(
                     color = Color.White,
                     fontSize = 16.sp,
-                    shadow = Shadow(color = Color.DarkGray, offset = Offset(5.0f, 5.0f), blurRadius = 5f)
+                    shadow = Shadow(
+                        color = Color.DarkGray,
+                        offset = Offset(5.0f, 5.0f),
+                        blurRadius = 5f
+                    )
                 )
             )
         }
@@ -1798,6 +1795,70 @@ fun CameraScreenSuccess(
                         .height(50.dp)
                 ) {
                     ///////////value selector
+                    ////tmp fast selector
+                  /*  val items by remember {
+                        mutableStateOf(
+                            listOf(
+                                TextItem(
+                                    "100",1
+                                ),
+                                TextItem(
+                                    "200",2
+                                ),
+                                TextItem(
+                                    "300",3
+                                ),
+                                TextItem(
+                                    "400",4
+                                ),
+                                TextItem(
+                                    "500",5
+                                ),
+                                TextItem(
+                                    "600",6
+                                ),
+                                TextItem(
+                                    "700",7
+                                ),
+                                TextItem(
+                                    "800",8
+                                ),
+                                TextItem(
+                                    "900",9
+                                ),
+                                TextItem(
+                                    "1000",10
+                                ),
+                                TextItem(
+                                    "2000",11
+                                ),
+                                TextItem(
+                                    "3000",12
+                                ),
+                                TextItem(
+                                    "4000",13
+                                ),
+                                TextItem(
+                                    "5000",14
+                                ),
+                                TextItem(
+                                    "6000",15
+                                ),
+
+                            )
+                        )
+                    }
+                    ValueSelector(
+                        modifier = Modifier.height(42.dp),
+                        position = 0,
+                        items = items,
+                        onSelectedItemChanged = { index, manual ->
+                            if (manual) {
+                             //   selectorSelectedItemIndex = index
+                            }
+                        }
+                    )*/
+                    /////////////////
                     if (isSelectorVisible) {
                         ValueSelector(
                             modifier = Modifier.height(42.dp),
