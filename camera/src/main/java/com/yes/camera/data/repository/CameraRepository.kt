@@ -7,6 +7,7 @@ import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
 import android.graphics.Matrix
+import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.graphics.YuvImage
@@ -60,6 +61,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -3986,155 +3988,155 @@ class CameraRepository(
     }
 
 
-   /* private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
-        var image: Image? = null
-        try {
-            image = reader.acquireLatestImage()
-            image?.let {
-                // Получить буфер
-                val buffer: ByteBuffer = it.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
-
-                // Указать путь к файлу
-                val filename = "saved_image.jpg"
-                val directory =
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                val file = File(directory, filename)
-
-                // Записать байты в файл
-                FileOutputStream(file).use { output ->
-                    output.write(bytes)
-                }
-
-                println("Изображение сохранено по пути: ${file.absolutePath}")
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            image?.close()
-        }
-
-
-        /* if (running){
-             val image = reader.acquireNextImage()
-             if (image!= null) {
-                 val buffer = image.planes[0].buffer
+    /* private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
+         var image: Image? = null
+         try {
+             image = reader.acquireLatestImage()
+             image?.let {
+                 // Получить буфер
+                 val buffer: ByteBuffer = it.planes[0].buffer
                  val bytes = ByteArray(buffer.remaining())
                  buffer.get(bytes)
 
-                 try {
-                     val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
-                     sink.write(byteBuffer.array())
-                 } catch (e: IOException) {
-                     println()
-                 } finally {
-                     image.close() // Освобождаем изображение
+                 // Указать путь к файлу
+                 val filename = "saved_image.jpg"
+                 val directory =
+                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                 val file = File(directory, filename)
+
+                 // Записать байты в файл
+                 FileOutputStream(file).use { output ->
+                     output.write(bytes)
                  }
+
+                 println("Изображение сохранено по пути: ${file.absolutePath}")
              }
-         }*/
-        // val image = reader.acquireNextImage()
-        /* reader.acquireNextImage()?.let {
-             val ybytes = ByteArray(it.planes[0].buffer.capacity())
-             it.planes[0].buffer.get(ybytes)
-             _outputBuffer.value = ybytes
-             it.close()
-         }*/
-        //  image?.close()
-        /* if (running) {
-             val image = reader.acquireNextImage()
-             image?.let {
-                 val tmp =yuv420ToBitmap(it)
-                 //  _event.value = convertYUV420_888to420p(it)
-                 ///////////////////
-                 val uvPos = it.width * image.height
-                 val uvSize = it.width / 2 * image.height / 2
+         } catch (e: IOException) {
+             e.printStackTrace()
+         } finally {
+             image?.close()
+         }
 
-              //   fps1.get("before")
-                 /////////////////////////////////
-                /* val yPlane = it.planes[0].buffer
-                 val uPlane = it.planes[1].buffer
-                 val vPlane = it.planes[2].buffer*/
 
-                 //val buffer = image.planes[0].buffer
-                 ////////////////
-               /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
-                 it.planes[0].buffer.get(randomAccessFile)
-                 val ubytes = ByteArray(uvSize)
-                 it.planes[1].buffer.get(ubytes,0,uvSize)
-                 val vbytes = ByteArray(uvSize)
-                 it.planes[2].buffer.get(vbytes,0,uvSize)*/
-               //  fps1.get("middle")
-                 ///////////////////
+         /* if (running){
+              val image = reader.acquireNextImage()
+              if (image!= null) {
+                  val buffer = image.planes[0].buffer
+                  val bytes = ByteArray(buffer.remaining())
+                  buffer.get(bytes)
 
-             /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
-                 it.planes[1].buffer.limit(uvSize)
-                 val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
-                 it.planes[2].buffer.limit(uvSize)
-                 val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
-                 /////////////////
-                /* val b = randomAccessFile?.write(ubytes)
-                 val c = randomAccessFile?.write(vbytes)*/
-                /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
-                 val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
-                 //////////////////////////////////
-                 //    randomAccessFile?.seek(0)
-                 // copyImage(image)
-                 _event.tryEmit(getByteBufferYUVPlanes(image))
-               //  fps1.get("after")
-                 /////////////////////////
+                  try {
+                      val byteBuffer = ByteBuffer.wrap(bytes) // Создаем ByteBuffer из массива байтов
+                      sink.write(byteBuffer.array())
+                  } catch (e: IOException) {
+                      println()
+                  } finally {
+                      image.close() // Освобождаем изображение
+                  }
+              }
+          }*/
+         // val image = reader.acquireNextImage()
+         /* reader.acquireNextImage()?.let {
+              val ybytes = ByteArray(it.planes[0].buffer.capacity())
+              it.planes[0].buffer.get(ybytes)
+              _outputBuffer.value = ybytes
+              it.close()
+          }*/
+         //  image?.close()
+         /* if (running) {
+              val image = reader.acquireNextImage()
+              image?.let {
+                  val tmp =yuv420ToBitmap(it)
+                  //  _event.value = convertYUV420_888to420p(it)
+                  ///////////////////
+                  val uvPos = it.width * image.height
+                  val uvSize = it.width / 2 * image.height / 2
 
-                 /*  bufferedOutputStream?.write(
-                       imageToYUVPlanes(image)
-                   )
-                   bufferedOutputStream?.flush()*/
-                 ///////////////////////
-                 // _event.tryEmit(getYUVPlanes(it))
-                 it.close()
+               //   fps1.get("before")
+                  /////////////////////////////////
+                 /* val yPlane = it.planes[0].buffer
+                  val uPlane = it.planes[1].buffer
+                  val vPlane = it.planes[2].buffer*/
 
-             }
-         } else if (finished) {
-             /////////////////
-            /* randomAccessFile?.close()
-             FFmpegKitConfig.closeFFmpegPipe(pipe1)
-             finished = false*/
-             /////////////////
-             //job.cancel()
-             /*   process?.destroy()
-                process?.waitFor()
-                FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
-             ///////////////////
-             /*  pipe1?.let {
-                   FFmpegKitConfig.closeFFmpegPipe(it)
-               }
-             //  process?.waitFor()
-               process?.destroy()*/
-             //   FFmpeg.cancel()
-             // process?.outputStream?.flush()
-             //  process?.outputStream?.close()
-             //  finished = false
-         } else {
-             reader.acquireLatestImage()?.close()
-             // fps1.get("fps")
-         }*/
-        //  fps1.get("fps")
-        /////////////////
+                  //val buffer = image.planes[0].buffer
+                  ////////////////
+                /*  val ybytes = ByteArray(it.planes[0].buffer.capacity())
+                  it.planes[0].buffer.get(randomAccessFile)
+                  val ubytes = ByteArray(uvSize)
+                  it.planes[1].buffer.get(ubytes,0,uvSize)
+                  val vbytes = ByteArray(uvSize)
+                  it.planes[2].buffer.get(vbytes,0,uvSize)*/
+                //  fps1.get("middle")
+                  ///////////////////
 
-    }*/
+              /*    val a = randomAccessFile?.channel?.write(it.planes[0].buffer)
+                  it.planes[1].buffer.limit(uvSize)
+                  val b = randomAccessFile?.channel?.write(it.planes[1].buffer)
+                  it.planes[2].buffer.limit(uvSize)
+                  val c = randomAccessFile?.channel?.write(it.planes[2].buffer)*/
+                  /////////////////
+                 /* val b = randomAccessFile?.write(ubytes)
+                  val c = randomAccessFile?.write(vbytes)*/
+                 /* val b = randomAccessFile?.channel?.write(uPlane.slice(0, uPlane.capacity() / 4))
+                  val c = randomAccessFile?.channel?.write(vPlane.slice(0, uPlane.capacity() / 4))*/
+                  //////////////////////////////////
+                  //    randomAccessFile?.seek(0)
+                  // copyImage(image)
+                  _event.tryEmit(getByteBufferYUVPlanes(image))
+                //  fps1.get("after")
+                  /////////////////////////
+
+                  /*  bufferedOutputStream?.write(
+                        imageToYUVPlanes(image)
+                    )
+                    bufferedOutputStream?.flush()*/
+                  ///////////////////////
+                  // _event.tryEmit(getYUVPlanes(it))
+                  it.close()
+
+              }
+          } else if (finished) {
+              /////////////////
+             /* randomAccessFile?.close()
+              FFmpegKitConfig.closeFFmpegPipe(pipe1)
+              finished = false*/
+              /////////////////
+              //job.cancel()
+              /*   process?.destroy()
+                 process?.waitFor()
+                 FFmpegKitConfig.closeFFmpegPipe(pipe1)*/
+              ///////////////////
+              /*  pipe1?.let {
+                    FFmpegKitConfig.closeFFmpegPipe(it)
+                }
+              //  process?.waitFor()
+                process?.destroy()*/
+              //   FFmpeg.cancel()
+              // process?.outputStream?.flush()
+              //  process?.outputStream?.close()
+              //  finished = false
+          } else {
+              reader.acquireLatestImage()?.close()
+              // fps1.get("fps")
+          }*/
+         //  fps1.get("fps")
+         /////////////////
+
+     }*/
     private lateinit var imageReaderHistogram: ImageReader
     private lateinit var imageReaderJpeg: ImageReader
     private lateinit var imageReaderRaw: ImageReader
     private lateinit var filePath: String
     private val listenerHistogram = ImageReader.OnImageAvailableListener {
         imageReaderHistogram.acquireLatestImage()?.let { image ->
-           // cameraThreadManager.analysisExecutor.execute {
-                //histogram
-                val ybytes = ByteArray(image.planes[0].buffer.capacity())
-                image.planes[0].buffer.get(ybytes)
-                _outputBuffer.value = ybytes
-                //  val middleGray=AutoExposure.applyShutterPriorityWithClassicSteps()
-                image.close()
-           // }
+            // cameraThreadManager.analysisExecutor.execute {
+            //histogram
+            val ybytes = ByteArray(image.planes[0].buffer.capacity())
+            image.planes[0].buffer.get(ybytes)
+            _outputBuffer.value = ybytes
+            //  val middleGray=AutoExposure.applyShutterPriorityWithClassicSteps()
+            image.close()
+            // }
         }
 
     }
@@ -4280,49 +4282,49 @@ class CameraRepository(
 
  // Проверить поддерживаемые output-формати
          val supportedFormats = streamMap?.outputFormats*/
-           imageReaderHistogram =
-               ImageReader.newInstance(
-                   320,
-                   240,
-                   ImageFormat.YUV_420_888,
-                   3
-               )
-           imageReaderHistogram.setOnImageAvailableListener(
-               listenerHistogram,
-               cameraThreadManager.handler/*imageReaderHandler*/
-           )
-           histogramSurface = imageReaderHistogram.surface
-           ///////////////
-           imageReaderJpeg =
-               ImageReader.newInstance(
-                   characteristics.resolution.width,
-                   characteristics.resolution.height,
-                   ImageFormat.YUV_420_888,
-                   3
-               )
-           imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
-           captureSurfaceJpeg = imageReaderJpeg.surface
-           ///////////////////
-           imageReaderRaw =
-               ImageReader.newInstance(
-                   characteristics.resolution.width,
-                   characteristics.resolution.height,
-                   ImageFormat.YUV_420_888,
-                   // ImageFormat.RAW_SENSOR,
-                   3
-               )
-           imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
-           captureSurfaceRaw = imageReaderRaw.surface
+        imageReaderHistogram =
+            ImageReader.newInstance(
+                320,
+                240,
+                ImageFormat.YUV_420_888,
+                3
+            )
+        imageReaderHistogram.setOnImageAvailableListener(
+            listenerHistogram,
+            cameraThreadManager.handler/*imageReaderHandler*/
+        )
+        histogramSurface = imageReaderHistogram.surface
+        ///////////////
+        imageReaderJpeg =
+            ImageReader.newInstance(
+                characteristics.resolution.width,
+                characteristics.resolution.height,
+                ImageFormat.YUV_420_888,
+                3
+            )
+        imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
+        captureSurfaceJpeg = imageReaderJpeg.surface
+        ///////////////////
+        imageReaderRaw =
+            ImageReader.newInstance(
+                characteristics.resolution.width,
+                characteristics.resolution.height,
+                ImageFormat.YUV_420_888,
+                // ImageFormat.RAW_SENSOR,
+                3
+            )
+        imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
+        captureSurfaceRaw = imageReaderRaw.surface
         //////////////////
 
 
         createCaptureSession(
             listOf(
                 previewSurface,
-                  histogramSurface,
-                  //   encoder.configure(640,480),
-                  captureSurfaceJpeg,
-                  captureSurfaceRaw
+                histogramSurface,
+                //   encoder.configure(640,480),
+                captureSurfaceJpeg,
+                captureSurfaceRaw
             ),
             characteristics
         )
@@ -4373,42 +4375,38 @@ class CameraRepository(
 
 
     private lateinit var lastCharacteristics: Characteristics
-    private var autoAE = false
+    private var AE = false
     private var previousWbValue: Int? = null
     private var wb = false
     private var touchPoint: FloatArray? = null
+
+
+    // Ждем ли мы завершения замера
+
+    private var lastTriggeredPoint: FloatArray? = null
+
     suspend fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
+
         //////////////////////clean call
-
-        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-
-        captureRequest.addTarget(previewSurface)
-        // captureRequest.addTarget(histogramSurface)
-       /*   captureRequest.addTarget(captureSurfaceJpeg)
-        captureRequest.addTarget(captureSurfaceRaw)*/
-
+        /*
         // НИКАКИХ ручных настроек ISO/Shutter для теста
-       captureRequest.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
-        cameraSession?.setRepeatingRequest(captureRequest.build(), repeatingCaptureCallback, cameraThreadManager.handler)
-
+        captureRequest.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
+        cameraSession?.setRepeatingRequest(
+            captureRequest.build(),
+            repeatingCaptureCallback,
+            cameraThreadManager.handler
+        )
+*/
         //////////////////////
-
         lastCharacteristics = characteristics
-        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-        if (previewSurface.isValid) {
-            Log.e("Camera", "Preview Surface is  valid!")
-        } else {
-            Log.e("Camera", "Preview Surface is NOT valid!")
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
 
-        }
-        captureRequest.addTarget(previewSurface)
-        //  captureRequest.addTarget(histogramSurface)
-        //  captureRequest?.addTarget(captureSurface)
-
-/*
         captureRequest.apply {
+            addTarget(previewSurface)
+            //  addTarget(histogramSurface)
+            //  addTarget(captureSurface)
             set(
                 CaptureRequest.EDGE_MODE,
                 CaptureRequest.EDGE_MODE_OFF
@@ -4421,94 +4419,129 @@ class CameraRepository(
                 CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
                 CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
             )
+         /*   set(
+                CaptureRequest.CONTROL_MODE,
+                CaptureRequest.CONTROL_MODE_OFF
+            )*/
+              set(
+                  CaptureRequest.CONTROL_MODE,
+                  CaptureRequest.CONTROL_MODE_AUTO
+              )
 
-          //  set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
             /////////////?
-            characteristics.focusValue?.let {
-                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+            /* characteristics.focusValue?.let {
+                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
 
-                /*  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                  set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)*/
-            } ?: run {
-                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-            }
+                 /*  set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                   set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)*/
+             } ?: run {
+                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+             }*/
 ////////////////////
-
-          //   set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
-
-
+            //   set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
             /////wb
 
             previousWbValue = characteristics.wbValue
 
             //  wb=true
-            characteristics.wbValue?.let { wb ->
-                ////////////////////////////
-                val rggb = ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
-                val kelvin = ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
-                ////////////////////////////
+            /*  characteristics.wbValue?.let { wb ->
+                  ////////////////////////////
+                  //   val rggb = ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
+                  //  val kelvin = ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
+                  ////////////////////////////
+                  //     val rggbVector = kelvinToColorCorrectionGains(wb)
+                  //  val kelvin1 = colorCorrectionGainsToKelvin(rggbVector)
+                  //   val kelvin2 = ColorTemperatureConverter.rgbNormalizedToKelvin(rggbVector)
+                  //   val k = rgbToKelvin(rgb!!)
+                  //////////////////////
+                  val rgb = convertTemperatureToRggb(wb)
 
+                  set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                  set(
+                      CaptureRequest.COLOR_CORRECTION_GAINS,
+                      rgb
+                  )
+                  set(
+                      CaptureRequest.COLOR_CORRECTION_MODE,
+                      CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
+                  )
+              } ?: run {
+                  characteristics.wbMode?.let {
+                      wb = true
+                      set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode)
+                      set(
+                          CaptureRequest.COLOR_CORRECTION_MODE,
+                          CaptureRequest.COLOR_CORRECTION_MODE_FAST
+                      )
+                  }
+              }*/
 
-                val rggbVector = kelvinToColorCorrectionGains(wb)
-                val kelvin1 = colorCorrectionGainsToKelvin(rggbVector)
-                val kelvin2 = ColorTemperatureConverter.rgbNormalizedToKelvin(rggbVector)
-                //////////////////////
-                val rgb = convertTemperatureToRggb(wb)
-                val k = rgbToKelvin(rgb!!)
-                set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-                set(
-                    CaptureRequest.COLOR_CORRECTION_GAINS,
-                    //rggbVector
-                    rgb
-                )
-                set(
-                    CaptureRequest.COLOR_CORRECTION_MODE,
-                    CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
-                )
-            } ?: run {
-                characteristics.wbMode?.let {
-                    wb = true
-                    set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode)
-                }
-            }
             /////////////// exposure
-            characteristics.isoValue?.let { isoValue ->
-                characteristics.shutterValue?.let { shutterValue ->
-                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                    set(CaptureRequest.SENSOR_FRAME_DURATION, shutterValue + 100_000L)
-                    set(
-                        CaptureRequest.SENSOR_EXPOSURE_TIME,
-                        shutterValue
-                    )
-                    set(
-                        CaptureRequest.SENSOR_SENSITIVITY,
-                        isoValue
-                    )
-                } ?: run {
-
-                    ae = true
-                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                    // 1. Устанавливаем триггер запуска Precapture
-                    set(
-                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
-                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
-                    )
+            // --- 1. ЭКСПОЗИЦИЯ ---
 
 
-                }
-            } ?: run {
+            if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+                // РУЧНОЙ РЕЖИМ
+              //  set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
 
-                ae = true
+                set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                set(CaptureRequest.SENSOR_SENSITIVITY, characteristics.isoValue)
+                set(CaptureRequest.SENSOR_EXPOSURE_TIME, characteristics.shutterValue)
+                set(CaptureRequest.SENSOR_FRAME_DURATION, characteristics.shutterValue + 1_000_000L)
+            } else {
+                // АВТОМАТИЧЕСКИЙ РЕЖИМ
+                AE=true
                 set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                // 1. Устанавливаем триггер запуска Precapture
                 set(
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
                 )
-
+              /*  cameraSession?.capture(
+                    build(),
+                    repeatingCaptureCallback,
+                    cameraThreadManager.handler
+                )*/
+              //  set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
 
             }
+            ///////////////////////////
+            /*  characteristics.isoValue?.let { isoValue ->
+                  characteristics.shutterValue?.let { shutterValue ->
+                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                      set(CaptureRequest.SENSOR_FRAME_DURATION, shutterValue + 100_000L)
+                      set(
+                          CaptureRequest.SENSOR_EXPOSURE_TIME,
+                          shutterValue
+                      )
+                      set(
+                          CaptureRequest.SENSOR_SENSITIVITY,
+                          isoValue
+                      )
+                  } ?: run {
+
+                      ae = true
+                      set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                      // 1. Устанавливаем триггер запуска Precapture
+                      set(
+                          CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                          CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
+                      )
+
+
+                  }
+              } ?: run {
+
+                  ae = true
+                  set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                  // 1. Устанавливаем триггер запуска Precapture
+                  set(
+                      CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                      CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
+                  )
+
+
+              }*/
+            /////////////////
             /*  if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                   // set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_OFF)
                   autoAE = false
@@ -4580,6 +4613,76 @@ class CameraRepository(
 
               }*/
             /////////////////////////////////////////focus
+            // 1. РУЧНОЙ ФОКУС (Дистанция линзы)
+            /*
+            if (characteristics.focusValue != null) {
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+            } else {
+                // 2. АВТОМАТИЧЕСКИЙ ФОКУС
+                when (characteristics.focusMode) {
+                    // Режим фокусировки по нажатию (Touch-to-focus)
+                    -1 -> {
+                        set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+
+                        // Проверяем, изменилась ли точка касания по сравнению с последним триггером
+                        val newPoint = characteristics.touchPoint
+                        if (newPoint != null && !newPoint.contentEquals(lastTriggeredPoint)) {
+
+                            // ВАЖНО: Мы не ставим START здесь для repeatingRequest.
+                            // Вместо этого мы запускаем разовый импульс.
+                            val meteringRect = meteringRectangle(newPoint)
+
+                            // Сохраняем точку, чтобы не спамить триггером в следующем кадре
+                            lastTriggeredPoint = newPoint.copyOf()
+
+                            // Запускаем разовый запрос с триггером в потоке камеры
+                            myScope.launch(cameraThreadManager.dispatcher) {
+
+                                captureRequest.set(
+                                    CaptureRequest.CONTROL_AF_MODE,
+                                    CaptureRequest.CONTROL_AF_MODE_AUTO
+                                )
+                                captureRequest.set(
+                                    CaptureRequest.CONTROL_AF_REGIONS,
+                                    arrayOf(meteringRect)
+                                )
+                                captureRequest.set(
+                                    CaptureRequest.CONTROL_AF_TRIGGER,
+                                    CaptureRequest.CONTROL_AF_TRIGGER_START
+                                )
+
+                                cameraSession?.capture(
+                                    captureRequest.build(),
+                                    null,
+                                    cameraThreadManager.handler
+                                )
+                            }
+
+                            // В текущем (repeating) билдере держим регион, но триггер в IDLE
+                            set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
+                            set(
+                                CaptureRequest.CONTROL_AF_TRIGGER,
+                                CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                            )
+                        }
+                    }
+
+                    // Непрерывный фокус (CAF)
+                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> {
+                        set(
+                            CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                        )
+                        set(
+                            CaptureRequest.CONTROL_AF_TRIGGER,
+                            CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                        )
+                    }
+                }
+            }
+            */
+///////////
             /*  characteristics.focusValue?.let {
                   set(CaptureRequest.LENS_FOCUS_DISTANCE, it)
               } ?: run {
@@ -4625,7 +4728,7 @@ class CameraRepository(
               }*/
 
             try {
-                cameraSession?.stopRepeating()
+               // cameraSession?.stopRepeating()
                 cameraSession?.setRepeatingRequest(
                     build(),
                     repeatingCaptureCallback,
@@ -4637,7 +4740,7 @@ class CameraRepository(
 
             }
         }
-*/
+
     }
 
     fun singleCapture(enable: Boolean) {
@@ -4769,343 +4872,432 @@ class CameraRepository(
             super.onCaptureCompleted(session, request, result)
             //////////////////////////
 
-         //  myScope.launch(cameraThreadManager.dispatcher) {
-                val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
-                val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
-                //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
-                currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
-                currentShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
-                /* val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
-             val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)*/
-                val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
-                val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
-                autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
-                //  val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
-                val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
+            //  myScope.launch(cameraThreadManager.dispatcher) {
+            val iso = request.get(CaptureRequest.SENSOR_SENSITIVITY)
+            val exposureTime = request.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+            //  if (request.get(CaptureRequest.CONTROL_AE_MODE) == CaptureRequest.CONTROL_AE_MODE_ON) {
+            currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
+            currentShutter = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+            /* val whiteBalanceGains1 = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+         val whiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)*/
+            val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
+            val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
+            autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+              val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
+            val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
 
-                /*  _characteristicsFlow.value = _characteristicsFlow.value?.copy(
-                  shutterValue = exposureTimeNs,
-                  isoValue = iso
-              )*/
-                //  }
-                ///////////////////wb
-                val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
-                val tmpautoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            ///////////////////wb
+            val whiteBalanceGains = request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+            val tmpautoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
 
-                val wbState = result.get(CaptureResult.CONTROL_AWB_STATE)
-                //   val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
-                if (wb) {
-                    when (wbState) {
-                        CaptureResult.CONTROL_AWB_STATE_CONVERGED -> {
-                            wb = false
-                            val whiteBalanceGains =
-                                request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
-                            val tmpautoWhiteBalanceGains =
-                                result.get(CaptureResult.COLOR_CORRECTION_GAINS)
-                            val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
-                            println()
-                        }
+            val wbState = result.get(CaptureResult.CONTROL_AWB_STATE)
+            //   val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
+            if (wb) {
+                when (wbState) {
+                    CaptureResult.CONTROL_AWB_STATE_CONVERGED -> {
+                        wb = false
+                        val whiteBalanceGains =
+                            request.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+                        val tmpautoWhiteBalanceGains =
+                            result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+                        val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
+                        println()
                     }
                 }
+            }
 
-                ///////////////////focus
-                //   val afState = result[CaptureResult.CONTROL_AF_STATE]!!
-                val afState = result.get(CaptureResult.CONTROL_AF_STATE)
-                //  if (request.tag == "focus"){
-                if (focus) {
-                   when (afState) {
-                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                            Toast.makeText(context, "FOCUSED", Toast.LENGTH_SHORT).show()
-                            captureRequest.set(
-                                CaptureRequest.CONTROL_AF_TRIGGER,
-                                CaptureRequest.CONTROL_AF_TRIGGER_IDLE
-                            )
-                            focus = false
+            ///////////////////focus
+            val afState = result.get(CaptureResult.CONTROL_AF_STATE) ?: return
 
-                            cameraSession?.capture(captureRequest.build(), null, null)
-
-                        }
-
-                        CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                            Toast.makeText(context, "not focused", Toast.LENGTH_SHORT).show()
-                        }
+            // 2. Уводим логику в пул анализа, чтобы не блокировать получение метаданных следующего кадра
+            cameraThreadManager.analysisExecutor.execute {
+                when (afState) {
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                        // Фокус успешно найден и заблокирован
+                        handleFocusResult(isSuccess = true)
                     }
-                    val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
 
-                    /*  captureRequest =
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                        // Фокус не найден (объект слишком близко или темно), но движение остановлено
+                        handleFocusResult(isSuccess = false)
+                    }
+
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
+                        // Фокус найден в автоматическом режиме (CAF), можно обновить UI
+                        // updateFocusUI(isLocked = true)
+                    }
+                }
+            }
+            /*
+            //   val afState = result[CaptureResult.CONTROL_AF_STATE]!!
+            val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+            //  if (request.tag == "focus"){
+            if (focus) {
+                when (afState) {
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                        Toast.makeText(context, "FOCUSED", Toast.LENGTH_SHORT).show()
+                        captureRequest.set(
+                            CaptureRequest.CONTROL_AF_TRIGGER,
+                            CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                        )
+                        focus = false
+
+                        cameraSession?.capture(captureRequest.build(), null, null)
+
+                    }
+
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                        Toast.makeText(context, "not focused", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+                */
+            /////////////////////end of focus
+            /*  captureRequest =
+              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+          captureRequest?.addTarget(previewSurface)
+          captureRequest?.addTarget(captureSurface)*/
+            /*  captureRequest?.set(
+              CaptureRequest.CONTROL_AF_TRIGGER,
+               CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+          )*/
+            /* captureRequest?.set(
+             CaptureRequest.CONTROL_AF_TRIGGER,
+             CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
+         )
+      //   captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+         captureRequest?.let {
+             sessio?.stopRepeating()
+             sessio?.setRepeatingRequest(it.build(), null, null)
+         }*/
+            /*  captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+          captureRequest?.addTarget(previewSurface)
+          captureRequest?.addTarget(captureSurface)
+          captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+
+          captureRequest?.let {
+              sessio?.stopRepeating()
+             sessio?.setRepeatingRequest(it.build(), null, null)
+         }*/
+            /*  when (afState) {
+
+              CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                  val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+
+                  captureRequest =
                       cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
                   captureRequest?.addTarget(previewSurface)
-                  captureRequest?.addTarget(captureSurface)*/
-
-                    /*  captureRequest?.set(
-                      CaptureRequest.CONTROL_AF_TRIGGER,
-                       CaptureRequest.CONTROL_AF_TRIGGER_IDLE
-                  )*/
-                    /* captureRequest?.set(
-                     CaptureRequest.CONTROL_AF_TRIGGER,
-                     CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
-                 )
-              //   captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                 captureRequest?.let {
-                     sessio?.stopRepeating()
-                     sessio?.setRepeatingRequest(it.build(), null, null)
-                 }*/
-                    /*  captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                  captureRequest?.addTarget(previewSurface)
                   captureRequest?.addTarget(captureSurface)
-                  captureRequest?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                  val focusArea = Rect(1, 1, 920, 1230)
 
+
+                /*  captureRequest?.set(
+                      CaptureRequest.CONTROL_AF_MODE,
+                      CaptureRequest.CONTROL_AF_MODE_OFF
+                  )*/
+               /*   captureRequest?.set(
+                      CaptureRequest.CONTROL_AF_TRIGGER,
+                      CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                  )*/
+                  captureRequest?.set(
+                      CaptureRequest.CONTROL_AF_TRIGGER,
+                      null
+                  )
+                /*  captureRequest?.set(
+                      CaptureRequest.CONTROL_AF_REGIONS,
+                      afRegions
+                      // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
+                  )*/
                   captureRequest?.let {
-                      sessio?.stopRepeating()
-                     sessio?.setRepeatingRequest(it.build(), null, null)
-                 }*/
-                    /*  when (afState) {
-
-                      CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                          val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
-
-                          captureRequest =
-                              cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                          captureRequest?.addTarget(previewSurface)
-                          captureRequest?.addTarget(captureSurface)
-                          val focusArea = Rect(1, 1, 920, 1230)
-
-
-                        /*  captureRequest?.set(
-                              CaptureRequest.CONTROL_AF_MODE,
-                              CaptureRequest.CONTROL_AF_MODE_OFF
-                          )*/
-                       /*   captureRequest?.set(
-                              CaptureRequest.CONTROL_AF_TRIGGER,
-                              CaptureRequest.CONTROL_AF_TRIGGER_IDLE
-                          )*/
-                          captureRequest?.set(
-                              CaptureRequest.CONTROL_AF_TRIGGER,
-                              null
-                          )
-                        /*  captureRequest?.set(
-                              CaptureRequest.CONTROL_AF_REGIONS,
-                              afRegions
-                              // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
-                          )*/
-                          captureRequest?.let {
-                             // sessio?.stopRepeating()
-                              sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
-                          }
-                          println()
-                      }
-                      CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                          println()
-                      }
+                     // sessio?.stopRepeating()
+                      sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                  }
+                  println()
               }
-                   when (afState) {
+              CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                  println()
+              }
+      }
+           when (afState) {
 
-                       CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                          /* val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
-                           captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                           captureRequest?.addTarget(previewSurface)
-                           captureRequest?.addTarget(captureSurface)
-                           val focusArea = Rect(1, 1, 920, 1230)
+               CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                  /* val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+                   captureRequest = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                   captureRequest?.addTarget(previewSurface)
+                   captureRequest?.addTarget(captureSurface)
+                   val focusArea = Rect(1, 1, 920, 1230)
 
 
-                          /* captureRequest?.set(
-                               CaptureRequest.CONTROL_AF_MODE,
-                               CaptureRequest.CONTROL_AF_MODE_OFF
-                           )*/
-                           captureRequest?.set(
-                               CaptureRequest.CONTROL_AF_TRIGGER,
-                               CaptureRequest.CONTROL_AF_TRIGGER_IDLE
-                           )
-                          /* captureRequest?.set(
-                               CaptureRequest.CONTROL_AF_REGIONS,
-                               afRegions
-                               // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
-                           )*/
-                           captureRequest?.let {
-                               sessio?.stopRepeating()
-                               sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
-                           }*/
-
-                       }
-                       CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                           println()
-                       }
+                  /* captureRequest?.set(
+                       CaptureRequest.CONTROL_AF_MODE,
+                       CaptureRequest.CONTROL_AF_MODE_OFF
+                   )*/
+                   captureRequest?.set(
+                       CaptureRequest.CONTROL_AF_TRIGGER,
+                       CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                   )
+                  /* captureRequest?.set(
+                       CaptureRequest.CONTROL_AF_REGIONS,
+                       afRegions
+                       // arrayOf(MeteringRectangle(focusArea, MeteringRectangle.METERING_WEIGHT_MAX))
+                   )*/
+                   captureRequest?.let {
+                       sessio?.stopRepeating()
+                       sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
                    }*/
 
-                }
+               }
+               CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                   println()
+               }
+           }*/
+            //  }
+            /*  captureRequest?.let {
+              //  sessio?.stopRepeating()
+              //  sessio?.capture(it.build(), this, mBackgroundHandler)
+                sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+          }*/
+            /* when (afState) {
+             CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                 // Здесь вы можете выполнить действие в зависимости от результата фокусировки
+                 Log.e("f","FOCUSED")
+                 println("FOCUSED!!!!")
+                 val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
 
-                /*  captureRequest?.let {
-                  //  sessio?.stopRepeating()
-                  //  sessio?.capture(it.build(), this, mBackgroundHandler)
-                    sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
-              }*/
-                /* when (afState) {
-                 CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                     // Здесь вы можете выполнить действие в зависимости от результата фокусировки
-                     Log.e("f","FOCUSED")
-                     println("FOCUSED!!!!")
-                     val afRegions = request.get(CaptureRequest.CONTROL_AF_REGIONS)
+                 captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
+                 captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
 
-                     captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
-                     captureRequest?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
-
-                     captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
-                     captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-                     captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, null);// As documentation says AF_trigger can be null in some device
+                 captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
+                 captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                 captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, null);// As documentation says AF_trigger can be null in some device
 
 
-                     captureRequest?.let {
-                         sessio?.stopRepeating()
-                         sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
-                     }
-                     /*  captureRequest?.let {
-                             //  sessio?.stopRepeating()
-                           //  sessio?.capture(it.build(), this, mBackgroundHandler)
-                             sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
-                         }*/
+                 captureRequest?.let {
+                     sessio?.stopRepeating()
+                     sessio?.setRepeatingRequest(it.build(), null, mBackgroundHandler)
                  }
-                 CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                 /*  captureRequest?.let {
+                         //  sessio?.stopRepeating()
+                       //  sessio?.capture(it.build(), this, mBackgroundHandler)
+                         sessio?.setRepeatingRequest(it.build(), this, mBackgroundHandler)
+                     }*/
+             }
+             CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
 
-                     println("not focused")
-                     captureRequest?.set(
-                         CaptureRequest.CONTROL_AF_TRIGGER,
-                         CaptureRequest.CONTROL_AF_TRIGGER_START
-                     )
-                     /*  captureRequest?.let {
+                 println("not focused")
+                 captureRequest?.set(
+                     CaptureRequest.CONTROL_AF_TRIGGER,
+                     CaptureRequest.CONTROL_AF_TRIGGER_START
+                 )
+                 /*  captureRequest?.let {
+                         //  sessio?.stopRepeating()
+                         sessio?.capture(it.build(), this, mBackgroundHandler)
+                     }*/
+             }
+             CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
+
+                 println("scan")
+                 //   captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+                 /*  captureRequest?.let {
                              //  sessio?.stopRepeating()
                              sessio?.capture(it.build(), this, mBackgroundHandler)
                          }*/
+                 /*  captureRequest?.set(
+                         CaptureRequest.CONTROL_AF_TRIGGER,
+                         CameraMetadata.CONTROL_AF_TRIGGER_START
+                     );
+                     captureRequest?.let {
+                         sessio?.setRepeatingRequest(it.build(), this, null);
+                     }*/
+
+                 ////////////////////////
+                 val currentTime = System.currentTimeMillis()
+                 if (frameTime != 0L) {
+                     val fps = 1000.0 / (currentTime - frameTime)
+                     //   Log.e("CaptureSession", "FPS: $fps")
+                     //  println("FPS: $fps")
                  }
-                 CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
+                 frameTime = currentTime
+                 /////////////////////////
+             }
+             else -> {
+                 // Обработка других состояний, если необходимо
+                 println("Состояние фокуса: $afState")
+             }
+         }*/
+            //////////////AE
+            val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
 
-                     println("scan")
-                     //   captureRequest?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
-                     /*  captureRequest?.let {
-                                 //  sessio?.stopRepeating()
-                                 sessio?.capture(it.build(), this, mBackgroundHandler)
-                             }*/
-                     /*  captureRequest?.set(
-                             CaptureRequest.CONTROL_AF_TRIGGER,
-                             CameraMetadata.CONTROL_AF_TRIGGER_START
-                         );
-                         captureRequest?.let {
-                             sessio?.setRepeatingRequest(it.build(), this, null);
-                         }*/
+            if (AE && (aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED ||
+                        aeState == CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED)
+            ) {
+                AE = false
 
-                     ////////////////////////
-                     val currentTime = System.currentTimeMillis()
-                     if (frameTime != 0L) {
-                         val fps = 1000.0 / (currentTime - frameTime)
-                         //   Log.e("CaptureSession", "FPS: $fps")
-                         //  println("FPS: $fps")
-                     }
-                     frameTime = currentTime
-                     /////////////////////////
-                 }
-                 else -> {
-                     // Обработка других состояний, если необходимо
-                     println("Состояние фокуса: $afState")
-                 }
-             }*/
+                cameraThreadManager.analysisExecutor.execute {
+                    val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
+                    val currentExp = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
 
-                //////////////ae
+                    // Рассчитываем новые значения через ваши формулы (Priority Steps)
+                    val shutter = lastCharacteristics.isoValue?.let { targetIso ->
+                        getShutterPriorityWithClassicSteps(
+                            captureRequest,
+                            cameraCharacteristics,
+                            currentIso,
+                            currentExp,
+                            targetIso,
+                            0
+                        )
+                    } ?: currentExp
 
-                val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
-                if (ae) {
-                    when (aeState) {
-                        CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
-                            // Замер в процессе, ждем дальше
-                        }
+                    val iso = lastCharacteristics.shutterValue?.let { targetShutter ->
+                        getIsoPriorityWithClassicSteps(
+                            captureRequest,
+                            cameraCharacteristics,
+                            currentIso,
+                            currentExp,
+                            targetShutter,
+                            0
+                        )
+                    } ?: currentIso
 
-                        //   CaptureResult.CONTROL_AE_STATE_CONVERGED,
-                        //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
-                        CaptureResult.CONTROL_AE_STATE_CONVERGED, CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
-                            ae = false
+                    // Обновляем камеру
+                    myScope.launch(cameraThreadManager.dispatcher) {
+                        // Сброс триггера через CANCEL
+                        captureRequest.set(
+                            CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                            CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL
+                        )
+                        cameraSession?.capture(
+                            captureRequest.build(),
+                            null,
+                            cameraThreadManager.handler
+                        )
 
-                            // Замер завершен! Теперь можно делать основной снимок или
-                            // считывать значения для вашего "приоритета ISO".
-                            /////////////////ae
-
-
-                            // Получаем эталонные данные от системы
-                            val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
-                            val currentExposureNs =
-                                result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
-                            //  cameraDevice.
-                            // Вызываем вашу функцию пересчета (из предыдущего ответа)
-                            // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
-
-                            val shutterValue = lastCharacteristics.isoValue?.let { isoValue ->
-                                getShutterPriorityWithClassicSteps(
-                                    requestBuilder = captureRequest,
-                                    cameraCharacteristics = cameraCharacteristics,
-                                    lastAeIso = currentIso,
-                                    lastAeExposureNs = currentExposureNs,
-                                    targetIso = isoValue,
-                                    evCompensationIndex = 0
-                                )
-                            } ?: run {
-                                lastCharacteristics.shutterValue ?: run {
-                                    currentExposureNs
-                                }
-                            }
-                            val isoValue = lastCharacteristics.shutterValue?.let { shutterValue ->
-                                getIsoPriorityWithClassicSteps(
-                                    requestBuilder = captureRequest,
-                                    cameraCharacteristics = cameraCharacteristics,
-                                    lastAeIso = currentIso,
-                                    lastAeExposureNs = currentExposureNs,
-                                    targetExposureNs = shutterValue,
-                                    evCompensationIndex = 0
-                                )
-                            } ?: run {
-                                lastCharacteristics.isoValue ?: run {
-                                    currentIso
-                                }
-                            }
-
-                            captureRequest.set(
-                                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
-                                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
+                        // Переходим на ручное управление с вычисленными параметрами
+                        startPreviewCaptureRequest(
+                            lastCharacteristics.copy(
+                                shutterValue = shutter,
+                                isoValue = iso
                             )
-                            myScope.launch {
-                            cameraSession?.capture(captureRequest.build(), null, null)
-                            /*  startTimer(
-                              shutter=lastCharacteristics.shutterValue,
-                              iso=lastCharacteristics.isoValue
-                          )*/
+                        )
+                    }
+                }
+            }
 
 
-                                startPreviewCaptureRequest(
-                                    lastCharacteristics.copy(
-                                        shutterValue = shutterValue,
-                                        isoValue = isoValue
+            /*
+                        val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+                        if (ae) {
+                            when (aeState) {
+                                CaptureResult.CONTROL_AE_STATE_PRECAPTURE -> {
+                                    // Замер в процессе, ждем дальше
+                                }
+
+                                //   CaptureResult.CONTROL_AE_STATE_CONVERGED,
+                                //  CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED, CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED -> {
+                                    ae = false
+
+                                    // Замер завершен! Теперь можно делать основной снимок или
+                                    // считывать значения для вашего "приоритета ISO".
+                                    /////////////////ae
+
+
+                                    // Получаем эталонные данные от системы
+                                    val currentIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
+                                    val currentExposureNs =
+                                        result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
+                                    //  cameraDevice.
+                                    // Вызываем вашу функцию пересчета (из предыдущего ответа)
+                                    // Допустим, мы хотим ISO 200 и компенсацию +1 (индекс 3 при шаге 1/3)
+
+                                    val shutterValue = lastCharacteristics.isoValue?.let { isoValue ->
+                                        getShutterPriorityWithClassicSteps(
+                                            requestBuilder = captureRequest,
+                                            cameraCharacteristics = cameraCharacteristics,
+                                            lastAeIso = currentIso,
+                                            lastAeExposureNs = currentExposureNs,
+                                            targetIso = isoValue,
+                                            evCompensationIndex = 0
+                                        )
+                                    } ?: run {
+                                        lastCharacteristics.shutterValue ?: run {
+                                            currentExposureNs
+                                        }
+                                    }
+                                    val isoValue = lastCharacteristics.shutterValue?.let { shutterValue ->
+                                        getIsoPriorityWithClassicSteps(
+                                            requestBuilder = captureRequest,
+                                            cameraCharacteristics = cameraCharacteristics,
+                                            lastAeIso = currentIso,
+                                            lastAeExposureNs = currentExposureNs,
+                                            targetExposureNs = shutterValue,
+                                            evCompensationIndex = 0
+                                        )
+                                    } ?: run {
+                                        lastCharacteristics.isoValue ?: run {
+                                            currentIso
+                                        }
+                                    }
+
+                                    captureRequest.set(
+                                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                                        CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
                                     )
-                                )
+                                    myScope.launch {
+                                        cameraSession?.capture(captureRequest.build(), null, null)
+                                        /*  startTimer(
+                                          shutter=lastCharacteristics.shutterValue,
+                                          iso=lastCharacteristics.isoValue
+                                      )*/
+
+
+                                        startPreviewCaptureRequest(
+                                            lastCharacteristics.copy(
+                                                shutterValue = shutterValue,
+                                                isoValue = isoValue
+                                            )
+                                        )
+                                    }
+                                    /*  startPreviewCaptureRequest(
+                                      lastCharacteristics.copy(
+                                          shutterValue = shutterValue,
+                                          isoValue = isoValue
+                                      )
+                                  )*/
+
+
+                                }
                             }
-                            /*  startPreviewCaptureRequest(
-                              lastCharacteristics.copy(
-                                  shutterValue = shutterValue,
-                                  isoValue = isoValue
-                              )
-                          )*/
-
-
                         }
+            */
+            /////////////update
+
+            _characteristicsFlow.update { current ->
+                current?.let {
+                    val isChanged = it.focusValue != focusDistance ||
+                            it.wbValue != kelvin || // ВАЖНО: убедитесь, что константа 100 — это то, что вам нужно
+                            it.shutterValue != currentShutter ||
+                            it.isoValue != currentIso
+
+                    if (isChanged) {
+                        // Создаем копию только при наличии изменений
+                        it.copy(
+                            focusValue = focusDistance,
+                            wbValue = kelvin,
+                            shutterValue = currentShutter,
+                            isoValue = currentIso
+                        )
+                    } else {
+                        // Если изменений нет, возвращаем тот же самый объект
+                        // StateFlow поймет, что ссылка не изменилась, и не запустит рекомпозицию
+                        current
                     }
                 }
 
-                /////////////update
-                _characteristicsFlow.update { current ->
-                    current?.copy(
-                        focusValue = focusDistance,
-                        // wbValue = kelvin,
-                        wbValue = 100,
-                        shutterValue = currentShutter,
-                        isoValue = currentIso
-                    )
-                }
-          //  }
+
+            }
+            //  }
 
 
         }
@@ -5126,6 +5318,41 @@ class CameraRepository(
                     CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {}
                     else -> {}
                 }
+            }
+        }
+    }
+
+    private fun handleFocusResult(isSuccess: Boolean) {
+        // Возвращаемся в командный поток камеры для сброса триггера
+        myScope.launch(cameraThreadManager.dispatcher) {
+
+            // 1. Уведомляем пользователя (через Main Thread)
+            withContext(Dispatchers.Main) {
+                if (isSuccess) {
+                    // Например, красим рамку фокуса в зеленый
+                    Toast.makeText(context, "FOCUSED", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "not focused", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            // 2. СБРОС ТРИГГЕРА (Критично для 2026 года)
+            // Чтобы камера могла фокусироваться снова при следующем нажатии,
+            // нужно отправить разовый запрос с командой CANCEL или IDLE.
+            try {
+
+
+                // Отменяем текущий поиск фокуса, чтобы вернуть систему в исходное состояние
+                captureRequest.set(
+                    CaptureRequest.CONTROL_AF_TRIGGER,
+                    CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
+                )
+                cameraSession?.capture(captureRequest.build(), null, cameraThreadManager.handler)
+
+                // После CANCEL возвращаем камеру в режим слежения (Continuous)
+                startPreviewCaptureRequest(lastCharacteristics)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

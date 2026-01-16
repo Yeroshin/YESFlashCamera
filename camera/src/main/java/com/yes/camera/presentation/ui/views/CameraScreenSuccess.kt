@@ -64,6 +64,8 @@ import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 
 /*@Composable
@@ -1353,8 +1355,7 @@ fun CameraScreenSuccess(
             }
         }
 
-    val focusRadioGroupItems: List<RadioButton> by
-    remember {
+    val focusRadioGroupItems: List<RadioButton> by remember {
         mutableStateOf(
             listOf(
                 IconRadioItem(FocusItem.MACRO, "Auto", R.drawable.macro_auto),
@@ -1639,7 +1640,20 @@ fun CameraScreenSuccess(
     }
 
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
-
+    LaunchedEffect(surfaceViewSize ) {
+        // Ждем, когда размеры станут известны (не 0)
+        snapshotFlow { surfaceViewSize }
+            .filter { it.width > 0 && it.height > 0 }
+         //   .first() // Берем только самое первое валидное значение
+            .let { size ->
+                val normalizedX =
+                    (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
+                val normalizedY =
+                    -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
+                renderer.handleTouchPress(normalizedX, normalizedY)
+                renderer.configureMagnifier(1f)
+            }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1660,11 +1674,11 @@ fun CameraScreenSuccess(
                         surfaceViewSize = size
                         ///////////
                         //   surfaceViewSize = IntSize(width, height)
-                        val normalizedX =
+                      /*  val normalizedX =
                             (surfaceViewSize.width.toFloat() / 2f / surfaceViewSize.width.toFloat()) * 2f - 1f
                         val normalizedY =
                             -((surfaceViewSize.height.toFloat() / 2f / surfaceViewSize.height.toFloat()) * 2f - 1f)
-                        renderer.handleTouchPress(normalizedX, normalizedY)
+                        renderer.handleTouchPress(normalizedX, normalizedY)*/
                         renderer.configureMagnifier(1f)
                         /////////////
                     },
