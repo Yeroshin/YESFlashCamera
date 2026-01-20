@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.camera.presentation.model.RadioGroupItem
+import com.yes.camera.presentation.model.SelectorItem
 
 
 /*class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
@@ -125,67 +126,66 @@ import com.yes.camera.presentation.model.RadioGroupItem
 }*/
 
 ///////////////////////
-class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<RadioGroupItem.TextItem> {
 
-    @Composable
-    override fun Content(
-        item: RadioGroupItem.TextItem,
-        isPassed: Boolean,
-        modifier: Modifier,
+
+@Composable
+fun TextSelectorContent(
+    item: SelectorItem,
+    isPassed: Boolean,
+   // modifier: Modifier,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.wrapContentHeight()
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = modifier.wrapContentHeight()
-        ) {
-            val minFontSize = 8.sp
-            val initialFontSize = 16.sp
+        val minFontSize = 8.sp
+        val initialFontSize = 16.sp
 
-            // Шрифт сбрасывается только если изменился ID или текст
-            var fontSize by remember(item.id, item.title) { mutableStateOf(initialFontSize) }
+        // Шрифт сбрасывается только если изменился ID или текст
+        var fontSize by remember(item.id) { mutableStateOf(initialFontSize) }
 
-          //  val commonColor = if (isPassed) Color.Green else Color.White
-            val commonColor =
-                    if (isPassed) Color.Green else Color.White
+        //  val commonColor = if (isPassed) Color.Green else Color.White
+        val commonColor =
+            if (isPassed) Color.Green else Color.White
 
 
-
-            val commonShadow = remember {
-                Shadow(
-                    color = Color.DarkGray,
-                    offset = Offset(5.0f, 5.0f),
-                    blurRadius = 5f
-                )
-            }
-
-            Text(
-                modifier = modifier.padding(2.dp),
-                maxLines = 1,
-                textAlign = TextAlign.Center,
-                text = item.title,
-                style = TextStyle(
-                    fontSize = fontSize,
-                    color = commonColor,
-                    shadow = commonShadow
-                ),
-                onTextLayout = { layoutResult ->
-                    if (layoutResult.hasVisualOverflow && fontSize > minFontSize) {
-                        val scaledSize = (fontSize.value * 0.9f).sp
-                        fontSize = if (scaledSize < minFontSize) minFontSize else scaledSize
-                    }
-                },
-                softWrap = false
-            )
-
-            Text(
-                text = "|",
-                textAlign = TextAlign.Center,
-                style = TextStyle(
-                    fontSize = 14.sp,
-                    color = commonColor,
-                    shadow = commonShadow
-                )
+        val commonShadow = remember {
+            Shadow(
+                color = Color.DarkGray,
+                offset = Offset(5.0f, 5.0f),
+                blurRadius = 5f
             )
         }
+
+        Text(
+            modifier = Modifier.padding(2.dp),
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            text = item.value,
+            style = TextStyle(
+                fontSize = fontSize,
+                color = commonColor,
+                shadow = commonShadow
+            ),
+            onTextLayout = { layoutResult ->
+                if (layoutResult.hasVisualOverflow && fontSize > minFontSize) {
+                    val scaledSize = (fontSize.value * 0.9f).sp
+                    fontSize = if (scaledSize < minFontSize) minFontSize else scaledSize
+                }
+            },
+            softWrap = false
+        )
+
+        Text(
+            text = "|",
+            textAlign = TextAlign.Center,
+            style = TextStyle(
+                fontSize = 14.sp,
+                color = commonColor,
+                shadow = commonShadow
+            )
+        )
     }
 }
+
 

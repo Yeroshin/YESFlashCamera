@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -31,9 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
 
-import com.yes.camera.presentation.ui.adapter.CompositeAdapter
-import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
-import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
+
 import kotlin.math.abs
 
 
@@ -551,14 +550,19 @@ fun ValueSelector(
 }
 */
 ///////////////
-/*
+@Immutable
+data class SelectorUiItem(
+    val id: Int, // Это будет наш Enum (SettingsItem, WbItem и т.д.)
+    val content: @Composable (isSelected: Boolean) -> Unit
+)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
     modifier: Modifier,
     position: Int,
-    items: List<SelectorItem>?,
-    onSelectedItemChanged: (index: Int, manual: Boolean) -> Unit
+    items: List<SelectorUiItem>?,
+    onSelectedItemChanged: (index: Int) -> Unit
 ) {
     if (items.isNullOrEmpty()) return
 
@@ -570,11 +574,6 @@ fun ValueSelector(
     val itemWidthPx = remember(density) { with(density) { 48.dp.toPx() }.toInt() }
     var rowWidthPx by remember { mutableIntStateOf(0) }
 
-    val textDelegate = remember { TextSelectorItemUI() }
-    val iconDelegate = remember { IconSelectorItemUI() }
-
-    // 1. Объединенный snapshotFlow для всех расчетов (оптимально для 2026)
-    val isDragged by listState.interactionSource.collectIsDraggedAsState()
 
     // Используем derivedStateOf для центрального индекса, чтобы не спамить рекомпозициями
     val centerIndex by remember {
@@ -590,19 +589,34 @@ fun ValueSelector(
         }
     }
 
-    // 2. Синхронизация внешней позиции (только если она реально изменилась)
-    LaunchedEffect(position) {
+    LaunchedEffect(items) {
         if (centerIndex != position) {
             listState.animateScrollToItem(position, scrollOffset = -rowWidthPx / 2 + itemWidthPx / 2)
         }
     }
+    var isManual by remember { mutableStateOf(false) }
+    // Отслеживание ручного выбора
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
 
-    // 3. Коллбэк для ручного выбора
-    LaunchedEffect(centerIndex) {
-        if (isDragged) {
-            onSelectedItemChanged(centerIndex, true)
+            if (isManual) {
+                onSelectedItemChanged(index)
+            }
         }
     }
+
+
+// 1. Отслеживаем источник: ручной или программный
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .collect { scrolling ->
+                // Если скролл идет и есть Drag — значит ручной.
+                // Если скролл идет, а Drag нет — значит программный или инерция (fling).
+                isManual = scrolling && isDragged
+            }
+    }
+
 
     Box(
         modifier = modifier
@@ -631,10 +645,10 @@ fun ValueSelector(
                 // Модификатор теперь константный, не пересоздается при скролле
                 val itemModifier = Modifier.width(48.dp)
 
-                when (item) {
-                    is TextItem -> textDelegate.Content(item, isPassed, itemModifier)
-                    is IconItem -> iconDelegate.Content(item, isPassed, itemModifier)
-                }
+                item.content(
+                    isPassed
+                )
+
             }
         }
 
@@ -648,4 +662,4 @@ fun ValueSelector(
         )
     }
 }
-*/
+

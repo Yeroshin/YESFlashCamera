@@ -36,12 +36,13 @@ data class CharacteristicsUI(
 */
 @Immutable
 data class CharacteristicsUI(
-    val shutterItems: List<RadioGroupItem.TextItem> = emptyList(),
-    val isoItems: List<RadioGroupItem.TextItem> = emptyList(),
-    val wbManualItems: List<RadioGroupItem.TextItem> = emptyList(),
+    val shutterItems: List<SelectorItem> = emptyList(),
+    val isoItems: List<SelectorItem> = emptyList(),
+    val wbItems: List<SelectorItem> = emptyList(),
     val wbModeItems: List<RadioGroupItem.IconItem> = emptyList(),
-    val focusItems: List<RadioGroupItem.TextItem> = emptyList(),
-    val magnifierItems: List<RadioGroupItem.TextItem> = emptyList(),
+    val focusItems: List<SelectorItem> = emptyList(),
+    val focusModeItems: List<RadioGroupItem> = emptyList(),
+    val magnifierItems: List<SelectorItem> = emptyList(),
     val characteristicsItems:List<RadioGroupItem > = listOf(
         RadioGroupItem.TextItem(
             SettingsItem.SHUTTER,
@@ -109,6 +110,12 @@ sealed interface RadioGroupItem  {
         val currentValue: String
     ) : RadioGroupItem
 }
+data class SelectorItem(
+    val id:Int,
+    val value:String
+)
+
+
 enum class SettingsItem  {
     SHUTTER, ISO, FOCUS, WB, MAGNIFIER
 }

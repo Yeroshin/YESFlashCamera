@@ -4394,6 +4394,7 @@ class CameraRepository(
         // НИКАКИХ ручных настроек ISO/Shutter для теста
         captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         captureRequest.addTarget(previewSurface)
+      //  captureRequest.addTarget(histogramSurface)
         cameraSession?.setRepeatingRequest(
             captureRequest.build(),
             repeatingCaptureCallback,

@@ -33,7 +33,7 @@ fun hist(){
 @Composable
 fun Histogram(
     modifier: Modifier,
-    values: MutableMap<Int, Int>?,
+    values: Map<Int, Int>?,
     widthDp: Dp,
     heightDp: Dp
 ) {

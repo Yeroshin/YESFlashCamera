@@ -9,13 +9,13 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.util.fastMapNotNull
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
 import com.yes.camera.presentation.model.RadioGroupItem
+import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SettingsItem
 
 
@@ -253,26 +253,25 @@ class MapperUI(
                 .toSortedMap(compareByDescending { it })
                 .entries
                 .map { entry ->
-                    RadioGroupItem.TextItem(
-                        SettingsItem.SHUTTER,
+                    SelectorItem(
+                        entry.key.toInt(),
                         entry.value.toString(),
-                        shutterValue
                     )
                 },
             isoItems =
             standardIsoValues.mapIndexed { index, entry ->
-                RadioGroupItem.TextItem(
-                    SettingsItem.ISO,
+                SelectorItem(
+                    index,
                     entry.toString(),
-                    isoValue.toString()
+
                 )
             },
-            wbManualItems =
+            wbItems =
             standardWbValues.mapIndexed { index, entry ->
-                RadioGroupItem.TextItem(
-                    SettingsItem.WB,
+                SelectorItem(
+                    index,
                     entry.toString() + "K",
-                    isoValue.toString()
+
                 )
             },
             wbModeItems =
@@ -338,26 +337,20 @@ class MapperUI(
 
               },*/
             focusItems = focusValues.map { entry ->
-                RadioGroupItem.TextItem(
-                    SettingsItem.FOCUS,
+                SelectorItem(
+                    entry.toInt(),
                     entry.toString(),
-                    focusValue.toString()
+
                 )
             },
 
             magnifierItems =
-            listOf(
-                RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "1", ""),
-              /*  RadioGroupItem.TextItem("2", 1),
-                RadioGroupItem.TextItem("3", 2),
-                RadioGroupItem.TextItem("4", 3),
-                RadioGroupItem.TextItem("5", 4),
-                RadioGroupItem.TextItem("6", 5),
-                RadioGroupItem.TextItem("7", 6),
-                RadioGroupItem.TextItem("8", 7),
-                RadioGroupItem.TextItem("9", 8),
-                RadioGroupItem.TextItem("10", 9),*/
-            ),
+            standardFocusValues.map {entry ->
+                SelectorItem(
+                    entry.toInt(),
+                    entry.toString(),
+                    )
+            },
             histogramData = characteristics.histogramData,
 
 
@@ -390,9 +383,9 @@ class MapperUI(
         val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
             ?: when (characteristics.focusMode) {
                 FocusItem.MACRO -> {
-                    characteristics.focusItems.fastMapNotNull {
-                        it.title.toFloat()
-                    }.maxOrNull()
+                    characteristics.focusItems.map {
+                        it.value.toFloat()
+                    }.max()
 
                 }
 
@@ -406,9 +399,9 @@ class MapperUI(
                     null
                 }
 
-                FocusItem.INFINITE -> characteristics.focusItems?.fastMapNotNull {
-                    it.title.toFloatOrNull()
-                }?.minOrNull()
+                FocusItem.INFINITE -> characteristics.focusItems.map {
+                    it.value.toFloat()
+                }.min()
 
                 null -> null
             }
