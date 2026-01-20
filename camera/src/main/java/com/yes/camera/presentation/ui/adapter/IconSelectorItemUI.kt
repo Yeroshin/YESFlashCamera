@@ -22,8 +22,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.IconItem
-import com.yes.camera.presentation.model.SelectorItem
+import com.yes.camera.presentation.model.RadioGroupItem
+
 import com.yes.camera.presentation.model.TextSelectorItemUI
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 /*
@@ -104,11 +104,11 @@ class IconSelectorItemUI: CompositeAdapter.AdapterDelegate<IconItem> {
 
 */
 ////////////////////////
-class IconSelectorItemUI : CompositeAdapter.AdapterDelegate<IconItem> {
+class IconSelectorItemUI : CompositeAdapter.AdapterDelegate<RadioGroupItem.IconItem> {
 
     @Composable
     override fun Content(
-        item: IconItem,
+        item: RadioGroupItem.IconItem,
         isPassed: Boolean, // Состояние передается извне
         modifier: Modifier,
     ) {
@@ -132,7 +132,7 @@ class IconSelectorItemUI : CompositeAdapter.AdapterDelegate<IconItem> {
                 modifier = Modifier
                     .height(18.dp)
                     .width(24.dp),
-                resId = item.icon
+                resId = item.iconRes
             )
 
             // Разделитель

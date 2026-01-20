@@ -20,8 +20,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.SelectorItem
-import com.yes.camera.presentation.model.TextItem
+import com.yes.camera.presentation.model.RadioGroupItem
+
 
 /*class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
 
@@ -125,11 +125,11 @@ import com.yes.camera.presentation.model.TextItem
 }*/
 
 ///////////////////////
-class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
+class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<RadioGroupItem.TextItem> {
 
     @Composable
     override fun Content(
-        item: TextItem,
+        item: RadioGroupItem.TextItem,
         isPassed: Boolean,
         modifier: Modifier,
     ) {
@@ -141,7 +141,7 @@ class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
             val initialFontSize = 16.sp
 
             // Шрифт сбрасывается только если изменился ID или текст
-            var fontSize by remember(item.id, item.text) { mutableStateOf(initialFontSize) }
+            var fontSize by remember(item.id, item.title) { mutableStateOf(initialFontSize) }
 
           //  val commonColor = if (isPassed) Color.Green else Color.White
             val commonColor =
@@ -161,7 +161,7 @@ class TextSelectorItemUI : CompositeAdapter.AdapterDelegate<TextItem> {
                 modifier = modifier.padding(2.dp),
                 maxLines = 1,
                 textAlign = TextAlign.Center,
-                text = item.text,
+                text = item.title,
                 style = TextStyle(
                     fontSize = fontSize,
                     color = commonColor,

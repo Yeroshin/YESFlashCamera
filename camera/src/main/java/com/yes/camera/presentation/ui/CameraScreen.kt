@@ -3,9 +3,12 @@ package com.yes.camera.presentation.ui
 import ads_mobile_sdk.h6
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -110,14 +113,14 @@ fun CameraScreen(
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
-    var surface:SurfaceTexture? by remember {
+    var surface: SurfaceTexture? by remember {
         mutableStateOf(null)
     }
     val cameraThreadManager = remember { CameraThreadManager() }
     PermissionManager(
         permissions = arrayOf(
             Manifest.permission.CAMERA,
-          //  Manifest.permission.READ_MEDIA_IMAGES
+            //  Manifest.permission.READ_MEDIA_IMAGES
         ),
         onPermissionsGranted = {
             // Всё содержимое из оригинальной ветки if (permissionsGranted)
@@ -127,7 +130,7 @@ fun CameraScreen(
                     cameraHandler = cameraThreadManager.handler
                 ) { surfaceTexture ->
 
-                    surface=surfaceTexture
+                    surface = surfaceTexture
                     surfaceTexture.setDefaultBufferSize(640, 480/*,4096,3072*//*1920, 1080*/)
                     cameraViewModel.setEvent(
                         CameraContract.Event.OnOpenCamera(true, surfaceTexture)
@@ -140,9 +143,11 @@ fun CameraScreen(
                 CameraContract.CameraState.Idle -> {
                     /* Показать idle UI если нужно */
                 }
+
                 CameraContract.CameraState.Loading -> {
                     /* Показать лоадер */
                 }
+
                 is CameraContract.CameraState.Success -> {
                     CameraScreenSuccess(
                         context = context,
@@ -155,17 +160,17 @@ fun CameraScreen(
                         onStartVideoRecord = { enabled ->
                             cameraViewModel.setEvent(CameraContract.Event.OnStartVideoRecord(enabled))
                         },
-                        onCharacteristicChanged = { characteristics ->
+                        onSetCharacteristic = { characteristics ->
                             cameraViewModel.setEvent(
                                 CameraContract.Event.OnSetCharacteristics(characteristics)
                             )
                         },
-                        fullScreen = state.characteristics.fullScreen
+                        // fullScreen = state.characteristics.fullScreen
                     )
                 }
 
                 is CameraContract.CameraState.Error -> {
-                    ErrorScreen(error =state.error ){
+                    ErrorScreen(error = state.error) {
                         surface?.let {
                             cameraViewModel.setEvent(
                                 CameraContract.Event.OnOpenCamera(true, it)
@@ -176,18 +181,45 @@ fun CameraScreen(
                 }
             }
         },
-        onPermissionsDenied = {
-            Text("Cannot proceed without permissions.")
+        onPermissionsDenied = { isPermanent, onRetry ->
+            Column {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (isPermanent) {
+                        Text("Разрешение заблокировано. Пожалуйста, включите его в настройках.")
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Button(onClick = {
+                            val intent =
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                            context.startActivity(intent)
+                        }) {
+                            Text("Открыть настройки")
+                        }
+                    } else {
+                        Text("Для работы приложения необходим доступ к камере")
+                        Button(onClick = onRetry) {
+                            Text("Дать разрешение")
+                        }
+                    }
+                }
+            }
+
         }
     )
 }
 
 
-
 // Композит для экрана ошибки
 @Composable
 fun CameraScreenError(
-  //  onRetryPermission: () -> Unit,
+    //  onRetryPermission: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     Column(
@@ -201,9 +233,9 @@ fun CameraScreenError(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
-      /*  Button(onClick = onRetryPermission) {
-            Text("Запросить разрешение снова")
-        }*/
+        /*  Button(onClick = onRetryPermission) {
+              Text("Запросить разрешение снова")
+          }*/
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onSettingsClick) {
             Text("Вернуться в настройки")

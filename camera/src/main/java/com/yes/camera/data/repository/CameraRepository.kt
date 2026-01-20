@@ -4388,22 +4388,19 @@ class CameraRepository(
     suspend fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
-
+       /* lastCharacteristics = characteristics
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
         //////////////////////clean call
-        /*
         // НИКАКИХ ручных настроек ISO/Shutter для теста
-        captureRequest.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        captureRequest.addTarget(previewSurface)
         cameraSession?.setRepeatingRequest(
             captureRequest.build(),
             repeatingCaptureCallback,
             cameraThreadManager.handler
         )
-*/
-        //////////////////////
-        lastCharacteristics = characteristics
-        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
-
-        captureRequest.apply {
+        //////////////////////end of clean call
+    /*    captureRequest.apply {
             addTarget(previewSurface)
             //  addTarget(histogramSurface)
             //  addTarget(captureSurface)
@@ -4479,8 +4476,8 @@ class CameraRepository(
             /////////////// exposure
             // --- 1. ЭКСПОЗИЦИЯ ---
 
-
-            if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+            //////////////current bug worked
+         /*   if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                 // РУЧНОЙ РЕЖИМ
               //  set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
 
@@ -4496,6 +4493,8 @@ class CameraRepository(
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
                 )
+
+
               /*  cameraSession?.capture(
                     build(),
                     repeatingCaptureCallback,
@@ -4503,7 +4502,8 @@ class CameraRepository(
                 )*/
               //  set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
 
-            }
+            }*/
+            //////////////end of current bug worked
             ///////////////////////////
             /*  characteristics.isoValue?.let { isoValue ->
                   characteristics.shutterValue?.let { shutterValue ->
@@ -4727,7 +4727,7 @@ class CameraRepository(
 
               }*/
 
-            try {
+          /*  try {
                // cameraSession?.stopRepeating()
                 cameraSession?.setRepeatingRequest(
                     build(),
@@ -4738,8 +4738,8 @@ class CameraRepository(
                 e.printStackTrace()
                 throw IllegalArgumentException(e)
 
-            }
-        }
+            }*/
+        }*/
 
     }
 

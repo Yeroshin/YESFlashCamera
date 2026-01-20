@@ -9,16 +9,18 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.util.fastMapNotNull
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.model.FocusItem
-import com.yes.camera.presentation.model.TextItem
+import com.yes.camera.presentation.model.RadioGroupItem
+import com.yes.camera.presentation.model.SettingsItem
+
 
 import com.yes.camera.presentation.model.WbItem
-import com.yes.camera.presentation.ui.custom.compose.IconRadioItem
-import com.yes.camera.presentation.ui.views.ImmutableCollection
+
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.domain.Dimensions
 import kotlin.math.abs
@@ -68,53 +70,55 @@ class MapperUI(
         4560000
     )
 
-     private val standardWbValues = listOf(
-         1000,
-         2000,
-         3000,
-         4000,
-         5000,
-         6000,
-         7000,
-         8000,
-         9000,
-         10000
-     )
-   private fun generateFocusValues(min: Float, max: Float, step: Float): List<Float> {
-       val size = ((max - min) / step).toInt() + 1
-       return List(size) { i -> min + i * step }
-   }
-    private val standardFocusValues=listOf(
-       0.2F,
-       1F,
-       2F,
-       3F,
-       4F,
-       5F,
-       6F,
-       7F,
-       8F,
-       9F,
-       9.5F,
-       10F,
-       11F,
-       12F,
-       13F,
-       14F,
-       15F,
-   )
+    private val standardWbValues = listOf(
+        1000,
+        2000,
+        3000,
+        4000,
+        5000,
+        6000,
+        7000,
+        8000,
+        9000,
+        10000
+    )
+
+    private fun generateFocusValues(min: Float, max: Float, step: Float): List<Float> {
+        val size = ((max - min) / step).toInt() + 1
+        return List(size) { i -> min + i * step }
+    }
+
+    private val standardFocusValues = listOf(
+        0.2F,
+        1F,
+        2F,
+        3F,
+        4F,
+        5F,
+        6F,
+        7F,
+        8F,
+        9F,
+        9.5F,
+        10F,
+        11F,
+        12F,
+        13F,
+        14F,
+        15F,
+    )
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
 
 
-     /*   val supportedShutterSpeeds = standardShutterSpeeds
-            .entries
-            .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
-            .sortedBy { it.key }
-            .map { TextSelectorItemUI(it.value) }
-        val supportedIsoValues = standardIsoValues
-            .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
-            .map { TextSelectorItemUI(it.toString()) }*/
+        /*   val supportedShutterSpeeds = standardShutterSpeeds
+               .entries
+               .filter { it.key in characteristics.shutterRange.first..characteristics.shutterRange.last }
+               .sortedBy { it.key }
+               .map { TextSelectorItemUI(it.value) }
+           val supportedIsoValues = standardIsoValues
+               .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
+               .map { TextSelectorItemUI(it.toString()) }*/
         val shutterValue = characteristics.shutterValue?.let {
             standardShutterSpeeds.entries
                 .minByOrNull { (key, _) ->
@@ -136,60 +140,70 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-       val wbItems=characteristics.wbItems?.toList()?.mapNotNull {mode->
+        val wbItems = characteristics.wbItems?.toList()?.map { mode ->
 
-           when(mode){
-                    CONTROL_AWB_MODE_AUTO->{
-                        WbItem.AUTO to R.drawable.wb_auto
-                    }
-                    CONTROL_AWB_MODE_INCANDESCENT->{
-                        WbItem.INCANDESCENT to R.drawable.wb_incandescent
-                    }
-                    CONTROL_AWB_MODE_FLUORESCENT->{
-                        WbItem.FLUORESCENT to R.drawable.fluorescent
-                    }
-                    CONTROL_AWB_MODE_WARM_FLUORESCENT->{
-                        WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
-                    }
-                    CONTROL_AWB_MODE_DAYLIGHT->{
-                        WbItem.DAYLIGHT to R.drawable.wb_sunny
-                    }
-                    CONTROL_AWB_MODE_CLOUDY_DAYLIGHT->{
-                        WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
-                    }
-                    CONTROL_AWB_MODE_TWILIGHT->{
-                        WbItem.TWILIGHT to R.drawable.wb_twilight
-                    }
-                    CONTROL_AWB_MODE_SHADE->{
-                        WbItem.SHADE to R.drawable.wb_shade
-                    }
-                    else -> null
-                }?.let { (id, res) -> IconRadioItem(id,"Auto", res) }
-            //   IconRadioItem(id,"Auto", res)
+            when (mode) {
+                CONTROL_AWB_MODE_AUTO -> {
+                    WbItem.AUTO to R.drawable.wb_auto
+                }
+
+                CONTROL_AWB_MODE_INCANDESCENT -> {
+                    WbItem.INCANDESCENT to R.drawable.wb_incandescent
+                }
+
+                CONTROL_AWB_MODE_FLUORESCENT -> {
+                    WbItem.FLUORESCENT to R.drawable.fluorescent
+                }
+
+                CONTROL_AWB_MODE_WARM_FLUORESCENT -> {
+                    WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
+                }
+
+                CONTROL_AWB_MODE_DAYLIGHT -> {
+                    WbItem.DAYLIGHT to R.drawable.wb_sunny
+                }
+
+                CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> {
+                    WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
+                }
+
+                CONTROL_AWB_MODE_TWILIGHT -> {
+                    WbItem.TWILIGHT to R.drawable.wb_twilight
+                }
+
+                CONTROL_AWB_MODE_SHADE -> {
+                    WbItem.SHADE to R.drawable.wb_shade
+                }
+
+                else -> null
+            }
 
 
-       }
-        val wbValue=characteristics.wbValue?.toString()?:"A"
+        }
+        val wbValue = characteristics.wbValue.toString() ?: "A"
         val wbPosition=characteristics.wbValue?.let {
             val closestValue=standardWbValues.minByOrNull { value->
                 abs(value - it)
             }
             standardWbValues.indexOf(closestValue)
         }?:0
-        val focusValues=generateFocusValues(characteristics.maxFocusValue,characteristics.minFocusValue,1f)
-        val focusValue=characteristics.focusValue?.toString()?:"A"
-        val focusPosition=characteristics.focusValue?.let {
-            val closestValue=focusValues.minByOrNull { value->
+        val focusValues =
+            generateFocusValues(characteristics.maxFocusValue, characteristics.minFocusValue, 1f)
+        val focusValue = characteristics.focusValue
+        val focusPosition = characteristics.focusValue?.let {
+            val closestValue = focusValues.minByOrNull { value ->
                 abs(value - it)
             }
             focusValues.indexOf(closestValue)
-        }?:0
+        } ?: 0
 
 
 
 
 
         return CharacteristicsUI(
+
+
             shutterValue = shutterValue,
             shutterPosition = shutterPosition,
 
@@ -199,89 +213,155 @@ class MapperUI(
             wbValue = wbValue,
             wbPosition = wbPosition,
 
-            focusValue = focusValue,
+            focusValue = focusValue.toString(),
             focusPosition = focusPosition,
-            fullScreen = characteristics.fullscreen?:run { false },
+            fullScreen = characteristics.fullscreen?:false,
             resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
             aspectRatio = characteristics.resolution,
+
+
+            characteristicsItems = listOf(
+                RadioGroupItem.TextItem(
+                    SettingsItem.SHUTTER,
+                    "SHUTTER",
+                    shutterValue
+                ),
+                RadioGroupItem.TextItem(
+                    SettingsItem.ISO,
+                    "ISO",
+                    isoValue.toString()
+                ),
+                RadioGroupItem.TextItem(
+                    SettingsItem.WB,
+                    "WB",
+                    isoValue.toString() + "K"
+                ),
+                RadioGroupItem.TextItem(
+                    SettingsItem.FOCUS,
+                    "FOCUS",
+                    focusValue.toString()
+                ),
+                RadioGroupItem.TextItem(
+                    SettingsItem.MAGNIFIER,
+                    "MAGNIFIER",
+                    "0"
+                )
+            ),
+
             shutterItems =
-                standardShutterSpeeds
-                    .toSortedMap(compareByDescending { it })
-                    .entries
-                    .mapIndexed {index, entry ->
-                        TextItem(
-                            entry.value.toString(),
-                            index
-                        )
-                    }
-            ,
-            isoItems =
-                standardIsoValues.mapIndexed {index, entry ->
-                    TextItem( entry.toString(),
-                        index)
-                }
-            ,
-            wbManualItems =
-                standardWbValues.mapIndexed {index, entry ->
-                    TextItem(
-                        entry.toString() + "K",
-                        index
+            standardShutterSpeeds
+                .toSortedMap(compareByDescending { it })
+                .entries
+                .map { entry ->
+                    RadioGroupItem.TextItem(
+                        SettingsItem.SHUTTER,
+                        entry.value.toString(),
+                        shutterValue
                     )
-                }
-            ,
-            wbModeItems = characteristics.wbItems?.toList()?.mapNotNull { mode->
-
-                when(mode){
-                    CONTROL_AWB_MODE_AUTO->{
-                        WbItem.AUTO to R.drawable.wb_auto
-                    }
-                    CONTROL_AWB_MODE_INCANDESCENT->{
-                        WbItem.INCANDESCENT to R.drawable.wb_incandescent
-                    }
-                    CONTROL_AWB_MODE_FLUORESCENT->{
-                        WbItem.FLUORESCENT to R.drawable.fluorescent
-                    }
-                    CONTROL_AWB_MODE_WARM_FLUORESCENT->{
-                        WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
-                    }
-                    CONTROL_AWB_MODE_DAYLIGHT->{
-                        WbItem.DAYLIGHT to R.drawable.wb_sunny
-                    }
-                    CONTROL_AWB_MODE_CLOUDY_DAYLIGHT->{
-                        WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
-                    }
-                    CONTROL_AWB_MODE_TWILIGHT->{
-                        WbItem.TWILIGHT to R.drawable.wb_twilight
-                    }
-                    CONTROL_AWB_MODE_SHADE->{
-                        WbItem.SHADE to R.drawable.wb_shade
-                    }
-                    else -> null
-                }?.let { (id, res) -> IconRadioItem(id,"Auto", res) }
-                //   IconRadioItem(id,"Auto", res)
-
-
+                },
+            isoItems =
+            standardIsoValues.mapIndexed { index, entry ->
+                RadioGroupItem.TextItem(
+                    SettingsItem.ISO,
+                    entry.toString(),
+                    isoValue.toString()
+                )
             },
-            focusItems =focusValues.mapIndexed {index, entry ->
-                TextItem(entry.toString(),
-                    index)
+            wbManualItems =
+            standardWbValues.mapIndexed { index, entry ->
+                RadioGroupItem.TextItem(
+                    SettingsItem.WB,
+                    entry.toString() + "K",
+                    isoValue.toString()
+                )
+            },
+            wbModeItems =
+            WbItem.entries.map { item ->
+                RadioGroupItem.IconItem(
+                    id = item,
+                    iconRes = when (item) {
+                        WbItem.AUTO -> R.drawable.wb_auto
+                        WbItem.INCANDESCENT -> R.drawable.wb_incandescent
+                        WbItem.FLUORESCENT -> R.drawable.fluorescent
+                        WbItem.WARM_FLUORESCENT -> R.drawable.fluorescent
+                        WbItem.DAYLIGHT -> R.drawable.wb_sunny
+                        WbItem.CLOUDY_DAYLIGHT -> R.drawable.wb_cloudy
+                        WbItem.TWILIGHT -> R.drawable.wb_twilight
+                        WbItem.SHADE -> R.drawable.wb_shade
+
+                    },
+
+                    )
+            },
+            /*  characteristics.wbItems?.toList()?.mapNotNull { mode ->
+                  when (mode) {
+                      CONTROL_AWB_MODE_AUTO -> {
+                          RadioGroupItem.IconItem(
+                              WbItem.AUTO,
+                              R.drawable.wb_auto
+                          )
+                        //  WbItem.AUTO to R.drawable.wb_auto
+                      }
+
+                      CONTROL_AWB_MODE_INCANDESCENT -> {
+                          WbItem.INCANDESCENT to R.drawable.wb_incandescent
+                      }
+
+                      CONTROL_AWB_MODE_FLUORESCENT -> {
+                          WbItem.FLUORESCENT to R.drawable.fluorescent
+                      }
+
+                      CONTROL_AWB_MODE_WARM_FLUORESCENT -> {
+                          WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
+                      }
+
+                      CONTROL_AWB_MODE_DAYLIGHT -> {
+                          WbItem.DAYLIGHT to R.drawable.wb_sunny
+                      }
+
+                      CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> {
+                          WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
+                      }
+
+                      CONTROL_AWB_MODE_TWILIGHT -> {
+                          WbItem.TWILIGHT to R.drawable.wb_twilight
+                      }
+
+                      CONTROL_AWB_MODE_SHADE -> {
+                          WbItem.SHADE to R.drawable.wb_shade
+                      }
+
+                      else -> null
+                  }?.let { (id, res) -> IconRadioItem(id, "Auto", res) }
+                  //   IconRadioItem(id,"Auto", res)
+
+
+              },*/
+            focusItems = focusValues.map { entry ->
+                RadioGroupItem.TextItem(
+                    SettingsItem.FOCUS,
+                    entry.toString(),
+                    focusValue.toString()
+                )
             },
 
             magnifierItems =
-                listOf(
-                    TextItem( "1",0),
-                    TextItem( "2",1),
-                    TextItem( "3",2),
-                    TextItem( "4",3),
-                    TextItem( "5",4,),
-                    TextItem( "6",5),
-                    TextItem( "7",6,),
-                    TextItem( "8",7),
-                    TextItem( "9",8),
-                    TextItem( "10",9),
-                )
-            ,
-            histogramData = characteristics.histogramData
+            listOf(
+                RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "1", ""),
+              /*  RadioGroupItem.TextItem("2", 1),
+                RadioGroupItem.TextItem("3", 2),
+                RadioGroupItem.TextItem("4", 3),
+                RadioGroupItem.TextItem("5", 4),
+                RadioGroupItem.TextItem("6", 5),
+                RadioGroupItem.TextItem("7", 6),
+                RadioGroupItem.TextItem("8", 7),
+                RadioGroupItem.TextItem("9", 8),
+                RadioGroupItem.TextItem("10", 9),*/
+            ),
+            histogramData = characteristics.histogramData,
+
+
+
         )
     }
 
@@ -310,9 +390,9 @@ class MapperUI(
         val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
             ?: when (characteristics.focusMode) {
                 FocusItem.MACRO -> {
-                    characteristics.focusItems?.fastMapNotNull {
-                        it.text.toFloatOrNull()
-                    }?.maxOrNull()
+                    characteristics.focusItems.fastMapNotNull {
+                        it.title.toFloat()
+                    }.maxOrNull()
 
                 }
 
@@ -327,7 +407,7 @@ class MapperUI(
                 }
 
                 FocusItem.INFINITE -> characteristics.focusItems?.fastMapNotNull {
-                    it.text.toFloatOrNull()
+                    it.title.toFloatOrNull()
                 }?.minOrNull()
 
                 null -> null
@@ -345,7 +425,10 @@ class MapperUI(
             shutterRange = LongRange(0, 0),
             resolutionItems = emptyList(),
             resolution = Dimensions(0, 0),
-            touchPoint = characteristics.touchPoint
+            touchPoint = floatArrayOf(
+                characteristics.touchPoint?.x?:0f,
+                characteristics.touchPoint?.y?:0f,
+                )
         )
     }
 }

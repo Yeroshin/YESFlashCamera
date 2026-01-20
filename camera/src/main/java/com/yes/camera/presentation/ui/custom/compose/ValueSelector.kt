@@ -30,9 +30,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
-import com.yes.camera.presentation.model.IconItem
-import com.yes.camera.presentation.model.SelectorItem
-import com.yes.camera.presentation.model.TextItem
+
 import com.yes.camera.presentation.ui.adapter.CompositeAdapter
 import com.yes.camera.presentation.ui.adapter.IconSelectorItemUI
 import com.yes.camera.presentation.ui.adapter.TextSelectorItemUI
@@ -553,6 +551,7 @@ fun ValueSelector(
 }
 */
 ///////////////
+/*
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ValueSelector(
@@ -649,3 +648,4 @@ fun ValueSelector(
         )
     }
 }
+*/

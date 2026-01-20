@@ -13,19 +13,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.Item
 
-class IconRadioItem(
-    id: Item,
-    val title: String,
-    val resId: Int?,
+import com.yes.camera.presentation.model.RadioGroupItem
 
-) : RadioButton(id) {
+@Composable
+fun createIconRadioItem(
+    id: RadioGroupItem,
+     resId: Int?,
+) : RadioUiItem<RadioGroupItem> {
    // var resId by mutableStateOf(resId)
-    @Composable
-    override fun item(
-        selected: Boolean
-    ) {
+
      /*  resId?.let {
            Text(
                textAlign = TextAlign.Start,
@@ -49,7 +46,8 @@ class IconRadioItem(
                resId = it
            )
        }*/
-       resId?.let {
+     return RadioUiItem(id = id) { selected ->
+         resId?.let {
            VectorShadow(
                Modifier
                    // .alpha(0.3f)

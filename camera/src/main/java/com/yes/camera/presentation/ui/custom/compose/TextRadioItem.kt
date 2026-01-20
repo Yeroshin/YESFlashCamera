@@ -15,73 +15,56 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.SettingsRadioGroupItem
+import com.yes.camera.presentation.model.RadioGroupItem
 
-class TextRadioItem (
-    id: SettingsRadioGroupItem,
-    var value: String?,
-    private val title: String,
-    ) : RadioButton(id) {
-        @Composable
-        override fun item(
-            selected:Boolean
-        ) {
-            value?.let {
-                Column(
-                    //  modifier = Modifier
-                    horizontalAlignment = Alignment.Start
-
-                ) {
-                    Text(
-                        textAlign = TextAlign.Start,
-                        text = title,
-                        style = TextStyle(
-                            color =  if (selected) {
-                                Color.Green
-                            } else {
-                               Color.White
-                            },
-                            fontSize = 8.sp,
-                            shadow = Shadow(
-                                color = Color.DarkGray,
-                                offset = Offset(5.0f, 5.0f),
-                                blurRadius = 5f
-                            )
-                        )
-                    )
-                    val minFontSize: TextUnit = 8.sp
-                    val initialFontSize=16.sp
-                    var fontSize by remember { mutableStateOf(initialFontSize) }
-
-                    Text(
-                        maxLines = 1,
-                        text = it,
-                        style = TextStyle(
-                            color =  if (selected) {
-                                Color.Green
-                            } else {
-                                Color.White
-                            },
-                            fontSize = fontSize,
-                            shadow = Shadow(
-                                color = Color.DarkGray,
-                                offset = Offset(5.0f, 5.0f),
-                                blurRadius = 5f
-                            )
-                        ),
-                        onTextLayout = { layoutResult ->
-                            if (layoutResult.hasVisualOverflow) {
-                                val newSize = fontSize.value * 0.95f
-                                fontSize = if (newSize.sp >= minFontSize) newSize.sp else minFontSize
-                            }
-                        },
-                    )
-                }
-            }
-
-
-
-
+fun createRadioUiItems(
+    dataList: List<RadioGroupItem.TextItem>
+): List<RadioUiItem<Enum<*>>> {
+    return dataList.map { data ->
+        RadioUiItem(id = data.id) { isSelected ->
+            // А вот здесь мы вызываем Composable-функцию отрисовки
+            TextRadioContent(
+                title = data.title,
+                value = data.currentValue,
+                selected = isSelected
+            )
         }
-
     }
+}
+
+@Composable
+fun TextRadioContent(
+    title: String,
+    value: String,
+    selected: Boolean
+) {
+    Column(horizontalAlignment = Alignment.Start) {
+        Text(
+            text = title,
+            style = TextStyle(
+                color = if (selected) Color.Green else Color.White,
+                fontSize = 8.sp,
+                shadow = Shadow(Color.DarkGray, Offset(5f, 5f), 5f)
+            )
+        )
+
+        val minFontSize = 8.sp
+        var fontSize by remember(value) { mutableStateOf(16.sp) }
+
+        Text(
+            text = value,
+            maxLines = 1,
+            onTextLayout = { layoutResult ->
+                if (layoutResult.hasVisualOverflow) {
+                    val newSize = fontSize.value * 0.95f
+                    if (newSize.sp >= minFontSize) fontSize = newSize.sp
+                }
+            },
+            style = TextStyle(
+                color = if (selected) Color.Green else Color.White,
+                fontSize = fontSize,
+                shadow = Shadow(Color.DarkGray, Offset(5f, 5f), 5f)
+            )
+        )
+    }
+}
