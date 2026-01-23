@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,6 +71,10 @@ fun CameraScreenSuccess(
     var characteristics by remember(characteristicsInit) {
         mutableStateOf(characteristicsInit)
     }
+    var characteristicsRrequest by remember {
+        mutableStateOf(characteristicsInit)
+    }
+
     var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
     LaunchedEffect(surfaceViewSize) {
         // Ждем, когда размеры станут известны (не 0)
@@ -92,7 +97,6 @@ fun CameraScreenSuccess(
     val paramsRadioGroupItems = remember(characteristics.characteristicsItems) {
         characteristics.characteristicsItems.map { data ->
             RadioUiItem(id = data.id) { isSelected ->
-                // Здесь мы решаем, как рисовать конкретный тип данных
                 when (data) {
                     is RadioGroupItem.IconItem -> {
                         Icon(
@@ -124,17 +128,44 @@ fun CameraScreenSuccess(
     var isSelectorVisible by remember {
         mutableStateOf(true)
     }
-    var selectorPosition by remember {
-        mutableStateOf(0)
+    var selectorPosition:Int by remember {
+        mutableIntStateOf(0)
     }
     var selectorItems: List<SelectorUiItem>? by remember {
-        mutableStateOf(null)
+        mutableStateOf(
+            null
+        )
     }
     var selectorSelectedItemIndex by remember {
-        mutableStateOf(0)
+        mutableIntStateOf(0)
+    }
+    var isFirstLaunch by remember { mutableStateOf(true) }
+
+    LaunchedEffect(selectorSelectedItemIndex) {
+        if (isFirstLaunch) {
+            isFirstLaunch = false
+            return@LaunchedEffect // Пропускаем первый проход
+        }
+        onSetCharacteristic(
+            when(paramsRadioGroupSelectedItem){
+                SettingsItem.SHUTTER->{
+                    characteristics.copy(
+                        shutterValue = characteristics.shutterItems[selectorSelectedItemIndex].value
+                    )
+                }
+                SettingsItem.ISO->{
+                    characteristics.copy(
+                        isoValue = characteristics.isoItems[selectorSelectedItemIndex].value
+                    )
+                }
+
+                else -> characteristics.copy()
+            }
+        )
+
     }
     LaunchedEffect(paramsRadioGroupSelectedItem) {
-        selectorItems = when (paramsRadioGroupSelectedItem) {
+       /* selectorItems = when (paramsRadioGroupSelectedItem) {
             SettingsItem.SHUTTER ->
                 characteristics.shutterItems.map { data ->
                     SelectorUiItem(id = data.id) { isSelected ->
@@ -162,7 +193,20 @@ fun CameraScreenSuccess(
             SettingsItem.SHUTTER -> characteristics.shutterPosition
             SettingsItem.ISO->characteristics.isoPosition
             else -> 0
+        }*/
+        val (dataList, position) = when (paramsRadioGroupSelectedItem) {
+            SettingsItem.SHUTTER -> characteristics.shutterItems to characteristics.shutterPosition
+            SettingsItem.ISO -> characteristics.isoItems to characteristics.isoPosition
+            else -> null to 0
         }
+
+        // Преобразуем данные в UI-элементы одной цепочкой
+        selectorItems = dataList?.map { data ->
+            SelectorUiItem(id = data.id) { isSelected ->
+                TextSelectorContent(data, isSelected)
+            }
+        }
+        selectorPosition = position
     }
     Box(
         modifier = Modifier
@@ -261,6 +305,7 @@ fun CameraScreenSuccess(
                     top = 16.dp
                 ),
         )
+        //////////resolution
         characteristics.resolution?.let {
             Text(
                 modifier = Modifier

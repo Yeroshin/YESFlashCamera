@@ -3,6 +3,8 @@ package com.yes.camera.presentation.ui.custom.compose
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +33,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 
 
 import kotlin.math.abs
@@ -570,18 +574,17 @@ fun ValueSelector(
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val density = LocalDensity.current
 
-    // Фиксированные размеры (48.dp берем из константы, чтобы не мерить каждый раз)
-    val itemWidthPx = remember(density) { with(density) { 48.dp.toPx() }.toInt() }
+
+
+    val itemWidthDp = 48.dp
+    val itemWidthPx = with(density) { itemWidthDp.toPx() }
     var rowWidthPx by remember { mutableIntStateOf(0) }
 
-
-    // Используем derivedStateOf для центрального индекса, чтобы не спамить рекомпозициями
     val centerIndex by remember {
         derivedStateOf {
             val layoutInfo = listState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
-            if (visibleItems.isEmpty()) return@derivedStateOf 0
-
+            if (visibleItems.isEmpty()) return@derivedStateOf position
             val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
             visibleItems.minByOrNull { item ->
                 abs(item.offset + item.size / 2 - viewportCenter)
@@ -589,11 +592,6 @@ fun ValueSelector(
         }
     }
 
-    LaunchedEffect(items) {
-        if (centerIndex != position) {
-            listState.animateScrollToItem(position, scrollOffset = -rowWidthPx / 2 + itemWidthPx / 2)
-        }
-    }
     var isManual by remember { mutableStateOf(false) }
     // Отслеживание ручного выбора
     LaunchedEffect(listState) {
@@ -617,38 +615,32 @@ fun ValueSelector(
             }
     }
 
-
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .onSizeChanged { rowWidthPx = it.width } // Быстрее чем onGloballyPositioned
+            .onSizeChanged { rowWidthPx = it.width }
     ) {
         LazyRow(
             state = listState,
             flingBehavior = flingBehavior,
-            // Отступ для центрирования первого и последнего элементов
             contentPadding = PaddingValues(
-                horizontal = with(density) { (rowWidthPx / 2 - itemWidthPx / 2).coerceAtLeast(0).toDp() }
-            )
+                horizontal = with(density) {
+                    (rowWidthPx / 2f - itemWidthPx / 2f).coerceAtLeast(0f).toDp()
+                }
+            ),
+            horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             items(
                 count = items.size,
                 key = { index -> items[index].id }
             ) { index ->
-                val item = items[index]
-
-                // Используем локальный derivedStateOf для каждого элемента
-                val isPassed = remember(index) {
-                    derivedStateOf { index <= centerIndex }
-                }.value
-
-                // Модификатор теперь константный, не пересоздается при скролле
-                val itemModifier = Modifier.width(48.dp)
-
-                item.content(
-                    isPassed
-                )
-
+                Box(
+                    modifier = Modifier.width(itemWidthDp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val isSelected = index <= centerIndex
+                    items[index].content(isSelected)
+                }
             }
         }
 
@@ -662,4 +654,8 @@ fun ValueSelector(
         )
     }
 }
+
+
+
+
 

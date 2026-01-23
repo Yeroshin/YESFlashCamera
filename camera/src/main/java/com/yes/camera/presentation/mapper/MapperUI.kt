@@ -131,6 +131,7 @@ class MapperUI(
             "1/60"
         }
         val shutterPosition = standardShutterSpeeds
+          //  .toSortedMap(compareByDescending { it })
             .toSortedMap(compareByDescending { it })
             .values.toList().indexOf(shutterValue)
 
@@ -140,7 +141,7 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-        val wbItems = characteristics.wbItems?.toList()?.map { mode ->
+      /*  val wbItems = characteristics.wbItems?.toList()?.map { mode ->
 
             when (mode) {
                 CONTROL_AWB_MODE_AUTO -> {
@@ -179,7 +180,7 @@ class MapperUI(
             }
 
 
-        }
+        }*/
         val wbValue = characteristics.wbValue.toString() ?: "A"
         val wbPosition=characteristics.wbValue?.let {
             val closestValue=standardWbValues.minByOrNull { value->

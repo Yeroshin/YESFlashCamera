@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 
@@ -171,7 +172,8 @@ fun <T> UniversalRadioGroup(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.selectableGroup(),
+        modifier = modifier.selectableGroup()
+            .wrapContentHeight(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {

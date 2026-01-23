@@ -4388,20 +4388,22 @@ class CameraRepository(
     suspend fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
-       /* lastCharacteristics = characteristics
-        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)*/
+
         //////////////////////clean call
         // НИКАКИХ ручных настроек ISO/Shutter для теста
-        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+    /*    captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         captureRequest.addTarget(previewSurface)
       //  captureRequest.addTarget(histogramSurface)
         cameraSession?.setRepeatingRequest(
             captureRequest.build(),
             repeatingCaptureCallback,
             cameraThreadManager.handler
-        )
+        )*/
         //////////////////////end of clean call
-    /*    captureRequest.apply {
+        lastCharacteristics = characteristics
+        captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
+        captureRequest.apply {
+
             addTarget(previewSurface)
             //  addTarget(histogramSurface)
             //  addTarget(captureSurface)
@@ -4478,7 +4480,7 @@ class CameraRepository(
             // --- 1. ЭКСПОЗИЦИЯ ---
 
             //////////////current bug worked
-         /*   if (characteristics.isoValue != null && characteristics.shutterValue != null) {
+            if (characteristics.isoValue != null && characteristics.shutterValue != null) {
                 // РУЧНОЙ РЕЖИМ
               //  set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
 
@@ -4503,7 +4505,7 @@ class CameraRepository(
                 )*/
               //  set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
 
-            }*/
+            }
             //////////////end of current bug worked
             ///////////////////////////
             /*  characteristics.isoValue?.let { isoValue ->
@@ -4728,7 +4730,7 @@ class CameraRepository(
 
               }*/
 
-          /*  try {
+            try {
                // cameraSession?.stopRepeating()
                 cameraSession?.setRepeatingRequest(
                     build(),
@@ -4739,8 +4741,8 @@ class CameraRepository(
                 e.printStackTrace()
                 throw IllegalArgumentException(e)
 
-            }*/
-        }*/
+            }
+        }
 
     }
 
