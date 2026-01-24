@@ -592,26 +592,30 @@ fun ValueSelector(
         }
     }
 
-    var isManual by remember { mutableStateOf(false) }
-    // Отслеживание ручного выбора
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
 
-            if (isManual) {
-                onSelectedItemChanged(index)
-            }
-        }
+
+
+    var wasDragged by remember { mutableStateOf(false) }
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+
+// 2. Отслеживаем начало касания
+    LaunchedEffect(isDragged) {
+        if (isDragged) wasDragged = true
     }
 
-
-// 1. Отслеживаем источник: ручной или программный
-    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+// 3. Фиксируем результат только при полной остановке
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }
-            .collect { scrolling ->
-                // Если скролл идет и есть Drag — значит ручной.
-                // Если скролл идет, а Drag нет — значит программный или инерция (fling).
-                isManual = scrolling && isDragged
+        snapshotFlow {
+            // Нам важны два состояния: идет ли скролл и индекс центрального элемента
+            Pair(listState.isScrollInProgress, centerIndex)
+        }
+            .collect { (isScrolling, currentCenter) ->
+                // Если скролл закончился (isScrolling == false)
+                // И это был ручной скролл (wasDragged == true)
+                if (!isScrolling && wasDragged) {
+                    onSelectedItemChanged(currentCenter)
+                    wasDragged = false // Сбрасываем флаг до следующего касания
+                }
             }
     }
 
