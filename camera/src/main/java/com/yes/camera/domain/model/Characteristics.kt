@@ -24,4 +24,6 @@ data class Characteristics(
     val imgFormat: ImgFormat =ImgFormat.JPEG,
     val filePath: String="",
     val histogramData: MutableMap<Int, Int> = mutableMapOf(),
+
+
 )

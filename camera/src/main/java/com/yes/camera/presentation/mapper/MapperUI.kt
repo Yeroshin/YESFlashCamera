@@ -29,11 +29,11 @@ class MapperUI(
     private val resources: ResourceProvider
 ) {
     private val standardShutterSpeeds = mapOf(
-        31_250L to "1/32000",
+     /*   31_250L to "1/32000",
         62_500L to "1/16000",
         125_000L to "1/8000",
         250_000L to "1/4000",
-        500_000L to "1/2000",
+        500_000L to "1/2000",*/
         1_000_000L to "1/1000",
         2_000_000L to "1/500",
         4_000_000L to "1/250",
@@ -88,8 +88,7 @@ class MapperUI(
         return List(size) { i -> min + i * step }
     }
 
-    private val standardFocusValues = listOf(
-        0.2F,
+    private val standardMagnifierValues = listOf(
         1F,
         2F,
         3F,
@@ -99,13 +98,7 @@ class MapperUI(
         7F,
         8F,
         9F,
-        9.5F,
         10F,
-        11F,
-        12F,
-        13F,
-        14F,
-        15F,
     )
 
     fun map(characteristics: Characteristics): CharacteristicsUI {
@@ -141,46 +134,6 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-      /*  val wbItems = characteristics.wbItems?.toList()?.map { mode ->
-
-            when (mode) {
-                CONTROL_AWB_MODE_AUTO -> {
-                    WbItem.AUTO to R.drawable.wb_auto
-                }
-
-                CONTROL_AWB_MODE_INCANDESCENT -> {
-                    WbItem.INCANDESCENT to R.drawable.wb_incandescent
-                }
-
-                CONTROL_AWB_MODE_FLUORESCENT -> {
-                    WbItem.FLUORESCENT to R.drawable.fluorescent
-                }
-
-                CONTROL_AWB_MODE_WARM_FLUORESCENT -> {
-                    WbItem.WARM_FLUORESCENT to R.drawable.fluorescent
-                }
-
-                CONTROL_AWB_MODE_DAYLIGHT -> {
-                    WbItem.DAYLIGHT to R.drawable.wb_sunny
-                }
-
-                CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> {
-                    WbItem.CLOUDY_DAYLIGHT to R.drawable.wb_cloudy
-                }
-
-                CONTROL_AWB_MODE_TWILIGHT -> {
-                    WbItem.TWILIGHT to R.drawable.wb_twilight
-                }
-
-                CONTROL_AWB_MODE_SHADE -> {
-                    WbItem.SHADE to R.drawable.wb_shade
-                }
-
-                else -> null
-            }
-
-
-        }*/
         val wbValue = characteristics.wbValue.toString() ?: "A"
         val wbPosition=characteristics.wbValue?.let {
             val closestValue=standardWbValues.minByOrNull { value->
@@ -346,12 +299,13 @@ class MapperUI(
             },
 
             magnifierItems =
-            standardFocusValues.map {entry ->
+            standardMagnifierValues.map {entry ->
                 SelectorItem(
                     entry.toInt(),
                     entry.toString(),
                     )
             },
+            magnifierValue = "0",
             histogramData = characteristics.histogramData,
 
 

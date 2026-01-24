@@ -68,8 +68,27 @@ fun CameraScreenSuccess(
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
 ) {
-    var characteristics by remember(characteristicsInit) {
+    var characteristics by remember() {
         mutableStateOf(characteristicsInit)
+    }
+    LaunchedEffect(characteristicsInit) {
+        // 1. Извлекаем наше локальное "накрученное" значение лупы
+        val myMagnifierValue = (characteristics.characteristicsItems
+            .find { it.id == SettingsItem.MAGNIFIER } as? RadioGroupItem.TextItem)?.currentValue
+
+        // 2. Применяем ВСЕ новые данные из ViewModel (ISO, Shutter, списки элементов)
+        // Но в списке иконок/текста (characteristicsItems) сохраняем нашу лупу
+        characteristics = characteristicsInit.copy(
+            characteristicsItems = characteristicsInit.characteristicsItems.map { item ->
+                if (item.id == SettingsItem.MAGNIFIER && item is RadioGroupItem.TextItem && myMagnifierValue != null) {
+                    // Возвращаем новую структуру из ViewModel, но со старым текстом значения
+                    item.copy(currentValue = myMagnifierValue)
+                } else {
+                    // Все остальные пункты (ISO, Shutter и т.д.) заменяются на новые из ViewModel
+                    item
+                }
+            }
+        )
     }
     var characteristicsRrequest by remember {
         mutableStateOf(characteristicsInit)
@@ -94,6 +113,17 @@ fun CameraScreenSuccess(
         mutableStateOf(FloatArray(0))
     }
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
+    var paramsRadioGroupSelectedItem by remember( /*characteristics.characteristicsItems*/) {
+        mutableStateOf(
+            characteristics.characteristicsItems.firstOrNull()?.id
+        )
+    }
+    LaunchedEffect(characteristics.characteristicsItems) {
+        val items = characteristics.characteristicsItems
+        if (items.isNotEmpty() && items.none { it.id == paramsRadioGroupSelectedItem }) {
+            paramsRadioGroupSelectedItem = items.first().id
+        }
+    }
     val paramsRadioGroupItems = remember(characteristics.characteristicsItems) {
         characteristics.characteristicsItems.map { data ->
             RadioUiItem(id = data.id) { isSelected ->
@@ -114,14 +144,12 @@ fun CameraScreenSuccess(
                         )
                     }
                 }
+
+
             }
         }
     }
-    var paramsRadioGroupSelectedItem by remember( characteristics.characteristicsItems) {
-        mutableStateOf(
-            characteristics.characteristicsItems.firstOrNull()?.id
-        )
-    }
+
     var autoMode by remember {
         mutableStateOf(false)
     }
@@ -136,71 +164,89 @@ fun CameraScreenSuccess(
             null
         )
     }
-    var selectorSelectedItemIndex by remember {
+    var magnifierPosition by remember {
         mutableIntStateOf(0)
     }
-    var isFirstLaunch by remember { mutableStateOf(true) }
 
-    LaunchedEffect(selectorSelectedItemIndex) {
-        if (isFirstLaunch) {
-            isFirstLaunch = false
-            return@LaunchedEffect // Пропускаем первый проход
-        }
-        onSetCharacteristic(
-            when(paramsRadioGroupSelectedItem){
+    LaunchedEffect(selectorPosition) {
+        if (characteristics.characteristicsItems.isNotEmpty()) {
+
+            val updatedCharacteristics = when(paramsRadioGroupSelectedItem){
                 SettingsItem.SHUTTER->{
                     characteristics.copy(
-                        shutterValue = characteristics.shutterItems[selectorSelectedItemIndex].value
+                        shutterValue = characteristics.shutterItems[selectorPosition].value
                     )
                 }
                 SettingsItem.ISO->{
                     characteristics.copy(
-                        isoValue = characteristics.isoItems[selectorSelectedItemIndex].value
+                        isoValue = characteristics.isoItems[selectorPosition].value
                     )
                 }
+                SettingsItem.WB->{
+                    characteristics.copy(
+                        wbValue = characteristics.wbItems[selectorPosition].value
+                    )
+                }
+                SettingsItem.FOCUS->{
+                    characteristics.copy(
+                        focusValue = characteristics.focusItems[selectorPosition].value
+                    )
+                }
+                SettingsItem.MAGNIFIER->{
+                    magnifierPosition = characteristics.magnifierItems.indexOf(
+                        characteristics.magnifierItems[selectorPosition]
 
+                    )
+                    val index = characteristics.characteristicsItems.indexOfFirst { it.id == SettingsItem.MAGNIFIER }
+
+                    if (index != -1) {
+                        val oldItem = characteristics.characteristicsItems[index]
+
+                        if (oldItem is RadioGroupItem.TextItem) {
+                            // 2. Создаем обновленный объект
+                            val updatedItem = oldItem.copy(
+                                currentValue = characteristics.magnifierItems[magnifierPosition].value
+                            )
+
+                            // 3. Создаем новый список, заменяя элемент по индексу
+                            val updatedItems = characteristics.characteristicsItems.toMutableList().apply {
+                                this[index] = updatedItem
+                            }
+
+                            // 4. Обновляем состояние целиком (иммутабельно)
+                            characteristics = characteristics.copy(characteristicsItems = updatedItems)
+                            renderer.configureMagnifier(
+                                updatedItem.currentValue.toFloat()
+                            )
+
+                        }else{}
+
+                    }
+                    null
+                }
                 else -> characteristics.copy()
             }
-        )
+
+            updatedCharacteristics?.let { onSetCharacteristic(it) }
+        }
+
 
     }
+   /* var selectorSelectedItemIndex by remember {
+        mutableIntStateOf(0)
+    }*/
+
+
     LaunchedEffect(paramsRadioGroupSelectedItem) {
-       /* selectorItems = when (paramsRadioGroupSelectedItem) {
-            SettingsItem.SHUTTER ->
-                characteristics.shutterItems.map { data ->
-                    SelectorUiItem(id = data.id) { isSelected ->
-                        TextSelectorContent(
-                            data,
-                            isSelected,
-                        )
-                    }
-                }
-
-            SettingsItem.ISO ->
-                characteristics.isoItems.map { data ->
-                    SelectorUiItem(id = data.id) { isSelected ->
-                        TextSelectorContent(
-                            data,
-                            isSelected,
-                        )
-                    }
-                }
-
-
-            else -> null
-        }
-        selectorPosition=when(paramsRadioGroupSelectedItem){
-            SettingsItem.SHUTTER -> characteristics.shutterPosition
-            SettingsItem.ISO->characteristics.isoPosition
-            else -> 0
-        }*/
         val (dataList, position) = when (paramsRadioGroupSelectedItem) {
             SettingsItem.SHUTTER -> characteristics.shutterItems to characteristics.shutterPosition
             SettingsItem.ISO -> characteristics.isoItems to characteristics.isoPosition
+            SettingsItem.WB -> characteristics.wbItems to characteristics.wbPosition
+            SettingsItem.FOCUS -> characteristics.focusItems to characteristics.focusPosition
+            SettingsItem.MAGNIFIER -> characteristics.magnifierItems to magnifierPosition
             else -> null to 0
         }
 
-        // Преобразуем данные в UI-элементы одной цепочкой
         selectorItems = dataList?.map { data ->
             SelectorUiItem(id = data.id) { isSelected ->
                 TextSelectorContent(data, isSelected)
@@ -376,7 +422,7 @@ fun CameraScreenSuccess(
                             items = selectorItems,
                             onSelectedItemChanged = { index ->
 
-                                selectorSelectedItemIndex = index
+                                selectorPosition = index
 
                             }
                         )

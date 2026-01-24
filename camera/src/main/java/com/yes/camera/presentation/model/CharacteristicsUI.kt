@@ -84,7 +84,6 @@ data class CharacteristicsUI(
     val focusPosition: Int = 0,
     val focusMode: FocusItem? = null,
     val magnifierValue: String? = null,
-    val magnifierPosition: Int = 0,
     val touchPoint: Offset? = null,
     val fullScreen: Boolean = false,
     val resolution: String? = null,

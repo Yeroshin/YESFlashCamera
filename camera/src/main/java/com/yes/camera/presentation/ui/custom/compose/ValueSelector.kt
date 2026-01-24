@@ -642,7 +642,7 @@ fun ValueSelector(
         ) {
             items(
                 count = items.size,
-                key = { index -> items[index].id }
+              //  key = { index -> items[index].id }
             ) { index ->
                 Box(
                     modifier = Modifier.width(itemWidthDp),
