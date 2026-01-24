@@ -188,7 +188,7 @@ class MapperUI(
                 RadioGroupItem.TextItem(
                     SettingsItem.WB,
                     "WB",
-                    isoValue.toString() + "K"
+                    wbValue + "K"
                 ),
                 RadioGroupItem.TextItem(
                     SettingsItem.FOCUS,
@@ -198,7 +198,7 @@ class MapperUI(
                 RadioGroupItem.TextItem(
                     SettingsItem.MAGNIFIER,
                     "MAGNIFIER",
-                    "0"
+                    standardMagnifierValues.first().toString()
                 )
             ),
 
@@ -305,7 +305,7 @@ class MapperUI(
                     entry.toString(),
                     )
             },
-            magnifierValue = "0",
+            magnifierValue = "1",
             histogramData = characteristics.histogramData,
 
 

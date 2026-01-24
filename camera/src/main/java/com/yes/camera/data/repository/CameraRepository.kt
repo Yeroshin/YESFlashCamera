@@ -4441,10 +4441,10 @@ class CameraRepository(
             //   set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L)//30fps
             /////wb
 
-            previousWbValue = characteristics.wbValue
+          //  previousWbValue = characteristics.wbValue
 
             //  wb=true
-            /*  characteristics.wbValue?.let { wb ->
+             characteristics.wbValue?.let { wb ->
                   ////////////////////////////
                   //   val rggb = ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
                   //  val kelvin = ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
@@ -4474,7 +4474,7 @@ class CameraRepository(
                           CaptureRequest.COLOR_CORRECTION_MODE_FAST
                       )
                   }
-              }*/
+              }
 
             /////////////// exposure
             // --- 1. ЭКСПОЗИЦИЯ ---
@@ -4617,7 +4617,7 @@ class CameraRepository(
               }*/
             /////////////////////////////////////////focus
             // 1. РУЧНОЙ ФОКУС (Дистанция линзы)
-            /*
+
             if (characteristics.focusValue != null) {
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                 set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
@@ -4684,7 +4684,7 @@ class CameraRepository(
                     }
                 }
             }
-            */
+
 ///////////
             /*  characteristics.focusValue?.let {
                   set(CaptureRequest.LENS_FOCUS_DISTANCE, it)
@@ -4895,7 +4895,7 @@ class CameraRepository(
 
             val wbState = result.get(CaptureResult.CONTROL_AWB_STATE)
             //   val k = rgbToKelvin(tmpautoWhiteBalanceGains!!)
-            if (wb) {
+          /*  if (wb) {
                 when (wbState) {
                     CaptureResult.CONTROL_AWB_STATE_CONVERGED -> {
                         wb = false
@@ -4907,7 +4907,7 @@ class CameraRepository(
                         println()
                     }
                 }
-            }
+            }*/
 
             ///////////////////focus
             val afState = result.get(CaptureResult.CONTROL_AF_STATE) ?: return

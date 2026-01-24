@@ -555,7 +555,7 @@ fun ValueSelector(
 */
 ///////////////
 @Immutable
-data class SelectorUiItem(
+data class SelectorUiItem (
     val id: Int, // Это будет наш Enum (SettingsItem, WbItem и т.д.)
     val content: @Composable (isSelected: Boolean) -> Unit
 )
@@ -594,8 +594,8 @@ fun ValueSelector(
 ////////////////////////////////
 
     LaunchedEffect(position) {
-        if (!listState.isScrollInProgress) {
-            listState.animateScrollToItem(position, 0)
+        if (!listState.isScrollInProgress && centerIndex != position) {
+            listState.animateScrollToItem(position)
         }
     }
 
