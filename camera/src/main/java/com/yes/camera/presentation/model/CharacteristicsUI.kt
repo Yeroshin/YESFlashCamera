@@ -43,33 +43,34 @@ data class CharacteristicsUI(
     val focusItems: List<SelectorItem> = emptyList(),
     val focusModeItems: List<RadioGroupItem> = emptyList(),
     val magnifierItems: List<SelectorItem> = emptyList(),
-    val characteristicsItems:List<RadioGroupItem > = listOf(
-        RadioGroupItem.TextItem(
-            SettingsItem.SHUTTER,
-            "SHUTTER",
-            ""
-        ),
-        RadioGroupItem.TextItem(
-            SettingsItem.ISO,
-            "ISO",
-            ""
-        ),
-        RadioGroupItem.TextItem(
-            SettingsItem.WB,
-            "WB",
-            ""
-        ),
-        RadioGroupItem.TextItem(
-            SettingsItem.FOCUS,
-            "FOCUS",
-            ""
-        ),
-        RadioGroupItem.TextItem(
-            SettingsItem.MAGNIFIER,
-            "MAGNIFIER",
-            ""
-        )
-    ),
+    /*  val characteristicsItems:List<RadioGroupItem > = listOf(
+          RadioGroupItem.TextItem(
+              SettingsItem.SHUTTER,
+              "SHUTTER",
+              ""
+          ),
+          RadioGroupItem.TextItem(
+              SettingsItem.ISO,
+              "ISO",
+              ""
+          ),
+          RadioGroupItem.TextItem(
+              SettingsItem.WB,
+              "WB",
+              ""
+          ),
+          RadioGroupItem.TextItem(
+              SettingsItem.FOCUS,
+              "FOCUS",
+              ""
+          ),
+          RadioGroupItem.TextItem(
+              SettingsItem.MAGNIFIER,
+              "MAGNIFIER",
+              ""
+          )
+      ),*/
+    val characteristicsItems:List<RadioGroupItem > = emptyList(),
 
     val backCamera: Boolean = true,
     val shutterValue: String? = null,

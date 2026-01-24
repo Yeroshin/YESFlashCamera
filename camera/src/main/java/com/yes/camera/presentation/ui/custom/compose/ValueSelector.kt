@@ -591,10 +591,16 @@ fun ValueSelector(
             }?.index ?: 0
         }
     }
+////////////////////////////////
+
+    LaunchedEffect(position) {
+        if (!listState.isScrollInProgress) {
+            listState.animateScrollToItem(position, 0)
+        }
+    }
 
 
-
-
+////////////////////////////////
     var wasDragged by remember { mutableStateOf(false) }
     val isDragged by listState.interactionSource.collectIsDraggedAsState()
 

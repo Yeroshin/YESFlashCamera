@@ -117,9 +117,9 @@ fun CameraScreenSuccess(
             }
         }
     }
-    var paramsRadioGroupSelectedItem by remember {
+    var paramsRadioGroupSelectedItem by remember( characteristics.characteristicsItems) {
         mutableStateOf(
-            characteristics.characteristicsItems.first().id
+            characteristics.characteristicsItems.firstOrNull()?.id
         )
     }
     var autoMode by remember {
@@ -291,20 +291,22 @@ fun CameraScreenSuccess(
             ) {}
         }
         ////////////////radio group
+        paramsRadioGroupSelectedItem?.let {
+            UniversalRadioGroup(
+                items = paramsRadioGroupItems,
+                selectedId = it,
+                onItemClick = { value ->
+                    paramsRadioGroupSelectedItem = value
+                },
+                modifier = Modifier
+                    .padding(4.dp)
+                    .fillMaxWidth()
+                    .padding(
+                        top = 16.dp
+                    ),
+            )
+        }
 
-        UniversalRadioGroup(
-            items = paramsRadioGroupItems,
-            selectedId = paramsRadioGroupSelectedItem,
-            onItemClick = { value ->
-                paramsRadioGroupSelectedItem = value
-            },
-            modifier = Modifier
-                .padding(4.dp)
-                .fillMaxWidth()
-                .padding(
-                    top = 16.dp
-                ),
-        )
         //////////resolution
         characteristics.resolution?.let {
             Text(
