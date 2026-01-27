@@ -69,12 +69,12 @@ fun CameraScreenSuccess(
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
 ) {
-    StrictMode.setThreadPolicy(
+   /* StrictMode.setThreadPolicy(
         StrictMode.ThreadPolicy.Builder()
             .detectAll()
             .penaltyLog()
             .build()
-    )
+    )*/
     var characteristics by remember() {
         mutableStateOf(characteristicsInit)
     }
@@ -257,7 +257,9 @@ fun CameraScreenSuccess(
                 else -> null to 0
             }
             selectorItems = dataList?.map { data ->
-                SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
+                SelectorUiItem(id = data.id) { isSelected ->
+                    TextSelectorContent(data, isSelected)
+                }
             }
             selectorPosition = position
             selectorRadioGroupItems = null
@@ -537,10 +539,17 @@ fun CameraScreenSuccess(
                                 items = items,
                                 selectedItem = selectorRadioGroupSelectedItem as? ModeItem,
                                 onItemClick = { mode ->
+                                    selectorRadioGroupSelectedItem=mode
                                     // Здесь вызываем обновление через ViewModel
                                     val updated = when(mode) {
-                                        is ModeItem.WbItem -> characteristics.copy(wbMode = mode)
-                                        is ModeItem.FocusItem -> characteristics.copy(focusMode = mode)
+                                        is ModeItem.WbItem -> characteristics.copy(
+                                            wbValue = null,
+                                            wbMode = mode
+                                        )
+                                        is ModeItem.FocusItem -> characteristics.copy(
+                                            focusValue = null,
+                                            focusMode = mode
+                                        )
                                         else -> characteristics
                                     }
                                     onSetCharacteristic(updated)

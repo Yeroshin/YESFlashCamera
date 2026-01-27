@@ -5281,7 +5281,9 @@ class CameraRepository(
                     val isChanged = it.focusValue != focusDistance ||
                             it.wbValue != kelvin || // ВАЖНО: убедитесь, что константа 100 — это то, что вам нужно
                             it.shutterValue != currentShutter ||
-                            it.isoValue != currentIso
+                            it.isoValue != currentIso ||
+                            it.wbMode != lastCharacteristics.wbMode ||
+                            it.focusMode != lastCharacteristics.focusMode
 
                     if (isChanged) {
                         // Создаем копию только при наличии изменений
@@ -5289,7 +5291,9 @@ class CameraRepository(
                             focusValue = focusDistance,
                             wbValue = kelvin,
                             shutterValue = currentShutter,
-                            isoValue = currentIso
+                            isoValue = currentIso,
+                            wbMode = lastCharacteristics.wbMode,
+                            focusMode = lastCharacteristics.focusMode
                         )
                     } else {
                         // Если изменений нет, возвращаем тот же самый объект

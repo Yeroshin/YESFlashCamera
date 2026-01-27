@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.mapper
 
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_MACRO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
@@ -9,6 +10,7 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
+import android.view.Display.Mode
 import androidx.compose.ui.util.fastMapNotNull
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
@@ -20,7 +22,6 @@ import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SettingsItem
 
 
-
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.domain.Dimensions
 import kotlin.math.abs
@@ -29,12 +30,12 @@ class MapperUI(
     private val resources: ResourceProvider
 ) {
     private val standardShutterSpeeds = mapOf(
-     /*   31_250L to "1/32000",
-        62_500L to "1/16000",
-        125_000L to "1/8000",
-        250_000L to "1/4000",
-        500_000L to "1/2000",
-        1_000_000L to "1/1000",*/
+        /*   31_250L to "1/32000",
+           62_500L to "1/16000",
+           125_000L to "1/8000",
+           250_000L to "1/4000",
+           500_000L to "1/2000",
+           1_000_000L to "1/1000",*/
         2_000_000L to "1/500",
         4_000_000L to "1/250",
         8_000_000L to "1/125",
@@ -124,7 +125,7 @@ class MapperUI(
             "1/60"
         }
         val shutterPosition = standardShutterSpeeds
-          //  .toSortedMap(compareByDescending { it })
+            //  .toSortedMap(compareByDescending { it })
             .toSortedMap(compareByDescending { it })
             .values.toList().indexOf(shutterValue)
 
@@ -135,12 +136,12 @@ class MapperUI(
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
         val wbValue = characteristics.wbValue?.let { "${it}K" } ?: "A"
-        val wbPosition=characteristics.wbValue?.let {
-            val closestValue=standardWbValues.minByOrNull { value->
+        val wbPosition = characteristics.wbValue?.let {
+            val closestValue = standardWbValues.minByOrNull { value ->
                 abs(value - it)
             }
             standardWbValues.indexOf(closestValue)
-        }?:0
+        } ?: 0
         val focusValues =
             generateFocusValues(characteristics.maxFocusValue, characteristics.minFocusValue, 1f)
         val focusValue = characteristics.focusValue
@@ -167,9 +168,9 @@ class MapperUI(
             wbValue = wbValue,
             wbPosition = wbPosition,
 
-            focusValue = focusValue?.toString()?:"",
+            focusValue = focusValue?.toString() ?: "",
             focusPosition = focusPosition,
-            fullScreen = characteristics.fullscreen?:false,
+            fullScreen = characteristics.fullscreen ?: false,
             resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
             aspectRatio = characteristics.resolution,
 
@@ -218,7 +219,7 @@ class MapperUI(
                     index,
                     entry.toString(),
 
-                )
+                    )
             },
             wbItems =
             standardWbValues.mapIndexed { index, entry ->
@@ -226,7 +227,7 @@ class MapperUI(
                     index,
                     entry.toString() + "K",
 
-                )
+                    )
             },
             wbModeItems =
             ModeItem.WbItem.entries.map { item ->
@@ -245,6 +246,17 @@ class MapperUI(
                     },
 
                     )
+            },
+            wbMode = when (characteristics.wbMode) {
+                CONTROL_AWB_MODE_AUTO -> ModeItem.WbItem.AUTO
+                CONTROL_AWB_MODE_INCANDESCENT -> ModeItem.WbItem.INCANDESCENT
+                CONTROL_AWB_MODE_FLUORESCENT -> ModeItem.WbItem.FLUORESCENT
+                CONTROL_AWB_MODE_WARM_FLUORESCENT -> ModeItem.WbItem.WARM_FLUORESCENT
+                CONTROL_AWB_MODE_DAYLIGHT -> ModeItem.WbItem.DAYLIGHT
+                CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> ModeItem.WbItem.CLOUDY_DAYLIGHT
+                CONTROL_AWB_MODE_TWILIGHT -> ModeItem.WbItem.TWILIGHT
+                CONTROL_AWB_MODE_SHADE -> ModeItem.WbItem.SHADE
+                else -> ModeItem.WbItem.AUTO
             },
             /*  characteristics.wbItems?.toList()?.mapNotNull { mode ->
                   when (mode) {
@@ -295,34 +307,40 @@ class MapperUI(
                     entry.toInt(),
                     entry.toString(),
 
-                )
+                    )
             },
             focusModeItems =
-            ModeItem.FocusItem.entries.map { item->
+            ModeItem.FocusItem.entries.map { item ->
                 RadioGroupItem.IconItem(
-                    id=item,
-                    iconRes = when(item){
-                        ModeItem.FocusItem.MACRO->R.drawable.macro_auto
+                    id = item,
+                    iconRes = when (item) {
+                        ModeItem.FocusItem.MACRO -> R.drawable.macro_auto
                         ModeItem.FocusItem.CONTINUOUS -> R.drawable.continuous
                         ModeItem.FocusItem.TOUCH -> R.drawable.touch
                         ModeItem.FocusItem.INFINITE -> R.drawable.infinity
                     }
                 )
             },
+            focusMode = when (characteristics.focusMode) {
+                characteristics.maxFocusValue.toInt() -> ModeItem.FocusItem.MACRO
+                CONTROL_AF_MODE_CONTINUOUS_PICTURE -> ModeItem.FocusItem.CONTINUOUS
+                -1 -> ModeItem.FocusItem.TOUCH
+                characteristics.minFocusValue.toInt() -> ModeItem.FocusItem.INFINITE
+                else -> ModeItem.FocusItem.MACRO
+            },
 
             magnifierItems =
-            standardMagnifierValues.map {entry ->
+            standardMagnifierValues.map { entry ->
                 SelectorItem(
                     entry.toInt(),
                     entry.toString(),
-                    )
+                )
             },
             magnifierValue = "1",
             histogramData = characteristics.histogramData,
 
 
-
-        )
+            )
     }
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
@@ -346,32 +364,36 @@ class MapperUI(
                 }
             }
         }
-        var focusMode: Int? = null
-        val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
-            ?: when (characteristics.focusMode) {
-                ModeItem.FocusItem.MACRO -> {
-                    characteristics.focusItems.map {
-                        it.value.toFloat()
-                    }.max()
-
-                }
-
-                ModeItem.FocusItem.CONTINUOUS -> {
-                    focusMode = CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                    null
-                }
-
-                ModeItem.FocusItem.TOUCH -> {
-                    focusMode = -1
-                    null
-                }
-
-                ModeItem.FocusItem.INFINITE -> characteristics.focusItems.map {
+        var focusMode: Int? = when (characteristics.focusMode) {
+            ModeItem.FocusItem.MACRO -> {
+                characteristics.focusItems.map {
                     it.value.toFloat()
-                }.min()
+                }.max().toInt()
+                //  focusMode = CONTROL_AF_MODE_MACRO
+                //  null
 
-                null -> null
             }
+
+            ModeItem.FocusItem.CONTINUOUS -> {
+                CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                // null
+            }
+
+            ModeItem.FocusItem.TOUCH -> {
+                -1
+                // null
+            }
+
+            ModeItem.FocusItem.INFINITE -> {
+                characteristics.focusItems.map {
+                    it.value.toFloat()
+                }.min().toInt()
+            }
+
+            null -> null
+        }
+        val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
+
 
 
         return Characteristics(
@@ -386,9 +408,9 @@ class MapperUI(
             resolutionItems = emptyList(),
             resolution = Dimensions(0, 0),
             touchPoint = floatArrayOf(
-                characteristics.touchPoint?.x?:0f,
-                characteristics.touchPoint?.y?:0f,
-                )
+                characteristics.touchPoint?.x ?: 0f,
+                characteristics.touchPoint?.y ?: 0f,
+            )
         )
     }
 }
