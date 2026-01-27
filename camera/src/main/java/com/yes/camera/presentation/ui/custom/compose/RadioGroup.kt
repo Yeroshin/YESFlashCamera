@@ -167,7 +167,7 @@ data class RadioUiItem<T>(
 @Composable
 fun <T> UniversalRadioGroup(
     items: List<RadioUiItem<T>>,
-    selectedId: T,
+    selectedItem: T?,
     onItemClick: (T) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -178,7 +178,7 @@ fun <T> UniversalRadioGroup(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         items.forEach { item ->
-            val isSelected = item.id == selectedId
+            val isSelected = item.id == selectedItem
 
             key(item.id) { // Оптимизация рекомпозиции
                 Box(

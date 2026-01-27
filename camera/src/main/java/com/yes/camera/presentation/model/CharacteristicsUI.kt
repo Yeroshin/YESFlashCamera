@@ -39,7 +39,7 @@ data class CharacteristicsUI(
     val shutterItems: List<SelectorItem> = emptyList(),
     val isoItems: List<SelectorItem> = emptyList(),
     val wbItems: List<SelectorItem> = emptyList(),
-    val wbModeItems: List<RadioGroupItem.IconItem> = emptyList(),
+    val wbModeItems: List<RadioGroupItem> = emptyList(),
     val focusItems: List<SelectorItem> = emptyList(),
     val focusModeItems: List<RadioGroupItem> = emptyList(),
     val magnifierItems: List<SelectorItem> = emptyList(),
@@ -79,10 +79,10 @@ data class CharacteristicsUI(
     val isoPosition: Int = 0,
     val wbValue: String? = null,
     val wbPosition: Int = 0,
-    val wbMode: WbItem? = null,
+    val wbMode: ModeItem.WbItem? = null,
     val focusValue: String? = null,
     val focusPosition: Int = 0,
-    val focusMode: FocusItem? = null,
+    val focusMode: ModeItem.FocusItem? = null,
     val magnifierValue: String? = null,
     val touchPoint: Offset? = null,
     val fullScreen: Boolean = false,
@@ -119,13 +119,15 @@ data class SelectorItem(
 enum class SettingsItem  {
     SHUTTER, ISO, FOCUS, WB, MAGNIFIER
 }
+sealed interface ModeItem{
+    enum class WbItem:ModeItem {
+        AUTO, INCANDESCENT, FLUORESCENT, WARM_FLUORESCENT, DAYLIGHT, CLOUDY_DAYLIGHT, TWILIGHT, SHADE
+    }
 
-enum class WbItem {
-    AUTO, INCANDESCENT, FLUORESCENT, WARM_FLUORESCENT, DAYLIGHT, CLOUDY_DAYLIGHT, TWILIGHT, SHADE
-}
+    enum class FocusItem :ModeItem {
+        MACRO, CONTINUOUS, TOUCH, INFINITE
+    }
 
-enum class FocusItem  {
-    MACRO, CONTINUOUS, TOUCH, INFINITE
 }
 
 

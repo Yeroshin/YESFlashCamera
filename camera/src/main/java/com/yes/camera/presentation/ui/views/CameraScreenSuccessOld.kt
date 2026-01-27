@@ -40,11 +40,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
-import com.yes.camera.presentation.model.FocusItem
 
 import com.yes.camera.presentation.model.RadioGroupItem
 
-import com.yes.camera.presentation.model.WbItem
+
 import com.yes.camera.presentation.ui.custom.compose.Histogram
 
 

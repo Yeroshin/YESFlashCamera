@@ -21,20 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.camera.presentation.model.RadioGroupItem
 
-fun createRadioUiItems(
-    dataList: List<RadioGroupItem.TextItem>
-): List<RadioUiItem<Enum<*>>> {
-    return dataList.map { data ->
-        RadioUiItem(id = data.id) { isSelected ->
-            // А вот здесь мы вызываем Composable-функцию отрисовки
-            TextRadioContent(
-                title = data.title,
-                value = data.currentValue,
-                selected = isSelected
-            )
-        }
-    }
-}
+
 
 @Composable
 fun TextRadioContent(

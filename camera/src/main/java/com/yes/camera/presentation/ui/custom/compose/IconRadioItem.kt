@@ -120,3 +120,18 @@ fun temp(){
     )
         }
 }
+//////////////////////
+@Composable
+fun IconRadioContent(
+    resId:Int,
+    selected: Boolean
+) {
+    VectorShadow(
+        Modifier
+            // .alpha(0.3f)
+            .size(24.dp),
+        vectorColor = if (selected) Color.Green else Color.White,
+        shadowColor = Color.DarkGray,
+        resId = resId
+    )
+}

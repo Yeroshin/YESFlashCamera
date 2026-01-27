@@ -13,13 +13,13 @@ import androidx.compose.ui.util.fastMapNotNull
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
-import com.yes.camera.presentation.model.FocusItem
+import com.yes.camera.presentation.model.ModeItem
+
 import com.yes.camera.presentation.model.RadioGroupItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SettingsItem
 
 
-import com.yes.camera.presentation.model.WbItem
 
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.domain.Dimensions
@@ -134,7 +134,7 @@ class MapperUI(
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-        val wbValue = characteristics.wbValue.toString() ?: "A"
+        val wbValue = characteristics.wbValue?.let { "${it}K" } ?: "A"
         val wbPosition=characteristics.wbValue?.let {
             val closestValue=standardWbValues.minByOrNull { value->
                 abs(value - it)
@@ -167,7 +167,7 @@ class MapperUI(
             wbValue = wbValue,
             wbPosition = wbPosition,
 
-            focusValue = focusValue.toString(),
+            focusValue = focusValue?.toString()?:"",
             focusPosition = focusPosition,
             fullScreen = characteristics.fullscreen?:false,
             resolution = characteristics.resolution.width.toString() + "x" + characteristics.resolution.height.toString(),
@@ -188,7 +188,7 @@ class MapperUI(
                 RadioGroupItem.TextItem(
                     SettingsItem.WB,
                     "WB",
-                    wbValue + "K"
+                    wbValue
                 ),
                 RadioGroupItem.TextItem(
                     SettingsItem.FOCUS,
@@ -229,18 +229,18 @@ class MapperUI(
                 )
             },
             wbModeItems =
-            WbItem.entries.map { item ->
+            ModeItem.WbItem.entries.map { item ->
                 RadioGroupItem.IconItem(
                     id = item,
                     iconRes = when (item) {
-                        WbItem.AUTO -> R.drawable.wb_auto
-                        WbItem.INCANDESCENT -> R.drawable.wb_incandescent
-                        WbItem.FLUORESCENT -> R.drawable.fluorescent
-                        WbItem.WARM_FLUORESCENT -> R.drawable.fluorescent
-                        WbItem.DAYLIGHT -> R.drawable.wb_sunny
-                        WbItem.CLOUDY_DAYLIGHT -> R.drawable.wb_cloudy
-                        WbItem.TWILIGHT -> R.drawable.wb_twilight
-                        WbItem.SHADE -> R.drawable.wb_shade
+                        ModeItem.WbItem.AUTO -> R.drawable.wb_auto
+                        ModeItem.WbItem.INCANDESCENT -> R.drawable.wb_incandescent
+                        ModeItem.WbItem.FLUORESCENT -> R.drawable.fluorescent
+                        ModeItem.WbItem.WARM_FLUORESCENT -> R.drawable.fluorescent
+                        ModeItem.WbItem.DAYLIGHT -> R.drawable.wb_sunny
+                        ModeItem.WbItem.CLOUDY_DAYLIGHT -> R.drawable.wb_cloudy
+                        ModeItem.WbItem.TWILIGHT -> R.drawable.wb_twilight
+                        ModeItem.WbItem.SHADE -> R.drawable.wb_shade
 
                     },
 
@@ -297,6 +297,18 @@ class MapperUI(
 
                 )
             },
+            focusModeItems =
+            ModeItem.FocusItem.entries.map { item->
+                RadioGroupItem.IconItem(
+                    id=item,
+                    iconRes = when(item){
+                        ModeItem.FocusItem.MACRO->R.drawable.macro_auto
+                        ModeItem.FocusItem.CONTINUOUS -> R.drawable.continuous
+                        ModeItem.FocusItem.TOUCH -> R.drawable.touch
+                        ModeItem.FocusItem.INFINITE -> R.drawable.infinity
+                    }
+                )
+            },
 
             magnifierItems =
             standardMagnifierValues.map {entry ->
@@ -321,14 +333,14 @@ class MapperUI(
         val wbValue = characteristics.wbValue?.filter { it.isDigit() }?.toIntOrNull()
         val wbMode = wbValue?.let { null } ?: run {
             when (characteristics.wbMode) {
-                WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
-                WbItem.INCANDESCENT -> CONTROL_AWB_MODE_INCANDESCENT
-                WbItem.FLUORESCENT -> CONTROL_AWB_MODE_FLUORESCENT
-                WbItem.WARM_FLUORESCENT -> CONTROL_AWB_MODE_WARM_FLUORESCENT
-                WbItem.DAYLIGHT -> CONTROL_AWB_MODE_DAYLIGHT
-                WbItem.CLOUDY_DAYLIGHT -> CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
-                WbItem.TWILIGHT -> CONTROL_AWB_MODE_TWILIGHT
-                WbItem.SHADE -> CONTROL_AWB_MODE_SHADE
+                ModeItem.WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
+                ModeItem.WbItem.INCANDESCENT -> CONTROL_AWB_MODE_INCANDESCENT
+                ModeItem.WbItem.FLUORESCENT -> CONTROL_AWB_MODE_FLUORESCENT
+                ModeItem.WbItem.WARM_FLUORESCENT -> CONTROL_AWB_MODE_WARM_FLUORESCENT
+                ModeItem.WbItem.DAYLIGHT -> CONTROL_AWB_MODE_DAYLIGHT
+                ModeItem.WbItem.CLOUDY_DAYLIGHT -> CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+                ModeItem.WbItem.TWILIGHT -> CONTROL_AWB_MODE_TWILIGHT
+                ModeItem.WbItem.SHADE -> CONTROL_AWB_MODE_SHADE
                 else -> {
                     null
                 }
@@ -337,24 +349,24 @@ class MapperUI(
         var focusMode: Int? = null
         val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
             ?: when (characteristics.focusMode) {
-                FocusItem.MACRO -> {
+                ModeItem.FocusItem.MACRO -> {
                     characteristics.focusItems.map {
                         it.value.toFloat()
                     }.max()
 
                 }
 
-                FocusItem.CONTINUOUS -> {
+                ModeItem.FocusItem.CONTINUOUS -> {
                     focusMode = CONTROL_AF_MODE_CONTINUOUS_PICTURE
                     null
                 }
 
-                FocusItem.TOUCH -> {
+                ModeItem.FocusItem.TOUCH -> {
                     focusMode = -1
                     null
                 }
 
-                FocusItem.INFINITE -> characteristics.focusItems.map {
+                ModeItem.FocusItem.INFINITE -> characteristics.focusItems.map {
                     it.value.toFloat()
                 }.min()
 

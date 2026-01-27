@@ -1,8 +1,7 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
-import android.opengl.GLSurfaceView
-import android.view.MotionEvent
+import android.os.StrictMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,8 +18,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,22 +31,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.R
 import com.yes.camera.presentation.model.CharacteristicsUI
+import com.yes.camera.presentation.model.ModeItem
 import com.yes.camera.presentation.model.RadioGroupItem
-import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SettingsItem
 import com.yes.camera.presentation.ui.adapter.TextSelectorContent
 import com.yes.camera.presentation.ui.custom.compose.CameraPreviewContainer
 import com.yes.camera.presentation.ui.custom.compose.Histogram
+import com.yes.camera.presentation.ui.custom.compose.IconRadioContent
 import com.yes.camera.presentation.ui.custom.compose.RadioUiItem
 import com.yes.camera.presentation.ui.custom.compose.RecordButton
 import com.yes.camera.presentation.ui.custom.compose.SelectorUiItem
@@ -55,7 +55,6 @@ import com.yes.camera.presentation.ui.custom.compose.UniversalRadioGroup
 import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 
-import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -69,6 +68,12 @@ fun CameraScreenSuccess(
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
 ) {
+    StrictMode.setThreadPolicy(
+        StrictMode.ThreadPolicy.Builder()
+            .detectAll()
+            .penaltyLog()
+            .build()
+    )
     var characteristics by remember() {
         mutableStateOf(characteristicsInit)
     }
@@ -145,18 +150,13 @@ fun CameraScreenSuccess(
                         )
                     }
                 }
-
-
             }
         }
     }
 
-    var autoMode by remember {
-        mutableStateOf(false)
-    }
-    var isSelectorVisible by remember {
-        mutableStateOf(true)
-    }
+
+
+
     var selectorPosition: Int by remember {
         mutableIntStateOf(0)
     }
@@ -264,6 +264,50 @@ fun CameraScreenSuccess(
         }
         selectorPosition = position
     }
+    ////////////////////////////
+    var selectorRadioGroupItems by remember {
+        mutableStateOf<List<RadioUiItem<ModeItem>>?>(null)
+    }
+    var selectorRadioGroupSelectedItem by remember {
+        mutableStateOf<Any?>(null)
+    }
+    val autoModes = remember(characteristics.characteristicsItems) {
+        mutableStateMapOf<SettingsItem, Boolean>().apply {
+            characteristics.characteristicsItems.forEach { item ->
+                val category = item.id as? SettingsItem
+                if (category != null) {
+                    // Устанавливаем начальное значение (например, всё в false или по логике)
+                    this[category] = false
+                }
+            }
+        }
+    }
+
+
+    LaunchedEffect(autoModes[paramsRadioGroupSelectedItem]) {
+        autoModes[paramsRadioGroupSelectedItem]?.let{autoMode->
+            if (autoMode) return@LaunchedEffect
+
+            // 1. Получаем список нужных данных
+            val dataItems = when (paramsRadioGroupSelectedItem) {
+                SettingsItem.WB -> characteristics.wbModeItems
+                SettingsItem.FOCUS -> characteristics.focusModeItems
+                else -> null
+            }
+
+            // 2. Мапим данные в UI-элементы одним блоком
+            selectorRadioGroupItems = dataItems?.map { data ->
+                RadioUiItem(id = data.id as ModeItem) { isSelected ->
+                    when (data) {
+                        is RadioGroupItem.IconItem -> IconRadioContent(data.iconRes, isSelected)
+                        is RadioGroupItem.TextItem -> TextRadioContent(data.title, data.currentValue, isSelected)
+                    }
+                }
+            }
+        }
+
+
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -362,8 +406,9 @@ fun CameraScreenSuccess(
         paramsRadioGroupSelectedItem?.let {
             UniversalRadioGroup(
                 items = paramsRadioGroupItems,
-                selectedId = it,
+                selectedItem = it,
                 onItemClick = { value ->
+                    autoModes[value as SettingsItem] = !(autoModes[value])!!
                     paramsRadioGroupSelectedItem = value
                 },
                 modifier = Modifier
@@ -424,11 +469,12 @@ fun CameraScreenSuccess(
                 ///////////auto
                 VectorShadow(
                     modifier = Modifier.size(32.dp),
-                    vectorColor = if (autoMode) Color.Green else Color.White,
+                    vectorColor = if (autoModes[paramsRadioGroupSelectedItem ]==true) Color.Green else Color.White,
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.auto,
                     onClick = {
-                        autoMode = !autoMode
+                        autoModes[paramsRadioGroupSelectedItem as SettingsItem] = !(autoModes[paramsRadioGroupSelectedItem] ?: false)
+                      //  autoMode = !autoMode
                     }
                 )
                 Box(
@@ -503,33 +549,37 @@ fun CameraScreenSuccess(
                       )
                       ////end of tmp fast selector
                       */
-                    if (isSelectorVisible) {
-                        ValueSelector(
-                            modifier = Modifier.height(42.dp),
-                            position = selectorPosition,
-                            items = selectorItems,
-                            onSelectedItemChanged = { index ->
+                    autoModes[paramsRadioGroupSelectedItem]?.let {
+                        if (!it) {
+                            ValueSelector(
+                                modifier = Modifier.height(42.dp),
+                                position = selectorPosition,
+                                items = selectorItems,
+                                onSelectedItemChanged = { index ->
 
-                                selectorPosition = index
+                                    selectorPosition = index
 
+                                }
+                            )
+                        } else {
+                            selectorRadioGroupItems?.let { items ->
+                                UniversalRadioGroup(
+                                    items = items,
+                                    selectedItem = selectorRadioGroupSelectedItem as? ModeItem,
+                                    onItemClick = { value ->
+                                        //   paramsRadioGroupSelectedItem = value
+                                    },
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .fillMaxWidth()
+                                        .padding(
+                                            top = 16.dp
+                                        ),
+                                )
                             }
-                        )
-                    } else {
-                        /*  RadioGroup(
-                              modifier = Modifier
-                                  .padding(4.dp)
-                                  .fillMaxWidth(),
-                              items = selectorRadioGroupItems,
-                              selectedOption = when (selectorRadioGroupItems?.firstOrNull()?.id) {
-                                  is WbItem -> wbSelectorRadioGroupSelectedItem
-                                  is FocusItem -> focusSelectorRadioGroupSelectedItem
-                                  else -> null
-                              },
-                              onOptionSelected = { value ->
-                                  selectorRadioGroupSelectedItem = value as IconRadioGroupItem
-                              }
-                          )*/
+                        }
                     }
+
 
                 }
             }
