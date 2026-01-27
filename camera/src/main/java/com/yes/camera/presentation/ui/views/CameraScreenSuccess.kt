@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
+import android.media.audiofx.EnvironmentalReverb.Settings
 import android.os.StrictMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -124,10 +125,22 @@ fun CameraScreenSuccess(
             characteristics.characteristicsItems.firstOrNull()?.id
         )
     }
+    val autoModes = remember {
+        mutableStateMapOf<SettingsItem, Boolean>()
+    }
     LaunchedEffect(characteristics.characteristicsItems) {
         val items = characteristics.characteristicsItems
         if (items.isNotEmpty() && items.none { it.id == paramsRadioGroupSelectedItem }) {
             paramsRadioGroupSelectedItem = items.first().id
+
+            items.forEach { item ->
+                (item.id as? SettingsItem)?.let { category ->
+                    // Кладем false только если там еще ничего нет (чтобы не затирать выбор пользователя)
+                    if (!autoModes.containsKey(category)) {
+                        autoModes[category] = false
+                    }
+                }
+            }
         }
     }
     val paramsRadioGroupItems = remember(characteristics.characteristicsItems) {
@@ -155,8 +168,6 @@ fun CameraScreenSuccess(
     }
 
 
-
-
     var selectorPosition: Int by remember {
         mutableIntStateOf(0)
     }
@@ -170,133 +181,62 @@ fun CameraScreenSuccess(
     }
 
     LaunchedEffect(selectorPosition) {
-        if (characteristics.characteristicsItems.isNotEmpty()) {
+        if (characteristics.characteristicsItems.isEmpty()) return@LaunchedEffect
 
-            val updatedCharacteristics = when (paramsRadioGroupSelectedItem) {
-                SettingsItem.SHUTTER -> {
-                    characteristics.copy(
-                        shutterValue = characteristics.shutterItems[selectorPosition].value
-                    )
-                }
+        val updatedCharacteristics = when (paramsRadioGroupSelectedItem) {
+            SettingsItem.MAGNIFIER -> {
+                // 1. Находим индекс лупы в списке доступных увеличений
+                val newMagValue = characteristics.magnifierItems[selectorPosition].value
+                magnifierPosition = selectorPosition
 
-                SettingsItem.ISO -> {
-                    characteristics.copy(
-                        isoValue = characteristics.isoItems[selectorPosition].value
-                    )
-                }
-
-                SettingsItem.WB -> {
-                    characteristics.copy(
-                        wbValue = characteristics.wbItems[selectorPosition].value
-                    )
-                }
-
-                SettingsItem.FOCUS -> {
-                    characteristics.copy(
-                        focusValue = characteristics.focusItems[selectorPosition].value
-                    )
-                }
-
-                SettingsItem.MAGNIFIER -> {
-                    magnifierPosition = characteristics.magnifierItems.indexOf(
-                        characteristics.magnifierItems[selectorPosition]
-
-                    )
-                    val index =
-                        characteristics.characteristicsItems.indexOfFirst { it.id == SettingsItem.MAGNIFIER }
-
-                    if (index != -1) {
-                        val oldItem = characteristics.characteristicsItems[index]
-
-                        if (oldItem is RadioGroupItem.TextItem) {
-                            // 2. Создаем обновленный объект
-                            val updatedItem = oldItem.copy(
-                                currentValue = characteristics.magnifierItems[magnifierPosition].value
-                            )
-
-                            // 3. Создаем новый список, заменяя элемент по индексу
-                            val updatedItems =
-                                characteristics.characteristicsItems.toMutableList().apply {
-                                    this[index] = updatedItem
-                                }
-
-                            // 4. Обновляем состояние целиком (иммутабельно)
-                            characteristics =
-                                characteristics.copy(characteristicsItems = updatedItems)
-                            renderer.configureMagnifier(
-                                updatedItem.currentValue.toFloat()
-                            )
-
-                        } else {
+                // 2. Обновляем текст в основном меню (RadioGroup)
+                val indexInMenu = characteristics.characteristicsItems.indexOfFirst { it.id == SettingsItem.MAGNIFIER }
+                if (indexInMenu != -1) {
+                    val oldItem = characteristics.characteristicsItems[indexInMenu]
+                    if (oldItem is RadioGroupItem.TextItem) {
+                        val updatedItem = oldItem.copy(currentValue = newMagValue)
+                        val newList = characteristics.characteristicsItems.toMutableList().apply {
+                            this[indexInMenu] = updatedItem
                         }
+                        characteristics = characteristics.copy(characteristicsItems = newList)
 
+                        // 3. СРАЗУ настраиваем рендерер
+                        renderer.configureMagnifier(newMagValue.replace("x", "").toFloatOrNull() ?: 1f)
                     }
-                    null
                 }
-
-                else -> characteristics.copy()
+                null // Возвращаем null, чтобы не отправлять характеристики в камеру (лупа - это софт)
             }
-
-            updatedCharacteristics?.let { onSetCharacteristic(it) }
+            SettingsItem.SHUTTER -> characteristics.copy(shutterValue = characteristics.shutterItems[selectorPosition].value)
+            SettingsItem.ISO -> characteristics.copy(isoValue = characteristics.isoItems[selectorPosition].value)
+            SettingsItem.WB -> characteristics.copy(wbValue = characteristics.wbItems[selectorPosition].value)
+            SettingsItem.FOCUS -> characteristics.copy(focusValue = characteristics.focusItems[selectorPosition].value)
+            else -> null
         }
 
-
+        updatedCharacteristics?.let { onSetCharacteristic(it) }
     }
     /* var selectorSelectedItemIndex by remember {
          mutableIntStateOf(0)
      }*/
-
-
-    LaunchedEffect(paramsRadioGroupSelectedItem) {
-        val (dataList, position) = when (paramsRadioGroupSelectedItem) {
-            SettingsItem.SHUTTER -> characteristics.shutterItems to characteristics.shutterPosition
-            SettingsItem.ISO -> characteristics.isoItems to characteristics.isoPosition
-            SettingsItem.WB -> characteristics.wbItems to characteristics.wbPosition
-            SettingsItem.FOCUS -> characteristics.focusItems to characteristics.focusPosition
-            SettingsItem.MAGNIFIER -> characteristics.magnifierItems to magnifierPosition
-            else -> null to 0
-        }
-
-        selectorItems = dataList?.map { data ->
-            SelectorUiItem(id = data.id) { isSelected ->
-                TextSelectorContent(data, isSelected)
-            }
-        }
-        selectorPosition = position
-    }
-    ////////////////////////////
     var selectorRadioGroupItems by remember {
         mutableStateOf<List<RadioUiItem<ModeItem>>?>(null)
     }
     var selectorRadioGroupSelectedItem by remember {
         mutableStateOf<Any?>(null)
     }
-    val autoModes = remember(characteristics.characteristicsItems) {
-        mutableStateMapOf<SettingsItem, Boolean>().apply {
-            characteristics.characteristicsItems.forEach { item ->
-                val category = item.id as? SettingsItem
-                if (category != null) {
-                    // Устанавливаем начальное значение (например, всё в false или по логике)
-                    this[category] = false
-                }
+
+    LaunchedEffect(paramsRadioGroupSelectedItem, autoModes[paramsRadioGroupSelectedItem]/*, characteristics*/) {
+        val currentCategory = paramsRadioGroupSelectedItem as? SettingsItem ?: return@LaunchedEffect
+        val isAuto = autoModes[currentCategory] ?: false
+
+        if (isAuto) {
+            // Режим AUTO (выбор режимов: WB Mode, Focus Mode)
+            val (dataList, currentMode) = when (currentCategory) {
+                SettingsItem.WB -> characteristics.wbModeItems to characteristics.wbMode
+                SettingsItem.FOCUS -> characteristics.focusModeItems to characteristics.focusMode
+                else -> null to null
             }
-        }
-    }
-
-
-    LaunchedEffect(autoModes[paramsRadioGroupSelectedItem]) {
-        autoModes[paramsRadioGroupSelectedItem]?.let{autoMode->
-            if (autoMode) return@LaunchedEffect
-
-            // 1. Получаем список нужных данных
-            val dataItems = when (paramsRadioGroupSelectedItem) {
-                SettingsItem.WB -> characteristics.wbModeItems
-                SettingsItem.FOCUS -> characteristics.focusModeItems
-                else -> null
-            }
-
-            // 2. Мапим данные в UI-элементы одним блоком
-            selectorRadioGroupItems = dataItems?.map { data ->
+            selectorRadioGroupItems = dataList?.map { data ->
                 RadioUiItem(id = data.id as ModeItem) { isSelected ->
                     when (data) {
                         is RadioGroupItem.IconItem -> IconRadioContent(data.iconRes, isSelected)
@@ -304,10 +244,43 @@ fun CameraScreenSuccess(
                     }
                 }
             }
+            selectorRadioGroupSelectedItem = currentMode
+            selectorItems = null
+        } else {
+            // Режим MANUAL (ISO, Shutter, Magnifier, ручные WB/Focus)
+            val (dataList, position) = when (currentCategory) {
+                SettingsItem.SHUTTER -> characteristics.shutterItems to characteristics.shutterPosition
+                SettingsItem.ISO -> characteristics.isoItems to characteristics.isoPosition
+                SettingsItem.WB -> characteristics.wbItems to characteristics.wbPosition
+                SettingsItem.FOCUS -> characteristics.focusItems to characteristics.focusPosition
+                SettingsItem.MAGNIFIER -> characteristics.magnifierItems to magnifierPosition
+                else -> null to 0
+            }
+            selectorItems = dataList?.map { data ->
+                SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
+            }
+            selectorPosition = position
+            selectorRadioGroupItems = null
         }
-
-
     }
+    ////////////////////////////
+
+
+
+// Синхронизируем начальные значения (только для новых категорий)
+  /*  LaunchedEffect(characteristics.characteristicsItems) {
+        characteristics.characteristicsItems.forEach { item ->
+            (item.id as? SettingsItem)?.let { category ->
+                // Кладем false только если там еще ничего нет (чтобы не затирать выбор пользователя)
+                if (!autoModes.containsKey(category)) {
+                    autoModes[category] = false
+                }
+            }
+        }
+    }*/
+
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -408,7 +381,7 @@ fun CameraScreenSuccess(
                 items = paramsRadioGroupItems,
                 selectedItem = it,
                 onItemClick = { value ->
-                    autoModes[value as SettingsItem] = !(autoModes[value])!!
+                   // autoModes[value as SettingsItem] = !(autoModes[value])!!
                     paramsRadioGroupSelectedItem = value
                 },
                 modifier = Modifier
@@ -469,14 +442,17 @@ fun CameraScreenSuccess(
                 ///////////auto
                 VectorShadow(
                     modifier = Modifier.size(32.dp),
-                    vectorColor = if (autoModes[paramsRadioGroupSelectedItem ]==true) Color.Green else Color.White,
+                    vectorColor = if (autoModes[paramsRadioGroupSelectedItem] == true) Color.Green else Color.White,
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.auto,
                     onClick = {
-                        autoModes[paramsRadioGroupSelectedItem as SettingsItem] = !(autoModes[paramsRadioGroupSelectedItem] ?: false)
-                      //  autoMode = !autoMode
+                        autoModes[paramsRadioGroupSelectedItem as SettingsItem] =
+                            !(autoModes[paramsRadioGroupSelectedItem] ?: false)
+                        //  autoMode = !autoMode
                     }
                 )
+                /////////value selector
+                val currentIsAuto = autoModes[paramsRadioGroupSelectedItem] ?: false
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -549,35 +525,38 @@ fun CameraScreenSuccess(
                       )
                       ////end of tmp fast selector
                       */
-                    autoModes[paramsRadioGroupSelectedItem]?.let {
-                        if (!it) {
-                            ValueSelector(
-                                modifier = Modifier.height(42.dp),
-                                position = selectorPosition,
-                                items = selectorItems,
-                                onSelectedItemChanged = { index ->
 
-                                    selectorPosition = index
 
+                    if (currentIsAuto && (
+                                paramsRadioGroupSelectedItem == SettingsItem.WB
+                                        || paramsRadioGroupSelectedItem == SettingsItem.FOCUS
+                            )) {
+                        // Показываем выбор режимов (Auto, Cloudy, Macro...)
+                        selectorRadioGroupItems?.let { items ->
+                            UniversalRadioGroup(
+                                items = items,
+                                selectedItem = selectorRadioGroupSelectedItem as? ModeItem,
+                                onItemClick = { mode ->
+                                    // Здесь вызываем обновление через ViewModel
+                                    val updated = when(mode) {
+                                        is ModeItem.WbItem -> characteristics.copy(wbMode = mode)
+                                        is ModeItem.FocusItem -> characteristics.copy(focusMode = mode)
+                                        else -> characteristics
+                                    }
+                                    onSetCharacteristic(updated)
                                 }
                             )
-                        } else {
-                            selectorRadioGroupItems?.let { items ->
-                                UniversalRadioGroup(
-                                    items = items,
-                                    selectedItem = selectorRadioGroupSelectedItem as? ModeItem,
-                                    onItemClick = { value ->
-                                        //   paramsRadioGroupSelectedItem = value
-                                    },
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .fillMaxWidth()
-                                        .padding(
-                                            top = 16.dp
-                                        ),
-                                )
-                            }
                         }
+                    } else {
+                        // Показываем обычный скролл значений (ISO, Shutter, Magnifier)
+                        ValueSelector(
+                            modifier = Modifier.fillMaxSize(),
+                            position = selectorPosition,
+                            items = selectorItems,
+                            onSelectedItemChanged = { index ->
+                                selectorPosition = index
+                            }
+                        )
                     }
 
 
