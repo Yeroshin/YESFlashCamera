@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
 import kotlin.math.exp
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -69,7 +70,7 @@ class SubscribeCameraSettingsUseCase(
                     smoothedMap[index] = value
                 }
                 smoothedMap
-            }.sample(17.milliseconds)
+            }.sample(17.milliseconds).take(1)
         val cameraCharacteristicsFlow=cameraRepository.subscribeCameraSettings().filterNotNull()
        // val settingsFlow=settingsRepository.subscribeSettings()
 

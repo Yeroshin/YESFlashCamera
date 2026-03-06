@@ -230,7 +230,33 @@ class MapperUI(
                     )
             },
             wbModeItems =
-            ModeItem.WbItem.entries.map { item ->
+            characteristics.wbModeItems?.map { item ->
+            RadioGroupItem.IconItem(
+                id =  when (item) {
+                    CONTROL_AWB_MODE_AUTO -> ModeItem.WbItem.AUTO
+                    CONTROL_AWB_MODE_INCANDESCENT -> ModeItem.WbItem.INCANDESCENT
+                    CONTROL_AWB_MODE_FLUORESCENT -> ModeItem.WbItem.FLUORESCENT
+                    CONTROL_AWB_MODE_WARM_FLUORESCENT -> ModeItem.WbItem.WARM_FLUORESCENT
+                    CONTROL_AWB_MODE_DAYLIGHT -> ModeItem.WbItem.DAYLIGHT
+                    CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> ModeItem.WbItem.CLOUDY_DAYLIGHT
+                    CONTROL_AWB_MODE_TWILIGHT -> ModeItem.WbItem.TWILIGHT
+                    CONTROL_AWB_MODE_SHADE -> ModeItem.WbItem.SHADE
+                    else -> ModeItem.WbItem.AUTO
+                },
+                iconRes = when (item) {
+                    CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
+                    CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
+                    CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.fluorescent
+                    CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.fluorescent
+                    CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
+                    CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_cloudy
+                    CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
+                    CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
+                    else ->R.drawable.wb_auto
+                }
+            )
+        } ?: emptyList()
+           /* ModeItem.WbItem.entries.map { item ->
                 RadioGroupItem.IconItem(
                     id = item,
                     iconRes = when (item) {
@@ -246,7 +272,7 @@ class MapperUI(
                     },
 
                     )
-            },
+            }*/,
             wbMode = when (characteristics.wbMode) {
                 CONTROL_AWB_MODE_AUTO -> ModeItem.WbItem.AUTO
                 CONTROL_AWB_MODE_INCANDESCENT -> ModeItem.WbItem.INCANDESCENT
@@ -364,14 +390,16 @@ class MapperUI(
                 }
             }
         }
-        var focusMode: Int? = when (characteristics.focusMode) {
-            ModeItem.FocusItem.MACRO -> {
-                characteristics.focusItems.map {
-                    it.value.toFloat()
-                }.max().toInt()
-                //  focusMode = CONTROL_AF_MODE_MACRO
-                //  null
+        var focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
 
+        val focusMode: Int? = when (characteristics.focusMode) {
+            ModeItem.FocusItem.MACRO -> {
+                focusValue=  characteristics.focusItems.map {
+                    it.value.toFloat()
+                }.max()
+                //  focusMode = CONTROL_AF_MODE_MACRO
+                  null
+             //   CONTROL_AF_MODE_MACRO
             }
 
             ModeItem.FocusItem.CONTINUOUS -> {
@@ -380,33 +408,34 @@ class MapperUI(
             }
 
             ModeItem.FocusItem.TOUCH -> {
-                -1
+                focusValue=null
+                    -1
                 // null
             }
 
             ModeItem.FocusItem.INFINITE -> {
-                characteristics.focusItems.map {
+                focusValue=   characteristics.focusItems.map {
                     it.value.toFloat()
-                }.min().toInt()
+                }.min()
+                null
             }
 
             null -> null
         }
-        val focusValue: Float? = characteristics.focusValue?.toFloatOrNull()
 
 
 
         return Characteristics(
             isoValue = isoValue,
-            isoRange = IntRange(0, 0),
+
             shutterValue = shutterValue,
             wbValue = wbValue,
             wbMode = wbMode,
             focusValue = focusValue,
             focusMode = focusMode,
-            shutterRange = LongRange(0, 0),
+
             resolutionItems = emptyList(),
-            resolution = Dimensions(0, 0),
+
             touchPoint = floatArrayOf(
                 characteristics.touchPoint?.x ?: 0f,
                 characteristics.touchPoint?.y ?: 0f,

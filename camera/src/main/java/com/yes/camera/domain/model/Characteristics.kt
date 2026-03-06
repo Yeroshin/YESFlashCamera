@@ -12,12 +12,13 @@ data class Characteristics(
     val shutterRange: LongRange = LongRange(0L, 0L),
     val wbValue: Int? = null,
     val wbMode: Int? = null,
-    val wbItems: IntArray? = null,
+    val wbValueItems: List<Int>? = null,
+    val wbModeItems: IntArray? = null,
     val focusValue: Float? = null,
     val focusMode: Int? = null,
     val minFocusValue: Float = 0f,
     val maxFocusValue: Float = 0f,
-    val resolution: Dimensions,
+    val resolution: Dimensions=Dimensions(0, 0),
     val resolutionItems: List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null,
     val fullscreen: Boolean? = null,
@@ -26,4 +27,4 @@ data class Characteristics(
     val histogramData: MutableMap<Int, Int> = mutableMapOf(),
 
 
-)
+    )

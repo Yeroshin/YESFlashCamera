@@ -7,7 +7,6 @@ import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.ImageFormat.NV21
 import android.graphics.Matrix
-import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.graphics.YuvImage
@@ -16,7 +15,6 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.DngCreator
@@ -30,18 +28,13 @@ import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaRecorder
 import android.os.Build
-import android.os.Environment
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
-import android.util.Range
 import android.util.Rational
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import com.google.android.gms.common.util.concurrent.HandlerExecutor
 import com.yes.camera.data.repository.AutoExposure.getIsoPriorityWithClassicSteps
 import com.yes.camera.data.repository.AutoExposure.getShutterPriorityWithClassicSteps
 import com.yes.camera.domain.model.Characteristics
@@ -49,12 +42,9 @@ import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.utils.CameraThreadManager
 import com.yes.shared.utils.FileNameGenerator
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,13 +53,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
-import java.nio.ByteBuffer
-import java.util.Timer
-import kotlin.concurrent.schedule
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
@@ -3972,7 +3957,7 @@ class CameraRepository(
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterValue = 0,
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
-            wbItems = awbModes,
+            wbModeItems = awbModes,
             minFocusValue = minFocusDistance ?: 0f,
             maxFocusValue = maxFocusDistance ?: 0f,
             resolutionItems = allSizes?.map {
@@ -4595,7 +4580,8 @@ class CameraRepository(
             //  previousWbValue = characteristics.wbValue
             //  wb=true
             /////////////////WB
-          /*   characteristics.wbValue?.let { wb ->
+
+             characteristics.wbValue?.let { wb ->
                   ////////////////////////////
                   //   val rggb = ColorTemperatureConverter.kelvinToNormalizedRgb(wb.toFloat())
                   //  val kelvin = ColorTemperatureConverter.rgbNormalizedToKelvin(rggb)
@@ -4625,7 +4611,7 @@ class CameraRepository(
                           CaptureRequest.COLOR_CORRECTION_MODE_HIGH_QUALITY
                       )
                   }
-              }*/
+              }
 
             /////////////// exposure
             // --- 1. ЭКСПОЗИЦИЯ ---
@@ -4660,7 +4646,7 @@ class CameraRepository(
 
             /////////////////////////////////////////focus
             // 1. РУЧНОЙ ФОКУС (Дистанция линзы)
-/*
+
             if (characteristics.focusValue != null) {
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                 set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
@@ -4729,7 +4715,7 @@ class CameraRepository(
                         )
                     }
                 }
-            }*/
+            }
 
 
 
@@ -5277,7 +5263,7 @@ class CameraRepository(
                     } else {
                         // Если изменений нет, возвращаем тот же самый объект
                         // StateFlow поймет, что ссылка не изменилась, и не запустит рекомпозицию
-                        current
+                        it
                     }
                 }
 
@@ -5325,21 +5311,23 @@ class CameraRepository(
             // 2. СБРОС ТРИГГЕРА (Критично для 2026 года)
             // Чтобы камера могла фокусироваться снова при следующем нажатии,
             // нужно отправить разовый запрос с командой CANCEL или IDLE.
-            try {
+            if (isSuccess) {
+                try {
 
 
-                // Отменяем текущий поиск фокуса, чтобы вернуть систему в исходное состояние
-                captureRequest.set(
-                    CaptureRequest.CONTROL_AF_TRIGGER,
-                    CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
-                )
-                cameraSession?.capture(captureRequest.build(), null, cameraThreadManager.handler)
+                    // Отменяем текущий поиск фокуса, чтобы вернуть систему в исходное состояние
+                    captureRequest.set(
+                        CaptureRequest.CONTROL_AF_TRIGGER,
+                        CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
+                    )
+                    cameraSession?.capture(captureRequest.build(), null, cameraThreadManager.handler)
 
-                // После CANCEL возвращаем камеру в режим слежения (Continuous)
-                startPreviewCaptureRequest(lastCharacteristics)
-            } catch (e: Exception) {
-                e.printStackTrace()
+                 //   startPreviewCaptureRequest(lastCharacteristics)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
+
         }
     }
 

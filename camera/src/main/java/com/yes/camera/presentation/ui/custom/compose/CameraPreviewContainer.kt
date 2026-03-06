@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
@@ -21,7 +22,7 @@ fun CameraPreviewContainer(
     fullScreen: Boolean,
    characteristics: CharacteristicsUI?, // Предположим, это ваш класс с width и height
     onSizeChanged: (IntSize) -> Unit,
-    onTouchPoint: (FloatArray) -> Unit
+    onTouchPoint: (Offset) -> Unit
 ) {
     // Этот компонент будет рекомпозироваться ТОЛЬКО при смене aspectRatio или fullScreen.
     // Изменение ISO или Shutter на него больше не влияет!
@@ -44,7 +45,7 @@ fun CameraPreviewContainer(
                         MotionEvent.ACTION_MOVE -> renderer.handleTouchDrag(nx, ny)
                         MotionEvent.ACTION_UP -> {
                             v.performClick()
-                            onTouchPoint(floatArrayOf(event.x / v.width, event.y / v.height))
+                            onTouchPoint(Offset(event.x / v.width, event.y / v.height))
                         }
                     }
                     true
