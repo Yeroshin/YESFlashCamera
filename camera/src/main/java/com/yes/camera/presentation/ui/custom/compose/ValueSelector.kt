@@ -2,6 +2,7 @@ package com.yes.camera.presentation.ui.custom.compose
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -30,9 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -555,7 +558,7 @@ fun ValueSelector(
 */
 ///////////////
 @Immutable
-data class SelectorUiItem (
+data class SelectorUiItem(
     val id: Int, // Это будет наш Enum (SettingsItem, WbItem и т.д.)
     val content: @Composable (isSelected: Boolean) -> Unit
 )
@@ -570,15 +573,21 @@ fun ValueSelector(
 ) {
     if (items.isNullOrEmpty()) return
 
-    val listState = rememberLazyListState()
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val density = LocalDensity.current
-
-
-
     val itemWidthDp = 48.dp
     val itemWidthPx = with(density) { itemWidthDp.toPx() }
     var rowWidthPx by remember { mutableIntStateOf(0) }
+
+    val horizontalPadding = with(density) {
+        (rowWidthPx / 2f - itemWidthPx / 2f).coerceAtLeast(0f).toDp()
+    }
+    val offsetInPx = with(density) { horizontalPadding.roundToPx() }
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = position,
+        initialFirstVisibleItemScrollOffset = -offsetInPx
+    )
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
 
     val centerIndex by remember {
         derivedStateOf {
@@ -586,14 +595,18 @@ fun ValueSelector(
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isEmpty()) return@derivedStateOf position
             val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            val t = visibleItems.minByOrNull { item ->
+                abs(item.offset + item.size / 2 - viewportCenter)
+            }?.index ?: position
+            val m = t
             visibleItems.minByOrNull { item ->
                 abs(item.offset + item.size / 2 - viewportCenter)
-            }?.index ?: 0
+            }?.index ?: position
         }
     }
 ////////////////////////////////
 
-    LaunchedEffect(position) {
+    LaunchedEffect(position, rowWidthPx) {
         if (!listState.isScrollInProgress && centerIndex != position) {
             listState.animateScrollToItem(position)
         }
@@ -625,6 +638,8 @@ fun ValueSelector(
             }
     }
 
+
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -634,15 +649,13 @@ fun ValueSelector(
             state = listState,
             flingBehavior = flingBehavior,
             contentPadding = PaddingValues(
-                horizontal = with(density) {
-                    (rowWidthPx / 2f - itemWidthPx / 2f).coerceAtLeast(0f).toDp()
-                }
+                horizontal = horizontalPadding
             ),
             horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             items(
                 count = items.size,
-              //  key = { index -> items[index].id }
+                //  key = { index -> items[index].id }
             ) { index ->
                 Box(
                     modifier = Modifier.width(itemWidthDp),
@@ -665,7 +678,4 @@ fun ValueSelector(
     }
 }
 
-
-
-
-
+/////////////////////

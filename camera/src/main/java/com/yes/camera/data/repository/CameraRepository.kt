@@ -4650,7 +4650,7 @@ class CameraRepository(
             if (characteristics.focusValue != null) {
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                 set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-            } else {
+            } else if (characteristics.focusMode!= null){
                 // 2. АВТОМАТИЧЕСКИЙ ФОКУС
                 when (characteristics.focusMode) {
                     // Режим фокусировки по нажатию (Touch-to-focus)
@@ -4700,6 +4700,9 @@ class CameraRepository(
                                 CaptureRequest.CONTROL_AF_TRIGGER,
                                 CaptureRequest.CONTROL_AF_TRIGGER_IDLE
                             )
+                            lastCharacteristics=lastCharacteristics.copy(
+                                focusMode = null
+                            )
                         }
                     }
 
@@ -4715,6 +4718,7 @@ class CameraRepository(
                         )
                     }
                 }
+
             }
 
 

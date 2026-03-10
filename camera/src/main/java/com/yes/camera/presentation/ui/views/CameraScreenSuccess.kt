@@ -96,6 +96,8 @@ fun CameraScreenSuccess(
                 }
             }
         )
+
+
     }
     var characteristicsRrequest by remember {
         mutableStateOf(characteristicsInit)
@@ -132,16 +134,17 @@ fun CameraScreenSuccess(
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
 
 
+
+    val autoModes = remember {
+        mutableStateMapOf<SettingsItem, Boolean>()
+    }
     var paramsRadioGroupSelectedItem by remember( /*characteristics.characteristicsItems*/) {
         mutableStateOf(
             characteristics.characteristicsItems.firstOrNull()?.id
         )
     }
-    val autoModes = remember {
-        mutableStateMapOf<SettingsItem, Boolean>()
-    }
     LaunchedEffect(characteristics.characteristicsItems) {
-        val items = characteristics.characteristicsItems
+       /* val items = characteristics.characteristicsItems
         if (items.isNotEmpty() && items.none { it.id == paramsRadioGroupSelectedItem }) {
             paramsRadioGroupSelectedItem = items.first().id
 
@@ -153,7 +156,7 @@ fun CameraScreenSuccess(
                     }
                 }
             }
-        }
+        }*/
     }
     val paramsRadioGroupItems = remember(characteristics.characteristicsItems) {
         characteristics.characteristicsItems.map { data ->
@@ -321,6 +324,20 @@ fun CameraScreenSuccess(
         autoModes[paramsRadioGroupSelectedItem],
         characteristicsInit
     ) {
+        val items = characteristics.characteristicsItems
+        if (items.isNotEmpty() && items.none { it.id == paramsRadioGroupSelectedItem }) {
+            paramsRadioGroupSelectedItem = items.first().id
+
+            items.forEach { item ->
+                (item.id as? SettingsItem)?.let { category ->
+                    // Кладем false только если там еще ничего нет (чтобы не затирать выбор пользователя)
+                    if (!autoModes.containsKey(category)) {
+                        autoModes[category] = false
+                    }
+                }
+            }
+        }
+        ////////////////////
         val currentCategory = paramsRadioGroupSelectedItem as? SettingsItem ?: return@LaunchedEffect
         val isAuto = autoModes[currentCategory] ?: false
 
@@ -389,12 +406,7 @@ fun CameraScreenSuccess(
             SettingsItem.MAGNIFIER -> characteristics.magnifierItems to magnifierPosition
             else -> null to 0
         }
-
-        selectorItems = dataList?.map { data ->
-            SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
-        }
-
-        // 4. СИНХРОНИЗАЦИЯ ПОЗИЦИИ
+// 4. СИНХРОНИЗАЦИЯ ПОЗИЦИИ
         // В режиме AUTO селектор всегда прыгает в позицию, которую прислала камера.
         // В режиме MANUAL — только при смене категории (чтобы не мешать скроллу пальцем).
         if (isAuto || isCategoryChanged) {
@@ -405,6 +417,11 @@ fun CameraScreenSuccess(
                 isTechnicalScroll = false
             }
         }
+        selectorItems = dataList?.map { data ->
+            SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
+        }
+
+
     }
     // ЭФФЕКТ 2: ПРИМЕНЕНИЕ РУЧНЫХ НАСТРОЕК (Пользователь крутит селектор)
     LaunchedEffect(selectorPosition) {
