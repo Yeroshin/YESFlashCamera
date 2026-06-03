@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -193,31 +194,43 @@ fun CameraScreen(
                 renderer?.configureMagnifier(1f)
             }
     }
+    val onPreviewTouch = remember(cameraViewModel) {
+        fun(offset: Offset) { // Используем ключевое слово fun для точного вывода типа
+            val freshestState = cameraViewModel.uiState.value.state
+            (freshestState as? CameraContract.CameraState.Success)?.let { successState ->
+                cameraViewModel.setEvent(
+                    CameraContract.Event.OnSetCharacteristics(
+                        successState.characteristics.copy(touchPoint = offset)
+                    )
+                )
+            }
+        }
+    }
     val viewState = cameraViewModel.uiState.collectAsState()
     val currentState = viewState.value.state
     if (hasPermission && renderer != null) {
         Box(modifier = Modifier.fillMaxSize()) {
+            val successCharacteristics = (currentState as? CameraContract.CameraState.Success)?.characteristics
+
+            // 2. ОПТИМИЗАЦИЯ: Фиксируем параметры размеров в памяти.
+            // Этот remember сработает ТОЛЬКО если пользователь физически сменит соотношение сторон (например, с 4:3 на 16:9).
+            // Смена ISO, выдержки или фокуса больше НИКОГДА не заставит этот блок пересчитываться!
+            val previewConfig = remember(successCharacteristics?.aspectRatio, successCharacteristics?.fullScreen) {
+                Pair(
+                    successCharacteristics?.fullScreen ?: false,
+                    successCharacteristics?.aspectRatio
+                )
+            }
             CameraPreviewContainer(
                 renderer,
-                (currentState as? CameraContract.CameraState.Success)?.characteristics?.fullScreen
-                    ?: false,
-                (currentState as? CameraContract.CameraState.Success)?.characteristics?.aspectRatio,
+                fullScreen = previewConfig.first,  // Передаем закешированное значение
+                aspectRatio = previewConfig.second,
                 { size ->
                     surfaceViewSize = size
                 },
-                { offset ->
-                    val freshestState = cameraViewModel.uiState.value.state
 
-                    (freshestState as? CameraContract.CameraState.Success)?.let { successState ->
-                        cameraViewModel.setEvent(
-                            CameraContract.Event.OnSetCharacteristics(
-                                successState.characteristics.copy(
-                                    touchPoint = offset // Теперь объединение происходит со 100% свежими данными
-                                )
-                            )
-                        )
-                    }
-                }
+                onTouchPoint = onPreviewTouch
+
             )
 
 
