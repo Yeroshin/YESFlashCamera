@@ -2,7 +2,7 @@ package com.yes.camera.presentation.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
-
+import kotlinx.collections.immutable.persistentListOf
 import com.yes.shared.domain.Dimensions
 /*
 data class CharacteristicsUI(
@@ -70,7 +70,7 @@ data class CharacteristicsUI(
               ""
           )
       ),*/
-    val characteristicsItems:List<RadioGroupItem > = emptyList(),
+    val characteristicsItems: List<RadioGroupItem> =persistentListOf(),
 
     val backCamera: Boolean = true,
     val shutterValue: String? = null,

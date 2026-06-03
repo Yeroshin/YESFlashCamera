@@ -51,7 +51,7 @@ dependencies {
 
 
     implementation(libs.androidx.core.ktx)
-
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.8")
 
     //compose
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))

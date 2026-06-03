@@ -14,13 +14,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.ui.custom.gles.AutoFitSurfaceView
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
+import com.yes.shared.domain.Dimensions
 
 @Stable
 @Composable
 fun CameraPreviewContainer(
     renderer: GLRenderer,
     fullScreen: Boolean,
-   characteristics: CharacteristicsUI?, // Предположим, это ваш класс с width и height
+    aspectRatio: Dimensions?, // Предположим, это ваш класс с width и height
     onSizeChanged: (IntSize) -> Unit,
     onTouchPoint: (Offset) -> Unit
 ) {
@@ -57,8 +58,8 @@ fun CameraPreviewContainer(
             // Теперь update вызывается редко
             view.setFullscreen(fullScreen)
             view.setAspectRatio(
-                characteristics?.aspectRatio?.width ?: 3,
-                characteristics?.aspectRatio?.height ?: 2
+                aspectRatio?.width ?: 3,
+                aspectRatio?.height ?: 2
             )
         }
     )

@@ -4364,15 +4364,42 @@ class CameraRepository(
     private var previousWbValue: Int? = null
     private var wb = false
     private var touchPoint: FloatArray? = null
-
+    private var af=false
 
     // Ждем ли мы завершения замера
 
     private var lastTriggeredPoint: FloatArray? = null
+    fun getChanges(old: Characteristics, new: Characteristics): Map<String, Pair<Any?, Any?>> {
 
+        val changes = mutableMapOf<String, Pair<Any?, Any?>>()
+
+        // Используем Java Reflection (она доступна по умолчанию)
+        old::class.java.declaredFields.forEach { field ->
+            field.isAccessible = true // Даем доступ к приватным полям
+            val oldVal = field.get(old)
+            val newVal = field.get(new)
+
+            if (oldVal != newVal) {
+                // Проверка для массивов (wbModeItems), так как у них != сравнивает ссылки
+                if (oldVal is IntArray && newVal is IntArray) {
+                    if (!oldVal.contentEquals(newVal)) {
+                        changes[field.name] = oldVal to newVal
+                    }
+                } else {
+                    changes[field.name] = oldVal to newVal
+                }
+            }
+        }
+        return changes
+    }
     suspend fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
+        if (::lastCharacteristics.isInitialized) {
+            val changes=getChanges(lastCharacteristics, characteristics)
+            val t=changes
+        }
+
 ///////////////////////////
         /*  characteristics.isoValue?.let { isoValue ->
               characteristics.shutterValue?.let { shutterValue ->
@@ -4537,7 +4564,7 @@ class CameraRepository(
             cameraThreadManager.handler
         )*/
         //////////////////////end of clean call
-        lastCharacteristics = characteristics
+
         captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL)
         captureRequest.apply {
 
@@ -4602,6 +4629,7 @@ class CameraRepository(
                       CaptureRequest.COLOR_CORRECTION_MODE,
                       CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
                   )
+
               } ?: run {
                   characteristics.wbMode?.let {
                       wb = true
@@ -4673,7 +4701,7 @@ class CameraRepository(
                             myScope.launch(cameraThreadManager.dispatcher) {
                                 val singleBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL).apply {
                                     addTarget(previewSurface)
-
+                                    set(CaptureRequest.CONTROL_AE_LOCK, true)
                                     set(
                                         CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_AUTO
@@ -4687,6 +4715,7 @@ class CameraRepository(
                                         CaptureRequest.CONTROL_AF_TRIGGER_START
                                     )
                                 }
+
                                 cameraSession?.capture(
                                     singleBuilder .build(),
                                     repeatingCaptureCallback,
@@ -4695,15 +4724,15 @@ class CameraRepository(
                             }
 
                             // В текущем (repeating) билдере держим регион, но триггер в IDLE
-                            set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRect))
+                            set(CaptureRequest.CONTROL_AF_REGIONS,
+                                arrayOf(meteringRect)
+                            )
                             set(
                                 CaptureRequest.CONTROL_AF_TRIGGER,
                                 CaptureRequest.CONTROL_AF_TRIGGER_IDLE
                             )
-                            lastCharacteristics=lastCharacteristics.copy(
-                                focusMode = null
-                            )
                         }
+                    af=true
                     }
 
                     // Непрерывный фокус (CAF)
@@ -4735,6 +4764,7 @@ class CameraRepository(
                 throw IllegalArgumentException(e)
 
             }
+            lastCharacteristics = characteristics
         }
 
     }
@@ -4906,24 +4936,31 @@ class CameraRepository(
             val afState = result.get(CaptureResult.CONTROL_AF_STATE) ?: return
 
             // 2. Уводим логику в пул анализа, чтобы не блокировать получение метаданных следующего кадра
-            cameraThreadManager.analysisExecutor.execute {
-                when (afState) {
-                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                        // Фокус успешно найден и заблокирован
-                        handleFocusResult(isSuccess = true)
-                    }
+           if(af){
 
-                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                        // Фокус не найден (объект слишком близко или темно), но движение остановлено
-                        handleFocusResult(isSuccess = false)
-                    }
+               cameraThreadManager.analysisExecutor.execute {
+                   when (afState) {
 
-                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
-                        // Фокус найден в автоматическом режиме (CAF), можно обновить UI
-                        // updateFocusUI(isLocked = true)
-                    }
-                }
-            }
+                       CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                           // Фокус успешно найден и заблокирован
+                           af=false
+                           handleFocusResult(isSuccess = true)
+                       }
+
+                       CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                           af=false
+                           // Фокус не найден (объект слишком близко или темно), но движение остановлено
+                           handleFocusResult(isSuccess = false)
+                       }
+
+                       CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
+                           // Фокус найден в автоматическом режиме (CAF), можно обновить UI
+                           // updateFocusUI(isLocked = true)
+                       }
+                   }
+               }
+           }
+
             /*
             //   val afState = result[CaptureResult.CONTROL_AF_STATE]!!
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
@@ -5134,7 +5171,13 @@ class CameraRepository(
                 // Определяем, что именно мы фиксируем
                 val finalShutter = if (lastCharacteristics.shutterValue == null) {
                     // Если выдержка не задана, рассчитываем её под выбранное ISO
-                    getShutterPriorityWithClassicSteps(captureRequest, cameraCharacteristics, currentIso, currentExp, lastCharacteristics.isoValue ?: currentIso, 0)
+                    getShutterPriorityWithClassicSteps(
+                        captureRequest,
+                        cameraCharacteristics,
+                        currentIso,
+                        currentExp,
+                        lastCharacteristics.isoValue ?: currentIso,
+                        0)
                 } else lastCharacteristics.shutterValue
 
                 val finalIso = if (lastCharacteristics.isoValue == null) {
@@ -5248,7 +5291,7 @@ class CameraRepository(
             _characteristicsFlow.update { current ->
                 current?.let {
                     val isChanged = it.focusValue != focusDistance ||
-                            it.wbValue != kelvin || // ВАЖНО: убедитесь, что константа 100 — это то, что вам нужно
+                         //   it.wbValue != kelvin || // ВАЖНО: убедитесь, что константа 100 — это то, что вам нужно
                             it.shutterValue != currentShutter ||
                             it.isoValue != currentIso ||
                             it.wbMode != lastCharacteristics.wbMode ||
@@ -5299,6 +5342,7 @@ class CameraRepository(
     }
 
     private fun handleFocusResult(isSuccess: Boolean) {
+
         // Возвращаемся в командный поток камеры для сброса триггера
         myScope.launch(cameraThreadManager.dispatcher) {
 
@@ -5316,6 +5360,7 @@ class CameraRepository(
             // Чтобы камера могла фокусироваться снова при следующем нажатии,
             // нужно отправить разовый запрос с командой CANCEL или IDLE.
             if (isSuccess) {
+
                 try {
 
 
@@ -5324,7 +5369,7 @@ class CameraRepository(
                         CaptureRequest.CONTROL_AF_TRIGGER,
                         CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
                     )
-                    cameraSession?.capture(captureRequest.build(), null, cameraThreadManager.handler)
+                    cameraSession?.capture(captureRequest.build(), repeatingCaptureCallback, cameraThreadManager.handler)
 
                  //   startPreviewCaptureRequest(lastCharacteristics)
                 } catch (e: Exception) {
@@ -6046,3 +6091,5 @@ object AutoExposure {
         builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurationNs)*/
     }
 }
+
+

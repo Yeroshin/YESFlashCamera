@@ -1,16 +1,13 @@
 package com.yes.camera.presentation.ui
 
-import ads_mobile_sdk.h6
 import android.Manifest
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
-import androidx.activity.viewModels
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,28 +17,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yes.camera.presentation.contract.CameraContract
+import com.yes.camera.presentation.ui.custom.compose.CameraPreviewContainer
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
-import com.yes.camera.utils.ShutterSpeedsResourcesProvider
 import com.yes.camera.presentation.ui.views.CameraScreenSuccess
 import com.yes.camera.presentation.ui.views.ErrorScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.shared.presentation.ui.PermissionManager
 import com.yes.shared.utils.CameraThreadManager
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 
 
 /*
@@ -117,29 +116,112 @@ fun CameraScreen(
         mutableStateOf(null)
     }
     val cameraThreadManager = remember { CameraThreadManager() }
-    PermissionManager(
+    var hasPermission by remember { mutableStateOf(false) }
+    var isPermanentDenied by remember { mutableStateOf(false) }
+   /* PermissionManager(
         permissions = arrayOf(
             Manifest.permission.CAMERA,
             //  Manifest.permission.READ_MEDIA_IMAGES
         ),
         onPermissionsGranted = {
+            hasPermission = true
             // Всё содержимое из оригинальной ветки if (permissionsGranted)
-            val renderer = remember {
-                GLRenderer(
-                    context = context,
-                    cameraHandler = cameraThreadManager.handler
-                ) { surfaceTexture ->
 
-                    surface = surfaceTexture
-                    surfaceTexture.setDefaultBufferSize(640, 480/*,4096,3072*//*1920, 1080*/)
-                    cameraViewModel.setEvent(
-                        CameraContract.Event.OnOpenCamera(true, surfaceTexture)
-                    )
-                }
+
+        },
+        onPermissionsDenied = { isPermanent, onRetry ->
+            hasPermission = false
+
+
+        }
+    )*/
+    val registryOwner = LocalActivityResultRegistryOwner.current
+        ?: error("No ActivityResultRegistryOwner found")
+    val permissionManager = remember {
+        PermissionManager(
+            context = context,
+            registry = registryOwner.activityResultRegistry,
+            permissions = arrayOf(Manifest.permission.CAMERA),
+            onPermissionsGranted = {
+                hasPermission = true // Рендерер ниже сразу увидит этот флаг
+            },
+            onPermissionsDenied = { isPermanent ->
+                isPermanentDenied = isPermanent
             }
+        )
+    }
 
-            val viewState = cameraViewModel.uiState.collectAsState()
-            when (val state = viewState.value.state) {
+    // 2. Жизненный цикл менеджера разрешений.
+    // Отрабатывает строго ОДИН РАЗ при открытии и закрытии экрана.
+    DisposableEffect(permissionManager) {
+        permissionManager.register()
+        permissionManager.checkAndRequestPermissions()
+
+        onDispose {
+            permissionManager.unregister() // Чистим за собой реестр лаунчеров
+        }
+    }
+    val renderer = remember(hasPermission) {
+        if (hasPermission) {
+            GLRenderer(
+                context = context,
+                cameraHandler = cameraThreadManager.handler
+            ) { surfaceTexture ->
+
+                surface = surfaceTexture
+                surfaceTexture.setDefaultBufferSize(640, 480/*,4096,3072*//*1920, 1080*/)
+                cameraViewModel.setEvent(
+                    CameraContract.Event.OnOpenCamera(true, surfaceTexture)
+                )
+            }
+        } else null
+
+    }
+    var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(renderer) {
+        // Ждем, когда размеры станут известны (не 0)
+        snapshotFlow { surfaceViewSize }
+            .filter { it.width > 0 && it.height > 0 }
+            .first() // Берем только самое первое валидное значение
+            .let { size ->
+                val normalizedX =
+                    (size.width.toFloat() / 2f / size.width.toFloat()) * 2f - 1f
+                val normalizedY =
+                    -((size.height.toFloat() / 2f / size.height.toFloat()) * 2f - 1f)
+                renderer?.handleTouchPress(normalizedX, normalizedY)
+                renderer?.configureMagnifier(1f)
+            }
+    }
+    val viewState = cameraViewModel.uiState.collectAsState()
+    val currentState = viewState.value.state
+    if (hasPermission && renderer != null) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            CameraPreviewContainer(
+                renderer,
+                (currentState as? CameraContract.CameraState.Success)?.characteristics?.fullScreen
+                    ?: false,
+                (currentState as? CameraContract.CameraState.Success)?.characteristics?.aspectRatio,
+                { size ->
+                    surfaceViewSize = size
+                },
+                { offset ->
+                    val freshestState = cameraViewModel.uiState.value.state
+
+                    (freshestState as? CameraContract.CameraState.Success)?.let { successState ->
+                        cameraViewModel.setEvent(
+                            CameraContract.Event.OnSetCharacteristics(
+                                successState.characteristics.copy(
+                                    touchPoint = offset // Теперь объединение происходит со 100% свежими данными
+                                )
+                            )
+                        )
+                    }
+                }
+            )
+
+
+            when (currentState) {
                 CameraContract.CameraState.Idle -> {
                     /* Показать idle UI если нужно */
                 }
@@ -152,7 +234,7 @@ fun CameraScreen(
                     CameraScreenSuccess(
                         context = context,
                         renderer = renderer,
-                        characteristicsInit = state.characteristics,
+                        characteristicsInit = currentState.characteristics,
                         onSettingsClick = {
                             cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
                             onSettingsClick()
@@ -170,7 +252,7 @@ fun CameraScreen(
                 }
 
                 is CameraContract.CameraState.Error -> {
-                    ErrorScreen(error = state.error) {
+                    ErrorScreen(error = currentState.error) {
                         surface?.let {
                             cameraViewModel.setEvent(
                                 CameraContract.Event.OnOpenCamera(true, it)
@@ -180,39 +262,50 @@ fun CameraScreen(
                     }
                 }
             }
-        },
-        onPermissionsDenied = { isPermanent, onRetry ->
-            Column {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (isPermanent) {
-                        Text("Разрешение заблокировано. Пожалуйста, включите его в настройках.")
-                        Spacer(modifier = Modifier.height(8.dp))
+        }
+    }else{
+       /* Column {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (isPermanent) {
+                    Text("Разрешение заблокировано. Пожалуйста, включите его в настройках.")
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        Button(onClick = {
-                            val intent =
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                            context.startActivity(intent)
-                        }) {
-                            Text("Открыть настройки")
-                        }
-                    } else {
-                        Text("Для работы приложения необходим доступ к камере")
-                        Button(onClick = onRetry) {
-                            Text("Дать разрешение")
-                        }
+                    Button(onClick = {
+                        val intent =
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        context.startActivity(intent)
+                    }) {
+                        Text("Открыть настройки")
+                    }
+                } else {
+                    Text("Для работы приложения необходим доступ к камере")
+                    Button(onClick = onRetry) {
+                        Text("Дать разрешение")
                     }
                 }
             }
+        }*/
+        CameraScreenError(
+            //  onRetryPermission: () -> Unit,
+            onSettingsClick= {
+                val intent =
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                context.startActivity(intent)
+            }
+        )
+    }
 
-        }
-    )
+
 }
 
 

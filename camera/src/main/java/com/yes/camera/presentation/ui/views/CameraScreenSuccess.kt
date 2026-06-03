@@ -1,8 +1,6 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
-import android.media.audiofx.EnvironmentalReverb.Settings
-import android.os.StrictMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -57,6 +54,7 @@ import com.yes.camera.presentation.ui.custom.compose.ValueSelector
 import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 
@@ -103,8 +101,8 @@ fun CameraScreenSuccess(
         mutableStateOf(characteristicsInit)
     }
 
-    var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
-    LaunchedEffect(surfaceViewSize) {
+ //   var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
+   /* LaunchedEffect(surfaceViewSize) {
         // Ждем, когда размеры станут известны (не 0)
         snapshotFlow { surfaceViewSize }
             .filter { it.width > 0 && it.height > 0 }
@@ -130,7 +128,7 @@ fun CameraScreenSuccess(
             )
         }
 
-    }
+    }*/
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
 
 
@@ -179,7 +177,7 @@ fun CameraScreenSuccess(
                     }
                 }
             }
-        }
+        }.toImmutableList()
     }
 
 
@@ -318,17 +316,42 @@ fun CameraScreenSuccess(
     */
     /////////end of worked
 
+    /////////temp
+    var prevSelectedItem by remember { mutableStateOf(paramsRadioGroupSelectedItem) }
+    var prevAutoMode by remember { mutableStateOf(autoModes[paramsRadioGroupSelectedItem]) }
+    var prevItems by remember { mutableStateOf(paramsRadioGroupItems) }
+    /////////endoftemp
     // ЭФФЕКТ 1: СИНХРОНИЗАЦИЯ UI (Смена категорий, режимов и авто-обновление позиции)
     LaunchedEffect(
         paramsRadioGroupSelectedItem,
         autoModes[paramsRadioGroupSelectedItem],
-        characteristicsInit
+        paramsRadioGroupItems
     ) {
-        val items = characteristics.characteristicsItems
-        if (items.isNotEmpty() && items.none { it.id == paramsRadioGroupSelectedItem }) {
-            paramsRadioGroupSelectedItem = items.first().id
+        ////temp
+        val currentAutoMode = autoModes[paramsRadioGroupSelectedItem]
 
-            items.forEach { item ->
+        // 2. Проверяем, что конкретно изменилось
+        when {
+            paramsRadioGroupSelectedItem != prevSelectedItem -> {
+               println()
+            }
+            currentAutoMode != prevAutoMode -> {
+                println()
+            }
+            paramsRadioGroupItems != prevItems -> {
+                println()
+            }
+        }
+
+        // 3. Актуализируем сохраненные значения для следующего раза
+        prevSelectedItem = paramsRadioGroupSelectedItem
+        prevAutoMode = currentAutoMode
+        prevItems = paramsRadioGroupItems
+        ////endoftemp
+        if (paramsRadioGroupItems.isNotEmpty() && paramsRadioGroupItems.none { it.id == paramsRadioGroupSelectedItem }) {
+            paramsRadioGroupSelectedItem = paramsRadioGroupItems.first().id
+
+            paramsRadioGroupItems.forEach { item ->
                 (item.id as? SettingsItem)?.let { category ->
                     // Кладем false только если там еще ничего нет (чтобы не затирать выбор пользователя)
                     if (!autoModes.containsKey(category)) {
@@ -512,7 +535,7 @@ fun CameraScreenSuccess(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Transparent)
     ) {
         ///////////preview]
         Box() {
@@ -583,7 +606,7 @@ fun CameraScreenSuccess(
                      )
                  }
              )*/
-            CameraPreviewContainer(
+          /*  CameraPreviewContainer(
                 renderer,
                 characteristics.fullScreen,
                 characteristics, // Предположим, это ваш класс с width и height
@@ -593,7 +616,7 @@ fun CameraScreenSuccess(
                 { array ->
                     touchPoint = array
                 }
-            )
+            )*/
 
             ShutterBox(
                 isOpen = shutterBoxIsOpen,
@@ -768,7 +791,7 @@ fun CameraScreenSuccess(
                                 onItemClick = { mode ->
                                     selectorRadioGroupSelectedItem = mode
                                     // Здесь вызываем обновление через ViewModel
-                                    characteristics = when (mode) {
+                                    val characteristicsCopy = when (mode) {
                                         is ModeItem.WbItem -> characteristics.copy(
                                             wbValue = null,
                                             wbMode = mode
@@ -779,9 +802,9 @@ fun CameraScreenSuccess(
                                             focusMode = mode
                                         )
 
-                                        else -> characteristics
+                                      //  else -> characteristics
                                     }
-                                    onSetCharacteristic(characteristics)
+                                    onSetCharacteristic(characteristicsCopy)
                                 }
                             )
                         }

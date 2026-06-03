@@ -75,10 +75,16 @@ class SubscribeCameraSettingsUseCase(
        // val settingsFlow=settingsRepository.subscribeSettings()
 
       //  val combinedCameraFlow: Flow<Pair<Characteristics?, MutableMap<Int, Int>?>>
-
+      var oldChar:Characteristics?=null
        return combine(
            histogramFlow,cameraCharacteristicsFlow
         ) {histogram, cameraCharacteristics,->
+           oldChar?.let {
+               val changes=getChanges(it,cameraCharacteristics)
+               val t=changes
+           }
+
+           oldChar=cameraCharacteristics
            val settingsCharacteristics=settingsRepository.getCharacteristics()
             cameraCharacteristics.copy(
                 fullscreen = settingsCharacteristics.fullscreen,
@@ -137,4 +143,25 @@ class SubscribeCameraSettingsUseCase(
         }
         return smoothed
     }
-}
+    fun getChanges(old: Characteristics, new: Characteristics): Map<String, Pair<Any?, Any?>> {
+        val changes = mutableMapOf<String, Pair<Any?, Any?>>()
+
+        // Используем Java Reflection (она доступна по умолчанию)
+        old::class.java.declaredFields.forEach { field ->
+            field.isAccessible = true // Даем доступ к приватным полям
+            val oldVal = field.get(old)
+            val newVal = field.get(new)
+
+            if (oldVal != newVal) {
+                // Проверка для массивов (wbModeItems), так как у них != сравнивает ссылки
+                if (oldVal is IntArray && newVal is IntArray) {
+                    if (!oldVal.contentEquals(newVal)) {
+                        changes[field.name] = oldVal to newVal
+                    }
+                } else {
+                    changes[field.name] = oldVal to newVal
+                }
+            }
+        }
+        return changes
+    }}

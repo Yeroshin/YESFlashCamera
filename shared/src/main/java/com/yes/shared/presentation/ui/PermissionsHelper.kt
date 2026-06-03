@@ -1,5 +1,5 @@
 package com.yes.shared.presentation.ui
-
+/*
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -106,8 +106,8 @@ fun PermissionManager(
 @Composable
 fun PermissionManager(
     permissions: Array<String>,
-    onPermissionsGranted: @Composable () -> Unit,
-    onPermissionsDenied: @Composable (isPermanent: Boolean, onRetry: () -> Unit) -> Unit
+    onPermissionsGranted: () -> Unit,
+    onPermissionsDenied: (isPermanent: Boolean, onRetry: () -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     val activity = context.findActivity() // Безопасный поиск Activity
@@ -157,5 +157,88 @@ fun Context.findActivity(): Activity? = when (this) {
 }
 
 
+*/
 
+
+////////////////////
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import android.os.Bundle
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import java.util.UUID
+
+class PermissionManager(
+    private val context: Context,
+    private val registry: ActivityResultRegistry,
+    private val permissions: Array<String>,
+    private val onPermissionsGranted: () -> Unit,
+    private val onPermissionsDenied: (isPermanent: Boolean) -> Unit
+) {
+    private var launcher: ActivityResultLauncher<Array<String>>? = null
+    // Генерируем уникальный ключ для регистрации лаунчера в системе
+    private val registryKey = "permission_launcher_${UUID.randomUUID()}"
+
+    /**
+     * Этот метод вызывается ОДИН раз, когда экран готов.
+     * Он регистрирует лаунчер в системном реестре Android Activity.
+     */
+    fun register() {
+        launcher = registry.register(
+            registryKey,
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { results ->
+            val allGranted = results.values.all { it }
+            handlePermissionResult(allGranted)
+        }
+    }
+
+    /**
+     * Основной метод для проверки и запроса прав.
+     */
+    fun checkAndRequestPermissions() {
+        val isGranted = permissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (isGranted) {
+            onPermissionsGranted()
+        } else {
+            launcher?.launch(permissions)
+        }
+    }
+
+    /**
+     * Метод очистки. Важно вызвать его, когда экран уничтожается,
+     * чтобы не было утечек памяти в ActivityResultRegistry.
+     */
+    fun unregister() {
+        launcher?.unregister()
+        launcher = null
+    }
+
+    private fun handlePermissionResult(isGranted: Boolean) {
+        if (isGranted) {
+            onPermissionsGranted()
+        } else {
+            val activity = context.findActivity()
+            val shouldShowRationale = activity?.let { act ->
+                permissions.any { ActivityCompat.shouldShowRequestPermissionRationale(act, it) }
+            } ?: false
+
+            onPermissionsDenied(!shouldShowRationale)
+        }
+    }
+
+    private fun Context.findActivity(): Activity? = when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+}
 

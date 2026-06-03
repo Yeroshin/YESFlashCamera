@@ -434,7 +434,7 @@ class MapperUI(
             focusValue = focusValue,
             focusMode = focusMode,
 
-            resolutionItems = emptyList(),
+         //   resolutionItems = emptyList(),
 
             touchPoint = floatArrayOf(
                 characteristics.touchPoint?.x ?: 0f,

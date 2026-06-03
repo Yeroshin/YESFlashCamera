@@ -4,6 +4,7 @@ import android.graphics.SurfaceTexture
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.RecordVideoUseCase
@@ -120,8 +121,41 @@ class CameraViewModel(
             }
         )
     }
+    fun getChanges(old: Characteristics, new: Characteristics): Map<String, Pair<Any?, Any?>> {
+        val changes = mutableMapOf<String, Pair<Any?, Any?>>()
 
+        // Используем Java Reflection (она доступна по умолчанию)
+        old::class.java.declaredFields.forEach { field ->
+            field.isAccessible = true // Даем доступ к приватным полям
+            val oldVal = field.get(old)
+            val newVal = field.get(new)
+
+            if (oldVal != newVal) {
+                // Проверка для массивов (wbModeItems), так как у них != сравнивает ссылки
+                if (oldVal is IntArray && newVal is IntArray) {
+                    if (!oldVal.contentEquals(newVal)) {
+                        changes[field.name] = oldVal to newVal
+                    }
+                } else {
+                    changes[field.name] = oldVal to newVal
+                }
+            }
+        }
+        return changes
+    }
+    var oldChar: Characteristics?=null
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
+       ////////////////////
+
+        oldChar?.let {
+            val changes = getChanges(it, mapper.map(characteristics))
+            val t = changes
+        }
+        oldChar=mapper.map(characteristics)
+        val t =oldChar
+        /////////////////////
+
+
         withUseCaseScope(
             //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
             onError = {
