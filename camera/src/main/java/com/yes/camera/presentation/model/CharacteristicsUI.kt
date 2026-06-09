@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.collections.immutable.persistentListOf
 import com.yes.shared.domain.Dimensions
+import kotlinx.collections.immutable.ImmutableList
+
 /*
 data class CharacteristicsUI(
     val backCamera: Boolean? = null,
@@ -70,7 +72,7 @@ data class CharacteristicsUI(
               ""
           )
       ),*/
-    val characteristicsItems: List<RadioGroupItem> =persistentListOf(),
+    val characteristicsItems: ImmutableList<RadioGroupItem> =persistentListOf(),
 
     val backCamera: Boolean = true,
     val shutterValue: String? = null,

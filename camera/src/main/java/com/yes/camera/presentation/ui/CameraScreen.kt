@@ -212,25 +212,38 @@ fun CameraScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             val successCharacteristics = (currentState as? CameraContract.CameraState.Success)?.characteristics
 
-            // 2. ОПТИМИЗАЦИЯ: Фиксируем параметры размеров в памяти.
-            // Этот remember сработает ТОЛЬКО если пользователь физически сменит соотношение сторон (например, с 4:3 на 16:9).
-            // Смена ISO, выдержки или фокуса больше НИКОГДА не заставит этот блок пересчитываться!
-            val previewConfig = remember(successCharacteristics?.aspectRatio, successCharacteristics?.fullScreen) {
-                Pair(
-                    successCharacteristics?.fullScreen ?: false,
-                    successCharacteristics?.aspectRatio
-                )
+            // 1. ОПТИМИЗАЦИЯ: Извлекаем примитивы и привязываем их к remember.
+            // Теперь мы не создаем нестабильный Pair.
+            val isFullScreen = remember(successCharacteristics?.fullScreen) {
+                successCharacteristics?.fullScreen ?: false
             }
+
+            // Передаем aspectRatio. ОБРАТИТЕ ВНИМАНИЕ: если ваш класс aspectRatio внутри структуры
+            // часто пересоздается во ViewModel, лучше передавать отдельно ширину и высоту (Int)!
+            val currentAspectRatio = remember(successCharacteristics?.aspectRatio) {
+                successCharacteristics?.aspectRatio
+            }
+
+            // 2. ОПТИМИЗАЦИЯ: Фиксируем колбэк изменения размера.
+            // Теперь эта лямбда имеет стабильную ссылку и не провоцирует перерисовку.
+            val onSizeChangedIndexed = remember {
+                { size: IntSize -> surfaceViewSize = size }
+            }
+
+            // ТЕПЕРЬ ВСЕ АРГУМЕНТЫ НА 100% СТАБИЛЬНЫ:
+            // renderer — закеширован
+            // fullScreen — примитив Boolean (Stable)
+            // aspectRatio — закеширован через remember
+            // onSizeChanged — закеширован
+            // onTouchPoint — закеширован (onPreviewTouch)
+            //
+            // Результат: При изменении ISO этот блок кода будет СКИПАТЬСЯ (Skip)!
             CameraPreviewContainer(
-                renderer,
-                fullScreen = previewConfig.first,  // Передаем закешированное значение
-                aspectRatio = previewConfig.second,
-                { size ->
-                    surfaceViewSize = size
-                },
-
+                renderer = renderer,
+                fullScreen = isFullScreen,
+                aspectRatio = currentAspectRatio,
+                onSizeChanged = onSizeChangedIndexed,
                 onTouchPoint = onPreviewTouch
-
             )
 
 

@@ -24,6 +24,7 @@ import com.yes.camera.presentation.model.SettingsItem
 
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.domain.Dimensions
+import kotlinx.collections.immutable.persistentListOf
 import kotlin.math.abs
 
 class MapperUI(
@@ -175,7 +176,7 @@ class MapperUI(
             aspectRatio = characteristics.resolution,
 
 
-            characteristicsItems = listOf(
+            characteristicsItems = persistentListOf(
                 RadioGroupItem.TextItem(
                     SettingsItem.SHUTTER,
                     "SHUTTER",

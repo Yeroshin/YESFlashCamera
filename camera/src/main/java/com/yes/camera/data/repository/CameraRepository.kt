@@ -4937,18 +4937,18 @@ class CameraRepository(
 
             // 2. Уводим логику в пул анализа, чтобы не блокировать получение метаданных следующего кадра
            if(af){
-
+               af=false
                cameraThreadManager.analysisExecutor.execute {
                    when (afState) {
 
                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
                            // Фокус успешно найден и заблокирован
-                           af=false
+
                            handleFocusResult(isSuccess = true)
                        }
 
                        CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                           af=false
+
                            // Фокус не найден (объект слишком близко или темно), но движение остановлено
                            handleFocusResult(isSuccess = false)
                        }
@@ -5363,14 +5363,14 @@ class CameraRepository(
 
                 try {
 
-
+/*
                     // Отменяем текущий поиск фокуса, чтобы вернуть систему в исходное состояние
                     captureRequest.set(
                         CaptureRequest.CONTROL_AF_TRIGGER,
                         CaptureRequest.CONTROL_AF_TRIGGER_CANCEL
                     )
                     cameraSession?.capture(captureRequest.build(), repeatingCaptureCallback, cameraThreadManager.handler)
-
+*/
                  //   startPreviewCaptureRequest(lastCharacteristics)
                 } catch (e: Exception) {
                     e.printStackTrace()

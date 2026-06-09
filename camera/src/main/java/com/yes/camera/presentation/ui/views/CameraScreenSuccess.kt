@@ -23,7 +23,6 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -32,7 +31,6 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yes.camera.R
@@ -41,7 +39,6 @@ import com.yes.camera.presentation.model.ModeItem
 import com.yes.camera.presentation.model.RadioGroupItem
 import com.yes.camera.presentation.model.SettingsItem
 import com.yes.camera.presentation.ui.adapter.TextSelectorContent
-import com.yes.camera.presentation.ui.custom.compose.CameraPreviewContainer
 import com.yes.camera.presentation.ui.custom.compose.Histogram
 import com.yes.camera.presentation.ui.custom.compose.IconRadioContent
 import com.yes.camera.presentation.ui.custom.compose.RadioUiItem
@@ -55,8 +52,6 @@ import com.yes.camera.presentation.ui.custom.compose.VectorShadow
 
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun CameraScreenSuccess(
@@ -92,7 +87,7 @@ fun CameraScreenSuccess(
                     // Все остальные пункты (ISO, Shutter и т.д.) заменяются на новые из ViewModel
                     item
                 }
-            }
+            }.toImmutableList()
         )
 
 
@@ -181,6 +176,9 @@ fun CameraScreenSuccess(
     }
 
 
+    var selectorValue: Int by remember {
+        mutableIntStateOf(0)
+    }
     var selectorPosition: Int by remember {
         mutableIntStateOf(0)
     }
@@ -316,6 +314,22 @@ fun CameraScreenSuccess(
     */
     /////////end of worked
 
+    LaunchedEffect(
+        paramsRadioGroupItems
+    ) {
+        if (paramsRadioGroupItems.isNotEmpty() && paramsRadioGroupItems.none { it.id == paramsRadioGroupSelectedItem }) {
+            paramsRadioGroupSelectedItem = paramsRadioGroupItems.first().id
+
+            paramsRadioGroupItems.forEach { item ->
+                (item.id as? SettingsItem)?.let { category ->
+                    // Кладем false только если там еще ничего нет (чтобы не затирать выбор пользователя)
+                    if (!autoModes.containsKey(category)) {
+                        autoModes[category] = false
+                    }
+                }
+            }
+        }
+    }
     /////////temp
     var prevSelectedItem by remember { mutableStateOf(paramsRadioGroupSelectedItem) }
     var prevAutoMode by remember { mutableStateOf(autoModes[paramsRadioGroupSelectedItem]) }
@@ -325,7 +339,7 @@ fun CameraScreenSuccess(
     LaunchedEffect(
         paramsRadioGroupSelectedItem,
         autoModes[paramsRadioGroupSelectedItem],
-        paramsRadioGroupItems
+      //  paramsRadioGroupItems
     ) {
         ////temp
         val currentAutoMode = autoModes[paramsRadioGroupSelectedItem]
@@ -348,7 +362,7 @@ fun CameraScreenSuccess(
         prevAutoMode = currentAutoMode
         prevItems = paramsRadioGroupItems
         ////endoftemp
-        if (paramsRadioGroupItems.isNotEmpty() && paramsRadioGroupItems.none { it.id == paramsRadioGroupSelectedItem }) {
+     /*   if (paramsRadioGroupItems.isNotEmpty() && paramsRadioGroupItems.none { it.id == paramsRadioGroupSelectedItem }) {
             paramsRadioGroupSelectedItem = paramsRadioGroupItems.first().id
 
             paramsRadioGroupItems.forEach { item ->
@@ -359,7 +373,7 @@ fun CameraScreenSuccess(
                     }
                 }
             }
-        }
+        }*/
         ////////////////////
         val currentCategory = paramsRadioGroupSelectedItem as? SettingsItem ?: return@LaunchedEffect
         val isAuto = autoModes[currentCategory] ?: false
@@ -432,22 +446,23 @@ fun CameraScreenSuccess(
 // 4. СИНХРОНИЗАЦИЯ ПОЗИЦИИ
         // В режиме AUTO селектор всегда прыгает в позицию, которую прислала камера.
         // В режиме MANUAL — только при смене категории (чтобы не мешать скроллу пальцем).
+        selectorItems = dataList?.map { data ->
+            SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
+        }
         if (isAuto || isCategoryChanged) {
             selectorPosition = positionFromChars
         } else {
             // Если мы в мануале и позиция совпала — снимаем блок
-            if (selectorPosition == positionFromChars) {
+            if (selectorValue == positionFromChars) {
                 isTechnicalScroll = false
             }
         }
-        selectorItems = dataList?.map { data ->
-            SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
-        }
+
 
 
     }
     // ЭФФЕКТ 2: ПРИМЕНЕНИЕ РУЧНЫХ НАСТРОЕК (Пользователь крутит селектор)
-    LaunchedEffect(selectorPosition) {
+    LaunchedEffect(selectorValue) {
         if (characteristics.characteristicsItems.isEmpty()) return@LaunchedEffect
 
         // Игнорируем, если позиция была установлена программно (из Эффекта 1)
@@ -461,14 +476,14 @@ fun CameraScreenSuccess(
 
         // 1. Magnifier (Soft)
         if (currentCategory == SettingsItem.MAGNIFIER) {
-            val newMagValue = characteristics.magnifierItems.getOrNull(selectorPosition)?.value
+            val newMagValue = characteristics.magnifierItems.getOrNull(selectorValue)?.value
                 ?: return@LaunchedEffect
-            magnifierPosition = selectorPosition
+            magnifierPosition = selectorValue
             val newList = characteristics.characteristicsItems.map { item ->
                 if (item.id == SettingsItem.MAGNIFIER && item is RadioGroupItem.TextItem) {
                     item.copy(currentValue = newMagValue)
                 } else item
-            }
+            }.toImmutableList()
             characteristics = characteristics.copy(characteristicsItems = newList)
             renderer.configureMagnifier(newMagValue.replace("x", "").toFloatOrNull() ?: 1f)
             return@LaunchedEffect
@@ -480,26 +495,26 @@ fun CameraScreenSuccess(
             val updated = when (currentCategory) {
                 SettingsItem.SHUTTER -> characteristics.copy(
                     shutterValue = characteristics.shutterItems.getOrNull(
-                        selectorPosition
+                        selectorValue
                     )?.value
                 )
 
                 SettingsItem.ISO -> characteristics.copy(
                     isoValue = characteristics.isoItems.getOrNull(
-                        selectorPosition
+                        selectorValue
                     )?.value
                 )
 
                 SettingsItem.WB -> characteristics.copy(
                     wbValue = characteristics.wbItems.getOrNull(
-                        selectorPosition
+                        selectorValue
                     )?.value
 
                 )
 
                 SettingsItem.FOCUS -> characteristics.copy(
                     focusValue = characteristics.focusItems.getOrNull(
-                        selectorPosition
+                        selectorValue
                     )?.value,
                     focusMode=null
                 )
@@ -815,7 +830,7 @@ fun CameraScreenSuccess(
                             position = selectorPosition,
                             items = selectorItems,
                             onSelectedItemChanged = { index ->
-                                selectorPosition = index
+                                selectorValue = index
                                 autoModes[paramsRadioGroupSelectedItem as SettingsItem] = false
 
                             }
