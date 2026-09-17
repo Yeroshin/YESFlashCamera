@@ -15,7 +15,9 @@ import com.yes.camera.presentation.mapper.MapperUI
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @Stable
 class CameraViewModel(
@@ -30,62 +32,11 @@ class CameraViewModel(
         fun resolveCameraDependency(): BaseDependency
     }
 
-    init {
-        withUseCaseScope(
-            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = {
-                println(it.message)
-                setState {
-                    copy(
-                        state = CameraState.Error(
-                            error = it
-                        )
-                    )
-                }
-            },
-            block = {
-                subscribeCameraSettingsUseCase()
-                    .collect { characteristics ->
-                        setState {
-                            copy(
-                                state = CameraState.Success(
-                                    characteristics = mapper.map(characteristics)
-                                )
-                            )
-                        }
-                    }
-            }
-        )
-        /*  viewModelScope.launch {
-              subscribeHistogramUseCase()
-                  .collect { histogramData ->
-                      setState {
-                          copy(
-                              histogram = histogramData
-
-                          )
-                      }
-                  }
-          }*/
-        /*viewModelScope.launch {
-            subscribeCharacteristicsUseCase()
-                .collect { characteristics ->
-                    setState {
-                        copy(
-                            state = CameraState.Success(
-                                characteristics = mapper.map(characteristics)
-                            )
-                        )
-                    }
-                }
-        }*/
-    }
+    private val _characteristicsInternal = MutableStateFlow(CharacteristicsUI())
 
     override fun createInitialState(): State {
         return State(
-            CameraState.Success(
-                CharacteristicsUI()
-            )
+            CameraState.Idle
         )
     }
 
@@ -121,6 +72,7 @@ class CameraViewModel(
             }
         )
     }
+
     fun getChanges(old: Characteristics, new: Characteristics): Map<String, Pair<Any?, Any?>> {
         val changes = mutableMapOf<String, Pair<Any?, Any?>>()
 
@@ -143,17 +95,14 @@ class CameraViewModel(
         }
         return changes
     }
-    var oldChar: Characteristics?=null
-    private fun setCharacteristics(characteristics: CharacteristicsUI) {
-       ////////////////////
 
+    var oldChar: Characteristics? = null
+    private fun setCharacteristics(characteristics: CharacteristicsUI) {
         oldChar?.let {
             val changes = getChanges(it, mapper.map(characteristics))
             val t = changes
         }
-        oldChar=mapper.map(characteristics)
-        val t =oldChar
-        /////////////////////
+        oldChar = mapper.map(characteristics)
 
 
         withUseCaseScope(
@@ -169,41 +118,46 @@ class CameraViewModel(
                 }
             },
             block = {
-                val camera = setInputCharacteristicsUseCase(
+                setInputCharacteristicsUseCase(
                     SetInputCharacteristicsUseCase.Params(
                         mapper.map(characteristics)
                     )
                 )
-                /* setState {
-                     copy(
-                         state = CameraState.Success(
-                             characteristics = mapper.map(camera)
-                         )
-
-                     )
-                 }*/
             }
         )
     }
 
     private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
         withUseCaseScope(
-            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
+            loadingUpdater = { isLoading ->
+                if (isLoading) {
+                    setState { copy(state = CameraState.Loading) }
+                }
+            },
             onError = {
-                println(it.message)
+                setState { copy(state = CameraState.Error(it)) }
             },
             block = {
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
-                )/*.collect { characteristics ->
-                    setState {
-                        copy(
-                            state = CameraState.Success(
-                                characteristics = mapper.map(characteristics)
-                            )
+                )
+
+                // Start updating the internal flow as soon as camera is opened
+                useCaseCoroutineScope.launch {
+                    subscribeCameraSettingsUseCase()
+                        .collect { characteristics ->
+                            _characteristicsInternal.value = mapper.map(characteristics)
+                        }
+                }
+
+                // Set state to Success, passing the flow
+                setState {
+                    copy(
+                        state = CameraState.Success(
+                            characteristicsFlow = _characteristicsInternal.asStateFlow()
                         )
-                    }
-                }*/
+                    )
+                }
             }
         )
     }

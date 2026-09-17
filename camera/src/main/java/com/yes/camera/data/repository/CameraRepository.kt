@@ -3914,7 +3914,7 @@ class CameraRepository(
         val config2 = cameraCharacteristics.get(
             CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION
         )
-        val у = config2?.getOutputSizes(ImageFormat.RAW_SENSOR)
+        val y = config2?.getOutputSizes(ImageFormat.RAW_SENSOR)
         // If image format is provided, use it to determine supported sizes; or else use target class
         // val allSizes = config?.getOutputSizes(ImageReader::class.java)
         val e = config?.getOutputSizes(MediaCodec::class.java)
@@ -4112,16 +4112,27 @@ class CameraRepository(
     private lateinit var imageReaderJpeg: ImageReader
     private lateinit var imageReaderRaw: ImageReader
     private lateinit var filePath: String
+    private var histogramBuffer = ByteArray(0)
     private val listenerHistogram = ImageReader.OnImageAvailableListener {
         imageReaderHistogram.acquireLatestImage()?.let { image ->
-            // cameraThreadManager.analysisExecutor.execute {
-            //histogram
-            val ybytes = ByteArray(image.planes[0].buffer.capacity())
-            image.planes[0].buffer.get(ybytes)
-            _outputBuffer.value = ybytes
-            //  val middleGray=AutoExposure.applyShutterPriorityWithClassicSteps()
-            image.close()
-            // }
+            val plane = image.planes[0]
+            val buffer = plane.buffer
+            val width = image.width
+            val height = image.height
+            val rowStride = plane.rowStride
+
+            // 2. Адаптация размера буфера под реальный кадр
+            val requiredSize = width * height
+            if (histogramBuffer.size != requiredSize) {
+                histogramBuffer = ByteArray(requiredSize)
+            }
+            for (row in 0 until height) {
+                // Прыгаем сразу на начало нужной строки в памяти (пропуская padding)
+                buffer.position(row * rowStride)
+                // Забираем только полезные пиксели шириной width
+                buffer.get(histogramBuffer, row * width, width)
+            }
+            _outputBuffer.value = histogramBuffer.copyOf()
         }
 
     }
@@ -4909,7 +4920,7 @@ class CameraRepository(
             val currentMode = result.get(CaptureResult.CONTROL_AWB_MODE)
             val wbMode = request.get(CaptureRequest.CONTROL_AWB_MODE)
             autoWhiteBalanceGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
-              val kelvin = rgbToKelvin(autoWhiteBalanceGains!!)
+              val kelvin = autoWhiteBalanceGains?.let{rgbToKelvin(it)}
             val focusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
 
             ///////////////////wb

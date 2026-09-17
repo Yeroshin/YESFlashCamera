@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 
@@ -28,11 +29,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.yes.camera.presentation.contract.CameraContract
+import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.ui.custom.compose.CameraPreviewContainer
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.presentation.ui.views.CameraScreenSuccess
@@ -40,6 +43,7 @@ import com.yes.camera.presentation.ui.views.ErrorScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.shared.presentation.ui.PermissionManager
 import com.yes.shared.utils.CameraThreadManager
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 
@@ -200,7 +204,7 @@ fun CameraScreen(
             (freshestState as? CameraContract.CameraState.Success)?.let { successState ->
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnSetCharacteristics(
-                        successState.characteristics.copy(touchPoint = offset)
+                        successState.characteristicsFlow.value.copy(touchPoint = offset)
                     )
                 )
             }
@@ -210,18 +214,21 @@ fun CameraScreen(
     val currentState = viewState.value.state
     if (hasPermission && renderer != null) {
         Box(modifier = Modifier.fillMaxSize()) {
-            val successCharacteristics = (currentState as? CameraContract.CameraState.Success)?.characteristics
+            val characteristicsFlow = (currentState as? CameraContract.CameraState.Success)?.characteristicsFlow
+            
+            // We only collect fullScreen and aspectRatio here to minimize recompositions.
+            // Even better: use collectAsState with a selector if available, or map it.
+            // For now, let's just collect the whole thing but be aware of the performance.
+            // Optimization: CameraPreviewContainer will only recompose if these values change
+            // because of the remember block below.
+            val characteristics by (characteristicsFlow ?: MutableStateFlow(CharacteristicsUI())).collectAsState()
 
-            // 1. ОПТИМИЗАЦИЯ: Извлекаем примитивы и привязываем их к remember.
-            // Теперь мы не создаем нестабильный Pair.
-            val isFullScreen = remember(successCharacteristics?.fullScreen) {
-                successCharacteristics?.fullScreen ?: false
+            val isFullScreen = remember(characteristics.fullScreen) {
+                characteristics.fullScreen
             }
 
-            // Передаем aspectRatio. ОБРАТИТЕ ВНИМАНИЕ: если ваш класс aspectRatio внутри структуры
-            // часто пересоздается во ViewModel, лучше передавать отдельно ширину и высоту (Int)!
-            val currentAspectRatio = remember(successCharacteristics?.aspectRatio) {
-                successCharacteristics?.aspectRatio
+            val currentAspectRatio = remember(characteristics.aspectRatio) {
+                characteristics.aspectRatio
             }
 
             // 2. ОПТИМИЗАЦИЯ: Фиксируем колбэк изменения размера.
@@ -253,14 +260,17 @@ fun CameraScreen(
                 }
 
                 CameraContract.CameraState.Loading -> {
-                    /* Показать лоадер */
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.White
+                    )
                 }
 
                 is CameraContract.CameraState.Success -> {
                     CameraScreenSuccess(
                         context = context,
                         renderer = renderer,
-                        characteristicsInit = currentState.characteristics,
+                        characteristicsFlow = currentState.characteristicsFlow,
                         onSettingsClick = {
                             cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
                             onSettingsClick()
@@ -273,7 +283,6 @@ fun CameraScreen(
                                 CameraContract.Event.OnSetCharacteristics(characteristics)
                             )
                         },
-                        // fullScreen = state.characteristics.fullScreen
                     )
                 }
 

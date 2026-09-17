@@ -4,6 +4,7 @@ import android.graphics.SurfaceTexture
 import androidx.compose.runtime.Stable
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.shared.presentation.vm.BaseViewModel.*
+import kotlinx.coroutines.flow.StateFlow
 
 class CameraContract {
     sealed class Event : UiEvent {
@@ -31,8 +32,8 @@ class CameraContract {
         data object Idle : CameraState()
         data object Loading : CameraState()
         data class Success(
-            val characteristics:CharacteristicsUI,
-       ): CameraState()
+            val characteristicsFlow: StateFlow<CharacteristicsUI>,
+        ) : CameraState()
 
     }
     sealed class Effect : UiEffect {
