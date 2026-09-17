@@ -11,11 +11,15 @@ class SetInputCharacteristicsUseCase(
     private val cameraRepository: CameraRepository,
     private val settingsRepository: SettingsRepository
 ) : UseCase<SetInputCharacteristicsUseCase.Params, Unit>(dispatcher) {
-    override suspend fun run(params: Params) {
+    
+    // Мгновенная часть: Камера
+    override fun runSync(params: Params) {
         cameraRepository.startPreviewCaptureRequest(params.characteristics)
+    }
+
+    // Асинхронная часть: Диск
+    override suspend fun run(params: Params) {
         settingsRepository.setCharacteristics(params.characteristics)
-
-
     }
 
     data class Params(

@@ -4,6 +4,7 @@ import android.graphics.SurfaceTexture
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import android.util.Log
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
@@ -17,6 +18,7 @@ import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Stable
@@ -28,6 +30,8 @@ class CameraViewModel(
     private val recordVideoUseCase: RecordVideoUseCase,
     private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
 ) : BaseViewModel<Event, State, Effect>() {
+    private val TAG = "CameraViewModel"
+
     interface DependencyResolver {
         fun resolveCameraDependency(): BaseDependency
     }
@@ -63,8 +67,8 @@ class CameraViewModel(
 
     private fun startVideoRecord(enabled: Boolean) {
         withUseCaseScope(
-            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
+            onError = { Log.e(TAG, "Video record error: ${it.message}") },
+            onComplete = { Log.d(TAG, "Video record command sequence completed (enabled=$enabled)") },
             block = {
                 recordVideoUseCase(
                     RecordVideoUseCase.Params(enable = enabled)
@@ -98,32 +102,21 @@ class CameraViewModel(
 
     var oldChar: Characteristics? = null
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
+        val domainModel = mapper.map(characteristics)
+        
         oldChar?.let {
-            val changes = getChanges(it, mapper.map(characteristics))
+            val changes = getChanges(it, domainModel)
             val t = changes
         }
-        oldChar = mapper.map(characteristics)
+        oldChar = domainModel
 
-
-        withUseCaseScope(
-            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = {
-                println(it.message)
-                setState {
-                    copy(
-                        state = CameraState.Error(
-                            error = it
-                        )
-                    )
-                }
-            },
-            block = {
-                setInputCharacteristicsUseCase(
-                    SetInputCharacteristicsUseCase.Params(
-                        mapper.map(characteristics)
-                    )
-                )
-            }
+        // Используем встроенный в runner метод launchHybridUseCase:
+        // Передаем привязанный (bound) UseCaseAction
+        launchHybridUseCase(
+            onComplete = { Log.d(TAG, "Characteristics update and persistence completed") },
+            block = setInputCharacteristicsUseCase.bind(
+                SetInputCharacteristicsUseCase.Params(domainModel)
+            )
         )
     }
 
@@ -138,11 +131,16 @@ class CameraViewModel(
                 setState { copy(state = CameraState.Error(it)) }
             },
             block = {
+                // 1. Инициируем открытие
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
                 )
 
-                // Start updating the internal flow as soon as camera is opened
+                // 2. Ждем ПЕРВОГО реального значения характеристик (подтверждение успеха)
+                val firstData = subscribeCameraSettingsUseCase().first()
+                _characteristicsInternal.value = mapper.map(firstData)
+
+                // 3. ТОЛЬКО ТЕПЕРЬ запускаем постоянную подписку в фоне
                 useCaseCoroutineScope.launch {
                     subscribeCameraSettingsUseCase()
                         .collect { characteristics ->
@@ -150,7 +148,7 @@ class CameraViewModel(
                         }
                 }
 
-                // Set state to Success, passing the flow
+                // 4. И только теперь переходим в состояние Success
                 setState {
                     copy(
                         state = CameraState.Success(
@@ -158,14 +156,15 @@ class CameraViewModel(
                         )
                     )
                 }
-            }
+            },
+            onComplete = { Log.d(TAG, "Camera opening sequence finished") }
         )
     }
 
     private fun closeCamera() {
         withUseCaseScope(
-            //  loadingUpdater = { isLoading -> updateUiState { copy(isLoading = isLoading) } },
-            onError = { println(it.message) },
+            onError = { Log.e(TAG, "Close camera error: ${it.message}") },
+            onComplete = { Log.d(TAG, "Camera closing sequence completed") },
             block = {
                 closeCameraUseCase()
             }

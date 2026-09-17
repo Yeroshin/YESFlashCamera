@@ -25,4 +25,24 @@ interface CoroutinesUseCaseRunner {
             }
         }
     }
+
+    /**
+     * Executes a bound UseCaseAction in two phases:
+     * 1. Immediate sync call (executeSync) on the current thread.
+     * 2. Background async call (executeAsync) via withUseCaseScope.
+     */
+    fun <R> launchHybridUseCase(
+        loadingUpdater: ((Boolean) -> Unit)? = null,
+        onError: ((Throwable) -> Unit)? = null,
+        onComplete: (() -> Unit)? = null,
+        block: UseCaseAction<R>
+    ) {
+        // Phase 1: Instant sync execution
+        block.executeSync()
+
+        // Phase 2: Standard async execution with lifecycle management
+        withUseCaseScope(loadingUpdater, onError, onComplete) {
+            block.executeAsync()
+        }
+    }
 }

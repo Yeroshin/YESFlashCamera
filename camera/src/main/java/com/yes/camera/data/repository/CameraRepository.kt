@@ -4403,7 +4403,7 @@ class CameraRepository(
         }
         return changes
     }
-    suspend fun startPreviewCaptureRequest(
+    fun startPreviewCaptureRequest(
         characteristics: Characteristics,
     ) {
         if (::lastCharacteristics.isInitialized) {
