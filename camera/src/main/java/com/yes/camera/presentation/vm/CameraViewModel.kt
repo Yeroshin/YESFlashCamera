@@ -103,7 +103,7 @@ class CameraViewModel(
     var oldChar: Characteristics? = null
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
         val domainModel = mapper.map(characteristics)
-        
+
         oldChar?.let {
             val changes = getChanges(it, domainModel)
             val t = changes

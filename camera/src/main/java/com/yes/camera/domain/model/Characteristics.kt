@@ -3,7 +3,6 @@ package com.yes.camera.domain.model
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
 
-
 data class Characteristics(
     val backCamera: Boolean? = null,
     val isoValue: Int? = null,
@@ -18,13 +17,17 @@ data class Characteristics(
     val focusMode: Int? = null,
     val minFocusValue: Float = 0f,
     val maxFocusValue: Float = 0f,
-    val resolution: Dimensions=Dimensions(0, 0),
+    val resolution: Dimensions = Dimensions(0, 0),
     val resolutionItems: List<Dimensions> = emptyList(),
     val touchPoint: FloatArray? = null,
     val fullscreen: Boolean? = null,
-    val imgFormat: ImgFormat =ImgFormat.JPEG,
-    val filePath: String="",
+    val imgFormat: ImgFormat = ImgFormat.JPEG,
+    val filePath: String = "",
     val histogramData: MutableMap<Int, Int> = mutableMapOf(),
-
-
-    )
+    
+    // Observed hardware state (Metadata)
+    val actualIso: Int? = null,
+    val actualShutter: Long? = null,
+    val actualFocusDistance: Float? = null,
+    val actualWbKelvin: Int? = null
+)

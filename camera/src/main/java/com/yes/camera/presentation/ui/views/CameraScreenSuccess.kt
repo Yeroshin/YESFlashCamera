@@ -63,6 +63,18 @@ fun CameraScreenSuccess(
 ) {
     val characteristics by characteristicsFlow.collectAsState()
 
+    // Синхронизация лупы и фокуса с рендерером
+    LaunchedEffect(characteristics.touchPoint) {
+        characteristics.touchPoint?.let { point ->
+            // Пересчитываем координаты Compose (0..1) в нормализованные OpenGL (-1..1)
+            val normalizedX = point.x * 2f - 1f
+            val normalizedY = -(point.y * 2f - 1f)
+
+            // Двигаем лупу в рендерере к точке фокуса
+            renderer.handleTouchPress(normalizedX, normalizedY)
+        }
+    }
+
     var characteristicsRrequest by remember(characteristics) {
         mutableStateOf(characteristics)
     }
@@ -160,7 +172,7 @@ fun CameraScreenSuccess(
         val isCategoryChanged = currentCategory != previousCategory
         previousCategory = currentCategory
 
-        if (isCategoryChanged || isAuto) {
+        if (isCategoryChanged && isAuto) {
             isTechnicalScroll = true
         }
 
@@ -243,7 +255,7 @@ fun CameraScreenSuccess(
             val newMagValue = characteristics.magnifierItems.getOrNull(selectorValue)?.value
                 ?: return@LaunchedEffect
             magnifierPosition = selectorValue
-            
+
             renderer.configureMagnifier(newMagValue.replace("x", "").toFloatOrNull() ?: 1f)
             onSetCharacteristic(characteristics.copy(magnifierValue = newMagValue))
             return@LaunchedEffect
@@ -436,7 +448,7 @@ fun CameraScreenSuccess(
                     shadowColor = Color.DarkGray,
                     resId = R.drawable.flip_camera_android,
                 )
-                
+
                 val startVideoRecord = remember {
                     onStartVideoRecord
                 }

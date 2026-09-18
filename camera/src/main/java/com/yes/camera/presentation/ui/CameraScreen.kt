@@ -198,13 +198,14 @@ fun CameraScreen(
                 renderer?.configureMagnifier(1f)
             }
     }
-    val onPreviewTouch = remember(cameraViewModel) {
-        fun(offset: Offset) { // Используем ключевое слово fun для точного вывода типа
+    val onPreviewTouch: (Offset) -> Unit = remember(cameraViewModel) {
+        { offset -> 
             val freshestState = cameraViewModel.uiState.value.state
             (freshestState as? CameraContract.CameraState.Success)?.let { successState ->
+                val currentChars = successState.characteristicsFlow.value
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnSetCharacteristics(
-                        successState.characteristicsFlow.value.copy(touchPoint = offset)
+                        currentChars.copy(touchPoint = offset)
                     )
                 )
             }

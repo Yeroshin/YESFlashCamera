@@ -93,11 +93,11 @@ class SettingsRepository(
     suspend fun subscribeSettings(): Flow<Characteristics> {
         return combine(
             subscribeFullScreen(),
-            subscribeResolutionValue().filterNotNull()
+            subscribeResolutionValue()
         ) { fullscreen, resolution ->
             Characteristics(
-                fullscreen = fullscreen,
-                resolution = resolution
+                fullscreen = fullscreen ?: false,
+                resolution = resolution ?: Dimensions(0, 0)
             )
         }
     }

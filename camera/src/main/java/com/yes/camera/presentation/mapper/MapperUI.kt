@@ -114,41 +114,45 @@ class MapperUI(
            val supportedIsoValues = standardIsoValues
                .filter { it in characteristics.isoRange.first..characteristics.isoRange.last }
                .map { TextSelectorItemUI(it.toString()) }*/
-        val shutterValue = characteristics.shutterValue?.let {
+        // Мы используем actualShutter для отображения текущего значения,
+        // но shutterValue для определения режима (Auto/Manual)
+        val displayShutter = characteristics.shutterValue ?: characteristics.actualShutter
+        val shutterValue = displayShutter?.let {
             standardShutterSpeeds.entries
                 .minByOrNull { (key, _) ->
-                    abs(key - characteristics.shutterValue)
+                    abs(key - it)
                 }
                 ?.toPair()
                 ?.second
+        } ?: "1/60"
 
-        } ?: run {
-            "1/60"
-        }
         val shutterPosition = standardShutterSpeeds
-            //  .toSortedMap(compareByDescending { it })
             .toSortedMap(compareByDescending { it })
             .values.toList().indexOf(shutterValue)
 
-        val isoValue = characteristics.isoValue?.let {
+        val displayIso = characteristics.isoValue ?: characteristics.actualIso
+        val isoValue = displayIso?.let { dIso ->
             standardIsoValues.minByOrNull {
-                abs(it - characteristics.isoValue)
+                abs(it - dIso)
             }
         }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(isoValue) } ?: 0
-        val wbValue = characteristics.wbValue?.let { "${it}K" } ?: "A"
-        val wbPosition = characteristics.wbValue?.let {
+        
+        val displayWb = characteristics.wbValue ?: characteristics.actualWbKelvin
+        val wbValue = displayWb?.let { "${it}K" } ?: "A"
+        val wbPosition = displayWb?.let { dWb ->
             val closestValue = standardWbValues.minByOrNull { value ->
-                abs(value - it)
+                abs(value - dWb)
             }
             standardWbValues.indexOf(closestValue)
         } ?: 0
-        val focusValues =
-            generateFocusValues(characteristics.maxFocusValue, characteristics.minFocusValue, 1f)
-        val focusValue = characteristics.focusValue
-        val focusPosition = characteristics.focusValue?.let {
+
+        val focusValues = generateFocusValues(characteristics.maxFocusValue, characteristics.minFocusValue, 1f)
+        val displayFocus = characteristics.focusValue ?: characteristics.actualFocusDistance
+        val focusValue = displayFocus
+        val focusPosition = displayFocus?.let { dFocus ->
             val closestValue = focusValues.minByOrNull { value ->
-                abs(value - it)
+                abs(value - dFocus)
             }
             focusValues.indexOf(closestValue)
         } ?: 0
@@ -353,7 +357,7 @@ class MapperUI(
                 CONTROL_AF_MODE_CONTINUOUS_PICTURE -> ModeItem.FocusItem.CONTINUOUS
                 -1 -> ModeItem.FocusItem.TOUCH
                 characteristics.minFocusValue.toInt() -> ModeItem.FocusItem.INFINITE
-                else -> ModeItem.FocusItem.MACRO
+                else -> ModeItem.FocusItem.CONTINUOUS // ФИКС: По умолчанию CONTINUOUS, а не MACRO
             },
 
             magnifierItems =
