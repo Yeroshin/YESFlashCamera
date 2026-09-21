@@ -176,13 +176,15 @@ class CameraRepository(
         val config = SessionConfiguration(SessionConfiguration.SESSION_REGULAR, configs, cameraThreadManager.executor, object : CameraCaptureSession.StateCallback() {
             override fun onConfigured(session: CameraCaptureSession) {
                 cameraSession = session
-                // Используем TEMPLATE_MANUAL для стабильности всех ручных режимов
                 persistentBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL).apply {
                     addTarget(previewSurface)
                     addTarget(histogramSurface)
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                    // Глобальный замер AE на весь сенсор по умолчанию
                     val fullSensor = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
                     set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
+                    set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+                    set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
                 }
                 lastCharacteristics = characteristics
                 applyState(characteristics, forceFlush = true)
@@ -205,51 +207,45 @@ class CameraRepository(
     private var lastAeUpdateMillis = 0L
     private val UPDATE_TOKEN = Any()
 
-    /**
-     * Прямой вызов из UI. Никакой фильтрации.
-     * Каждое действие пользователя — это безусловный приказ камере.
-     */
     fun startPreviewCaptureRequest(characteristics: Characteristics) {
         lastCharacteristics = characteristics
-        isWaitingForFocus = false 
-
         cameraThreadManager.handler.removeCallbacksAndMessages(UPDATE_TOKEN)
         val action = Runnable { applyState(characteristics, forceFlush = true) }
-        
-        if (Looper.myLooper() == cameraThreadManager.handler.looper) {
-            applyState(characteristics, forceFlush = true)
-        } else {
-            cameraThreadManager.handler.postAtTime(action, UPDATE_TOKEN, SystemClock.uptimeMillis())
-        }
+        if (Looper.myLooper() == cameraThreadManager.handler.looper) { applyState(characteristics, forceFlush = true) } 
+        else { cameraThreadManager.handler.postAtTime(action, UPDATE_TOKEN, SystemClock.uptimeMillis()) }
     }
 
     private fun applyState(characteristics: Characteristics, forceFlush: Boolean = false) {
         val builder = persistentBuilder ?: return
         val session = cameraSession ?: return
+        val old = appliedCharacteristics
         val hw = _characteristicsFlow.value
 
         try {
-            // WB
-            if (characteristics.wbValue != null) {
-                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-                builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(characteristics.wbValue))
-                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-            } else {
-                builder.set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
+            // --- 1. БАЛАНС БЕЛОГО (Только если изменился) ---
+            if (characteristics.wbValue != old?.wbValue || characteristics.wbMode != old?.wbMode) {
+                if (characteristics.wbValue != null) {
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                    builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(characteristics.wbValue))
+                    builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                } else {
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                }
             }
 
-            // Exposure
+            // --- 2. ЭКСПОЗИЦИЯ (Только если изменилась) ---
             var iso = characteristics.isoValue
             var shutter = characteristics.shutterValue
-            
+            val modeChanged = (iso == null) != (old?.isoValue == null) || (shutter == null) != (old?.shutterValue == null)
+
             if (iso != null || shutter != null) {
                 if (iso != null && shutter == null) {
-                    val bS = hw?.actualShutter ?: appliedCharacteristics?.shutterValue ?: 33_333_333L
-                    val bI = hw?.actualIso ?: appliedCharacteristics?.isoValue ?: 100
+                    val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
+                    val bI = hw?.actualIso ?: old?.isoValue ?: 100
                     shutter = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, iso, 0)
                 } else if (shutter != null && iso == null) {
-                    val bS = hw?.actualShutter ?: appliedCharacteristics?.shutterValue ?: 33_333_333L
-                    val bI = hw?.actualIso ?: appliedCharacteristics?.isoValue ?: 100
+                    val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
+                    val bI = hw?.actualIso ?: old?.isoValue ?: 100
                     iso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter, 0)
                 }
                 AE = false
@@ -258,49 +254,53 @@ class CameraRepository(
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter ?: 10_000_000L)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter ?: 33_333_333L, 33_333_333L))
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-            } else {
+            } else if (modeChanged || old == null) {
                 AE = true
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
             }
 
-            // Focus
-            if (characteristics.focusValue != null && characteristics.focusMode != -1) {
-                isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
-                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+            // --- 3. ФОКУС (Жесткая изоляция от изменений ISO) ---
+            val isManual = characteristics.focusValue != null && characteristics.focusMode != -1
+            val afModeChanged = characteristics.focusMode != old?.focusMode || isManual != (old?.focusValue != null)
+
+            if (isManual) {
+                if (afModeChanged || characteristics.focusValue != old?.focusValue) {
+                    isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
+                    builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
+                }
             } else {
                 val mode = characteristics.focusMode ?: CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                if (mode == -1) {
+                if (mode == -1) { // TOUCH
                     characteristics.touchPoint?.let { point ->
-                        if (isAfLocked && lastLockedFocusDistance != null) {
+                        val pointChanged = !Arrays.equals(point, old?.touchPoint)
+                        if (pointChanged) {
+                            isAfLocked = false; isWaitingForFocus = true; lastLockedFocusDistance = null
+                            val rect = meteringRectangle(point)
+                            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                            builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
+                            launchAfTrigger(builder, rect)
+                        } else if (isAfLocked && lastLockedFocusDistance != null) {
+                            // Если точка та же и мы залочены - ПРИНУДИТЕЛЬНО держим замок
                             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                             builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, lastLockedFocusDistance)
-                        } else {
-                            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                            val rect = meteringRectangle(point)
-                            builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
-                            if (forceFlush) launchAfTrigger(builder, rect)
                         }
                     }
-                } else {
+                } else if (afModeChanged) {
                     isAfLocked = false; isWaitingForFocus = false
                     builder.set(CaptureRequest.CONTROL_AF_MODE, mode)
                 }
             }
             
             appliedCharacteristics = characteristics
-            val request = builder.build()
-            
-            // КРИТИЧЕСКИЙ ФИКС: Если это команда от пользователя, мы принудительно прерываем текущий
-            // поток кадров, чтобы новые настройки применились МГНОВЕННО.
-            if (forceFlush) {
-                session.stopRepeating() 
-                session.capture(request, repeatingCaptureCallback, cameraThreadManager.handler)
+            if (forceFlush && modeChanged) {
+                session.stopRepeating()
+                session.capture(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             }
-            session.setRepeatingRequest(request, repeatingCaptureCallback, cameraThreadManager.handler)
+            session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             
-        } catch (e: Exception) { Log.e("CameraRepository", "Apply state error") }
+        } catch (e: Exception) { Log.e("CameraRepository", "Apply error") }
     }
 
     private fun launchAfTrigger(base: CaptureRequest.Builder, rect: MeteringRectangle) {
@@ -311,12 +311,14 @@ class CameraRepository(
                 set(CaptureRequest.CONTROL_AE_MODE, base.get(CaptureRequest.CONTROL_AE_MODE))
                 set(CaptureRequest.SENSOR_SENSITIVITY, base.get(CaptureRequest.SENSOR_SENSITIVITY))
                 set(CaptureRequest.SENSOR_EXPOSURE_TIME, base.get(CaptureRequest.SENSOR_EXPOSURE_TIME))
+                // ФИКС: Явно копируем регионы AE, чтобы яркость не прыгнула при тапе
+                set(CaptureRequest.CONTROL_AE_REGIONS, base.get(CaptureRequest.CONTROL_AE_REGIONS))
                 set(CaptureRequest.CONTROL_AE_LOCK, true) 
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
                 set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
                 set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
             }
-            af = true; isWaitingForFocus = true
+            af = true
             session.capture(trigger.build(), repeatingCaptureCallback, cameraThreadManager.handler)
         } catch (e: Exception) {}
     }
@@ -330,18 +332,17 @@ class CameraRepository(
             val fDist = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: 0f
             val wbG = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
 
-            // Авто-коррекция (только фон)
             if (AE && (now - lastAeUpdateMillis > 500) && (lastCharacteristics.isoValue == null || lastCharacteristics.shutterValue == null)) {
                 val tIso = lastCharacteristics.isoValue
                 val tExp = lastCharacteristics.shutterValue
                 when {
                     tIso != null && tExp == null -> {
                         val calc = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, sIso, sExp, tIso, 0)
-                        if (abs(calc - sExp) > calc * 0.1) { lastAeUpdateMillis = now; applyState(lastCharacteristics.copy(shutterValue = calc), forceFlush = false) }
+                        if (abs(calc - sExp) > calc * 0.1) { lastAeUpdateMillis = now; applyState(lastCharacteristics.copy(shutterValue = calc)) }
                     }
                     tExp != null && tIso == null -> {
                         val calc = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, sIso, sExp, tExp, 0)
-                        if (abs(calc - sIso) > calc * 0.1) { lastAeUpdateMillis = now; applyState(lastCharacteristics.copy(isoValue = calc), forceFlush = false) }
+                        if (abs(calc - sIso) > calc * 0.1) { lastAeUpdateMillis = now; applyState(lastCharacteristics.copy(isoValue = calc)) }
                     }
                 }
             }
@@ -369,6 +370,7 @@ class CameraRepository(
                         lastLockedFocusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
                     }
                     handleFocusResult(afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED)
+                    // ПРИНУДИТЕЛЬНОЕ применение для фиксации AF_MODE_OFF
                     applyState(lastCharacteristics, forceFlush = false)
                 }
             }
