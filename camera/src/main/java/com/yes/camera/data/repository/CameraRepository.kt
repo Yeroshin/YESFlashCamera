@@ -222,43 +222,31 @@ class CameraRepository(
 
         try {
             // 1. БАЛАНС БЕЛОГО
-            updateWhiteBalance(builder, characteristics, old)
+            if (characteristics.wbValue != old?.wbValue || characteristics.wbMode != old?.wbMode) {
+                if (characteristics.wbValue != null) {
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+                    builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(characteristics.wbValue))
+                    builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                } else {
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                }
+            }
 
             // 2. ЭКСПОЗИЦИЯ
             val exposureResult = updateExposure(builder, characteristics, old, hw)
 
-            // 3. ФОКУС
-            updateFocus(builder, characteristics, old)
+            appliedCharacteristics = characteristics
 
-            // Сохраняем примененное состояние
-            appliedCharacteristics = characteristics.copy(
-                isoValue = exposureResult.iso, 
-                shutterValue = exposureResult.shutter
-            )
-
-            // Если изменился режим (Auto <-> Manual) и это запрос от пользователя - сбрасываем конвейер
             if (forceFlush && exposureResult.modeChanged) {
                 session.stopRepeating()
                 session.capture(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             }
             session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             
-        } catch (e: Exception) { Log.e("CameraRepository", "Apply state failed: ${e.message}", e) }
+        } catch (e: Exception) { Log.e("CameraRepository", "Apply error: ${e.message}", e) }
     }
 
-    private fun updateWhiteBalance(builder: CaptureRequest.Builder, new: Characteristics, old: Characteristics?) {
-        if (new.wbValue == old?.wbValue && new.wbMode == old?.wbMode) return
-        
-        if (new.wbValue != null) {
-            builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-            builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(new.wbValue))
-            builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-        } else {
-            builder.set(CaptureRequest.CONTROL_AWB_MODE, new.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
-        }
-    }
-
-    private data class ExposureResult(val iso: Int?, val shutter: Long?, val modeChanged: Boolean)
+    private data class ExposureResult(val modeChanged: Boolean)
 
     private fun updateExposure(
         builder: CaptureRequest.Builder, 
@@ -268,59 +256,51 @@ class CameraRepository(
     ): ExposureResult {
         val iso = new.isoValue
         val shutter = new.shutterValue
-        val isManual = iso != null || shutter != null
-        val wasManual = old?.isoValue != null || old?.shutterValue != null
-        val modeChanged = isManual != wasManual || old == null
+        
+        val modeChanged = (iso == null) != (old?.isoValue == null) || 
+                          (shutter == null) != (old?.shutterValue == null) || 
+                          old == null
 
-        return when {
+        when {
+            iso == null && shutter == null -> {
+                AE = true
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
+            }
             iso != null && shutter != null -> {
-                // MANUAL
                 AE = false
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-                ExposureResult(iso, shutter, modeChanged)
             }
             iso != null -> {
-                // ISO PRIORITY
                 AE = false
                 val meanLum = calculateMeanLuminance()
-                val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
-                val bI = hw?.actualIso ?: old?.isoValue ?: 100
+                val bS = hw?.actualShutter ?: 33_333_333L
+                val bI = hw?.actualIso ?: 100
                 val calcShutter = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, iso, meanLum.toInt())
-                
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, calcShutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(calcShutter, 33_333_333L))
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-                ExposureResult(iso, calcShutter, modeChanged)
             }
-            shutter != null -> {
-                // SHUTTER PRIORITY
+            else -> { // shutter != null
                 AE = false
                 val meanLum = calculateMeanLuminance()
-                val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
-                val bI = hw?.actualIso ?: old?.isoValue ?: 100
-                val calcIso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter, meanLum.toInt())
-                
+                val bS = hw?.actualShutter ?: 33_333_333L
+                val bI = hw?.actualIso ?: 100
+                val calcIso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter!!, meanLum.toInt())
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, calcIso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-                ExposureResult(calcIso, shutter, modeChanged)
-            }
-            else -> {
-                // FULL AUTO
-                AE = true
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
-                ExposureResult(null, null, modeChanged)
             }
         }
+        return ExposureResult(modeChanged)
     }
 
     private fun calculateMeanLuminance(): Double {
@@ -393,16 +373,9 @@ class CameraRepository(
             val fDist = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: 0f
             val wbG = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
 
-            // ФОНОВАЯ коррекция (теперь работает и в Приоритетах)
-            if (!isAfLocked && (now - lastAeUpdateMillis > 500)) {
-                val tIso = lastCharacteristics.isoValue
-                val tExp = lastCharacteristics.shutterValue
-                
-                // Если хотя бы один параметр в "Авто" (null), запускаем пересчет
-                if (tIso == null || tExp == null) {
-                    lastAeUpdateMillis = now
-                    applyState(lastCharacteristics, forceFlush = false)
-                }
+            if (!isAfLocked && (now - lastAeUpdateMillis > 500) && (lastCharacteristics.isoValue == null || lastCharacteristics.shutterValue == null)) {
+                lastAeUpdateMillis = now
+                applyState(lastCharacteristics, forceFlush = false)
             }
 
             if (now - lastUIUpdate > 100) {
@@ -411,10 +384,10 @@ class CameraRepository(
                 _characteristicsFlow.update { current ->
                     val base = current ?: Characteristics(isoRange = IntRange(0, 0), shutterRange = LongRange(0, 0))
                     base.copy(
-                        actualIso = sIso, actualShutter = sExp, actualFocusDistance = fDist, actualWbKelvin = kelvin,
-                        focusMode = if (::lastCharacteristics.isInitialized) lastCharacteristics.focusMode else base.focusMode,
-                        wbMode = if (::lastCharacteristics.isInitialized) lastCharacteristics.wbMode else base.wbMode,
-                        touchPoint = if (::lastCharacteristics.isInitialized) lastCharacteristics.touchPoint else base.touchPoint
+                        actualIso = sIso, 
+                        actualShutter = sExp, 
+                        actualFocusDistance = fDist, 
+                        actualWbKelvin = kelvin
                     )
                 }
             }
@@ -465,7 +438,7 @@ class CameraRepository(
 
     private fun kelvinToRgb(kelvin: Float): RggbChannelVector? {
         val t = kelvin / 100.0
-        val r = if (t < 66.0) 255.0 else (351.97690566805693 + 0.114206453784165 * (t - 55.0) - 40.25366309332127 * ln(t - 55.0)).coerceIn(0.0, 255.0)
+        val r = if (t < 66.0) 255.0 else (351.97690566805693 + 0.114206453484165 * (t - 55.0) - 40.25366309332127 * ln(t - 55.0)).coerceIn(0.0, 255.0)
         val g = if (t < 66.0) (-155.25485562709179 - 0.44596950469579133 * (t - 2.0) + 104.49216199393888 * ln(t - 2.0)).coerceIn(0.0, 255.0) else (325.4494125711974 + 0.07943456536662342 * (t - 50.0) - 28.0852963507957 * ln(t - 50.0)).coerceIn(0.0, 255.0)
         val b = if (t >= 66.0) 255.0 else if (t <= 20.0) 0.0 else (-254.76935184120902 + 0.8274096064007395 * (t - 10.0) + 115.67994401066147 * ln(t - 10.0)).coerceIn(0.0, 255.0)
         return RggbChannelVector(r.toFloat(), g.toFloat(), g.toFloat(), b.toFloat())

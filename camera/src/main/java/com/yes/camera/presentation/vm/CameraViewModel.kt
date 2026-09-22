@@ -19,6 +19,7 @@ import com.yes.shared.presentation.vm.BaseViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
@@ -105,20 +106,13 @@ class CameraViewModel(
         return changes
     }
 
-    var oldChar: Characteristics? = null
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
+        // Optimistic update: apply intent to UI state immediately so sliders feel responsive
+        _characteristicsInternal.value = characteristics
+
         val domainModel = mapper.map(characteristics)
 
-        oldChar?.let {
-            val changes = getChanges(it, domainModel)
-            val t = changes
-        }
-        oldChar = domainModel
-
-        // Используем встроенный в runner метод launchHybridUseCase:
-        // Передаем привязанный (bound) UseCaseAction
         launchHybridUseCase(
-
             block = setInputCharacteristicsUseCase.bind(
                 SetInputCharacteristicsUseCase.Params(domainModel)
             ),
@@ -149,8 +143,10 @@ class CameraViewModel(
                 // 3. ТОЛЬКО ТЕПЕРЬ запускаем постоянную подписку в фоне
                 useCaseCoroutineScope.launch {
                     subscribeCameraSettingsUseCase()
-                        .collect { characteristics ->
-                            _characteristicsInternal.value = mapper.map(characteristics)
+                        .collect { domainCharacteristics ->
+                            _characteristicsInternal.update { currentUi ->
+                                mapper.merge(currentUi, domainCharacteristics)
+                            }
                         }
                 }
 

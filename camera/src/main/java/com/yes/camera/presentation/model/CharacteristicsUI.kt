@@ -6,36 +6,6 @@ import kotlinx.collections.immutable.persistentListOf
 import com.yes.shared.domain.Dimensions
 import kotlinx.collections.immutable.ImmutableList
 
-/*
-data class CharacteristicsUI(
-    val backCamera: Boolean? = null,
-    val shutterValue: String? = null,
-    val shutterPosition: Int = 0,
-    val isoValue: String? = null,
-    val isoPosition: Int = 0,
-    val wbValue: String? = null,
-    val wbPosition: Int = 0,
-    val wbMode: WbItem? = null,
-    val focusValue: String? = null,
-    val focusPosition: Int = 0,
-    val focusMode: FocusItem? = null,
-    val magnifierValue: String? = null,
-    val magnifierPosition: Int = 0,
-    val touchPoint: FloatArray? = null,
-    val fullScreen: Boolean = false,
-    val resolution:String?=null,
-    val aspectRatio: Dimensions?=null,
-
-    val shutterItems: List<TextItem>? = null,
-    val isoItems: List<TextItem>? = null,
-    val wbManualItems: List<TextItem>? = null,
-    val wbModeItems: List<RadioButton>? = null,
-    val focusItems: List<TextItem>? = null,
-    val magnifierItems: List<TextItem>? = null,
-
-    val histogramData: MutableMap<Int, Int> = mutableMapOf(),
-)
-*/
 @Immutable
 data class CharacteristicsUI(
     val shutterItems: List<SelectorItem> = emptyList(),
@@ -45,34 +15,7 @@ data class CharacteristicsUI(
     val focusItems: List<SelectorItem> = emptyList(),
     val focusModeItems: List<RadioGroupItem> = emptyList(),
     val magnifierItems: List<SelectorItem> = emptyList(),
-    /*  val characteristicsItems:List<RadioGroupItem > = listOf(
-          RadioGroupItem.TextItem(
-              SettingsItem.SHUTTER,
-              "SHUTTER",
-              ""
-          ),
-          RadioGroupItem.TextItem(
-              SettingsItem.ISO,
-              "ISO",
-              ""
-          ),
-          RadioGroupItem.TextItem(
-              SettingsItem.WB,
-              "WB",
-              ""
-          ),
-          RadioGroupItem.TextItem(
-              SettingsItem.FOCUS,
-              "FOCUS",
-              ""
-          ),
-          RadioGroupItem.TextItem(
-              SettingsItem.MAGNIFIER,
-              "MAGNIFIER",
-              ""
-          )
-      ),*/
-    val characteristicsItems: ImmutableList<RadioGroupItem> =persistentListOf(),
+    val characteristicsItems: ImmutableList<RadioGroupItem> = persistentListOf(),
 
     val backCamera: Boolean = true,
     val shutterValue: String? = null,
@@ -90,20 +33,23 @@ data class CharacteristicsUI(
     val fullScreen: Boolean = false,
     val resolution: String? = null,
     val aspectRatio: Dimensions? = null,
-    // Гистограмму лучше вынести в отдельный StateFlow, но если здесь, то:
-    val histogramData: Map<Int, Int> = emptyMap() // Используем обычный Map вместо Mutable
 
+    // Flags for Auto/Manual status from Domain
+    val isShutterAuto: Boolean = true,
+    val isIsoAuto: Boolean = true,
+    val isWbAuto: Boolean = true,
+    val isFocusAuto: Boolean = true,
+
+    val histogramData: Map<Int, Int> = emptyMap()
 )
-
 
 @Immutable
 sealed interface RadioGroupItem  {
-    val id: Enum<*> // Оригинальный элемент (для логики клика)
+    val id: Enum<*>
 
     data class IconItem(
         override val id: Enum<*>,
-        val iconRes: Int,
-       // val labelRes: Int
+        val iconRes: Int
     ) : RadioGroupItem
 
     data class TextItem(
@@ -112,29 +58,22 @@ sealed interface RadioGroupItem  {
         val currentValue: String
     ) : RadioGroupItem
 }
-data class SelectorItem(
-    val id:Int,
-    val value:String
-)
 
+data class SelectorItem(
+    val id: Int,
+    val value: String
+)
 
 enum class SettingsItem  {
     SHUTTER, ISO, FOCUS, WB, MAGNIFIER
 }
-sealed interface ModeItem{
-    enum class WbItem:ModeItem {
+
+sealed interface ModeItem {
+    enum class WbItem: ModeItem {
         AUTO, INCANDESCENT, FLUORESCENT, WARM_FLUORESCENT, DAYLIGHT, CLOUDY_DAYLIGHT, TWILIGHT, SHADE
     }
 
-    enum class FocusItem :ModeItem {
+    enum class FocusItem: ModeItem {
         MACRO, CONTINUOUS, TOUCH, INFINITE
     }
-
 }
-
-
-
-
-
-
-
