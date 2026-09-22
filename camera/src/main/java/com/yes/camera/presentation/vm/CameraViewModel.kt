@@ -68,7 +68,12 @@ class CameraViewModel(
     private fun startVideoRecord(enabled: Boolean) {
         withUseCaseScope(
             onError = { Log.e(TAG, "Video record error: ${it.message}") },
-            onComplete = { Log.d(TAG, "Video record command sequence completed (enabled=$enabled)") },
+            onComplete = {
+                Log.d(
+                    TAG,
+                    "Video record command sequence completed (enabled=$enabled)"
+                )
+            },
             block = {
                 recordVideoUseCase(
                     RecordVideoUseCase.Params(enable = enabled)
@@ -113,10 +118,11 @@ class CameraViewModel(
         // Используем встроенный в runner метод launchHybridUseCase:
         // Передаем привязанный (bound) UseCaseAction
         launchHybridUseCase(
-            onComplete = { Log.d(TAG, "Characteristics update and persistence completed") },
+
             block = setInputCharacteristicsUseCase.bind(
                 SetInputCharacteristicsUseCase.Params(domainModel)
-            )
+            ),
+            onComplete = { Log.d(TAG, "Characteristics update and persistence completed") }
         )
     }
 

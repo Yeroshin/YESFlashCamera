@@ -62,9 +62,9 @@ class CameraRepository(
     private val encoder: MediaEncoder
 ) {
     var cameraSession: CameraCaptureSession? = null
-    private lateinit var cameraDevice: CameraDevice
-    private lateinit var cameraCharacteristics: CameraCharacteristics
-    private var persistentBuilder: CaptureRequest.Builder? = null
+    internal lateinit var cameraDevice: CameraDevice
+    internal lateinit var cameraCharacteristics: CameraCharacteristics
+    internal var persistentBuilder: CaptureRequest.Builder? = null
 
     private lateinit var previewSurface: Surface
     private lateinit var histogramSurface: Surface
@@ -180,7 +180,6 @@ class CameraRepository(
                     addTarget(previewSurface)
                     addTarget(histogramSurface)
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                    // Глобальный замер AE на весь сенсор по умолчанию
                     val fullSensor = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
                     set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
                     set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
@@ -195,14 +194,14 @@ class CameraRepository(
     }
 
     private val myScope = CoroutineScope(SupervisorJob() + cameraThreadManager.dispatcher)
-    private lateinit var lastCharacteristics: Characteristics
-    private var appliedCharacteristics: Characteristics? = null
+    internal lateinit var lastCharacteristics: Characteristics
+    internal var appliedCharacteristics: Characteristics? = null
     
     private var AE = false
     private var af = false
     private var isAfLocked = false
     private var isWaitingForFocus = false
-    private var lastLockedFocusDistance: Float? = null
+    internal var lastLockedFocusDistance: Float? = null
     
     private var lastAeUpdateMillis = 0L
     private val UPDATE_TOKEN = Any()
@@ -222,85 +221,148 @@ class CameraRepository(
         val hw = _characteristicsFlow.value
 
         try {
-            // --- 1. БАЛАНС БЕЛОГО (Только если изменился) ---
-            if (characteristics.wbValue != old?.wbValue || characteristics.wbMode != old?.wbMode) {
-                if (characteristics.wbValue != null) {
-                    builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-                    builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(characteristics.wbValue))
-                    builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-                } else {
-                    builder.set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
-                }
-            }
+            // 1. БАЛАНС БЕЛОГО
+            updateWhiteBalance(builder, characteristics, old)
 
-            // --- 2. ЭКСПОЗИЦИЯ (Только если изменилась) ---
-            var iso = characteristics.isoValue
-            var shutter = characteristics.shutterValue
-            val modeChanged = (iso == null) != (old?.isoValue == null) || (shutter == null) != (old?.shutterValue == null)
+            // 2. ЭКСПОЗИЦИЯ
+            val exposureResult = updateExposure(builder, characteristics, old, hw)
 
-            if (iso != null || shutter != null) {
-                if (iso != null && shutter == null) {
-                    val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
-                    val bI = hw?.actualIso ?: old?.isoValue ?: 100
-                    shutter = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, iso, 0)
-                } else if (shutter != null && iso == null) {
-                    val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
-                    val bI = hw?.actualIso ?: old?.isoValue ?: 100
-                    iso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter, 0)
-                }
-                AE = false
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso ?: 100)
-                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter ?: 10_000_000L)
-                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter ?: 33_333_333L, 33_333_333L))
-                builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-            } else if (modeChanged || old == null) {
-                AE = true
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
-            }
+            // 3. ФОКУС
+            updateFocus(builder, characteristics, old)
 
-            // --- 3. ФОКУС (Жесткая изоляция от изменений ISO) ---
-            val isManual = characteristics.focusValue != null && characteristics.focusMode != -1
-            val afModeChanged = characteristics.focusMode != old?.focusMode || isManual != (old?.focusValue != null)
+            // Сохраняем примененное состояние
+            appliedCharacteristics = characteristics.copy(
+                isoValue = exposureResult.iso, 
+                shutterValue = exposureResult.shutter
+            )
 
-            if (isManual) {
-                if (afModeChanged || characteristics.focusValue != old?.focusValue) {
-                    isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
-                    builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                    builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, characteristics.focusValue)
-                }
-            } else {
-                val mode = characteristics.focusMode ?: CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                if (mode == -1) { // TOUCH
-                    characteristics.touchPoint?.let { point ->
-                        val pointChanged = !Arrays.equals(point, old?.touchPoint)
-                        if (pointChanged) {
-                            isAfLocked = false; isWaitingForFocus = true; lastLockedFocusDistance = null
-                            val rect = meteringRectangle(point)
-                            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                            builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
-                            launchAfTrigger(builder, rect)
-                        } else if (isAfLocked && lastLockedFocusDistance != null) {
-                            // Если точка та же и мы залочены - ПРИНУДИТЕЛЬНО держим замок
-                            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                            builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, lastLockedFocusDistance)
-                        }
-                    }
-                } else if (afModeChanged) {
-                    isAfLocked = false; isWaitingForFocus = false
-                    builder.set(CaptureRequest.CONTROL_AF_MODE, mode)
-                }
-            }
-            
-            appliedCharacteristics = characteristics
-            if (forceFlush && modeChanged) {
+            // Если изменился режим (Auto <-> Manual) и это запрос от пользователя - сбрасываем конвейер
+            if (forceFlush && exposureResult.modeChanged) {
                 session.stopRepeating()
                 session.capture(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             }
             session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             
-        } catch (e: Exception) { Log.e("CameraRepository", "Apply error") }
+        } catch (e: Exception) { Log.e("CameraRepository", "Apply state failed: ${e.message}", e) }
+    }
+
+    private fun updateWhiteBalance(builder: CaptureRequest.Builder, new: Characteristics, old: Characteristics?) {
+        if (new.wbValue == old?.wbValue && new.wbMode == old?.wbMode) return
+        
+        if (new.wbValue != null) {
+            builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
+            builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(new.wbValue))
+            builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+        } else {
+            builder.set(CaptureRequest.CONTROL_AWB_MODE, new.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
+        }
+    }
+
+    private data class ExposureResult(val iso: Int?, val shutter: Long?, val modeChanged: Boolean)
+
+    private fun updateExposure(
+        builder: CaptureRequest.Builder, 
+        new: Characteristics, 
+        old: Characteristics?, 
+        hw: Characteristics?
+    ): ExposureResult {
+        val iso = new.isoValue
+        val shutter = new.shutterValue
+        val isManual = iso != null || shutter != null
+        val wasManual = old?.isoValue != null || old?.shutterValue != null
+        val modeChanged = isManual != wasManual || old == null
+
+        return when {
+            iso != null && shutter != null -> {
+                // MANUAL
+                AE = false
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
+                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))
+                builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
+                ExposureResult(iso, shutter, modeChanged)
+            }
+            iso != null -> {
+                // ISO PRIORITY
+                AE = false
+                val meanLum = calculateMeanLuminance()
+                val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
+                val bI = hw?.actualIso ?: old?.isoValue ?: 100
+                val calcShutter = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, iso, meanLum.toInt())
+                
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, calcShutter)
+                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(calcShutter, 33_333_333L))
+                builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
+                ExposureResult(iso, calcShutter, modeChanged)
+            }
+            shutter != null -> {
+                // SHUTTER PRIORITY
+                AE = false
+                val meanLum = calculateMeanLuminance()
+                val bS = hw?.actualShutter ?: old?.shutterValue ?: 33_333_333L
+                val bI = hw?.actualIso ?: old?.isoValue ?: 100
+                val calcIso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter, meanLum.toInt())
+                
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, calcIso)
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
+                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))
+                builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
+                ExposureResult(calcIso, shutter, modeChanged)
+            }
+            else -> {
+                // FULL AUTO
+                AE = true
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
+                ExposureResult(null, null, modeChanged)
+            }
+        }
+    }
+
+    private fun calculateMeanLuminance(): Double {
+        var sum = 0L
+        for (i in histogramDataBuffer.indices step 8) {
+            sum += histogramDataBuffer[i].toInt() and 0xFF
+        }
+        return if (histogramDataBuffer.isEmpty()) 128.0 else sum.toDouble() / (histogramDataBuffer.size / 8)
+    }
+
+    private fun updateFocus(builder: CaptureRequest.Builder, new: Characteristics, old: Characteristics?) {
+        val isManual = new.focusValue != null && new.focusMode != -1
+        val wasManual = old?.focusValue != null && old?.focusMode != -1
+        val modeChanged = new.focusMode != old?.focusMode || isManual != wasManual
+
+        if (isManual) {
+            if (modeChanged || new.focusValue != old?.focusValue) {
+                isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
+                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, new.focusValue)
+            }
+        } else {
+            val targetMode = new.focusMode ?: CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+            if (targetMode == -1) { // TOUCH
+                new.touchPoint?.let { point ->
+                    val pointChanged = !Arrays.equals(point, old?.touchPoint)
+                    if (pointChanged) {
+                        isAfLocked = false; isWaitingForFocus = true; lastLockedFocusDistance = null
+                        val rect = meteringRectangle(point)
+                        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                        builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
+                        launchAfTrigger(builder, rect)
+                    } else if (isAfLocked && lastLockedFocusDistance != null) {
+                        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, lastLockedFocusDistance)
+                    }
+                }
+            } else if (modeChanged) {
+                isAfLocked = false; isWaitingForFocus = false
+                builder.set(CaptureRequest.CONTROL_AF_MODE, targetMode)
+            }
+        }
     }
 
     private fun launchAfTrigger(base: CaptureRequest.Builder, rect: MeteringRectangle) {
@@ -311,7 +373,6 @@ class CameraRepository(
                 set(CaptureRequest.CONTROL_AE_MODE, base.get(CaptureRequest.CONTROL_AE_MODE))
                 set(CaptureRequest.SENSOR_SENSITIVITY, base.get(CaptureRequest.SENSOR_SENSITIVITY))
                 set(CaptureRequest.SENSOR_EXPOSURE_TIME, base.get(CaptureRequest.SENSOR_EXPOSURE_TIME))
-                // ФИКС: Явно копируем регионы AE, чтобы яркость не прыгнула при тапе
                 set(CaptureRequest.CONTROL_AE_REGIONS, base.get(CaptureRequest.CONTROL_AE_REGIONS))
                 set(CaptureRequest.CONTROL_AE_LOCK, true) 
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
@@ -332,18 +393,15 @@ class CameraRepository(
             val fDist = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: 0f
             val wbG = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
 
-            if (AE && (now - lastAeUpdateMillis > 500) && (lastCharacteristics.isoValue == null || lastCharacteristics.shutterValue == null)) {
+            // ФОНОВАЯ коррекция (теперь работает и в Приоритетах)
+            if (!isAfLocked && (now - lastAeUpdateMillis > 500)) {
                 val tIso = lastCharacteristics.isoValue
                 val tExp = lastCharacteristics.shutterValue
-                when {
-                    tIso != null && tExp == null -> {
-                        val calc = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, sIso, sExp, tIso, 0)
-                        if (abs(calc - sExp) > calc * 0.1) { lastAeUpdateMillis = now; applyState(lastCharacteristics.copy(shutterValue = calc)) }
-                    }
-                    tExp != null && tIso == null -> {
-                        val calc = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, sIso, sExp, tExp, 0)
-                        if (abs(calc - sIso) > calc * 0.1) { lastAeUpdateMillis = now; applyState(lastCharacteristics.copy(isoValue = calc)) }
-                    }
+                
+                // Если хотя бы один параметр в "Авто" (null), запускаем пересчет
+                if (tIso == null || tExp == null) {
+                    lastAeUpdateMillis = now
+                    applyState(lastCharacteristics, forceFlush = false)
                 }
             }
 
@@ -369,8 +427,7 @@ class CameraRepository(
                         isAfLocked = true
                         lastLockedFocusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
                     }
-                    handleFocusResult(afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED)
-                    // ПРИНУДИТЕЛЬНОЕ применение для фиксации AF_MODE_OFF
+                    handleFocusResult(afState == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED)
                     applyState(lastCharacteristics, forceFlush = false)
                 }
             }
@@ -437,12 +494,24 @@ object ImageSaver {
 object AutoExposure {
     private val SHUTTERS = listOf(125_000L, 250_000L, 500_000L, 1_000_000L, 2_000_000L, 4_000_000L, 8_000_000L, 16_666_666L, 33_333_333L, 66_666_666L, 125_000_000L, 250_000_000L, 500_000_000L, 1_000_000_000L)
     private val ISOS = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400)
-    fun getShutterPriorityWithClassicSteps(rb: CaptureRequest.Builder?, chars: CameraCharacteristics, aeIso: Int, aeExp: Long, targetIso: Int, ev: Int): Long {
-        val ideal = aeExp * (aeIso.toDouble() / targetIso.toDouble()); val closest = SHUTTERS.minByOrNull { abs(ln(it.toDouble() / ideal)) } ?: ideal.toLong()
-        val range = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE); return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
+    
+    fun getShutterPriorityWithClassicSteps(rb: CaptureRequest.Builder?, chars: CameraCharacteristics, aeIso: Int, aeExp: Long, targetIso: Int, currentLum: Int): Long {
+        if (targetIso <= 0) return aeExp
+        val lumFactor = if (currentLum > 0) 128.0 / currentLum.toDouble() else 1.0
+        val ideal = (aeExp * (aeIso.toDouble() / targetIso.toDouble()) * lumFactor).toLong()
+        
+        val closest = SHUTTERS.minByOrNull { abs(ln(it.toDouble() / ideal)) } ?: ideal
+        val range = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
     }
-    fun getIsoPriorityWithClassicSteps(rb: CaptureRequest.Builder?, chars: CameraCharacteristics, aeIso: Int, aeExp: Long, targetExp: Long, ev: Int): Int {
-        val ideal = aeIso.toDouble() * (aeExp.toDouble() / targetExp.toDouble()); val closest = ISOS.minByOrNull { abs(ln(it.toDouble() / ideal)) } ?: ideal.toInt()
-        val range = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE); return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
+    
+    fun getIsoPriorityWithClassicSteps(rb: CaptureRequest.Builder?, chars: CameraCharacteristics, aeIso: Int, aeExp: Long, targetExp: Long, currentLum: Int): Int {
+        if (targetExp <= 0) return aeIso
+        val lumFactor = if (currentLum > 0) 128.0 / currentLum.toDouble() else 1.0
+        val ideal = (aeIso.toDouble() * (aeExp.toDouble() / targetExp.toDouble()) * lumFactor).toInt()
+        
+        val closest = ISOS.minByOrNull { abs(ln(it.toDouble() / ideal)) } ?: ideal
+        val range = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
     }
 }
