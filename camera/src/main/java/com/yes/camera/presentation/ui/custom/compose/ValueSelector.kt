@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -638,15 +639,16 @@ fun ValueSelector(
                 contentPadding = PaddingValues(horizontal = horizontalPadding),
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                items(
-                    count = items.size,
-                ) { index ->
+                itemsIndexed(
+                    items = items,
+                    key = { _, item -> item.id }
+                ) { index, item ->
                     Box(
                         modifier = Modifier.width(itemWidthDp),
                         contentAlignment = Alignment.Center
                     ) {
                         val isSelected = index <= centerIndex
-                        items[index].content(isSelected)
+                        item.content(isSelected)
                     }
                 }
             }

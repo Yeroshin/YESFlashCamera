@@ -19,6 +19,7 @@ import com.yes.shared.domain.Dimensions
 @Stable
 @Composable
 fun CameraPreviewContainer(
+    modifier: Modifier = Modifier,
     renderer: GLRenderer,
     fullScreen: Boolean,
     aspectRatio: Dimensions?, // Предположим, это ваш класс с width и height
@@ -29,8 +30,7 @@ fun CameraPreviewContainer(
     // Изменение ISO или Shutter на него больше не влияет!
 
     AndroidView(
-        modifier = Modifier
-            .fillMaxSize() // Размер контролируем внешним контейнером
+        modifier = modifier
             .onSizeChanged { onSizeChanged(it) },
         factory = { context ->
             AutoFitSurfaceView(context, null).apply {

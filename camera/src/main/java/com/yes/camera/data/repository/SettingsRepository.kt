@@ -96,7 +96,7 @@ class SettingsRepository(
             subscribeResolutionValue()
         ) { fullscreen, resolution ->
             Characteristics(
-                fullscreen = fullscreen ?: false,
+                fullscreen = fullscreen ?: true,
                 resolution = resolution ?: Dimensions(0, 0)
             )
         }

@@ -6,7 +6,7 @@ import com.yes.shared.domain.ImgFormat
 data class Settings(
     val resolutionValue: Dimensions?,
     val resolutionItems: List<Dimensions>? = null,
-    val fullScreen: Boolean? = false,
+    val fullScreen: Boolean? = true,
     val imageFormat: ImgFormat? = null,
     val filePath: String? = null
 )

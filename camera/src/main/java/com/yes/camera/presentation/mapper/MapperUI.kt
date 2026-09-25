@@ -76,7 +76,7 @@ class MapperUI(
             wbPosition = wbPosition,
             focusValue = displayFocus?.toString() ?: "",
             focusPosition = focusPosition,
-            fullScreen = characteristics.fullscreen ?: false,
+            fullScreen = characteristics.fullscreen ?: true,
             resolution = "${characteristics.resolution.width}x${characteristics.resolution.height}",
             aspectRatio = characteristics.resolution,
 

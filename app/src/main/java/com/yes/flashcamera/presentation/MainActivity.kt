@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
@@ -19,6 +20,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
+import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
@@ -172,7 +174,12 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        splashScreen.setKeepOnScreenCondition {
+            cameraViewModel.uiState.value.state !is CameraContract.CameraState.Success
+        }
 
         ///////////////////////////
         setContent {

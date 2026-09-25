@@ -5,7 +5,7 @@ import com.yes.settings.presentation.ui.views.ImmutableCollection
 data class SettingsUI(
     val resolutionValue: String = "",
     val resolutionItems: ImmutableCollection<String> = ImmutableCollection(emptyList()),
-    val fullScreen: Boolean = false,
+    val fullScreen: Boolean = true,
     val imgFormatValue:String,
     val imgFormatItems:ImmutableCollection<String>
 )

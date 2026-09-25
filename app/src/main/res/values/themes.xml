@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <style name="Theme.FlashCamera.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_black</item>
+        <item name="postSplashScreenTheme">@style/Theme.FlashCamera</item>
+    </style>
+
     <style name="Theme.FlashCamera" parent="Theme.AppCompat.DayNight.NoActionBar" />
-<style name="mybutton" parent="Theme.FlashCamera">
-    <item name="android:backgroundTint">@null</item>
-    <item name="android:elevation">0dp</item>
 
+    <style name="mybutton" parent="Theme.FlashCamera">
+        <item name="android:backgroundTint">@null</item>
+        <item name="android:elevation">0dp</item>
+    </style>
 
-</style>
 </resources>

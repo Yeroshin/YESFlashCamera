@@ -1,9 +1,12 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -22,7 +26,10 @@ import com.yes.camera.presentation.ui.adapter.TextSelectorContent
 import com.yes.camera.presentation.ui.custom.compose.*
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun CameraScreenSuccess(
@@ -66,7 +73,7 @@ fun CameraScreenSuccess(
         ShutterBox(
             isOpen = shutterBoxIsOpen,
             onToggle = { shutterBoxIsOpen = !shutterBoxIsOpen },
-            modifier = Modifier.padding(top = if (characteristics.fullScreen) 0.dp else 84.dp)
+            modifier = Modifier.fillMaxSize().padding(top = if (characteristics.fullScreen) 0.dp else 64.dp)
         ) {}
         
         UniversalRadioGroup(
@@ -185,6 +192,48 @@ fun CameraScreenSuccess(
                     onStartVideoRecord(isCheck)
                 })
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun CameraScreenSuccessPreview() {
+    val context = LocalContext.current
+    val handler = remember { Handler(Looper.getMainLooper()) }
+    val renderer = remember { GLRenderer(context, handler) {} }
+    val stateFlow = remember {
+        MutableStateFlow(
+            CharacteristicsUI(
+                resolution = "1920x1080",
+                shutterValue = "1/60",
+                isoValue = "100",
+                wbValue = "5000K",
+                characteristicsItems = persistentListOf(
+                    RadioGroupItem.TextItem(SettingsItem.SHUTTER, "SHUTTER", "1/60"),
+                    RadioGroupItem.TextItem(SettingsItem.ISO, "ISO", "100"),
+                    RadioGroupItem.TextItem(SettingsItem.WB, "WB", "5000K"),
+                    RadioGroupItem.TextItem(SettingsItem.FOCUS, "FOCUS", "A"),
+                    RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "MAGNIFIER", "1")
+                ),
+                shutterItems = listOf(SelectorItem(0, "1/500"), SelectorItem(1, "1/250"), SelectorItem(2, "1/125"), SelectorItem(3, "1/60")),
+                isoItems = listOf(SelectorItem(0, "50"), SelectorItem(1, "100"), SelectorItem(2, "200")),
+                isShutterAuto = false,
+                isIsoAuto = false
+            )
+        )
+    }
+    MaterialTheme {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            CameraScreenSuccess(
+                context = context,
+                renderer = renderer,
+                characteristicsFlow = stateFlow,
+                onSettingsClick = {},
+                onStartVideoRecord = {},
+                onSetCharacteristic = {},
+                onSelectCategory = {}
+            )
         }
     }
 }

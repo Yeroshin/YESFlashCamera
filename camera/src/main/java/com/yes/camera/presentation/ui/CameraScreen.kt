@@ -6,12 +6,14 @@ import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.dp
 import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.model.CharacteristicsUI
@@ -214,7 +217,10 @@ fun CameraScreen(
     val viewState = cameraViewModel.uiState.collectAsState()
     val currentState = viewState.value.state
     if (hasPermission && renderer != null) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.TopCenter
+        ) {
             val characteristicsFlow = (currentState as? CameraContract.CameraState.Success)?.characteristicsFlow
             
             // We only collect fullScreen and aspectRatio here to minimize recompositions.
@@ -247,6 +253,7 @@ fun CameraScreen(
             //
             // Результат: При изменении ISO этот блок кода будет СКИПАТЬСЯ (Skip)!
             CameraPreviewContainer(
+                modifier = Modifier.padding(top = if (characteristics.fullScreen) 0.dp else 84.dp),
                 renderer = renderer,
                 fullScreen = isFullScreen,
                 aspectRatio = currentAspectRatio,
