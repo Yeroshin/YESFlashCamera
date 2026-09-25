@@ -284,6 +284,11 @@ fun CameraScreen(
                                 CameraContract.Event.OnSetCharacteristics(characteristics)
                             )
                         },
+                        onSelectCategory = { category ->
+                            cameraViewModel.setEvent(
+                                CameraContract.Event.OnSelectCategory(category)
+                            )
+                        },
                     )
                 }
 

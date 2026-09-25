@@ -32,6 +32,7 @@ fun CameraScreenSuccess(
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
+    onSelectCategory: (category: SettingsItem) -> Unit,
 ) {
     val characteristics by characteristicsFlow.collectAsState()
 
@@ -45,7 +46,6 @@ fun CameraScreenSuccess(
     }
 
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
-    var currentCategory by remember { mutableStateOf(SettingsItem.SHUTTER) }
 
     val paramsRadioGroupItems = remember(characteristics.characteristicsItems) {
         characteristics.characteristicsItems.map { data ->
@@ -58,38 +58,9 @@ fun CameraScreenSuccess(
         }.toImmutableList()
     }
 
-    // Derived flags and data for current category
-    val isAutoForCategory = remember(currentCategory, characteristics) {
-        when (currentCategory) {
-            SettingsItem.SHUTTER -> characteristics.isShutterAuto
-            SettingsItem.ISO -> characteristics.isIsoAuto
-            SettingsItem.WB -> characteristics.isWbAuto
-            SettingsItem.FOCUS -> characteristics.isFocusAuto
-            else -> false
-        }
-    }
-
-    val currentItems = remember(currentCategory, characteristics) {
-        when (currentCategory) {
-            SettingsItem.SHUTTER -> characteristics.shutterItems
-            SettingsItem.ISO -> characteristics.isoItems
-            SettingsItem.WB -> characteristics.wbItems
-            SettingsItem.FOCUS -> characteristics.focusItems
-            SettingsItem.MAGNIFIER -> characteristics.magnifierItems
-            else -> emptyList()
-        }
-    }
-
-    val currentPosition = remember(currentCategory, characteristics) {
-        when (currentCategory) {
-            SettingsItem.SHUTTER -> characteristics.shutterPosition
-            SettingsItem.ISO -> characteristics.isoPosition
-            SettingsItem.WB -> characteristics.wbPosition
-            SettingsItem.FOCUS -> characteristics.focusPosition
-            SettingsItem.MAGNIFIER -> 0
-            else -> 0
-        }
-    }
+    val isAutoForCategory = characteristics.isAutoForSelectedCategory
+    val currentItems = characteristics.currentCategoryItems
+    val currentPosition = characteristics.currentCategoryPosition
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
         ShutterBox(
@@ -100,8 +71,8 @@ fun CameraScreenSuccess(
         
         UniversalRadioGroup(
             items = paramsRadioGroupItems,
-            selectedItem = currentCategory,
-            onItemClick = { currentCategory = it as SettingsItem },
+            selectedItem = characteristics.selectedCategory,
+            onItemClick = { onSelectCategory(it as SettingsItem) },
             modifier = Modifier.padding(4.dp).fillMaxWidth().padding(top = 16.dp),
         )
 
@@ -126,11 +97,17 @@ fun CameraScreenSuccess(
                     vectorColor = if (isAutoForCategory) Color.Green else Color.White,
                     shadowColor = Color.DarkGray,
                     onClick = {
-                        val updated = when (currentCategory) {
+                        val updated = when (characteristics.selectedCategory) {
                             SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = !characteristics.isShutterAuto)
                             SettingsItem.ISO -> characteristics.copy(isIsoAuto = !characteristics.isIsoAuto)
-                            SettingsItem.WB -> characteristics.copy(isWbAuto = !characteristics.isWbAuto)
-                            SettingsItem.FOCUS -> characteristics.copy(isFocusAuto = !characteristics.isFocusAuto)
+                            SettingsItem.WB -> characteristics.copy(
+                                isWbAuto = !characteristics.isWbAuto,
+                                wbMode = characteristics.wbMode ?: ModeItem.WbItem.AUTO
+                            )
+                            SettingsItem.FOCUS -> characteristics.copy(
+                                isFocusAuto = !characteristics.isFocusAuto,
+                                focusMode = characteristics.focusMode ?: ModeItem.FocusItem.CONTINUOUS
+                            )
                             else -> null
                         }
                         updated?.let(onSetCharacteristic)
@@ -138,8 +115,8 @@ fun CameraScreenSuccess(
                 )
                 
                 Box(modifier = Modifier.fillMaxWidth().padding(4.dp).height(50.dp)) {
-                    if (isAutoForCategory && (currentCategory == SettingsItem.WB || currentCategory == SettingsItem.FOCUS)) {
-                        val modeItems = if (currentCategory == SettingsItem.WB) characteristics.wbModeItems else characteristics.focusModeItems
+                    if (isAutoForCategory && (characteristics.selectedCategory == SettingsItem.WB || characteristics.selectedCategory == SettingsItem.FOCUS)) {
+                        val modeItems = if (characteristics.selectedCategory == SettingsItem.WB) characteristics.wbModeItems else characteristics.focusModeItems
                         val uiModeItems = remember(modeItems) {
                             modeItems.map { data ->
                                 RadioUiItem(id = data.id as ModeItem) { isSelected ->
@@ -150,7 +127,7 @@ fun CameraScreenSuccess(
                                 }
                             }.toImmutableList()
                         }
-                        val selectedMode = if (currentCategory == SettingsItem.WB) characteristics.wbMode else characteristics.focusMode
+                        val selectedMode = if (characteristics.selectedCategory == SettingsItem.WB) characteristics.wbMode else characteristics.focusMode
                         
                         UniversalRadioGroup(
                             items = uiModeItems,
@@ -166,7 +143,7 @@ fun CameraScreenSuccess(
                         )
                     } else {
                         // KEY гарантирует, что ValueSelector пересоздастся (и сбросит скролл) при смене категории
-                        key(currentCategory) {
+                        key(characteristics.selectedCategory) {
                             val uiItems = remember(currentItems) {
                                 currentItems.map { data -> 
                                     SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) } 
@@ -181,18 +158,17 @@ fun CameraScreenSuccess(
                                     // Сбрасываем AUTO только если реально сдвинули или уже в AUTO
                                     if (index != currentPosition || isAutoForCategory) {
                                         val newValue = currentItems.getOrNull(index)?.value
-                                        val updated = when (currentCategory) {
-                                            SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = false, shutterValue = newValue)
-                                            SettingsItem.ISO -> characteristics.copy(isIsoAuto = false, isoValue = newValue)
-                                            SettingsItem.WB -> characteristics.copy(isWbAuto = false, wbValue = newValue)
-                                            SettingsItem.FOCUS -> characteristics.copy(isFocusAuto = false, focusValue = newValue)
+                                        val updated = when (characteristics.selectedCategory) {
+                                            SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = false, shutterValue = newValue, shutterPosition = index)
+                                            SettingsItem.ISO -> characteristics.copy(isIsoAuto = false, isoValue = newValue, isoPosition = index)
+                                            SettingsItem.WB -> characteristics.copy(isWbAuto = false, wbValue = newValue, wbPosition = index)
+                                            SettingsItem.FOCUS -> characteristics.copy(isFocusAuto = false, focusValue = newValue, focusPosition = index)
                                             SettingsItem.MAGNIFIER -> {
                                                 renderer.configureMagnifier(newValue?.replace("x", "")?.toFloatOrNull() ?: 1f)
                                                 characteristics.copy(magnifierValue = newValue)
                                             }
-                                            else -> null
                                         }
-                                        updated?.let(onSetCharacteristic)
+                                        updated.let(onSetCharacteristic)
                                     }
                                 }
                             )

@@ -235,6 +235,9 @@ class CameraRepository(
             // 2. ЭКСПОЗИЦИЯ
             val exposureResult = updateExposure(builder, characteristics, old, hw)
 
+            // 3. ФОКУС
+            updateFocus(builder, characteristics, old)
+
             appliedCharacteristics = characteristics
 
             if (forceFlush && exposureResult.modeChanged) {
@@ -325,13 +328,18 @@ class CameraRepository(
         } else {
             val targetMode = new.focusMode ?: CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
             if (targetMode == -1) { // TOUCH
+                if (modeChanged && new.touchPoint == null) {
+                    isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
+                    builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                }
                 new.touchPoint?.let { point ->
                     val pointChanged = !Arrays.equals(point, old?.touchPoint)
-                    if (pointChanged) {
+                    val rect = meteringRectangle(point)
+                    builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
+
+                    if (pointChanged || modeChanged) {
                         isAfLocked = false; isWaitingForFocus = true; lastLockedFocusDistance = null
-                        val rect = meteringRectangle(point)
                         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                        builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
                         launchAfTrigger(builder, rect)
                     } else if (isAfLocked && lastLockedFocusDistance != null) {
                         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
@@ -339,8 +347,9 @@ class CameraRepository(
                     }
                 }
             } else if (modeChanged) {
-                isAfLocked = false; isWaitingForFocus = false
+                isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
                 builder.set(CaptureRequest.CONTROL_AF_MODE, targetMode)
+                builder.set(CaptureRequest.CONTROL_AF_REGIONS, null)
             }
         }
     }

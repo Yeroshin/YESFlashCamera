@@ -40,8 +40,39 @@ data class CharacteristicsUI(
     val isWbAuto: Boolean = true,
     val isFocusAuto: Boolean = true,
 
-    val histogramData: Map<Int, Int> = emptyMap()
-)
+    val histogramData: Map<Int, Int> = emptyMap(),
+    val selectedCategory: SettingsItem = SettingsItem.SHUTTER
+) {
+    val isAutoForSelectedCategory: Boolean
+        get() = when (selectedCategory) {
+            SettingsItem.SHUTTER -> isShutterAuto
+            SettingsItem.ISO -> isIsoAuto
+            SettingsItem.WB -> isWbAuto
+            SettingsItem.FOCUS -> isFocusAuto
+            else -> false
+        }
+
+    val currentCategoryItems: List<SelectorItem>
+        get() = when (selectedCategory) {
+            SettingsItem.SHUTTER -> shutterItems
+            SettingsItem.ISO -> isoItems
+            SettingsItem.WB -> wbItems
+            SettingsItem.FOCUS -> focusItems
+            SettingsItem.MAGNIFIER -> magnifierItems
+        }
+
+    val currentCategoryPosition: Int
+        get() = when (selectedCategory) {
+            SettingsItem.SHUTTER -> shutterPosition
+            SettingsItem.ISO -> isoPosition
+            SettingsItem.WB -> wbPosition
+            SettingsItem.FOCUS -> focusPosition
+            SettingsItem.MAGNIFIER -> {
+                val index = magnifierItems.indexOfFirst { it.value == magnifierValue }
+                if (index >= 0) index else 0
+            }
+        }
+}
 
 @Immutable
 sealed interface RadioGroupItem  {

@@ -145,10 +145,8 @@ class MapperUI(
                 )
             },
             focusMode = when (characteristics.focusMode) {
-                characteristics.maxFocusValue.toInt() -> ModeItem.FocusItem.MACRO
                 CONTROL_AF_MODE_CONTINUOUS_PICTURE -> ModeItem.FocusItem.CONTINUOUS
                 -1 -> ModeItem.FocusItem.TOUCH
-                characteristics.minFocusValue.toInt() -> ModeItem.FocusItem.INFINITE
                 else -> ModeItem.FocusItem.CONTINUOUS
             },
             magnifierItems = standardMagnifierValues.map { SelectorItem(it.toInt(), it.toString()) },
@@ -174,11 +172,11 @@ class MapperUI(
             
             wbValue = if (intent.isWbAuto) hardwareMapped.wbValue else intent.wbValue,
             wbPosition = if (intent.isWbAuto) hardwareMapped.wbPosition else intent.wbPosition,
-            wbMode = if (intent.isWbAuto) hardwareMapped.wbMode else intent.wbMode,
+            wbMode = intent.wbMode ?: hardwareMapped.wbMode,
             
             focusValue = if (intent.isFocusAuto) hardwareMapped.focusValue else intent.focusValue,
             focusPosition = if (intent.isFocusAuto) hardwareMapped.focusPosition else intent.focusPosition,
-            focusMode = if (intent.isFocusAuto) hardwareMapped.focusMode else intent.focusMode,
+            focusMode = intent.focusMode ?: hardwareMapped.focusMode,
 
             resolution = hardwareMapped.resolution,
             aspectRatio = hardwareMapped.aspectRatio,

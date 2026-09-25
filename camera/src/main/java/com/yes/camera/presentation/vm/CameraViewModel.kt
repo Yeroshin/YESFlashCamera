@@ -56,6 +56,10 @@ class CameraViewModel(
                 setCharacteristics(event.characteristics)
             }
 
+            is Event.OnSelectCategory -> {
+                _characteristicsInternal.update { it.copy(selectedCategory = event.category) }
+            }
+
             is Event.OnStartVideoRecord -> {
                 startVideoRecord(event.enabled)
             }

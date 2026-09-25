@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -573,108 +574,92 @@ fun ValueSelector(
 ) {
     if (items.isNullOrEmpty()) return
 
-    val density = LocalDensity.current
-    val itemWidthDp = 48.dp
-    val itemWidthPx = with(density) { itemWidthDp.toPx() }
-    var rowWidthPx by remember { mutableIntStateOf(0) }
-
-    val horizontalPadding = with(density) {
-        (rowWidthPx / 2f - itemWidthPx / 2f).coerceAtLeast(0f).toDp()
-    }
-    val offsetInPx = with(density) { horizontalPadding.roundToPx() }
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = position,
-        initialFirstVisibleItemScrollOffset = -offsetInPx
-    )
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-
-
-    val centerIndex by remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val visibleItems = layoutInfo.visibleItemsInfo
-            if (visibleItems.isEmpty()) return@derivedStateOf position
-            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-            val t = visibleItems.minByOrNull { item ->
-                abs(item.offset + item.size / 2 - viewportCenter)
-            }?.index ?: position
-            val m = t
-            visibleItems.minByOrNull { item ->
-                abs(item.offset + item.size / 2 - viewportCenter)
-            }?.index ?: position
-        }
-    }
-////////////////////////////////
-
-    LaunchedEffect(position, rowWidthPx) {
-        if (!listState.isScrollInProgress && centerIndex != position) {
-            listState.animateScrollToItem(position)
-        }
-    }
-
-
-////////////////////////////////
-    var wasDragged by remember { mutableStateOf(false) }
-    val isDragged by listState.interactionSource.collectIsDraggedAsState()
-
-// 2. Отслеживаем начало касания
-    LaunchedEffect(isDragged) {
-        if (isDragged) wasDragged = true
-    }
-
-// 3. Фиксируем результат только при полной остановке
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            // Нам важны два состояния: идет ли скролл и индекс центрального элемента
-            Pair(listState.isScrollInProgress, centerIndex)
-        }
-            .collect { (isScrolling, currentCenter) ->
-                // Если скролл закончился (isScrolling == false)
-                // И это был ручной скролл (wasDragged == true)
-                if (!isScrolling && wasDragged) {
-                    onSelectedItemChanged(currentCenter)
-                    wasDragged = false // Сбрасываем флаг до следующего касания
-                }
-            }
-    }
-
-
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .onSizeChanged { rowWidthPx = it.width }
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth()
     ) {
-        LazyRow(
-            state = listState,
-            flingBehavior = flingBehavior,
-            contentPadding = PaddingValues(
-                horizontal = horizontalPadding
-            ),
-            horizontalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            items(
-                count = items.size,
-                //  key = { index -> items[index].id }
-            ) { index ->
-                Box(
-                    modifier = Modifier.width(itemWidthDp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val isSelected = index <= centerIndex
-                    items[index].content(isSelected)
-                }
+        val density = LocalDensity.current
+        val itemWidthDp = 48.dp
+        val itemWidthPx = with(density) { itemWidthDp.toPx() }
+        val rowWidthPx = this.constraints.maxWidth
+
+        val horizontalPadding = with(density) {
+            (rowWidthPx / 2f - itemWidthPx / 2f).coerceAtLeast(0f).toDp()
+        }
+        val safeIndex = position.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+
+        val listState = rememberLazyListState(
+            initialFirstVisibleItemIndex = safeIndex
+        )
+        val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+        val centerIndex by remember {
+            derivedStateOf {
+                val layoutInfo = listState.layoutInfo
+                val visibleItems = layoutInfo.visibleItemsInfo
+                if (visibleItems.isEmpty()) return@derivedStateOf safeIndex
+                val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+                visibleItems.minByOrNull { item ->
+                    abs(item.offset + item.size / 2 - viewportCenter)
+                }?.index ?: safeIndex
             }
         }
 
-        VectorShadow(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .size(14.dp),
-            vectorColor = Color.Green,
-            shadowColor = Color.DarkGray,
-            resId = R.drawable.arrow_drop_up
-        )
+        LaunchedEffect(safeIndex) {
+            if (!listState.isScrollInProgress && centerIndex != safeIndex) {
+                listState.scrollToItem(safeIndex)
+            }
+        }
+
+        var wasDragged by remember { mutableStateOf(false) }
+        val isDragged by listState.interactionSource.collectIsDraggedAsState()
+
+        LaunchedEffect(isDragged) {
+            if (isDragged) wasDragged = true
+        }
+
+        LaunchedEffect(listState) {
+            snapshotFlow {
+                Pair(listState.isScrollInProgress, centerIndex)
+            }
+                .collect { (isScrolling, currentCenter) ->
+                    if (!isScrolling && wasDragged) {
+                        onSelectedItemChanged(currentCenter)
+                        wasDragged = false
+                    }
+                }
+        }
+
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            LazyRow(
+                state = listState,
+                flingBehavior = flingBehavior,
+                contentPadding = PaddingValues(horizontal = horizontalPadding),
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                items(
+                    count = items.size,
+                ) { index ->
+                    Box(
+                        modifier = Modifier.width(itemWidthDp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val isSelected = index <= centerIndex
+                        items[index].content(isSelected)
+                    }
+                }
+            }
+
+            VectorShadow(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .size(14.dp),
+                vectorColor = Color.Green,
+                shadowColor = Color.DarkGray,
+                resId = R.drawable.arrow_drop_up
+            )
+        }
     }
 }
 
