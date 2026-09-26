@@ -36,7 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.dp
+import com.yes.shared.presentation.ui.theme.AppTheme
 import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.ui.custom.compose.CameraPreviewContainer
@@ -197,8 +197,9 @@ fun CameraScreen(
                     (size.width.toFloat() / 2f / size.width.toFloat()) * 2f - 1f
                 val normalizedY =
                     -((size.height.toFloat() / 2f / size.height.toFloat()) * 2f - 1f)
-                renderer?.handleTouchPress(normalizedX, normalizedY)
                 renderer?.configureMagnifier(1f)
+                renderer?.handleTouchPress(normalizedX, normalizedY)
+
             }
     }
     val onPreviewTouch: (Offset) -> Unit = remember(cameraViewModel) {
@@ -218,7 +219,7 @@ fun CameraScreen(
     val currentState = viewState.value.state
     if (hasPermission && renderer != null) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black),
+            modifier = Modifier.fillMaxSize().background(AppTheme.colors.background),
             contentAlignment = Alignment.TopCenter
         ) {
             val characteristicsFlow = (currentState as? CameraContract.CameraState.Success)?.characteristicsFlow
@@ -253,7 +254,7 @@ fun CameraScreen(
             //
             // Результат: При изменении ISO этот блок кода будет СКИПАТЬСЯ (Skip)!
             CameraPreviewContainer(
-                modifier = Modifier.padding(top = if (characteristics.fullScreen) 0.dp else 84.dp),
+                modifier = Modifier.padding(top = if (characteristics.fullScreen) AppTheme.dimens.none else AppTheme.dimens.cameraTopPadding),
                 renderer = renderer,
                 fullScreen = isFullScreen,
                 aspectRatio = currentAspectRatio,
@@ -270,7 +271,7 @@ fun CameraScreen(
                 CameraContract.CameraState.Loading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
-                        color = Color.White
+                        color = AppTheme.colors.iconPrimary
                     )
                 }
 

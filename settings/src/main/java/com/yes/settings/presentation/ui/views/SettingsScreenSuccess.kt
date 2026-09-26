@@ -3,7 +3,6 @@ package com.yes.settings.presentation.ui.views
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,13 +35,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.yes.settings.R
 import com.yes.settings.presentation.model.SettingsUI
+import com.yes.shared.presentation.ui.theme.AppTheme
 import kotlinx.coroutines.flow.drop
 
 @Stable
@@ -52,19 +49,16 @@ data class ImmutableCollection<T>(
 
 @Composable
 fun RadioDialog(
-    //   show: Boolean,
     options: ImmutableCollection<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    val scrollState= rememberScrollState()
-    // if (show) {
+    val scrollState = rememberScrollState()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select option") },
-
         text = {
             Column(
                 modifier = Modifier.verticalScroll(scrollState)
@@ -84,7 +78,7 @@ fun RadioDialog(
                         )
                         Text(
                             text = option,
-                            modifier = Modifier.padding(start = 8.dp)
+                            modifier = Modifier.padding(start = AppTheme.dimens.medium)
                         )
                     }
                 }
@@ -101,7 +95,6 @@ fun RadioDialog(
             }
         }
     )
-    //  }
 }
 
 @Composable
@@ -113,45 +106,24 @@ fun SettingsScreenSuccess(
     var settings by remember {
         mutableStateOf(settingsUI)
     }
-   /* LaunchedEffect(settings) {
-        onSettingsChanged(settings)
-    }*/
+
     LaunchedEffect(Unit) {
         snapshotFlow { settings }
-            .drop(1)  // Пропускаем начальное значение
+            .drop(1)
             .collect { newSettings ->
                 onSettingsChanged(newSettings)
             }
     }
     var showDialog by remember { mutableStateOf(false) }
-   /* var resolutionItems by remember(settings.resolutionItems) {
-        mutableStateOf(settings.resolutionItems)
-    }
-    var resolutionSelected by remember(
-        settings.resolutionValue
-    ) {
-        mutableStateOf(
-            settings.resolutionValue
-        )
-    }*/
-    // Доступные варианты выбора
-    /*var options : ImmutableCollection<String> =
-        ImmutableCollection(
-            listOf(
-                "a",
-                "b"
-            )
-        )*/
 
     var options by remember {
         mutableStateOf(
             ImmutableCollection(
                 emptyList<String>()
             )
-
         )
     }
-    // Текущий выбранный вариант
+
     var selectedOption by remember { mutableStateOf("") }
     var onConfirmAction by remember {
         mutableStateOf({ })
@@ -163,7 +135,7 @@ fun SettingsScreenSuccess(
     var directory by remember {
         mutableStateOf("Dcim/photo")
     }
-    // Создаем launcher для выбора файла
+
     val dirPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri ->
@@ -176,35 +148,33 @@ fun SettingsScreenSuccess(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(AppTheme.colors.background)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(AppTheme.dimens.huge),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
             IconButton(
                 onClick = { onBackClick() },
-                modifier = Modifier.size(48.dp),
-
-                ) {
+                modifier = Modifier.size(AppTheme.dimens.iconHuge),
+            ) {
                 Icon(
-
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.White,
+                    modifier = Modifier.size(AppTheme.dimens.iconHuge),
+                    tint = AppTheme.colors.iconPrimary,
                     painter = painterResource(id = R.drawable.arrow_back),
-                    contentDescription = "Назад" // Обязательно для accessibility
+                    contentDescription = "Назад"
                 )
             }
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(AppTheme.dimens.giant))
             Text(
                 text = "Settings",
-                fontSize = 32.sp,
-                color = Color.White,
+                fontSize = AppTheme.dimens.textHeader,
+                color = AppTheme.colors.textPrimary,
             )
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(AppTheme.dimens.giant))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -216,24 +186,23 @@ fun SettingsScreenSuccess(
                             settings = settings.copy(
                                 resolutionValue = selectedOption
                             )
-                            //  settings.resolutionValue = selectedOption  // Сброс
                             showDialog = false
                         }
                     }
             ) {
                 Text(
                     text = "Image resolution",
-                    fontSize = 24.sp,
-                    color = Color.White
+                    fontSize = AppTheme.dimens.textTitle,
+                    color = AppTheme.colors.textPrimary
                 )
                 Text(
-                    text =settings.resolutionValue,// resolutionSelected,//"1024 x 768",
-                    fontSize = 18.sp,
-                    color = Color.Green
+                    text = settings.resolutionValue,
+                    fontSize = AppTheme.dimens.textLarge,
+                    color = AppTheme.colors.primaryAccent
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(AppTheme.dimens.huge))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -243,16 +212,16 @@ fun SettingsScreenSuccess(
             ) {
                 Text(
                     text = "Directory",
-                    fontSize = 24.sp,
-                    color = Color.White
+                    fontSize = AppTheme.dimens.textTitle,
+                    color = AppTheme.colors.textPrimary
                 )
                 Text(
                     text = directory,
-                    fontSize = 18.sp,
-                    color = Color.Green
+                    fontSize = AppTheme.dimens.textLarge,
+                    color = AppTheme.colors.primaryAccent
                 )
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(AppTheme.dimens.huge))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -264,23 +233,22 @@ fun SettingsScreenSuccess(
                             settings = settings.copy(
                                 imgFormatValue = selectedOption
                             )
-                            //  settings.resolutionValue = selectedOption  // Сброс
                             showDialog = false
                         }
                     }
             ) {
                 Text(
                     text = "Image format",
-                    fontSize = 24.sp,
-                    color = Color.White
+                    fontSize = AppTheme.dimens.textTitle,
+                    color = AppTheme.colors.textPrimary
                 )
                 Text(
                     text = settings.imgFormatValue,
-                    fontSize = 18.sp,
-                    color = Color.Green
+                    fontSize = AppTheme.dimens.textLarge,
+                    color = AppTheme.colors.primaryAccent
                 )
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(AppTheme.dimens.huge))
             Row(
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -288,8 +256,8 @@ fun SettingsScreenSuccess(
             ) {
                 Text(
                     text = "Fullscreen preview",
-                    fontSize = 24.sp,
-                    color = Color.White
+                    fontSize = AppTheme.dimens.textTitle,
+                    color = AppTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 var isChecked by remember { mutableStateOf(settings.fullScreen) }
@@ -301,7 +269,7 @@ fun SettingsScreenSuccess(
                         )
                         isChecked = it
                     },
-                    colors = CheckboxDefaults.colors(checkedColor = Color.Green)
+                    colors = CheckboxDefaults.colors(checkedColor = AppTheme.colors.primaryAccent)
                 )
             }
         }
@@ -312,22 +280,9 @@ fun SettingsScreenSuccess(
             selectedOption = selectedOption,
             onOptionSelected = { option ->
                 selectedOption = option
-                // Можно сразу закрыть диалог при выборе:
-                // showDialog = false
             },
             onDismiss = { showDialog = false },
             onConfirm = onConfirmAction
         )
     }
-    /* RadioDialog(
-         show = showDialog,
-         options = options,
-         selectedOption = selectedOption,
-         onOptionSelected = { option ->
-             selectedOption = option
-             // Можно сразу закрыть диалог при выборе:
-             // showDialog = false
-         },
-         onDismiss = { showDialog = false }
-     )*/
 }

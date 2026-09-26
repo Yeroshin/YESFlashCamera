@@ -1,27 +1,17 @@
 package com.yes.camera.presentation.ui.custom.compose
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yes.camera.presentation.model.RadioGroupItem
-
-
+import com.yes.shared.presentation.ui.theme.AppTheme
 
 @Composable
 fun TextRadioContent(
@@ -29,21 +19,23 @@ fun TextRadioContent(
     value: String,
     selected: Boolean
 ) {
-    Column(
-       // modifier = Modifier.fillMaxWidth(),
-        //  horizontalAlignment = Alignment.Start
-    ) {
+    val activeColor = AppTheme.colors.primaryAccent
+    val normalColor = AppTheme.colors.textPrimary
+    val shadowColor = AppTheme.colors.shadow
+    val initialTextSize = AppTheme.dimens.textMedium
+
+    Column {
         Text(
             text = title,
             style = TextStyle(
-                color = if (selected) Color.Green else Color.White,
+                color = if (selected) activeColor else normalColor,
                 fontSize = 8.sp,
-                shadow = Shadow(Color.DarkGray, Offset(5f, 5f), 5f)
+                shadow = Shadow(shadowColor, Offset(5f, 5f), 5f)
             )
         )
 
         val minFontSize = 8.sp
-        var fontSize by remember(value) { mutableStateOf(16.sp) }
+        var fontSize by remember(value) { mutableStateOf(initialTextSize) }
 
         Text(
             text = value,
@@ -55,9 +47,9 @@ fun TextRadioContent(
                 }
             },
             style = TextStyle(
-                color = if (selected) Color.Green else Color.White,
+                color = if (selected) activeColor else normalColor,
                 fontSize = fontSize,
-                shadow = Shadow(Color.DarkGray, Offset(5f, 5f), 5f)
+                shadow = Shadow(shadowColor, Offset(5f, 5f), 5f)
             )
         )
     }

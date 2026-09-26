@@ -10,9 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-
+import com.yes.shared.presentation.ui.theme.AppTheme
 
 @Composable
 fun ErrorScreen(
@@ -22,56 +20,53 @@ fun ErrorScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppTheme.dimens.extraLarge),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Иконка ошибки
         Icon(
             imageVector = Icons.Default.Warning,
             contentDescription = null,
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(AppTheme.dimens.shutterTopPadding),
             tint = MaterialTheme.colorScheme.error
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(AppTheme.dimens.large))
 
-        // Заголовок
         Text(
             text = "Произошла ошибка",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
+            style = AppTheme.typography.titleLarge,
+            color = AppTheme.colors.textPrimary
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(AppTheme.dimens.medium))
 
-        // Текст исключения в стилизованном блоке
         Surface(
             color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 200.dp)
+                .heightIn(max = AppTheme.dimens.histogramWidth * 1.33f)
         ) {
             Text(
                 text = error.localizedMessage ?: "Неизвестная ошибка",
                 modifier = Modifier
-                    .padding(12.dp)
+                    .padding(AppTheme.dimens.medium)
                     .verticalScroll(rememberScrollState()),
-                style = MaterialTheme.typography.bodySmall.copy(
+                style = AppTheme.typography.labelSmall.copy(
                     fontFamily = FontFamily.Monospace
                 ),
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(AppTheme.dimens.extraLarge))
 
-        // Кнопка повтора
         Button(
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = AppTheme.colors.primaryAccent,
+                contentColor = AppTheme.colors.background
             )
         ) {
             Text(text = "Попробовать снова")

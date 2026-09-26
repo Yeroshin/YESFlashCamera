@@ -37,6 +37,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.yes.camera.R
+import com.yes.shared.presentation.ui.theme.AppTheme
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -575,11 +580,13 @@ fun ValueSelector(
 ) {
     if (items.isNullOrEmpty()) return
 
+    val coroutineScope = rememberCoroutineScope()
+
     BoxWithConstraints(
         modifier = modifier.fillMaxWidth()
     ) {
         val density = LocalDensity.current
-        val itemWidthDp = 48.dp
+        val itemWidthDp = AppTheme.dimens.selectorItemWidth
         val itemWidthPx = with(density) { itemWidthDp.toPx() }
         val rowWidthPx = this.constraints.maxWidth
 
@@ -637,14 +644,24 @@ fun ValueSelector(
                 state = listState,
                 flingBehavior = flingBehavior,
                 contentPadding = PaddingValues(horizontal = horizontalPadding),
-                horizontalArrangement = Arrangement.spacedBy(0.dp)
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.none)
             ) {
                 itemsIndexed(
                     items = items,
                     key = { _, item -> item.id }
                 ) { index, item ->
                     Box(
-                        modifier = Modifier.width(itemWidthDp),
+                        modifier = Modifier
+                            .width(itemWidthDp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(index)
+                                    onSelectedItemChanged(index)
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         val isSelected = index <= centerIndex
@@ -656,9 +673,9 @@ fun ValueSelector(
             VectorShadow(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .size(14.dp),
-                vectorColor = Color.Green,
-                shadowColor = Color.DarkGray,
+                    .size(AppTheme.dimens.iconSmall),
+                vectorColor = AppTheme.colors.primaryAccent,
+                shadowColor = AppTheme.colors.shadow,
                 resId = R.drawable.arrow_drop_up
             )
         }

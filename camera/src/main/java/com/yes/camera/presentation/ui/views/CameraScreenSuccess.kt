@@ -6,30 +6,28 @@ import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.yes.camera.R
 import com.yes.camera.presentation.model.*
 import com.yes.camera.presentation.ui.adapter.TextSelectorContent
 import com.yes.camera.presentation.ui.custom.compose.*
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
-import kotlinx.collections.immutable.toImmutableList
+import com.yes.shared.presentation.ui.theme.AppTheme
+import com.yes.shared.presentation.ui.theme.FlashCameraTheme
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
-import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun CameraScreenSuccess(
@@ -58,7 +56,11 @@ fun CameraScreenSuccess(
         characteristics.characteristicsItems.map { data ->
             RadioUiItem(id = data.id) { isSelected ->
                 when (data) {
-                    is RadioGroupItem.IconItem -> Icon(painterResource(data.iconRes), null, tint = if (isSelected) Color.Yellow else Color.White)
+                    is RadioGroupItem.IconItem -> Icon(
+                        painterResource(data.iconRes),
+                        null,
+                        tint = if (isSelected) AppTheme.colors.secondaryAccent else AppTheme.colors.iconPrimary
+                    )
                     is RadioGroupItem.TextItem -> TextRadioContent(data.title, data.currentValue, isSelected)
                 }
             }
@@ -69,40 +71,50 @@ fun CameraScreenSuccess(
     val currentItems = characteristics.currentCategoryItems
     val currentPosition = characteristics.currentCategoryPosition
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+    Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.transparent)) {
         ShutterBox(
             isOpen = shutterBoxIsOpen,
             onToggle = { shutterBoxIsOpen = !shutterBoxIsOpen },
-            modifier = Modifier.fillMaxSize().padding(top = if (characteristics.fullScreen) 0.dp else 64.dp)
+            modifier = Modifier.fillMaxSize().padding(top = if (characteristics.fullScreen) AppTheme.dimens.none else AppTheme.dimens.shutterTopPadding)
         ) {}
         
         UniversalRadioGroup(
             items = paramsRadioGroupItems,
             selectedItem = characteristics.selectedCategory,
             onItemClick = { onSelectCategory(it as SettingsItem) },
-            modifier = Modifier.padding(4.dp).fillMaxWidth().padding(top = 16.dp),
+            modifier = Modifier.padding(AppTheme.dimens.small).fillMaxWidth().padding(top = AppTheme.dimens.large),
         )
 
         characteristics.resolution?.let {
             Text(
-                modifier = Modifier.padding(top = 98.dp, end = 18.dp).align(Alignment.TopEnd),
-                text = it, textAlign = TextAlign.End,
-                style = TextStyle(color = Color.White, fontSize = 16.sp, shadow = Shadow(Color.DarkGray, Offset(5f, 5f), 5f))
+                modifier = Modifier.padding(top = AppTheme.dimens.histogramTopPadding, end = AppTheme.dimens.large).align(Alignment.TopEnd),
+                text = it,
+                textAlign = TextAlign.End,
+                style = TextStyle(
+                    color = AppTheme.colors.textPrimary,
+                    fontSize = AppTheme.dimens.textMedium,
+                    shadow = Shadow(AppTheme.colors.shadow, Offset(5f, 5f), 5f)
+                )
             )
         }
         
         Histogram(
-            modifier = Modifier.padding(start = 16.dp, top = 98.dp).align(Alignment.TopStart),
-            characteristics.histogramData, 150.dp, 80.dp
+            modifier = Modifier.padding(start = AppTheme.dimens.large, top = AppTheme.dimens.histogramTopPadding).align(Alignment.TopStart),
+            values = characteristics.histogramData,
+            widthDp = AppTheme.dimens.histogramWidth,
+            heightDp = AppTheme.dimens.histogramHeight
         )
         
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth().align(Alignment.BottomCenter), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.padding(AppTheme.dimens.medium).fillMaxWidth().align(Alignment.BottomCenter),
+            verticalArrangement = Arrangement.spacedBy(AppTheme.dimens.medium)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 VectorShadow(
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(AppTheme.dimens.iconLarge),
                     resId = R.drawable.auto,
-                    vectorColor = if (isAutoForCategory) Color.Green else Color.White,
-                    shadowColor = Color.DarkGray,
+                    vectorColor = if (isAutoForCategory) AppTheme.colors.primaryAccent else AppTheme.colors.iconPrimary,
+                    shadowColor = AppTheme.colors.shadow,
                     onClick = {
                         val updated = when (characteristics.selectedCategory) {
                             SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = !characteristics.isShutterAuto)
@@ -121,7 +133,7 @@ fun CameraScreenSuccess(
                     }
                 )
                 
-                Box(modifier = Modifier.fillMaxWidth().padding(4.dp).height(50.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().padding(AppTheme.dimens.small).height(AppTheme.dimens.controlBarHeight)) {
                     if (isAutoForCategory && (characteristics.selectedCategory == SettingsItem.WB || characteristics.selectedCategory == SettingsItem.FOCUS)) {
                         val modeItems = if (characteristics.selectedCategory == SettingsItem.WB) characteristics.wbModeItems else characteristics.focusModeItems
                         val uiModeItems = remember(modeItems) {
@@ -162,8 +174,7 @@ fun CameraScreenSuccess(
                                 position = currentPosition,
                                 items = uiItems,
                                 onSelectedItemChanged = { index ->
-                                    // Сбрасываем AUTO только если реально сдвинули или уже в AUTO
-                                    if (index != currentPosition || isAutoForCategory) {
+                                    if (index != currentPosition || isAutoForCategory || characteristics.selectedCategory == SettingsItem.MAGNIFIER) {
                                         val newValue = currentItems.getOrNull(index)?.value
                                         val updated = when (characteristics.selectedCategory) {
                                             SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = false, shutterValue = newValue, shutterPosition = index)
@@ -184,10 +195,14 @@ fun CameraScreenSuccess(
                 }
             }
             
-            Row(modifier = Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(56.dp)) {
-                VectorShadow(Modifier.size(32.dp), R.drawable.settings, Color.White, Color.DarkGray, onClick = onSettingsClick)
-                VectorShadow(Modifier.size(32.dp), R.drawable.flip_camera_android, Color.White, Color.DarkGray)
-                RecordButton(modifier = Modifier.size(96.dp), isChecked = false, onClick = { isCheck ->
+            Row(
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.radioGroupSpacing)
+            ) {
+                VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.settings, AppTheme.colors.iconPrimary, AppTheme.colors.shadow, onClick = onSettingsClick)
+                VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.flip_camera_android, AppTheme.colors.iconPrimary, AppTheme.colors.shadow)
+                RecordButton(modifier = Modifier.size(AppTheme.dimens.recordButtonSize), isChecked = false, onClick = { isCheck ->
                     shutterBoxIsOpen = !shutterBoxIsOpen
                     onStartVideoRecord(isCheck)
                 })
@@ -223,8 +238,8 @@ fun CameraScreenSuccessPreview() {
             )
         )
     }
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    FlashCameraTheme {
+        Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background)) {
             CameraScreenSuccess(
                 context = context,
                 renderer = renderer,

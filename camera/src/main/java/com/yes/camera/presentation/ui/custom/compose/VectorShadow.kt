@@ -45,12 +45,14 @@ fun parseVector(
 }
 
 
+import com.yes.shared.presentation.ui.theme.AppTheme
+
 @Composable
 fun VectorShadow(
     modifier: Modifier,
     resId: Int,
-    vectorColor: Color = Color.Red,
-    shadowColor: Color = Color.Black,
+    vectorColor: Color = AppTheme.colors.primaryAccent,
+    shadowColor: Color = AppTheme.colors.shadow,
     shadowBlur: Float = 10f,
     shadowOffsetX: Float = 0.95f,
     shadowOffsetY: Float = 0.95f,

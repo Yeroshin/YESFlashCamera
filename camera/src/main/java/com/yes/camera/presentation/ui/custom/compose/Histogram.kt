@@ -2,54 +2,38 @@ package com.yes.camera.presentation.ui.custom.compose
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-
-/*@Composable
-@Preview
-fun hist(){
-    val v= listOf(1,2,3,4,1,2,3,4)
-    Histogram(
-        Modifier,
-        v,
-    300.dp,
-    100.dp
-    )
-}*/
+import com.yes.shared.presentation.ui.theme.AppTheme
 
 @Composable
 fun Histogram(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     values: Map<Int, Int>?,
-    widthDp: Dp,
-    heightDp: Dp
+    widthDp: Dp = AppTheme.dimens.histogramWidth,
+    heightDp: Dp = AppTheme.dimens.histogramHeight
 ) {
     val widthPx = with(LocalDensity.current) { widthDp.toPx() }
     val heightPx = with(LocalDensity.current) { heightDp.toPx() }
     val maxValue = values?.values?.maxOrNull() ?: 0
+    val overlayColor = AppTheme.colors.overlaySemiTransparent
+
     values?.let {
         val barWidth = widthPx / values.size.toFloat()
 
         Canvas(
             modifier = modifier
-            .width(widthDp)
-            .height(heightDp)
+                .width(widthDp)
+                .height(heightDp)
         ) {
             drawRect(
-                color = Color.White.copy(alpha = 0.5f),
+                color = overlayColor,
                 topLeft = Offset(0f, 0f),
                 size = Size(widthPx, heightPx),
                 style = Stroke(width = 5f)
@@ -57,7 +41,7 @@ fun Histogram(
             values.forEach { (key, value) ->
                 val barHeight = (value.toFloat() * heightPx / maxValue)
                 drawRect(
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = overlayColor,
                     topLeft = Offset(key.toFloat() * barWidth, heightPx - barHeight),
                     size = Size(barWidth, barHeight)
                 )
