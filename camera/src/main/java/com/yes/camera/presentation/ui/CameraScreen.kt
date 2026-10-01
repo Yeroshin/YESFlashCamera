@@ -192,14 +192,18 @@ fun CameraScreen(
         snapshotFlow { surfaceViewSize }
             .filter { it.width > 0 && it.height > 0 }
             .first() // Берем только самое первое валидное значение
-            .let { size ->
-                val normalizedX =
-                    (size.width.toFloat() / 2f / size.width.toFloat()) * 2f - 1f
-                val normalizedY =
-                    -((size.height.toFloat() / 2f / size.height.toFloat()) * 2f - 1f)
-                renderer?.configureMagnifier(1f)
-                renderer?.handleTouchPress(normalizedX, normalizedY)
+            .let {
+                val freshestState = cameraViewModel.uiState.value.state
+                val charsFlow = (freshestState as? CameraContract.CameraState.Success)?.characteristicsFlow
+                val currentChars = charsFlow?.value ?: CharacteristicsUI()
 
+                val mag = currentChars.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
+                renderer?.configureMagnifier(mag)
+
+                val point = currentChars.touchPoint ?: Offset(0.5f, 0.5f)
+                val normalizedX = point.x * 2f - 1f
+                val normalizedY = -(point.y * 2f - 1f)
+                renderer?.handleTouchPress(normalizedX, normalizedY)
             }
     }
     val onPreviewTouch: (Offset) -> Unit = remember(cameraViewModel) {

@@ -1,17 +1,17 @@
 package com.yes.camera.presentation.ui.custom.gles
 
-import android.opengl.GLES10.glDrawArrays
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
 import android.opengl.GLES20.GL_TRIANGLES
 import android.opengl.GLES20.glActiveTexture
 import android.opengl.GLES20.glBindTexture
-import android.opengl.GLES20.glUniform1i
+import android.opengl.GLES20.glDrawArrays
 import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.Matrix.setIdentityM
 import android.opengl.Matrix.translateM
 import androidx.core.math.MathUtils.clamp
 import com.yes.camera.utils.Geometry
+
 @Deprecated("not used")
 class GlMagnifier(glShaderProgram: ShaderProgram) :
     GLRenderer.GLObject(glShaderProgram) {
@@ -25,7 +25,6 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
 
     private var posXcorrection = 0f
     private var posYcorrection = 0f
-
 
     override fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float) {
         this.selected = pressed
@@ -42,7 +41,6 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
 
         return Pair(textureX, textureY)
     }
-
 
     private var texturePosition = Pair(0f, 0f)
 
@@ -64,7 +62,7 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
                 -1 + vertexHeight / 2,
                 1 - vertexHeight / 2
             ),
-            0f// mallet.radius,
+            0f
         )
         texturePosition = mapVertexToTextureCords(
             centerPosition.first / ratio,
@@ -81,14 +79,9 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
             textureWidth,
             textureHeight,
         )
-        ////////////////////
         setIdentityM(modelMatrix, 0)
         translateM(modelMatrix, 0, centerPosition.first, centerPosition.second, 0f)
-        /////////////////////
     }
-
-
-
 
     private var textureWidth = 0f
     private var textureHeight = 0f
@@ -102,12 +95,11 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
         this.magnifierSizeW = magnifierSizeW
         this.magnifierSizeH = magnifierSizeH
 
-        vertexWidth = maxOf(width, height) * magnifierSizeW//1.0f/ratio// wid*magnifierSizeW
-        vertexHeight = minOf(width, height) * magnifierSizeH//1.0f// he*magnifierSizeW
+        vertexWidth = maxOf(width, height) * magnifierSizeW
+        vertexHeight = minOf(width, height) * magnifierSizeH
 
-        textureWidth = 1f * (magnifierSizeW / magnification) // 0.0625fratio
-        textureHeight = 1f * (magnifierSizeH / magnification) // 0.0625f
-
+        textureWidth = 1f * (magnifierSizeW / magnification)
+        textureHeight = 1f * (magnifierSizeH / magnification)
 
         updateVertexBuffer(
             vertexWidth,
@@ -123,9 +115,6 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
             textureWidth,
             textureHeight,
         )
-      /*  setIdentityM(modelMatrix, 0)
-        translateM(modelMatrix, 0, 0f, 0f, 0f)*/
-
     }
 
     private var width: Float = 0f
@@ -135,30 +124,16 @@ class GlMagnifier(glShaderProgram: ShaderProgram) :
         this.height = 2f
         this.width = ratio * height
     }
-    override fun draw(modelViewProjectionMatrix: FloatArray) {
 
-
-        val mTextureUniformHandle =
-            GLES20.glGetUniformLocation(shaderProgram.programId, "u_TextureUnit")
+    override fun draw(modelViewProjectionMatrix: FloatArray, oesTextureId: Int) {
         glActiveTexture(GLES20.GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_EXTERNAL_OES, 1)
-
-        /*  glEnable(GL_BLEND)
-          glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA)*/
-      //  glUniform1i(mTextureUniformHandle, 0)
-
-        /* glEnable(GL_BLEND)
-         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)*/
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, if (oesTextureId != 0) oesTextureId else 1)
 
         bindData()
         shaderProgram.useProgram()
         glUniformMatrix4fv(uMatrixLocation, 1, false, modelViewProjectionMatrix, 0)
 
-       // shaderProgram.setUniforms(modelViewProjectionMatrix)
         glDrawArrays(GL_TRIANGLES, 0, 6)
-        // glDisable(GL_BLEND)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
-
     }
-
 }

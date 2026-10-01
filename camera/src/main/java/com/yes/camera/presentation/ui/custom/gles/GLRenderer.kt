@@ -1,6 +1,5 @@
 package com.yes.camera.presentation.ui.custom.gles
 
-
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Context.ACTIVITY_SERVICE
@@ -22,18 +21,14 @@ import android.opengl.GLES20.glEnableVertexAttribArray
 import android.opengl.GLES20.glGenTextures
 import android.opengl.GLES20.glGetAttribLocation
 import android.opengl.GLES20.glGetUniformLocation
-import android.opengl.GLES20.glTexParameterfv
 import android.opengl.GLES20.glTexParameteri
-import android.opengl.GLES20.glUniformMatrix4fv
 import android.opengl.GLES20.glVertexAttribPointer
 import android.opengl.GLES32.GL_CLAMP_TO_BORDER
-import android.opengl.GLES32.GL_TEXTURE_BORDER_COLOR
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix.invertM
 import android.opengl.Matrix.multiplyMV
 import android.os.Handler
 import android.util.Log
-
 import com.yes.camera.R
 import com.yes.camera.utils.Geometry
 import com.yes.camera.utils.Geometry.Ray
@@ -43,7 +38,6 @@ import java.nio.ByteOrder
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-
 class GLRenderer(
     private val context: Context,
     private val cameraHandler: Handler,
@@ -51,12 +45,14 @@ class GLRenderer(
 ) : GLSurfaceView.Renderer {
 
     private var surfaceTexture: SurfaceTexture? = null
+    private var oesTextureId: Int = 0
+
     private val plainShaderProgram by lazy {
-            ShaderProgram(
-                context,
-                R.raw.vertex,
-                R.raw.fragment
-            )
+        ShaderProgram(
+            context,
+            R.raw.vertex,
+            R.raw.fragment
+        )
     }
     private val advancedShaderProgram by lazy {
         ShaderProgram(
@@ -64,11 +60,6 @@ class GLRenderer(
             R.raw.vertex_multiple,
             R.raw.mixed_fragment
         )
-       /* ShaderProgram(
-            context,
-            R.raw.vertex_mixed3,
-            R.raw.fragment_mixed3
-        )*/
     }
     private val stateShaderProgram by lazy {
         ShaderProgram(
@@ -85,29 +76,17 @@ class GLRenderer(
         )
     }
     private val glScreen by lazy {
-        GLScreen(
-            plainShaderProgram
-        )
+        GLScreen(plainShaderProgram)
     }
-  /*  private val glMagnifier by lazy {
-        GlMagnifier(
-            plainShaderProgram
-        )
-    }*/
     private val glMagnifierAdvanced by lazy {
-        GlMagnifierAdvanced(
-            advancedShaderProgram,
-            context
-        )
+        GlMagnifierAdvanced(advancedShaderProgram, context)
     }
     private val glFocus by lazy {
-        GlFocus(
-            stateShaderProgram,
-            context
-        )
+        GlFocus(stateShaderProgram, context)
     }
 
     private val glObjects = mutableListOf<GLObject>()
+
     fun addGlObjects(objects: List<GLObject>) {
         glObjects.addAll(objects)
     }
@@ -125,7 +104,6 @@ class GLRenderer(
     private fun convertNormalized2DPointToRay(
         normalizedX: Float, normalizedY: Float
     ): Ray {
-
         val nearPointNdc = floatArrayOf(normalizedX, normalizedY, -1f, 1f)
         val farPointNdc = floatArrayOf(normalizedX, normalizedY, 1f, 1f)
 
@@ -155,17 +133,15 @@ class GLRenderer(
         )
     }
 
- //   private var touchedPoint = Geometry.Point(0f, 0f, 0f)
     fun handleTouchPress(normalizedX: Float, normalizedY: Float) {
         val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
         val plane = Geometry.Plane(
             Geometry.Point(0f, 0f, 0f),
             Geometry.Vector(0f, 0f, 1f)
         )
-       val  touchedPoint = Geometry.intersectionPoint(ray, plane)
-        ////////////////////
-        glObjects.find { it is GlMagnifierAdvanced  }?.translate(touchedPoint.x, touchedPoint.y)
-        ////////////////////
+        val touchedPoint = Geometry.intersectionPoint(ray, plane)
+
+        glObjects.find { it is GlMagnifierAdvanced }?.translate(touchedPoint.x, touchedPoint.y)
 
         glObjects.forEach {
             val objectBoundingRectangle = Geometry.Rectangle(
@@ -186,10 +162,8 @@ class GLRenderer(
             )
         }
     }
-    fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
-        //////////////////
 
-        ///////////////////
+    fun handleTouchDrag(normalizedX: Float, normalizedY: Float) {
         glObjects.forEach {
             if (it.selected) {
                 val ray: Ray = convertNormalized2DPointToRay(normalizedX, normalizedY)
@@ -202,46 +176,20 @@ class GLRenderer(
             }
         }
     }
+
     fun configureMagnifier(
         magnification: Float,
-        magnifierSizeW: Float= 0.5f,
-        magnifierSizeH: Float= 0.5f,
+        magnifierSizeW: Float = 0.5f,
+        magnifierSizeH: Float = 0.5f,
     ) {
-       // val foundDog: GlMagnifier? = glObjects.fi{ glObjects is GlMagnifier  } as Dog?
-       /* glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
-            it.configure(
-                magnification,
-                magnifierSizeW,
-                magnifierSizeH,
-            )
-        }*/
-        glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
-            it.configure(
+        glObjects.find { it is GlMagnifierAdvanced }?.let {
+            (it as GlMagnifierAdvanced).configure(
                 magnification,
                 magnifierSizeW,
                 magnifierSizeH,
             )
         }
-       /* (glObjects.find { it is GlMagnifier  } as GlMagnifier)?.let {
-            it.configure(
-                magnification,
-                magnifierSizeW,
-                magnifierSizeH,
-            )
-        }*/
-
-      /*  val dogs: List<GlMagnifier> = glObjects.filterIsInstance<GlMagnifier>()
-        if(glObjects.size>1){
-           /* (glObjects[1] as GlMagnifier).configure(
-                magnification,
-                magnifierSizeW,
-                magnifierSizeH,
-            )*/
-        }*/
-
     }
-
-
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         Log.d("DEBUG", "onSurfaceCreated called")
@@ -251,41 +199,19 @@ class GLRenderer(
             addGlObjects(
                 listOf(
                     glScreen,
-                 // glMagnifier,
-                    glMagnifierAdvanced,
-                  //  glFocus,
+                    glMagnifierAdvanced
                 )
             )
         }
-
-
     }
 
     private fun checkSupport(): Boolean {
         val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         val configurationInfo = activityManager.deviceConfigurationInfo
-        val supportsEs2 = configurationInfo.reqGlEsVersion >= 0x30000
-        return if (supportsEs2) {
-            true
-            /* binding.viewFinder.setEGLContextClientVersion(2)
-             binding.viewFinder.setRenderer(
-                 renderer
-             )*/
-
-            /*  binding.glSurfaceView.setEGLContextClientVersion(2)
-              binding.glSurfaceView.setRenderer(
-                 renderer
-              )*/
-
-        } else {
-            /* Toast.makeText(this, "This device does not support OpenGL ES 2.0.", Toast.LENGTH_LONG)
-                 .show()*/
-            false
-        }
+        return configurationInfo.reqGlEsVersion >= 0x30000
     }
 
     override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
-
         glCamera.setProjection(width, height)
 
         val ratio =
@@ -293,52 +219,46 @@ class GLRenderer(
         glObjects.forEach {
             it.onRatioChanged(ratio)
         }
-        glObjects.find { it is GlMagnifier  }?.let { it as GlMagnifier
-            it.configure(
-                2f, 0.5f, 0.5f
+        glObjects.find { it is GlMagnifierAdvanced }?.let {
+            (it as GlMagnifierAdvanced).configure(
+                1f, 0.5f, 0.5f
             )
         }
-        glObjects.find { it is GlMagnifierAdvanced  }?.let { it as GlMagnifierAdvanced
-            it.configure(
-                2f, 0.5f, 0.5f
-            )
-        }
-        glObjects.find { it is GlFocus  }?.let { it as GlFocus
-            it.configure(
+        glObjects.find { it is GlFocus }?.let {
+            (it as GlFocus).configure(
                 1f, 0.2f, 0.4f
             )
         }
-
     }
 
     override fun onDrawFrame(gl: GL10?) {
         surfaceTexture?.updateTexImage()
-        //   surfaceTexture?.getTransformMatrix(transformMatrix)
 
-        glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
         glClear(GL_COLOR_BUFFER_BIT)
 
         glObjects.forEach {
             it.draw(
-                glCamera.translateObjectInScene(it.modelMatrix)
+                glCamera.translateObjectInScene(it.modelMatrix),
+                oesTextureId
             )
         }
     }
 
     private fun createSurfaceTexture() {
-        surfaceTexture = SurfaceTexture(createOESTextureObject()).apply {
+        oesTextureId = createOESTextureObject()
+        surfaceTexture = SurfaceTexture(oesTextureId).apply {
             setOnFrameAvailableListener({
-                // Будим GL-поток для отрисовки кадра
                 glSurfaceView?.requestRender()
             }, cameraHandler)
             callback(this)
         }
     }
+
     var glSurfaceView: GLSurfaceView? = null
+
     private fun createOESTextureObject(): Int {
         val textureHandle = IntArray(1)
-
-
 
         glGenTextures(1, textureHandle, 0)
         glActiveTexture(GLES20.GL_TEXTURE0)
@@ -351,32 +271,33 @@ class GLRenderer(
             GL_TEXTURE_EXTERNAL_OES,
             GL_TEXTURE_MAG_FILTER, GL_NEAREST
         )
-       /* glTexParameterf(
-            GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE.toFloat()
-        )
-        glTexParameterf(
-            GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE.toFloat()
-        )*/
         glTexParameteri(
             GL_TEXTURE_EXTERNAL_OES,
             GL_TEXTURE_WRAP_S,
             GL_CLAMP_TO_BORDER
-        );
+        )
         glTexParameteri(
             GL_TEXTURE_EXTERNAL_OES,
             GL_TEXTURE_WRAP_T,
             GL_CLAMP_TO_BORDER
-        );
-      /*  val borderColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
-        glTexParameterfv(
-            GL_TEXTURE_EXTERNAL_OES,
-            GL_TEXTURE_BORDER_COLOR,
-            borderColor,
-            0)*/
+        )
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
         return textureHandle[0]
+    }
+
+    fun release() {
+        surfaceTexture?.release()
+        surfaceTexture = null
+        if (oesTextureId != 0) {
+            GLES20.glDeleteTextures(1, intArrayOf(oesTextureId), 0)
+            oesTextureId = 0
+        }
+        glObjects.forEach { it.release() }
+        glObjects.clear()
+        plainShaderProgram.release()
+        advancedShaderProgram.release()
+        stateShaderProgram.release()
+        scaledShaderProgram.release()
     }
 
     abstract class GLObject(protected val shaderProgram: ShaderProgram) {
@@ -416,8 +337,8 @@ class GLRenderer(
         val positionAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_POSITION)
         val textureCoordinatesAttributeLocation = glGetAttribLocation(shaderProgram.programId, A_TEXTURE_COORDINATES)
 
-        open  fun updateVertexBuffer(width: Float, height: Float) {
-            val vertexData = floatArrayOf( // Order of coordinates: X, Y, S, T
+        open fun updateVertexBuffer(width: Float, height: Float) {
+            val vertexData = floatArrayOf(
                 0.0f - width / 2, 0.0f + height / 2,
                 0.0f + width / 2, 0.0f + height / 2,
                 0.0f + width / 2, 0.0f - height / 2,
@@ -436,7 +357,7 @@ class GLRenderer(
             width: Float,
             height: Float
         ) {
-            val textureData = floatArrayOf( // Order of coordinates: X, Y, S, T
+            val textureData = floatArrayOf(
                 positionX - width / 2, positionY - height / 2,
                 positionX + width / 2, positionY - height / 2,
                 positionX + width / 2, positionY + height / 2,
@@ -450,8 +371,8 @@ class GLRenderer(
         }
 
         abstract fun setSelected(pressed: Boolean, touchedPointX: Float, touchedPointY: Float)
-        open fun bindData() {
 
+        open fun bindData() {
             vertexBuffer.position(0)
             glVertexAttribPointer(
                 positionAttributeLocation,
@@ -461,10 +382,8 @@ class GLRenderer(
                 8,
                 vertexBuffer
             )
-            glEnableVertexAttribArray(
-                positionAttributeLocation
-            )
-            ////////////////////////
+            glEnableVertexAttribArray(positionAttributeLocation)
+
             textureBuffer.position(0)
             glVertexAttribPointer(
                 textureCoordinatesAttributeLocation,
@@ -474,17 +393,16 @@ class GLRenderer(
                 8,
                 textureBuffer
             )
-            glEnableVertexAttribArray(
-                textureCoordinatesAttributeLocation
-            )
+            glEnableVertexAttribArray(textureCoordinatesAttributeLocation)
         }
 
         var centerPosition = Triple(0f, 0f, 0f)
         abstract fun translate(draggedPointX: Float, draggedPointY: Float)
 
-        abstract fun draw(modelViewProjectionMatrix: FloatArray)
+        abstract fun draw(modelViewProjectionMatrix: FloatArray, oesTextureId: Int = 0)
 
         abstract fun onRatioChanged(ratio: Float)
 
+        open fun release() {}
     }
 }

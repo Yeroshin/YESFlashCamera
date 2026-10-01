@@ -26,30 +26,29 @@ import android.util.Log
 import com.yes.camera.presentation.ui.custom.gles.ShaderProgram.ShaderHelper.createShader
 import com.yes.camera.utils.FileUtils
 
-
-class ShaderProgram (
-    context: Context, vertexShaderResourceId: Int,
+class ShaderProgram(
+    context: Context,
+    vertexShaderResourceId: Int,
     fragmentShaderResourceId: Int
 ) {
-
-
-     val programId: Int = ShaderHelper.buildProgram(
-        createShader(
-            context, GL_VERTEX_SHADER, vertexShaderResourceId
-        ),
-        createShader(
-            context, GL_FRAGMENT_SHADER, fragmentShaderResourceId
-        )
+    var programId: Int = ShaderHelper.buildProgram(
+        createShader(context, GL_VERTEX_SHADER, vertexShaderResourceId),
+        createShader(context, GL_FRAGMENT_SHADER, fragmentShaderResourceId)
     )
 
     fun useProgram() {
         val error1 = glGetError()
         if (error1 != GLES30.GL_NO_ERROR) {
             Log.e("TextureLoad", "OpenGL Error: $error1")
-        } else {
-            Log.d("TextureLoad", "Texture loaded successfully")
         }
         glUseProgram(programId)
+    }
+
+    fun release() {
+        if (programId != 0) {
+            glDeleteProgram(programId)
+            programId = 0
+        }
     }
 
     object ShaderHelper {

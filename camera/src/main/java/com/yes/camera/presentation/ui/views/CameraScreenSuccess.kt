@@ -50,6 +50,11 @@ fun CameraScreenSuccess(
         }
     }
 
+    LaunchedEffect(characteristics.magnifierValue) {
+        val mag = characteristics.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
+        renderer.configureMagnifier(mag)
+    }
+
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
 
     val paramsRadioGroupItems = remember(characteristics.characteristicsItems) {
@@ -67,9 +72,9 @@ fun CameraScreenSuccess(
         }.toImmutableList()
     }
 
-    val isAutoForCategory = characteristics.isAutoForSelectedCategory
-    val currentItems = characteristics.currentCategoryItems
-    val currentPosition = characteristics.currentCategoryPosition
+    val isAutoForCategory = remember(characteristics.isAutoForSelectedCategory) { characteristics.isAutoForSelectedCategory }
+    val currentItems = remember(characteristics.currentCategoryItems) { characteristics.currentCategoryItems }
+    val currentPosition = remember(characteristics.currentCategoryPosition) { characteristics.currentCategoryPosition }
 
     Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.transparent)) {
         ShutterBox(
@@ -77,7 +82,7 @@ fun CameraScreenSuccess(
             onToggle = { shutterBoxIsOpen = !shutterBoxIsOpen },
             modifier = Modifier.fillMaxSize().padding(top = if (characteristics.fullScreen) AppTheme.dimens.none else AppTheme.dimens.shutterTopPadding)
         ) {}
-        
+
         UniversalRadioGroup(
             items = paramsRadioGroupItems,
             selectedItem = characteristics.selectedCategory,
@@ -97,14 +102,14 @@ fun CameraScreenSuccess(
                 )
             )
         }
-        
+
         Histogram(
             modifier = Modifier.padding(start = AppTheme.dimens.large, top = AppTheme.dimens.histogramTopPadding).align(Alignment.TopStart),
             values = characteristics.histogramData,
             widthDp = AppTheme.dimens.histogramWidth,
             heightDp = AppTheme.dimens.histogramHeight
         )
-        
+
         Column(
             modifier = Modifier.padding(AppTheme.dimens.medium).fillMaxWidth().align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(AppTheme.dimens.medium)
@@ -132,10 +137,10 @@ fun CameraScreenSuccess(
                         updated?.let(onSetCharacteristic)
                     }
                 )
-                
+
                 Box(modifier = Modifier.fillMaxWidth().padding(AppTheme.dimens.small).height(AppTheme.dimens.controlBarHeight)) {
                     if (isAutoForCategory && (characteristics.selectedCategory == SettingsItem.WB || characteristics.selectedCategory == SettingsItem.FOCUS)) {
-                        val modeItems = if (characteristics.selectedCategory == SettingsItem.WB) characteristics.wbModeItems else characteristics.focusModeItems
+                        val modeItems = remember(characteristics.wbModeItems) { characteristics.wbModeItems }
                         val uiModeItems = remember(modeItems) {
                             modeItems.map { data ->
                                 RadioUiItem(id = data.id as ModeItem) { isSelected ->
@@ -146,8 +151,8 @@ fun CameraScreenSuccess(
                                 }
                             }.toImmutableList()
                         }
-                        val selectedMode = if (characteristics.selectedCategory == SettingsItem.WB) characteristics.wbMode else characteristics.focusMode
-                        
+                        val selectedMode = remember(characteristics.wbMode) { characteristics.wbMode }
+
                         UniversalRadioGroup(
                             items = uiModeItems,
                             selectedItem = selectedMode,
@@ -161,21 +166,20 @@ fun CameraScreenSuccess(
                             }
                         )
                     } else {
-                        // KEY гарантирует, что ValueSelector пересоздастся (и сбросит скролл) при смене категории
                         key(characteristics.selectedCategory) {
-                            val uiItems = remember(currentItems) {
-                                currentItems.map { data -> 
-                                    SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) } 
+                            val uiItems = remember(characteristics.currentCategoryItems) {
+                                characteristics.currentCategoryItems.map { data ->
+                                    SelectorUiItem(id = data.id) { isSelected -> TextSelectorContent(data, isSelected) }
                                 }
                             }
-                            
+
                             ValueSelector(
                                 modifier = Modifier.fillMaxSize(),
                                 position = currentPosition,
                                 items = uiItems,
                                 onSelectedItemChanged = { index ->
                                     if (index != currentPosition || isAutoForCategory || characteristics.selectedCategory == SettingsItem.MAGNIFIER) {
-                                        val newValue = currentItems.getOrNull(index)?.value
+                                        val newValue = characteristics.currentCategoryItems.getOrNull(index)?.value
                                         val updated = when (characteristics.selectedCategory) {
                                             SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = false, shutterValue = newValue, shutterPosition = index)
                                             SettingsItem.ISO -> characteristics.copy(isIsoAuto = false, isoValue = newValue, isoPosition = index)
@@ -194,7 +198,7 @@ fun CameraScreenSuccess(
                     }
                 }
             }
-            
+
             Row(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,

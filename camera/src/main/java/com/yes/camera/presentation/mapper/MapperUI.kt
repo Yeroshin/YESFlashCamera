@@ -9,6 +9,7 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
+import androidx.compose.ui.geometry.Offset
 import com.yes.camera.R
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.presentation.model.CharacteristicsUI
@@ -79,6 +80,9 @@ class MapperUI(
             fullScreen = characteristics.fullscreen ?: true,
             resolution = "${characteristics.resolution.width}x${characteristics.resolution.height}",
             aspectRatio = characteristics.resolution,
+            touchPoint = characteristics.touchPoint?.let {
+                if (it.size >= 2) Offset(it[0], it[1]) else null
+            } ?: Offset(0.5f, 0.5f),
 
             isShutterAuto = characteristics.shutterValue == null,
             isIsoAuto = characteristics.isoValue == null,
@@ -229,7 +233,7 @@ class MapperUI(
             wbMode = wbMode,
             focusValue = focusValue,
             focusMode = focusMode,
-            touchPoint = floatArrayOf(characteristics.touchPoint?.x ?: 0f, characteristics.touchPoint?.y ?: 0f)
+            touchPoint = floatArrayOf(characteristics.touchPoint?.x ?: 0.5f, characteristics.touchPoint?.y ?: 0.5f)
         )
     }
 }
