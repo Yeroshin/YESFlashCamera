@@ -83,6 +83,7 @@ class MapperUI(
             touchPoint = characteristics.touchPoint?.let {
                 if (it.size >= 2) Offset(it[0], it[1]) else null
             } ?: Offset(0.5f, 0.5f),
+            isFocused = characteristics.isFocused,
 
             isShutterAuto = characteristics.shutterValue == null,
             isIsoAuto = characteristics.isoValue == null,
@@ -185,6 +186,7 @@ class MapperUI(
             resolution = hardwareMapped.resolution,
             aspectRatio = hardwareMapped.aspectRatio,
             histogramData = hardwareMapped.histogramData,
+            isFocused = hardwareMapped.isFocused,
             
             characteristicsItems = persistentListOf(
                 RadioGroupItem.TextItem(SettingsItem.SHUTTER, "SHUTTER", if (intent.isShutterAuto) hardwareMapped.shutterValue ?: "" else intent.shutterValue ?: ""),
@@ -233,7 +235,8 @@ class MapperUI(
             wbMode = wbMode,
             focusValue = focusValue,
             focusMode = focusMode,
-            touchPoint = floatArrayOf(characteristics.touchPoint?.x ?: 0.5f, characteristics.touchPoint?.y ?: 0.5f)
+            touchPoint = floatArrayOf(characteristics.touchPoint?.x ?: 0.5f, characteristics.touchPoint?.y ?: 0.5f),
+            isFocused = characteristics.isFocused
         )
     }
 }

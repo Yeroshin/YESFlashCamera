@@ -29,5 +29,6 @@ data class Characteristics(
     val actualIso: Int? = null,
     val actualShutter: Long? = null,
     val actualFocusDistance: Float? = null,
-    val actualWbKelvin: Int? = null
+    val actualWbKelvin: Int? = null,
+    val isFocused: Boolean = false
 )

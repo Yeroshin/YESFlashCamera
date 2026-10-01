@@ -181,12 +181,14 @@ class GLRenderer(
         magnification: Float,
         magnifierSizeW: Float = 0.5f,
         magnifierSizeH: Float = 0.5f,
+        frame: Int = 0
     ) {
         glObjects.find { it is GlMagnifierAdvanced }?.let {
             (it as GlMagnifierAdvanced).configure(
                 magnification,
                 magnifierSizeW,
                 magnifierSizeH,
+                frame = frame
             )
         }
     }

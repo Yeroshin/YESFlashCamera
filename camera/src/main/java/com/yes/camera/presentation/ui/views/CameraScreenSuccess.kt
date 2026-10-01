@@ -50,9 +50,10 @@ fun CameraScreenSuccess(
         }
     }
 
-    LaunchedEffect(characteristics.magnifierValue) {
+    LaunchedEffect(characteristics.magnifierValue, characteristics.isFocused) {
         val mag = characteristics.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
-        renderer.configureMagnifier(mag)
+        val frame = if (characteristics.isFocused) 1 else 0
+        renderer.configureMagnifier(mag, frame = frame)
     }
 
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
@@ -140,7 +141,9 @@ fun CameraScreenSuccess(
 
                 Box(modifier = Modifier.fillMaxWidth().padding(AppTheme.dimens.small).height(AppTheme.dimens.controlBarHeight)) {
                     if (isAutoForCategory && (characteristics.selectedCategory == SettingsItem.WB || characteristics.selectedCategory == SettingsItem.FOCUS)) {
-                        val modeItems = remember(characteristics.wbModeItems) { characteristics.wbModeItems }
+                        val modeItems = remember(characteristics.selectedCategory, characteristics.wbModeItems, characteristics.focusModeItems) {
+                            if (characteristics.selectedCategory == SettingsItem.FOCUS) characteristics.focusModeItems else characteristics.wbModeItems
+                        }
                         val uiModeItems = remember(modeItems) {
                             modeItems.map { data ->
                                 RadioUiItem(id = data.id as ModeItem) { isSelected ->
@@ -151,7 +154,9 @@ fun CameraScreenSuccess(
                                 }
                             }.toImmutableList()
                         }
-                        val selectedMode = remember(characteristics.wbMode) { characteristics.wbMode }
+                        val selectedMode = remember(characteristics.selectedCategory, characteristics.wbMode, characteristics.focusMode) {
+                            if (characteristics.selectedCategory == SettingsItem.FOCUS) characteristics.focusMode else characteristics.wbMode
+                        }
 
                         UniversalRadioGroup(
                             items = uiModeItems,

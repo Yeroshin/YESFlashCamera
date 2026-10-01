@@ -198,7 +198,8 @@ fun CameraScreen(
                 val currentChars = charsFlow?.value ?: CharacteristicsUI()
 
                 val mag = currentChars.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
-                renderer?.configureMagnifier(mag)
+                val frame = if (currentChars.isFocused) 1 else 0
+                renderer?.configureMagnifier(mag, frame = frame)
 
                 val point = currentChars.touchPoint ?: Offset(0.5f, 0.5f)
                 val normalizedX = point.x * 2f - 1f

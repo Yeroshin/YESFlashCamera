@@ -33,6 +33,7 @@ data class CharacteristicsUI(
     val fullScreen: Boolean = true,
     val resolution: String? = null,
     val aspectRatio: Dimensions? = null,
+    val isFocused: Boolean = false,
 
     // Flags for Auto/Manual status from Domain
     val isShutterAuto: Boolean = true,

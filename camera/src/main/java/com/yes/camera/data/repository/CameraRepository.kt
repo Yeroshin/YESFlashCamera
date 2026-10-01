@@ -390,13 +390,16 @@ class CameraRepository(
             if (now - lastUIUpdate > 100) {
                 lastUIUpdate = now
                 val kelvin = wbG?.let { rgbToKelvin(it) } ?: 0
+                val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+                val focused = afState == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED || afState == CameraMetadata.CONTROL_AF_STATE_PASSIVE_FOCUSED
                 _characteristicsFlow.update { current ->
                     val base = current ?: Characteristics(isoRange = IntRange(0, 0), shutterRange = LongRange(0, 0))
                     base.copy(
                         actualIso = sIso, 
                         actualShutter = sExp, 
                         actualFocusDistance = fDist, 
-                        actualWbKelvin = kelvin
+                        actualWbKelvin = kelvin,
+                        isFocused = focused
                     )
                 }
             }
