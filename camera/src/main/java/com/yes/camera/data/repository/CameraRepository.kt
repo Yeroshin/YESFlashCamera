@@ -103,6 +103,10 @@ class CameraRepository(
             }
         }
         _histogramBufferFlow.tryEmit(histogramDataBuffer)
+        
+        // Автоматический анализ гистограммы для детекции вспышки (порог разницы яркостей = 25.0)
+        checkAndSaveFlashFrame(brightnessThreshold = 25.0)
+
         image.close()
     }
 
@@ -315,6 +319,63 @@ class CameraRepository(
             sum += histogramDataBuffer[i].toInt() and 0xFF
         }
         return if (histogramDataBuffer.isEmpty()) 128.0 else sum.toDouble() / (histogramDataBuffer.size / 8)
+    }
+
+    private var prevLum = 0.0
+    private var currLum = 0.0
+    private var nextLum = 0.0
+
+    /**
+     * Функция анализа гистограммы для обнаружения вспышки и сохранения кадра.
+     * Если текущий кадр светлее предыдущего и следующего больше чем на заданный brightnessThreshold,
+     * а также принудительно устанавливается безопасный диапазон выдержек (чтобы исключить половинную экспозицию),
+     * то кадр автоматически сохраняется.
+     */
+    fun checkAndSaveFlashFrame(brightnessThreshold: Double, minSafeShutterNs: Long = 4_000_000L, maxSafeShutterNs: Long = 33_333_333L) {
+        val currentMeanLum = calculateMeanLuminance()
+
+        // Сдвиг скользящего окна по 3 кадрам [предыдущий, текущий, следующий]
+        prevLum = currLum
+        currLum = nextLum
+        nextLum = currentMeanLum
+
+        // Детекция пика (вспышки): текущий кадр ярче предыдущего и следующего на величину порога
+        if (currLum > prevLum + brightnessThreshold && currLum > nextLum + brightnessThreshold) {
+            // Принудительно задаем безопасный диапазон выдержек для предотвращения артефактов rolling shutter
+            applyForcedShutterRange(minSafeShutterNs, maxSafeShutterNs)
+
+            // Сохраняем кадр
+            triggerFlashCapture()
+        }
+    }
+
+    private fun applyForcedShutterRange(minNs: Long, maxNs: Long) {
+        val builder = persistentBuilder ?: return
+        val currentShutter = builder.get(CaptureRequest.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
+        val clampedShutter = currentShutter.coerceIn(minNs, maxNs)
+        builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
+        builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(clampedShutter, 33_333_333L))
+        try {
+            cameraSession?.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "Forced shutter range error: ${e.message}")
+        }
+    }
+
+    private fun triggerFlashCapture() {
+        val session = cameraSession ?: return
+        try {
+            val captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
+                addTarget(imageReaderJpeg.surface)
+            }
+            session.capture(captureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
+                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                    Log.d("CameraRepository", "Flash detected! Frame saved via ImageSaver.")
+                }
+            }, cameraThreadManager.handler)
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "Flash capture error: ${e.message}")
+        }
     }
 
     private fun updateFocus(builder: CaptureRequest.Builder, new: Characteristics, old: Characteristics?) {

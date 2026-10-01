@@ -10,6 +10,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        buildConfigField("String", "VERSION_NAME", "\"${rootProject.extra["appVersionName"]}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -33,6 +34,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"

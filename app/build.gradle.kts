@@ -9,10 +9,10 @@ android {
 
     defaultConfig {
         applicationId = "com.yes.flashcamera"
-        minSdk =29
+        minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = rootProject.extra["appVersionCode"] as Int
+        versionName = rootProject.extra["appVersionName"] as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -23,12 +23,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-           /* proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )*/
+            isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
+                getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
@@ -52,11 +49,8 @@ android {
     buildToolsVersion = "34.0.0"
 
     buildFeatures {
-
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        buildConfig = true
     }
 }
 
@@ -64,7 +58,6 @@ dependencies {
     implementation(project(":shared"))
     implementation(project(":settings"))
     implementation(project(":camera"))
-
 
     //compose
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
@@ -75,17 +68,10 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
-    implementation ("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
     //testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
-
-
-
-
-
-
-
 }
