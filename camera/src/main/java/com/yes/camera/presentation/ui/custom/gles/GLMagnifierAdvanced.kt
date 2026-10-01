@@ -171,19 +171,21 @@ class GlMagnifierAdvanced(
         magnifierSizeW: Float,
         magnifierSizeH: Float,
         textureScale: Float = 1f,
-        framesNumber: Int = 9,
+        framesNumber: Int = 4,
         frame: Int = 0,
-        stride: Int = 3
+        stride: Int = 2
     ) {
         this.magnification = magnification
         this.magnifierSizeW = magnifierSizeW
         this.magnifierSizeH = magnifierSizeH
 
-        vertexWidth = maxOf(width, height) * magnifierSizeW
-        vertexHeight = minOf(width, height) * magnifierSizeH
+        val side = minOf(width, height) * magnifierSizeW
+        vertexWidth = side
+        vertexHeight = side
 
-        textureWidth = 1f * (magnifierSizeW / magnification)
-        textureHeight = 1f * (magnifierSizeH / magnification)
+        val effectiveRatio = if (ratio > 0f) ratio else 1f
+        textureWidth = (magnifierSizeW / effectiveRatio) / magnification
+        textureHeight = magnifierSizeW / magnification
 
         updateVertexBuffer(
             vertexWidth,
@@ -282,10 +284,19 @@ class GlMagnifierAdvanced(
             1
         )
 
+        // Pass half-width and half-height as uniform to normalize position for circular magnifier mask in fragment shader
+        val halfSizeLocation = glGetUniformLocation(shaderProgram.programId, "u_HalfSize")
+        GLES20.glUniform2f(halfSizeLocation, vertexWidth / 2f, vertexHeight / 2f)
+
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
         bindData()
 
         glUniformMatrix4fv(uMatrixLocation, 1, false, modelViewProjectionMatrix, 0)
         GLES20.glDrawArrays(GL_TRIANGLES, 0, 6)
+
+        GLES20.glDisable(GLES20.GL_BLEND)
 
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
         glBindTexture(GL_TEXTURE_2D, 0)
@@ -306,7 +317,7 @@ class GlMagnifierAdvanced(
 
         val bitmap = BitmapFactory.decodeResource(
             context.resources,
-            R.drawable.focus_test,
+            R.drawable.focus_ring,
             options
         )
 

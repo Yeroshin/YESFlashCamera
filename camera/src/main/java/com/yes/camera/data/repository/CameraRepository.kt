@@ -26,6 +26,9 @@ import android.media.ImageReader
 import android.os.Build
 import android.os.Looper
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
@@ -340,6 +343,7 @@ class CameraRepository(
                     if (pointChanged || modeChanged) {
                         isAfLocked = false; isWaitingForFocus = true; lastLockedFocusDistance = null
                         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                        _characteristicsFlow.update { it?.copy(isFocused = false) }
                         launchAfTrigger(builder, rect)
                     } else if (isAfLocked && lastLockedFocusDistance != null) {
                         builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
@@ -391,7 +395,7 @@ class CameraRepository(
                 lastUIUpdate = now
                 val kelvin = wbG?.let { rgbToKelvin(it) } ?: 0
                 val afState = result.get(CaptureResult.CONTROL_AF_STATE)
-                val focused = afState == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED || afState == CameraMetadata.CONTROL_AF_STATE_PASSIVE_FOCUSED
+                val focused = afState == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED
                 _characteristicsFlow.update { current ->
                     val base = current ?: Characteristics(isoRange = IntRange(0, 0), shutterRange = LongRange(0, 0))
                     base.copy(
@@ -422,7 +426,34 @@ class CameraRepository(
     fun singleCapture(enable: Boolean) {}
 
     private fun handleFocusResult(success: Boolean) {
-        myScope.launch(Dispatchers.Main) { Toast.makeText(context, if (success) "FOCUSED" else "Not focused", Toast.LENGTH_SHORT).show() }
+        myScope.launch(Dispatchers.Main) { 
+            if (success) {
+                triggerVibration(context)
+            }
+            Toast.makeText(context, if (success) "FOCUSED" else "Not focused", Toast.LENGTH_SHORT).show() 
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun triggerVibration(context: Context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                val vibrator = vibratorManager?.defaultVibrator
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "Vibration error: ${e.message}")
+        }
     }
 
     private fun meteringRectangle(touchPoint: FloatArray): MeteringRectangle {

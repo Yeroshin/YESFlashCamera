@@ -1,24 +1,29 @@
-#extension GL_OES_EGL_image_external: require
-precision mediump float; // Устанавливаем точность для float
+#extension GL_OES_EGL_image_external : require
+precision mediump float;
 
-varying vec2 vTexCoord1; // Получаем координаты текстурирования первой текстуры
-varying vec2 vTexCoord2; // Получаем координаты текстурирования второй текстуры
+varying vec2 vTexCoord1;
+varying vec2 vTexCoord2;
+varying vec2 vNormalizedPos;
 
-uniform samplerExternalOES baseTexture;    // Основная текстура
-uniform sampler2D overlayTexture;  // Наложенная текстура
-
+uniform samplerExternalOES baseTexture;
+uniform sampler2D overlayTexture;
 
 void main()
 {
-    // Получаем цвет из основной текстуры
+    // Since the quad is square (vertexWidth == vertexHeight), length(vNormalizedPos) forms a perfect circle
+    float dist = length(vNormalizedPos);
+
+    float radius = 0.98;
+    float edgeSmooth = 0.02;
+    float alpha = 1.0 - smoothstep(radius - edgeSmooth, radius, dist);
+
+    if (alpha <= 0.0) {
+        discard;
+    }
+
     vec4 baseColor = texture2D(baseTexture, vTexCoord1);
-
-    // Получаем цвет из наложенной текстуры
     vec4 overlayColor = texture2D(overlayTexture, vTexCoord2);
+    vec4 color = mix(baseColor, overlayColor, overlayColor.a);
 
-    // Смешиваем цвета с учетом альфа-канала
-    //gl_FragColor = mix(baseColor, overlayColor, overlayColor.a * overlayAlpha);
-    gl_FragColor = mix(baseColor,overlayColor,  overlayColor.a);
- // gl_FragColor =texture2D(baseTexture, vTexCoord1);
-//  gl_FragColor =texture2D(overlayTexture, vTexCoord2);
+    gl_FragColor = vec4(color.rgb, color.a * alpha);
 }
