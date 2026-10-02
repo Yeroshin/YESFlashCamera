@@ -8,5 +8,6 @@ data class Settings(
     val resolutionItems: List<Dimensions>? = null,
     val fullScreen: Boolean? = true,
     val imageFormat: ImgFormat? = null,
-    val filePath: String? = null
+    val filePath: String? = null,
+    val themeValue: String? = null
 )

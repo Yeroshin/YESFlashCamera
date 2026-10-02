@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import com.yes.settings.presentation.contract.SettingsContract
 import com.yes.settings.presentation.ui.views.SettingsScreenSuccess
+import com.yes.settings.presentation.ui.views.SettingsScreenSuccessNew
 import com.yes.settings.presentation.wm.SettingsViewModel
 
 @Composable
@@ -13,7 +14,7 @@ fun SettingsScreen(
 ) {
     val viewState = settingsViewModel.uiState.collectAsState()
     when(val state = viewState.value.state){
-        is SettingsContract.SettingsState.Success -> SettingsScreenSuccess(
+        is SettingsContract.SettingsState.Success -> SettingsScreenSuccessNew(
             settingsUI = state.settings,
             onBackClick = onBackClick,
             onSettingsChanged = {settings->

@@ -2,6 +2,7 @@ package com.yes.settings.di.module
 
 import com.yes.settings.data.repository.SettingsRepository
 import com.yes.settings.domain.usecase.GetSettingsUseCase
+import com.yes.settings.domain.usecase.GetStorageInfoUseCase
 import com.yes.settings.domain.usecase.SetSettingsUseCase
 import com.yes.settings.presentation.mapper.MapperUI
 import com.yes.settings.presentation.wm.SettingsViewModel
@@ -15,12 +16,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 @Module
 class SettingsModule {
     @Provides
-    fun providesMapperUI(
-
-    ): MapperUI {
-        return MapperUI(
-
-        )
+    fun providesMapperUI(): MapperUI {
+        return MapperUI()
     }
 
     @Provides
@@ -33,6 +30,18 @@ class SettingsModule {
             settingsRepository
         )
     }
+
+    @Provides
+    fun providesGetStorageInfoUseCase(
+        @IoDispatcher dispatcher: CoroutineDispatcher,
+        settingsRepository: SettingsRepository
+    ): GetStorageInfoUseCase {
+        return GetStorageInfoUseCase(
+            dispatcher,
+            settingsRepository
+        )
+    }
+
     @Provides
     fun providesSettingsRepository(
         settingsDataSource: SettingsDataSource
@@ -41,6 +50,7 @@ class SettingsModule {
             settingsDataSource
         )
     }
+
     @Provides
     fun providesGetSettingsUseCase(
         @IoDispatcher dispatcher: CoroutineDispatcher,
@@ -56,11 +66,13 @@ class SettingsModule {
     fun providesSettingsViewModelFactory(
         getSettingsUseCase: GetSettingsUseCase,
         setSettingsUseCase: SetSettingsUseCase,
+        getStorageInfoUseCase: GetStorageInfoUseCase,
         mapperUI: MapperUI
     ): SettingsViewModel.Factory {
         return SettingsViewModel.Factory(
             getSettingsUseCase,
             setSettingsUseCase,
+            getStorageInfoUseCase,
             mapperUI
         )
     }
