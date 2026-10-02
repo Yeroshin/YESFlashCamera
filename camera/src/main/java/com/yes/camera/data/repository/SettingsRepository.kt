@@ -21,13 +21,11 @@ import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.TOUCHPO
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.WBMODE
 import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.WBVALUE
 import com.yes.camera.domain.model.Characteristics
-import com.yes.shared.domain.Dimensions
 import com.yes.shared.data.dataSource.SettingsDataSource
+import com.yes.shared.domain.Dimensions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import java.io.File
 
@@ -49,28 +47,27 @@ class SettingsRepository(
         val FILEPATH = stringPreferencesKey("filePath")
     }
 
+    private val defaultDcimPath by lazy {
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath
+    }
+
     suspend fun setCharacteristics(characteristics: Characteristics) {
-        setIsoValue(characteristics.isoValue)
-        setShutterValue(characteristics.shutterValue)
-        setWbValue(characteristics.wbValue)
-        setWbMode(characteristics.wbMode)
-        setFocusValue(characteristics.focusValue)
-        setFocusMode(characteristics.focusMode)
-        setTouchPoint(characteristics.touchPoint)
+        settingsDataSource.edit { preferences ->
+            if (characteristics.isoValue != null) preferences[ISOVALUE] = characteristics.isoValue else preferences.remove(ISOVALUE)
+            if (characteristics.shutterValue != null) preferences[SHUTTERVALUE] = characteristics.shutterValue else preferences.remove(SHUTTERVALUE)
+            if (characteristics.wbValue != null) preferences[WBVALUE] = characteristics.wbValue else preferences.remove(WBVALUE)
+            if (characteristics.wbMode != null) preferences[WBMODE] = characteristics.wbMode else preferences.remove(WBMODE)
+            if (characteristics.focusValue != null) preferences[FOCUSVALUE] = characteristics.focusValue else preferences.remove(FOCUSVALUE)
+            if (characteristics.focusMode != null) preferences[FOCUSMODE] = characteristics.focusMode else preferences.remove(FOCUSMODE)
+            if (characteristics.touchPoint != null) {
+                preferences[TOUCHPOINT] = characteristics.touchPoint.joinToString(",")
+            } else {
+                preferences.remove(TOUCHPOINT)
+            }
+        }
     }
 
     suspend fun getCharacteristics(): Characteristics {
-        /* setIsoValue(null)
-        val isoValue = getIsoValue()
-        val t=isoValue
-        val shutterValue = getShutterValue()
-        val wbValue = getWbValue()
-        val wbMode = getWbMode()
-        val focusValue = getFocusValue()
-        val focusMode = getFocusMode()*/
-        //  val touchPoint = getTouchPoint()
-     //   throw IllegalArgumentException("Filepath must not be null")
-
         return Characteristics(
             backCamera = getBackCamera(),
             isoValue = getIsoValue(),
@@ -80,17 +77,14 @@ class SettingsRepository(
             focusValue = getFocusValue(),
             focusMode = getFocusMode(),
             fullscreen = getFullScreen(),
-            resolution = getResolutionValue() ?: run {
-                Dimensions(0, 0)
-            },
+            resolution = getResolutionValue() ?: Dimensions(0, 0),
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
-            //  touchPoint = getTouchPoint()
         )
     }
 
-    suspend fun subscribeSettings(): Flow<Characteristics> {
+    fun subscribeSettings(): Flow<Characteristics> {
         return combine(
             subscribeFullScreen(),
             subscribeResolutionValue()
@@ -106,19 +100,16 @@ class SettingsRepository(
         return settingsDataSource.subscribe(FULLSCREEN, null).first()
     }
 
-    suspend fun subscribeFullScreen(): Flow<Boolean?> {
+    fun subscribeFullScreen(): Flow<Boolean?> {
         return settingsDataSource.subscribe(FULLSCREEN, null)
     }
 
     suspend fun setBackCamera(backCamera: Boolean?) {
         backCamera?.let {
-
             settingsDataSource.set(it, BACKCAMERA)
-
         } ?: run {
             settingsDataSource.remove(BACKCAMERA)
         }
-
     }
 
     private suspend fun getBackCamera(): Boolean? {
@@ -126,15 +117,14 @@ class SettingsRepository(
     }
 
     suspend fun setResolutions(dimensions: List<Dimensions>?) {
-        dimensions?.let { it ->
+        dimensions?.let {
             settingsDataSource.set(
-                it.joinToString(",") { it.height.toString() + "x" + it.width.toString() },
+                it.joinToString(",") { dim -> "${dim.height}x${dim.width}" },
                 RESOLUTIONS
             )
         } ?: run {
             settingsDataSource.remove(RESOLUTIONS)
         }
-
     }
 
     suspend fun getResolutions(): List<Dimensions>? {
@@ -142,25 +132,19 @@ class SettingsRepository(
             ?.split(",")?.mapNotNull { resolution ->
                 val parts = resolution.trim().split("x")
                 if (parts.size == 2) {
-                    val width = parts[1].trim().toInt()
-                    val height = parts[0].trim().toInt()
-                    Dimensions(width, height)
-                } else {
-                    null // или обработать ошибку по-другому
-                }
+                    val width = parts[1].trim().toIntOrNull()
+                    val height = parts[0].trim().toIntOrNull()
+                    if (width != null && height != null) Dimensions(width, height) else null
+                } else null
             }
     }
 
     suspend fun setResolutionValue(dimension: Dimensions?) {
-        dimension?.let { it ->
-            settingsDataSource.set(
-                it.width.toString() + "x" + it.height.toString(),
-                RESOLUTIONVALUE
-            )
+        dimension?.let {
+            settingsDataSource.set("${it.width}x${it.height}", RESOLUTIONVALUE)
         } ?: run {
             settingsDataSource.remove(RESOLUTIONVALUE)
         }
-
     }
 
     suspend fun getResolutionValue(): Dimensions? {
@@ -168,139 +152,50 @@ class SettingsRepository(
             ?.split("x")
             ?.takeIf { it.size == 2 }
             ?.let { parts ->
-                Dimensions(parts[0].toInt(), parts[1].toInt())
+                val width = parts[0].toIntOrNull()
+                val height = parts[1].toIntOrNull()
+                if (width != null && height != null) Dimensions(width, height) else null
             }
-
-
     }
 
-    suspend fun subscribeResolutionValue(): Flow<Dimensions?> {
+    fun subscribeResolutionValue(): Flow<Dimensions?> {
         return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
-            .map {
-                it?.split("x")
+            .map { str ->
+                str?.split("x")
                     ?.takeIf { it.size == 2 }
                     ?.let { parts ->
-                        Dimensions(parts[0].toInt(), parts[1].toInt())
+                        val width = parts[0].toIntOrNull()
+                        val height = parts[1].toIntOrNull()
+                        if (width != null && height != null) Dimensions(width, height) else null
                     }
             }
-
-    }
-
-    private suspend fun setIsoValue(isoValue: Int?) {
-        isoValue?.let {
-
-            settingsDataSource.set(it, ISOVALUE)
-
-        } ?: run {
-            settingsDataSource.remove(ISOVALUE)
-        }
-
     }
 
     private suspend fun getIsoValue(): Int? {
         return settingsDataSource.subscribe(ISOVALUE, null).first()
     }
 
-    private suspend fun setShutterValue(shutterValue: Long?) {
-        shutterValue?.let {
-            settingsDataSource.set(it, SHUTTERVALUE)
-        } ?: run {
-            settingsDataSource.remove(SHUTTERVALUE)
-        }
-
-    }
-
     private suspend fun getShutterValue(): Long? {
         return settingsDataSource.subscribe(SHUTTERVALUE, null).first()
-    }
-
-    private suspend fun setWbValue(wbValue: Int?) {
-        wbValue?.let {
-            settingsDataSource.set(it, WBVALUE)
-        } ?: run {
-            settingsDataSource.remove(WBVALUE)
-        }
-
     }
 
     private suspend fun getWbValue(): Int? {
         return settingsDataSource.subscribe(WBVALUE, null).first()
     }
 
-    private suspend fun setWbMode(isoValue: Int?) {
-        isoValue?.let {
-            settingsDataSource.set(it, WBMODE)
-        } ?: run {
-            settingsDataSource.remove(WBMODE)
-        }
-
-    }
-
     private suspend fun getWbMode(): Int? {
         return settingsDataSource.subscribe(WBMODE, CONTROL_AWB_MODE_AUTO).first()
-    }
-
-    private suspend fun setFocusValue(focusValue: Float?) {
-        focusValue?.let {
-            settingsDataSource.set(it, FOCUSVALUE)
-        } ?: run {
-            settingsDataSource.remove(FOCUSVALUE)
-        }
-
     }
 
     private suspend fun getFocusValue(): Float? {
         return settingsDataSource.subscribe(FOCUSVALUE, -1f).first()
     }
 
-    private suspend fun setFocusMode(focusMode: Int?) {
-        focusMode?.let {
-            settingsDataSource.set(it, FOCUSMODE)
-        } ?: run {
-            settingsDataSource.remove(FOCUSMODE)
-        }
-
-    }
-
     private suspend fun getFocusMode(): Int? {
         return settingsDataSource.subscribe(FOCUSMODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE).first()
     }
 
-    private suspend fun setTouchPoint(touchPoint: FloatArray?) {
-        touchPoint?.let {
-            settingsDataSource.set(it.joinToString(","), TOUCHPOINT)
-        } ?: run {
-            settingsDataSource.remove(TOUCHPOINT)
-        }
-
-    }
-
-    private suspend fun getTouchPoint(): FloatArray? {
-        return settingsDataSource.subscribe(TOUCHPOINT, "").first()
-            ?.split(",")
-            ?.map { it.toFloat() }
-            ?.toFloatArray()
-    }
-
     private suspend fun getFilePath(): String? {
-        val dcimDir: File =
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-        val path: String = dcimDir.absolutePath
-        return settingsDataSource.subscribe(FILEPATH, path).first()
+        return settingsDataSource.subscribe(FILEPATH, defaultDcimPath).first()
     }
-
-    ///////////////////////
-
-    /* object PreferencesKeys {
-         val THEME = intPreferencesKey("theme")
-         val CURRENT_PLAYLIST_ID = longPreferencesKey("currentPlaylistId")
-         val CURRENT_TRACK_INDEX = intPreferencesKey("currentTrackIndex")
-         val CUSTOM_PRESET_NAME = stringPreferencesKey("customPresetNames")
-         val EQUALIZER_ENABLED = booleanPreferencesKey("equalizerEnabled")
-         val CURRENT_PRESET = intPreferencesKey("currentPreset")
-         val CUSTOM_PRESET = stringPreferencesKey("customPreset")
-         val LOUDNESS_ENHANCER_ENABLED = booleanPreferencesKey("loudnessEnhancerEnabled")
-         val LOUDNESS_ENHANCER_TARGET_GAIN = intPreferencesKey("loudnessEnhancerTargetGain")
-     }*/
-
 }

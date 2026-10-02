@@ -8,7 +8,8 @@ import android.util.Log
 import com.yes.camera.domain.model.Characteristics
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
-import com.yes.camera.domain.usecase.RecordVideoUseCase
+import com.yes.camera.domain.usecase.SaveCapturedImageUseCase
+import com.yes.camera.domain.usecase.SingleCaptureUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
 import com.yes.camera.domain.usecase.SubscribeCameraSettingsUseCase
 import com.yes.camera.presentation.contract.CameraContract.*
@@ -28,7 +29,8 @@ class CameraViewModel(
     private val openCameraUseCase: OpenCameraUseCase,
     private val closeCameraUseCase: CloseCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-    private val recordVideoUseCase: RecordVideoUseCase,
+    private val singleCaptureUseCase: SingleCaptureUseCase,
+    private val saveCapturedImageUseCase: SaveCapturedImageUseCase,
     private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
 ) : BaseViewModel<Event, State, Effect>() {
     private val TAG = "CameraViewModel"
@@ -64,6 +66,18 @@ class CameraViewModel(
                 startVideoRecord(event.enabled)
             }
 
+            Event.OnSingleCapture -> {
+                performSingleCapture()
+            }
+
+            Event.OnSaveCapturedImage -> {
+                saveCapturedImage()
+            }
+
+            Event.OnCancelCapturedImage -> {
+                returnToSuccessState()
+            }
+
             Event.OnCloseCamera -> {
                 closeCamera()
             }
@@ -80,24 +94,58 @@ class CameraViewModel(
                 )
             },
             block = {
-                recordVideoUseCase(
-                    RecordVideoUseCase.Params(enable = enabled)
+                singleCaptureUseCase(
+                    SingleCaptureUseCase.Params(enable = enabled)
                 )
             }
         )
     }
 
+    private fun performSingleCapture() {
+        withUseCaseScope(
+            onError = { Log.e(TAG, "Single capture error: ${it.message}") },
+            block = {
+                val bitmap = singleCaptureUseCase()
+                if (bitmap != null) {
+                    setState {
+                        copy(
+                            state = CameraState.CapturedPreview(bitmap)
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+    private fun saveCapturedImage() {
+        withUseCaseScope(
+            onError = { Log.e(TAG, "Save captured image error: ${it.message}") },
+            block = {
+                saveCapturedImageUseCase()
+                returnToSuccessState()
+            }
+        )
+    }
+
+    private fun returnToSuccessState() {
+        setState {
+            copy(
+                state = CameraState.Success(
+                    characteristicsFlow = _characteristicsInternal.asStateFlow()
+                )
+            )
+        }
+    }
+
     fun getChanges(old: Characteristics, new: Characteristics): Map<String, Pair<Any?, Any?>> {
         val changes = mutableMapOf<String, Pair<Any?, Any?>>()
 
-        // Используем Java Reflection (она доступна по умолчанию)
         old::class.java.declaredFields.forEach { field ->
-            field.isAccessible = true // Даем доступ к приватным полям
+            field.isAccessible = true
             val oldVal = field.get(old)
             val newVal = field.get(new)
 
             if (oldVal != newVal) {
-                // Проверка для массивов (wbModeItems), так как у них != сравнивает ссылки
                 if (oldVal is IntArray && newVal is IntArray) {
                     if (!oldVal.contentEquals(newVal)) {
                         changes[field.name] = oldVal to newVal
@@ -111,9 +159,7 @@ class CameraViewModel(
     }
 
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
-        // Optimistic update: apply intent to UI state immediately so sliders feel responsive
         _characteristicsInternal.value = characteristics
-
         val domainModel = mapper.map(characteristics)
 
         launchHybridUseCase(
@@ -135,16 +181,13 @@ class CameraViewModel(
                 setState { copy(state = CameraState.Error(it)) }
             },
             block = {
-                // 1. Инициируем открытие
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
                 )
 
-                // 2. Ждем ПЕРВОГО реального значения характеристик (подтверждение успеха)
                 val firstData = subscribeCameraSettingsUseCase().first()
                 _characteristicsInternal.value = mapper.map(firstData)
 
-                // 3. ТОЛЬКО ТЕПЕРЬ запускаем постоянную подписку в фоне
                 useCaseCoroutineScope.launch {
                     subscribeCameraSettingsUseCase()
                         .collect { domainCharacteristics ->
@@ -154,7 +197,6 @@ class CameraViewModel(
                         }
                 }
 
-                // 4. И только теперь переходим в состояние Success
                 setState {
                     copy(
                         state = CameraState.Success(
@@ -182,7 +224,8 @@ class CameraViewModel(
         private val openCameraUseCase: OpenCameraUseCase,
         private val closeCameraUseCase: CloseCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-        private val recordVideoUseCase: RecordVideoUseCase,
+        private val singleCaptureUseCase: SingleCaptureUseCase,
+        private val saveCapturedImageUseCase: SaveCapturedImageUseCase,
         private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -192,7 +235,8 @@ class CameraViewModel(
                 openCameraUseCase,
                 closeCameraUseCase,
                 setInputCharacteristicsUseCase,
-                recordVideoUseCase,
+                singleCaptureUseCase,
+                saveCapturedImageUseCase,
                 subscribeCameraSettingsUseCase,
             ) as T
         }

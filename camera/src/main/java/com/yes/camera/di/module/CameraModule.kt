@@ -11,7 +11,8 @@ import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.di.CameraScope
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
-import com.yes.camera.domain.usecase.RecordVideoUseCase
+import com.yes.camera.domain.usecase.SaveCapturedImageUseCase
+import com.yes.camera.domain.usecase.SingleCaptureUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
 import com.yes.camera.domain.usecase.SubscribeCameraSettingsUseCase
 import com.yes.camera.presentation.mapper.MapperUI
@@ -20,7 +21,6 @@ import com.yes.camera.utils.AndroidResourceProvider
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.data.dataSource.SettingsDataSource
 import com.yes.shared.di.module.CameraDispatcher
-import com.yes.shared.di.module.IoDispatcher
 import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.utils.CameraThreadManager
 import dagger.Module
@@ -126,13 +126,26 @@ class CameraModule {
     }
 
     @Provides
-    fun providesSetRecordVideoUseCase(
+    fun providesSingleCaptureUseCase(
         @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository
-    ): RecordVideoUseCase {
-        return RecordVideoUseCase(
+    ): SingleCaptureUseCase {
+        return SingleCaptureUseCase(
             dispatcher,
             cameraRepository
+        )
+    }
+
+    @Provides
+    fun providesSaveCapturedImageUseCase(
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
+        cameraRepository: CameraRepository,
+        settingsRepository: SettingsRepository
+    ): SaveCapturedImageUseCase {
+        return SaveCapturedImageUseCase(
+            dispatcher,
+            cameraRepository,
+            settingsRepository
         )
     }
 
@@ -143,15 +156,17 @@ class CameraModule {
         openCameraUseCase: OpenCameraUseCase,
         closeCameraUseCase: CloseCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-        recordVideoUseCase: RecordVideoUseCase,
-        subscribeCameraSettingsUseCase:SubscribeCameraSettingsUseCase,
+        singleCaptureUseCase: SingleCaptureUseCase,
+        saveCapturedImageUseCase: SaveCapturedImageUseCase,
+        subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
             openCameraUseCase,
             closeCameraUseCase,
             setInputCharacteristicsUseCase,
-            recordVideoUseCase,
+            singleCaptureUseCase,
+            saveCapturedImageUseCase,
             subscribeCameraSettingsUseCase,
         )
     }

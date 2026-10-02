@@ -42,6 +42,7 @@ import com.yes.camera.presentation.model.CharacteristicsUI
 import com.yes.camera.presentation.ui.custom.compose.CameraPreviewContainer
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
 import com.yes.camera.presentation.ui.views.CameraScreenSuccess
+import com.yes.camera.presentation.ui.views.CapturedImageScreen
 import com.yes.camera.presentation.ui.views.ErrorScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.shared.presentation.ui.PermissionManager
@@ -292,6 +293,9 @@ fun CameraScreen(
                         onStartVideoRecord = { enabled ->
                             cameraViewModel.setEvent(CameraContract.Event.OnStartVideoRecord(enabled))
                         },
+                        onSingleCapture = {
+                            cameraViewModel.setEvent(CameraContract.Event.OnSingleCapture)
+                        },
                         onSetCharacteristic = { characteristics ->
                             cameraViewModel.setEvent(
                                 CameraContract.Event.OnSetCharacteristics(characteristics)
@@ -302,6 +306,18 @@ fun CameraScreen(
                                 CameraContract.Event.OnSelectCategory(category)
                             )
                         },
+                    )
+                }
+
+                is CameraContract.CameraState.CapturedPreview -> {
+                    CapturedImageScreen(
+                        bitmap = currentState.bitmap,
+                        onSaveClick = {
+                            cameraViewModel.setEvent(CameraContract.Event.OnSaveCapturedImage)
+                        },
+                        onCancelClick = {
+                            cameraViewModel.setEvent(CameraContract.Event.OnCancelCapturedImage)
+                        }
                     )
                 }
 

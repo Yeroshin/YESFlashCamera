@@ -36,6 +36,7 @@ fun CameraScreenSuccess(
     characteristicsFlow: StateFlow<CharacteristicsUI>,
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
+    onSingleCapture: () -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
     onSelectCategory: (category: SettingsItem) -> Unit,
 ) {
@@ -213,7 +214,7 @@ fun CameraScreenSuccess(
                 VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.flip_camera_android, AppTheme.colors.iconPrimary, AppTheme.colors.shadow)
                 RecordButton(modifier = Modifier.size(AppTheme.dimens.recordButtonSize), isChecked = false, onClick = { isCheck ->
                     shutterBoxIsOpen = !shutterBoxIsOpen
-                    onStartVideoRecord(isCheck)
+                    onSingleCapture()
                 })
             }
         }
@@ -255,6 +256,7 @@ fun CameraScreenSuccessPreview() {
                 characteristicsFlow = stateFlow,
                 onSettingsClick = {},
                 onStartVideoRecord = {},
+                onSingleCapture = {},
                 onSetCharacteristic = {},
                 onSelectCategory = {}
             )

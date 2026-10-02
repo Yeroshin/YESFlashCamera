@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.contract
 
+import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
 import androidx.compose.runtime.Stable
 import com.yes.camera.presentation.model.CharacteristicsUI
@@ -11,6 +12,9 @@ class CameraContract {
     sealed class Event : UiEvent {
         data object OnGetOffers : Event()
         data class OnStartVideoRecord(val enabled:Boolean) : Event()
+        data object OnSingleCapture : Event()
+        data object OnSaveCapturedImage : Event()
+        data object OnCancelCapturedImage : Event()
         data class OnOpenCamera(
             val backCamera:Boolean,
             val surfaceTexture: SurfaceTexture
@@ -37,6 +41,9 @@ class CameraContract {
         data object Loading : CameraState()
         data class Success(
             val characteristicsFlow: StateFlow<CharacteristicsUI>,
+        ) : CameraState()
+        data class CapturedPreview(
+            val bitmap: Bitmap
         ) : CameraState()
 
     }

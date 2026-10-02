@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -98,19 +99,19 @@ fun SettingsScreenSuccessNew(
 
     val formatUpper = settingsUI.imgFormatValue.uppercase()
     val formatBadgeText = when {
-        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> "JPEG + DNG"
-        formatUpper.contains("RAW") -> "DNG 14-bit"
-        else -> "JPEG 8-bit"
+        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> stringResource(R.string.format_badge_jpeg_dng)
+        formatUpper.contains("RAW") -> stringResource(R.string.format_badge_dng_14bit)
+        else -> stringResource(R.string.format_badge_jpeg_8bit)
     }
     val formatDescText = when {
-        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> "Save both sensor raw data and compressed image"
-        formatUpper.contains("RAW") -> "Save uncompressed raw sensor data (DNG)"
-        else -> "Save standard compressed JPEG image"
+        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> stringResource(R.string.format_desc_jpeg_dng)
+        formatUpper.contains("RAW") -> stringResource(R.string.format_desc_dng)
+        else -> stringResource(R.string.format_desc_jpeg)
     }
     val bufferSizeText = when {
-        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> "Buffer size: ~47 MB/shot"
-        formatUpper.contains("RAW") -> "Buffer size: ~35 MB/shot"
-        else -> "Buffer size: ~12 MB/shot"
+        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> stringResource(R.string.buffer_size_jpeg_dng)
+        formatUpper.contains("RAW") -> stringResource(R.string.buffer_size_dng)
+        else -> stringResource(R.string.buffer_size_jpeg)
     }
 
     Box(
@@ -138,12 +139,12 @@ fun SettingsScreenSuccessNew(
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.arrow_back),
-                                contentDescription = "Назад",
+                                contentDescription = stringResource(R.string.cd_back),
                                 colorFilter = ColorFilter.tint(Color(0xffe4e1e6))
                             )
                         }
                         Text(
-                            text = "Camera Settings",
+                            text = stringResource(R.string.camera_settings_title),
                             color = Color(0xffe4e1e6),
                             lineHeight = 1.33.em,
                             style = TextStyle(
@@ -203,7 +204,7 @@ fun SettingsScreenSuccessNew(
                                         ) {
                                             Image(
                                                 painter = painterResource(id = R.drawable.camera),
-                                                contentDescription = "Разрешение",
+                                                contentDescription = stringResource(R.string.cd_resolution),
                                                 colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                             )
                                         }
@@ -212,7 +213,7 @@ fun SettingsScreenSuccessNew(
                                             modifier = Modifier.weight(weight = 1f)
                                         ) {
                                             Text(
-                                                text = "Photo resolution",
+                                                text = stringResource(R.string.photo_resolution_title),
                                                 color = Color(0xffe4e1e6),
                                                 lineHeight = 1.5.em,
                                                 style = TextStyle(
@@ -223,7 +224,7 @@ fun SettingsScreenSuccessNew(
                                                 modifier = Modifier.fillMaxWidth()
                                             )
                                             Text(
-                                                text = if (settingsUI.resolutionValue.isNotEmpty()) settingsUI.resolutionValue else "Standard resolution",
+                                                text = if (settingsUI.resolutionValue.isNotEmpty()) settingsUI.resolutionValue else stringResource(R.string.standard_resolution),
                                                 color = Color(0xffc3c6d0),
                                                 lineHeight = 1.43.em,
                                                 style = TextStyle(
@@ -255,7 +256,7 @@ fun SettingsScreenSuccessNew(
                                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                                         ) {
                                             Text(
-                                                text = if (settingsUI.resolutionValue.isNotEmpty()) settingsUI.resolutionValue else (settingsUI.resolutionItems.list.firstOrNull() ?: "Select resolution"),
+                                                text = if (settingsUI.resolutionValue.isNotEmpty()) settingsUI.resolutionValue else (settingsUI.resolutionItems.list.firstOrNull() ?: stringResource(R.string.select_resolution)),
                                                 color = Color(0xffd3e2ff),
                                                 style = TextStyle(
                                                     fontSize = 14.sp,
@@ -265,7 +266,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                             Image(
                                                 painter = painterResource(id = R.drawable.arrow_back),
-                                                contentDescription = "Развернуть",
+                                                contentDescription = stringResource(R.string.cd_expand),
                                                 colorFilter = ColorFilter.tint(Color(0xffc3c6d0)),
                                                 modifier = Modifier
                                                     .requiredSize(20.dp)
@@ -340,7 +341,7 @@ fun SettingsScreenSuccessNew(
                                         ) {
                                             Image(
                                                 painter = painterResource(id = R.drawable.film),
-                                                contentDescription = "Формат",
+                                                contentDescription = stringResource(R.string.cd_format),
                                                 colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                             )
                                         }
@@ -354,7 +355,7 @@ fun SettingsScreenSuccessNew(
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Text(
-                                                    text = "Raw / JPEG control",
+                                                    text = stringResource(R.string.raw_jpeg_control_title),
                                                     color = Color(0xffe4e1e6),
                                                     lineHeight = 1.5.em,
                                                     style = TextStyle(
@@ -422,7 +423,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                             Image(
                                                 painter = painterResource(id = R.drawable.arrow_back),
-                                                contentDescription = "Развернуть",
+                                                contentDescription = stringResource(R.string.cd_expand),
                                                 colorFilter = ColorFilter.tint(Color(0xffc3c6d0)),
                                                 modifier = Modifier
                                                     .requiredSize(20.dp)
@@ -472,7 +473,7 @@ fun SettingsScreenSuccessNew(
                                         ) {
                                             Image(
                                                 painter = painterResource(id = R.drawable.info),
-                                                contentDescription = "Инфо",
+                                                contentDescription = stringResource(R.string.cd_info),
                                                 colorFilter = ColorFilter.tint(Color(0xffd3e2ff))
                                             )
                                             Text(
@@ -482,7 +483,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         }
                                         Text(
-                                            text = "Ultra HDR enabled",
+                                            text = stringResource(R.string.ultra_hdr_enabled),
                                             color = Color(0xff80cfff),
                                             style = MaterialTheme.typography.labelSmall
                                         )
@@ -520,7 +521,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.card),
-                                            contentDescription = "Память",
+                                            contentDescription = stringResource(R.string.cd_storage),
                                             colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                         )
                                     }
@@ -529,7 +530,7 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier.weight(weight = 1f)
                                     ) {
                                         Text(
-                                            text = "Storage location",
+                                            text = stringResource(R.string.storage_location_title),
                                             color = Color(0xffe4e1e6),
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
@@ -559,7 +560,7 @@ fun SettingsScreenSuccessNew(
                                             .padding(horizontal = 16.dp, vertical = 6.dp)
                                     ) {
                                         Text(
-                                            text = "Change",
+                                            text = stringResource(R.string.change_button),
                                             color = Color(0xffd3e2ff),
                                             textAlign = TextAlign.Center,
                                             style = MaterialTheme.typography.labelMedium
@@ -621,7 +622,7 @@ fun SettingsScreenSuccessNew(
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                         Text(
-                                            text = "${(settingsUI.storageProgress * 100).toInt()}% used",
+                                            text = stringResource(R.string.storage_percent_used, (settingsUI.storageProgress * 100).toInt()),
                                             color = Color(0xffd3e2ff),
                                             style = MaterialTheme.typography.labelSmall
                                         )
@@ -665,7 +666,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.screen),
-                                            contentDescription = "Видоискатель",
+                                            contentDescription = stringResource(R.string.cd_viewfinder),
                                             colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                         )
                                     }
@@ -674,7 +675,7 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier.weight(weight = 1f)
                                     ) {
                                         Text(
-                                            text = "Full screen viewfinder",
+                                            text = stringResource(R.string.full_screen_viewfinder_title),
                                             color = Color(0xffe4e1e6),
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
@@ -684,7 +685,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                         Text(
-                                            text = "19.5:9 crop preview instead of\nstandard 4:3",
+                                            text = stringResource(R.string.full_screen_viewfinder_desc),
                                             color = Color(0xffc3c6d0),
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
@@ -729,7 +730,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.grid),
-                                            contentDescription = "Сетка",
+                                            contentDescription = stringResource(R.string.cd_grid),
                                             colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                         )
                                     }
@@ -738,7 +739,7 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier.weight(weight = 1f)
                                     ) {
                                         Text(
-                                            text = "Grid and level",
+                                            text = stringResource(R.string.grid_and_level_title),
                                             color = Color(0xffe4e1e6),
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
@@ -748,7 +749,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                         Text(
-                                            text = "Tilt level indicator and 3×3\ngolden ratio guide",
+                                            text = stringResource(R.string.grid_and_level_desc),
                                             color = Color(0xffc3c6d0),
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
@@ -793,7 +794,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.location),
-                                            contentDescription = "Геометки",
+                                            contentDescription = stringResource(R.string.cd_location),
                                             colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                         )
                                     }
@@ -802,7 +803,7 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier.weight(weight = 1f)
                                     ) {
                                         Text(
-                                            text = "Save location",
+                                            text = stringResource(R.string.save_location_title),
                                             color = Color(0xffe4e1e6),
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
@@ -812,7 +813,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                         Text(
-                                            text = "Add GPS coordinates to photo\nEXIF metadata",
+                                            text = stringResource(R.string.save_location_desc),
                                             color = Color(0xffc3c6d0),
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
@@ -860,7 +861,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.screen),
-                                            contentDescription = "Тема",
+                                            contentDescription = stringResource(R.string.cd_theme),
                                             colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
                                         )
                                     }
@@ -869,7 +870,7 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier.weight(weight = 1f)
                                     ) {
                                         Text(
-                                            text = "App Theme",
+                                            text = stringResource(R.string.app_theme_title),
                                             color = Color(0xffe4e1e6),
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
@@ -879,7 +880,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                         Text(
-                                            text = "Select application visual style and color mode",
+                                            text = stringResource(R.string.app_theme_desc),
                                             color = Color(0xffc3c6d0),
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
@@ -909,7 +910,7 @@ fun SettingsScreenSuccessNew(
                                             .padding(horizontal = 16.dp, vertical = 14.dp)
                                     ) {
                                         Text(
-                                            text = if (settingsUI.themeValue.isNotEmpty()) settingsUI.themeValue else "Dark (Default)",
+                                            text = if (settingsUI.themeValue.isNotEmpty()) settingsUI.themeValue else stringResource(R.string.theme_dark_default),
                                             color = Color(0xffd3e2ff),
                                             style = TextStyle(
                                                 fontSize = 14.sp,
@@ -919,7 +920,7 @@ fun SettingsScreenSuccessNew(
                                         )
                                         Image(
                                             painter = painterResource(id = R.drawable.arrow_back),
-                                            contentDescription = "Развернуть",
+                                            contentDescription = stringResource(R.string.cd_expand),
                                             colorFilter = ColorFilter.tint(Color(0xffc3c6d0)),
                                             modifier = Modifier
                                                 .requiredSize(20.dp)
@@ -934,7 +935,12 @@ fun SettingsScreenSuccessNew(
                                             .background(color = Color(0xff1f1f22))
                                     ) {
                                         val themeList = settingsUI.themeItems.list.ifEmpty {
-                                            listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast")
+                                            listOf(
+                                                stringResource(R.string.theme_dark_default),
+                                                stringResource(R.string.theme_amoled_black),
+                                                stringResource(R.string.theme_system_dark),
+                                                stringResource(R.string.theme_high_contrast)
+                                            )
                                         }
                                         themeList.forEach { themeItem ->
                                             DropdownMenuItem(
@@ -994,11 +1000,11 @@ fun SettingsScreenSuccessNew(
                                 ) {
                                     Image(
                                         painter = painterResource(id = R.drawable.reset),
-                                        contentDescription = "Сброс",
+                                        contentDescription = stringResource(R.string.cd_reset),
                                         colorFilter = ColorFilter.tint(Color(0xffffb4ab))
                                     )
                                     Text(
-                                        text = "Reset camera settings",
+                                        text = stringResource(R.string.reset_camera_settings),
                                         color = Color(0xffffb4ab),
                                         textAlign = TextAlign.Center,
                                         lineHeight = 1.43.em,
@@ -1012,7 +1018,7 @@ fun SettingsScreenSuccessNew(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "YES Flash Camera",
+                                        text = stringResource(R.string.yes_flash_camera),
                                         color = Color(0xffc3c6d0).copy(alpha = 0.6f),
                                         lineHeight = 1.45.em,
                                         style = MaterialTheme.typography.labelSmall
@@ -1024,7 +1030,7 @@ fun SettingsScreenSuccessNew(
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                     Text(
-                                        text = "Version ${BuildConfig.VERSION_NAME}",
+                                        text = stringResource(R.string.app_version_format, BuildConfig.VERSION_NAME),
                                         color = Color(0xffc3c6d0).copy(alpha = 0.6f),
                                         lineHeight = 1.45.em,
                                         style = MaterialTheme.typography.labelSmall

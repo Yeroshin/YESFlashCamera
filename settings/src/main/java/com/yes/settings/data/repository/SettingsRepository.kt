@@ -1,6 +1,5 @@
 package com.yes.settings.data.repository
 
-import android.graphics.ImageFormat
 import android.os.Environment
 import android.os.StatFs
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -18,9 +17,7 @@ import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.io.File
 
 class SettingsRepository(
     private val settingsDataSource: SettingsDataSource
@@ -34,164 +31,182 @@ class SettingsRepository(
         val THEMEVALUE = stringPreferencesKey("themeValue")
     }
 
-    suspend fun setSettings(settings: Settings) {
-        setResolutionValue(settings.resolutionValue)
-        setResolutions(settings.resolutionItems)
-        setFullscreen(settings.fullScreen)
-        setImageFormat(settings.imageFormat)
-        setFilePath(settings.filePath)
-        setThemeValue(settings.themeValue)
+    private val defaultDcimPath by lazy {
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath
     }
 
-    suspend fun subscribeSettings(): Flow<Settings> {
+    private val defaultExternalStoragePath by lazy {
+        Environment.getExternalStorageDirectory().absolutePath
+    }
+
+    suspend fun setSettings(settings: Settings) {
+        settingsDataSource.edit { preferences ->
+            // FULLSCREEN
+            if (settings.fullScreen != null) {
+                preferences[FULLSCREEN] = settings.fullScreen
+            } else {
+                preferences.remove(FULLSCREEN)
+            }
+
+            // RESOLUTIONVALUE
+            if (settings.resolutionValue != null) {
+                preferences[RESOLUTIONVALUE] = "${settings.resolutionValue.width}x${settings.resolutionValue.height}"
+            } else {
+                preferences.remove(RESOLUTIONVALUE)
+            }
+
+            // RESOLUTIONS
+            if (settings.resolutionItems != null) {
+                preferences[RESOLUTIONS] = settings.resolutionItems.joinToString(",") { "${it.height}x${it.width}" }
+            } else {
+                preferences.remove(RESOLUTIONS)
+            }
+
+            // IMGFORMAT
+            if (settings.imageFormat != null) {
+                preferences[IMGFORMAT] = when (settings.imageFormat) {
+                    ImgFormat.JPEG -> "jpeg"
+                    ImgFormat.RAW -> "raw"
+                    ImgFormat.JPEGRAW -> "jpegRaw"
+                }
+            } else {
+                preferences.remove(IMGFORMAT)
+            }
+
+            // FILEPATH
+            if (settings.filePath != null) {
+                preferences[FILEPATH] = settings.filePath
+            } else {
+                preferences.remove(FILEPATH)
+            }
+
+            // THEMEVALUE
+            if (settings.themeValue != null) {
+                preferences[THEMEVALUE] = settings.themeValue
+            } else {
+                preferences.remove(THEMEVALUE)
+            }
+        }
+    }
+
+    fun subscribeSettings(): Flow<Settings> {
         return combine(
-            combine(
-                subscribeResolutionValue(),
-                subscribeResolutions(),
-                subscribeFullscreen()
-            ) { resVal, resList, fs -> Triple(resVal, resList, fs) },
-            combine(
-                subscribeImageFormat(),
-                subscribeFilePath(),
-                subscribeThemeValue()
-            ) { imgFmt, path, theme -> Triple(imgFmt, path, theme) }
-        ) { t1, t2 ->
+            subscribeResolutionValue(),
+            subscribeResolutions(),
+            subscribeFullscreen(),
+            subscribeImageFormat(),
+            subscribeFilePath(),
+            subscribeThemeValue()
+        ) { array ->
             Settings(
-                resolutionValue = t1.first,
-                resolutionItems = t1.second,
-                fullScreen = t1.third,
-                imageFormat = t2.first,
-                filePath = t2.second,
-                themeValue = t2.third
+                resolutionValue = array[0] as Dimensions?,
+                resolutionItems = @Suppress("UNCHECKED_CAST") (array[1] as List<Dimensions>?),
+                fullScreen = array[2] as Boolean?,
+                imageFormat = array[3] as ImgFormat?,
+                filePath = array[4] as String?,
+                themeValue = array[5] as String?
             )
         }
     }
 
-    private suspend fun setFullscreen(fullscreen: Boolean?) {
-        fullscreen?.let { it ->
+    suspend fun setFullscreen(fullscreen: Boolean?) {
+        fullscreen?.let {
             settingsDataSource.set(it, FULLSCREEN)
         } ?: run {
             settingsDataSource.remove(FULLSCREEN)
         }
-
     }
 
-    private suspend fun subscribeFullscreen(): Flow<Boolean?> {
+    fun subscribeFullscreen(): Flow<Boolean?> {
         return settingsDataSource.subscribe(FULLSCREEN, null)
-
     }
 
-    private suspend fun setResolutionValue(dimension: Dimensions?) {
-        dimension?.let { it ->
-            settingsDataSource.set(
-                it.width.toString() + "x" + it.height.toString(),
-                RESOLUTIONVALUE
-            )
+    suspend fun setResolutionValue(dimension: Dimensions?) {
+        dimension?.let {
+            settingsDataSource.set("${it.width}x${it.height}", RESOLUTIONVALUE)
         } ?: run {
             settingsDataSource.remove(RESOLUTIONVALUE)
         }
-
     }
 
-    private suspend fun subscribeResolutionValue(): Flow<Dimensions?> {
-        val tmp = settingsDataSource.subscribe(RESOLUTIONVALUE, null).first()
-        val t = tmp
+    fun subscribeResolutionValue(): Flow<Dimensions?> {
         return settingsDataSource.subscribe(RESOLUTIONVALUE, null)
-            .map {
-                it?.split("x")
+            .map { str ->
+                str?.split("x")
                     ?.takeIf { it.size == 2 }
                     ?.let { parts ->
-                        Dimensions(parts[0].toInt(), parts[1].toInt())
+                        val width = parts[0].toIntOrNull()
+                        val height = parts[1].toIntOrNull()
+                        if (width != null && height != null) Dimensions(width, height) else null
                     }
             }
-
     }
 
-    private suspend fun setResolutions(dimensions: List<Dimensions>?) {
-        dimensions?.let { it ->
+    suspend fun setResolutions(dimensions: List<Dimensions>?) {
+        dimensions?.let { list ->
             settingsDataSource.set(
-                it.joinToString(",") { it.height.toString() + "x" + it.width.toString() },
+                list.joinToString(",") { "${it.height}x${it.width}" },
                 RESOLUTIONS
             )
         } ?: run {
             settingsDataSource.remove(RESOLUTIONS)
         }
-
     }
 
-    private suspend fun subscribeResolutions(): Flow<List<Dimensions>?> {
-        return settingsDataSource.subscribe(RESOLUTIONS, "3000x4000,3456x4608,4224x5632,4928x6560,6000x8000,6144x8192,6936x9248,9000x12000")
-            .map {
-                it?.split(",")
-                    ?.map { resolution ->
-                        val parts = resolution.trim().split("x")
-                        if (parts.size == 2) {
-                            val width = parts[1].trim().toInt()
-                            val height = parts[0].trim().toInt()
-                            Dimensions(width, height)
-                        } else {
-                            null // или обработать ошибку по-другому
-                        }
-                    }
-                    ?.filterNotNull()
-            }
-
+    fun subscribeResolutions(): Flow<List<Dimensions>?> {
+        return settingsDataSource.subscribe(
+            RESOLUTIONS,
+            "3000x4000,3456x4608,4224x5632,4928x6560,6000x8000,6144x8192,6936x9248,9000x12000"
+        ).map { str ->
+            str?.split(",")
+                ?.mapNotNull { resolution ->
+                    val parts = resolution.trim().split("x")
+                    if (parts.size == 2) {
+                        val height = parts[0].trim().toIntOrNull()
+                        val width = parts[1].trim().toIntOrNull()
+                        if (width != null && height != null) Dimensions(width, height) else null
+                    } else null
+                }
+        }
     }
 
-    private suspend fun setImageFormat(imageFormat: ImgFormat?) {
+    suspend fun setImageFormat(imageFormat: ImgFormat?) {
         imageFormat?.let {
-            when (it) {
-                ImgFormat.JPEG -> settingsDataSource.set(
-                    "jpeg",
-                    IMGFORMAT
-                )
-
-                ImgFormat.RAW -> settingsDataSource.set(
-                    "raw",
-                    IMGFORMAT
-                )
-
-                ImgFormat.JPEGRAW -> settingsDataSource.set(
-                    "jpegRaw",
-                    IMGFORMAT
-                )
+            val strVal = when (it) {
+                ImgFormat.JPEG -> "jpeg"
+                ImgFormat.RAW -> "raw"
+                ImgFormat.JPEGRAW -> "jpegRaw"
             }
+            settingsDataSource.set(strVal, IMGFORMAT)
         } ?: run {
             settingsDataSource.remove(IMGFORMAT)
         }
-
     }
 
-    private suspend fun subscribeImageFormat(): Flow<ImgFormat?> {
+    fun subscribeImageFormat(): Flow<ImgFormat?> {
         return settingsDataSource.subscribe(IMGFORMAT, "jpeg")
             .map {
                 when (it) {
-                    "jpeg" -> ImgFormat.JPEG
-                    "jpegRaw" -> ImgFormat.JPEGRAW
                     "raw" -> ImgFormat.RAW
+                    "jpegRaw" -> ImgFormat.JPEGRAW
                     else -> ImgFormat.JPEG
                 }
             }
-
     }
-    private suspend fun setFilePath(filePath:String?) {
+
+    suspend fun setFilePath(filePath: String?) {
         filePath?.let {
-            settingsDataSource.set(
-                filePath,
-                FILEPATH
-            )
+            settingsDataSource.set(it, FILEPATH)
         } ?: run {
             settingsDataSource.remove(FILEPATH)
         }
-
-    }
-    private suspend fun subscribeFilePath(): Flow<String?> {
-        val dcimDir: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-        val path:String = dcimDir.absolutePath
-        return settingsDataSource.subscribe(FILEPATH, path)
     }
 
-    private suspend fun setThemeValue(themeValue: String?) {
+    fun subscribeFilePath(): Flow<String?> {
+        return settingsDataSource.subscribe(FILEPATH, defaultDcimPath)
+    }
+
+    suspend fun setThemeValue(themeValue: String?) {
         themeValue?.let {
             settingsDataSource.set(it, THEMEVALUE)
         } ?: run {
@@ -199,7 +214,7 @@ class SettingsRepository(
         }
     }
 
-    private suspend fun subscribeThemeValue(): Flow<String?> {
+    fun subscribeThemeValue(): Flow<String?> {
         return settingsDataSource.subscribe(THEMEVALUE, "Dark (Default)")
     }
 
@@ -208,11 +223,11 @@ class SettingsRepository(
         resolution: Dimensions? = null,
         imgFormat: ImgFormat? = null
     ): StorageInfo {
-        val path = customPath ?: Environment.getExternalStorageDirectory().absolutePath
+        val path = customPath ?: defaultExternalStoragePath
         val stat = try {
             StatFs(path)
         } catch (_: Exception) {
-            StatFs(Environment.getExternalStorageDirectory().absolutePath)
+            StatFs(defaultExternalStoragePath)
         }
         val blockSize = stat.blockSizeLong
         val totalBytes = stat.blockCountLong * blockSize

@@ -33,7 +33,7 @@ class SettingsViewModel(
                         val storageInfo = getStorageInfoUseCase(
                             GetStorageInfoUseCase.Params(
                                 path = settings.filePath,
-                                resolution = settings.resolutionValue,
+                                resolution = settings.resolutionValue ?: settings.resolutionItems?.firstOrNull(),
                                 imageFormat = settings.imageFormat
                             )
                         )
@@ -80,7 +80,7 @@ class SettingsViewModel(
                 val storageInfo = getStorageInfoUseCase(
                     GetStorageInfoUseCase.Params(
                         path = domainSettings.filePath,
-                        resolution = domainSettings.resolutionValue,
+                        resolution = domainSettings.resolutionValue ?: domainSettings.resolutionItems?.firstOrNull(),
                         imageFormat = domainSettings.imageFormat
                     )
                 )
