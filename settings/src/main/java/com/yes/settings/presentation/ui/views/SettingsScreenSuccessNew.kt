@@ -108,11 +108,7 @@ fun SettingsScreenSuccessNew(
         formatUpper.contains("RAW") -> stringResource(R.string.format_desc_dng)
         else -> stringResource(R.string.format_desc_jpeg)
     }
-    val bufferSizeText = when {
-        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> stringResource(R.string.buffer_size_jpeg_dng)
-        formatUpper.contains("RAW") -> stringResource(R.string.buffer_size_dng)
-        else -> stringResource(R.string.buffer_size_jpeg)
-    }
+    val bufferSizeText = settingsUI.bufferSizeText
 
     Box(
         modifier = modifier

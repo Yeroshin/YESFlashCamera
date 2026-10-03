@@ -13,6 +13,7 @@ data class SettingsUI(
     val storageProgress: Float = 0.55f,
     val storagePath: String = "/DCIM/Camera/",
     val remainingShotsText: String = "Approx. 3,155 shots",
+    val bufferSizeText: String = "Buffer size: ~12 MB/shot",
     val themeValue: String = "Dark (Default)",
     val themeItems: ImmutableCollection<String> = ImmutableCollection(listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast"))
 )

@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.model
 
+import android.graphics.Bitmap
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import kotlinx.collections.immutable.persistentListOf
@@ -34,6 +35,7 @@ data class CharacteristicsUI(
     val resolution: String? = null,
     val aspectRatio: Dimensions? = null,
     val isFocused: Boolean = false,
+    val capturedBitmap: Bitmap? = null,
 
     // Flags for Auto/Manual status from Domain
     val isShutterAuto: Boolean = true,

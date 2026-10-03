@@ -1,5 +1,6 @@
 package com.yes.camera.domain.model
 
+import android.graphics.Bitmap
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
 
@@ -30,5 +31,6 @@ data class Characteristics(
     val actualShutter: Long? = null,
     val actualFocusDistance: Float? = null,
     val actualWbKelvin: Int? = null,
-    val isFocused: Boolean = false
+    val isFocused: Boolean = false,
+    val capturedBitmap: Bitmap? = null
 )

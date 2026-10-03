@@ -105,12 +105,13 @@ class CameraViewModel(
         withUseCaseScope(
             onError = { Log.e(TAG, "Single capture error: ${it.message}") },
             block = {
-                val bitmap = singleCaptureUseCase()
-                if (bitmap != null) {
-                    setState {
-                        copy(
-                            state = CameraState.CapturedPreview(bitmap)
-                        )
+                singleCaptureUseCase().collect { bitmap ->
+                    if (bitmap != null) {
+                        setState {
+                            copy(
+                                state = CameraState.CapturedPreview(bitmap)
+                            )
+                        }
                     }
                 }
             }
@@ -128,6 +129,7 @@ class CameraViewModel(
     }
 
     private fun returnToSuccessState() {
+        _characteristicsInternal.update { it.copy(capturedBitmap = null) }
         setState {
             copy(
                 state = CameraState.Success(
@@ -193,6 +195,13 @@ class CameraViewModel(
                         .collect { domainCharacteristics ->
                             _characteristicsInternal.update { currentUi ->
                                 mapper.merge(currentUi, domainCharacteristics)
+                            }
+                            if (domainCharacteristics.capturedBitmap != null) {
+                                setState {
+                                    copy(
+                                        state = CameraState.CapturedPreview(domainCharacteristics.capturedBitmap)
+                                    )
+                                }
                             }
                         }
                 }

@@ -40,6 +40,9 @@ class MapperUI {
             remainingShotsText = storageInfo?.let {
                 "Approx. ${it.remainingShots} shots (${it.avgShotSizeFormatted}/shot)"
             } ?: "Approx. 3,155 shots",
+            bufferSizeText = storageInfo?.let {
+                "Buffer size: ~${it.avgShotSizeFormatted}/shot"
+            } ?: "Buffer size: ~12 MB/shot",
             themeValue = settings.themeValue?.ifEmpty { "Dark (Default)" } ?: "Dark (Default)",
             themeItems = ImmutableCollection(
                 list = listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast")
