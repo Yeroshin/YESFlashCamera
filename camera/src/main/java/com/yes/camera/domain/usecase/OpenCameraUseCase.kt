@@ -1,6 +1,7 @@
 package com.yes.camera.domain.usecase
 
 import android.graphics.SurfaceTexture
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.yes.camera.data.repository.CameraRepository
@@ -39,6 +40,9 @@ class OpenCameraUseCase(
 
         // 4. Сохраняем список всех доступных разрешений
         settingsRepository.setResolutions(hardwareInfo.resolutionItems)
+
+        // 4.1. Записываем актуальную поддержку RAW/DNG в настройки
+        settingsRepository.setSupportsRaw(hardwareInfo.supportsRaw)
 
         // 5. Запускаем сессию с валидными данными
         cameraRepository.startSession(

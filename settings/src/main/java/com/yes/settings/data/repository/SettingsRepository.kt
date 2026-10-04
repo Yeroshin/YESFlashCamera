@@ -1,5 +1,8 @@
 package com.yes.settings.data.repository
 
+import android.content.Context
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.os.Environment
 import android.os.StatFs
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -20,8 +23,21 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 class SettingsRepository(
-    private val settingsDataSource: SettingsDataSource
+    private val settingsDataSource: SettingsDataSource,
+    private val context: Context
 ) {
+    private fun isDeviceSupportsRaw(): Boolean {
+        return try {
+            val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            manager.cameraIdList.any { id ->
+                val chars = manager.getCameraCharacteristics(id)
+                val caps = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+                caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
     object PreferencesKeys {
         val RESOLUTIONS = stringPreferencesKey("resolutionItems")
         val RESOLUTIONVALUE = stringPreferencesKey("resolutionValue")
@@ -29,6 +45,7 @@ class SettingsRepository(
         val IMGFORMAT = stringPreferencesKey("imgFormat")
         val FILEPATH = stringPreferencesKey("filePath")
         val THEMEVALUE = stringPreferencesKey("themeValue")
+        val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
     }
 
     private val defaultDcimPath by lazy {
@@ -66,8 +83,8 @@ class SettingsRepository(
             if (settings.imageFormat != null) {
                 preferences[IMGFORMAT] = when (settings.imageFormat) {
                     ImgFormat.JPEG -> "jpeg"
-                    ImgFormat.RAW -> "raw"
-                    ImgFormat.JPEGRAW -> "jpegRaw"
+                    ImgFormat.DNG -> "dng"
+                    ImgFormat.JPEGDNG -> "jpegDng"
                 }
             } else {
                 preferences.remove(IMGFORMAT)
@@ -96,7 +113,8 @@ class SettingsRepository(
             subscribeFullscreen(),
             subscribeImageFormat(),
             subscribeFilePath(),
-            subscribeThemeValue()
+            subscribeThemeValue(),
+            subscribeSupportsRaw()
         ) { array ->
             Settings(
                 resolutionValue = array[0] as Dimensions?,
@@ -104,9 +122,14 @@ class SettingsRepository(
                 fullScreen = array[2] as Boolean?,
                 imageFormat = array[3] as ImgFormat?,
                 filePath = array[4] as String?,
-                themeValue = array[5] as String?
+                themeValue = array[5] as String?,
+                supportsRaw = array[6] as Boolean?
             )
         }
+    }
+
+    fun subscribeSupportsRaw(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, isDeviceSupportsRaw())
     }
 
     suspend fun setFullscreen(fullscreen: Boolean?) {
@@ -174,8 +197,8 @@ class SettingsRepository(
         imageFormat?.let {
             val strVal = when (it) {
                 ImgFormat.JPEG -> "jpeg"
-                ImgFormat.RAW -> "raw"
-                ImgFormat.JPEGRAW -> "jpegRaw"
+                ImgFormat.DNG -> "dng"
+                ImgFormat.JPEGDNG -> "jpegDng"
             }
             settingsDataSource.set(strVal, IMGFORMAT)
         } ?: run {
@@ -186,9 +209,9 @@ class SettingsRepository(
     fun subscribeImageFormat(): Flow<ImgFormat?> {
         return settingsDataSource.subscribe(IMGFORMAT, "jpeg")
             .map {
-                when (it) {
-                    "raw" -> ImgFormat.RAW
-                    "jpegRaw" -> ImgFormat.JPEGRAW
+                when (it?.lowercase()) {
+                    "dng", "raw" -> ImgFormat.DNG
+                    "jpegdng", "jpeg_dng", "jpeg+dng", "jpegraw" -> ImgFormat.JPEGDNG
                     else -> ImgFormat.JPEG
                 }
             }
@@ -241,8 +264,8 @@ class SettingsRepository(
         val megapixels = (width.toFloat() * height.toFloat()) / 1_000_000f
 
         val mbPerMp = when (imgFormat) {
-            ImgFormat.RAW -> 2.0f
-            ImgFormat.JPEGRAW -> 2.35f
+            ImgFormat.DNG -> 2.0f
+            ImgFormat.JPEGDNG -> 2.35f
             ImgFormat.JPEG, null -> 0.35f
         }
 

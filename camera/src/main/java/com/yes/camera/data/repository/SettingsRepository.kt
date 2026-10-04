@@ -23,6 +23,7 @@ import com.yes.camera.data.repository.SettingsRepository.PreferencesKeys.WBVALUE
 import com.yes.camera.domain.model.Characteristics
 import com.yes.shared.data.dataSource.SettingsDataSource
 import com.yes.shared.domain.Dimensions
+import com.yes.shared.domain.ImgFormat
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -45,6 +46,16 @@ class SettingsRepository(
         val TOUCHPOINT = stringPreferencesKey("touchPoint")
         val FULLSCREEN = booleanPreferencesKey("fullScreen")
         val FILEPATH = stringPreferencesKey("filePath")
+        val IMGFORMAT = stringPreferencesKey("imgFormat")
+        val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
+    }
+
+    suspend fun getSupportsRaw(): Boolean? {
+        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, null).first()
+    }
+
+    suspend fun setSupportsRaw(supportsRaw: Boolean) {
+        settingsDataSource.set(supportsRaw, PreferencesKeys.SUPPORTS_RAW)
     }
 
     private val defaultDcimPath by lazy {
@@ -67,6 +78,26 @@ class SettingsRepository(
         }
     }
 
+    suspend fun getImgFormat(): ImgFormat {
+        val formatStr = settingsDataSource.subscribe(PreferencesKeys.IMGFORMAT, "jpeg").first()
+        return when (formatStr?.lowercase()) {
+            "dng", "raw" -> ImgFormat.DNG
+            "jpegdng", "jpeg_dng", "jpeg+dng", "jpegraw" -> ImgFormat.JPEGDNG
+            else -> ImgFormat.JPEG
+        }
+    }
+
+    fun subscribeImageFormat(): Flow<ImgFormat?> {
+        return settingsDataSource.subscribe(PreferencesKeys.IMGFORMAT, "jpeg")
+            .map {
+                when (it?.lowercase()) {
+                    "dng", "raw" -> ImgFormat.DNG
+                    "jpegdng", "jpeg_dng", "jpeg+dng", "jpegraw" -> ImgFormat.JPEGDNG
+                    else -> ImgFormat.JPEG
+                }
+            }
+    }
+
     suspend fun getCharacteristics(): Characteristics {
         return Characteristics(
             backCamera = getBackCamera(),
@@ -78,6 +109,7 @@ class SettingsRepository(
             focusMode = getFocusMode(),
             fullscreen = getFullScreen(),
             resolution = getResolutionValue() ?: Dimensions(0, 0),
+            imgFormat = getImgFormat(),
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
@@ -87,11 +119,13 @@ class SettingsRepository(
     fun subscribeSettings(): Flow<Characteristics> {
         return combine(
             subscribeFullScreen(),
-            subscribeResolutionValue()
-        ) { fullscreen, resolution ->
+            subscribeResolutionValue(),
+            subscribeImageFormat()
+        ) { fullscreen, resolution, imgFormat ->
             Characteristics(
                 fullscreen = fullscreen ?: true,
-                resolution = resolution ?: Dimensions(0, 0)
+                resolution = resolution ?: Dimensions(0, 0),
+                imgFormat = imgFormat ?: ImgFormat.JPEG
             )
         }
     }

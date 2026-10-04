@@ -1,5 +1,6 @@
 package com.yes.settings.di.module
 
+import android.content.Context
 import com.yes.settings.data.repository.SettingsRepository
 import com.yes.settings.domain.usecase.GetSettingsUseCase
 import com.yes.settings.domain.usecase.GetStorageInfoUseCase
@@ -44,10 +45,12 @@ class SettingsModule {
 
     @Provides
     fun providesSettingsRepository(
-        settingsDataSource: SettingsDataSource
+        settingsDataSource: SettingsDataSource,
+        context: Context
     ): SettingsRepository {
         return SettingsRepository(
-            settingsDataSource
+            settingsDataSource,
+            context
         )
     }
 

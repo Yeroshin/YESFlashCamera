@@ -90,5 +90,6 @@ dependencies {
 
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
 }

@@ -9,5 +9,6 @@ data class Settings(
     val fullScreen: Boolean? = true,
     val imageFormat: ImgFormat? = null,
     val filePath: String? = null,
-    val themeValue: String? = null
+    val themeValue: String? = null,
+    val supportsRaw: Boolean? = null
 )

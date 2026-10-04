@@ -32,5 +32,6 @@ data class Characteristics(
     val actualFocusDistance: Float? = null,
     val actualWbKelvin: Int? = null,
     val isFocused: Boolean = false,
-    val capturedBitmap: Bitmap? = null
+    val capturedBitmap: Bitmap? = null,
+    val supportsRaw: Boolean = false
 )

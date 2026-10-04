@@ -24,14 +24,18 @@ class MapperUI {
                 } ?: run { emptyList() }
             ),
             fullScreen = settings.fullScreen ?: run { true },
-            imgFormatValue = when (settings.imageFormat) {
-                ImgFormat.JPEG -> "JPEG"
-                ImgFormat.RAW -> "RAW"
-                ImgFormat.JPEGRAW -> "JPEG+RAW"
-                null -> "JPEG"
+            imgFormatValue = if (settings.supportsRaw != false) {
+                when (settings.imageFormat) {
+                    ImgFormat.JPEG -> "JPEG"
+                    ImgFormat.DNG -> "DNG"
+                    ImgFormat.JPEGDNG -> "JPEG+DNG"
+                    null -> "JPEG"
+                }
+            } else {
+                "JPEG"
             },
             imgFormatItems = ImmutableCollection(
-                list = listOf("JPEG", "RAW", "JPEG+RAW")
+                list = if (settings.supportsRaw != false) listOf("JPEG", "DNG", "JPEG+DNG") else listOf("JPEG")
             ),
             availableStorageText = storageInfo?.let { "${it.availableFormatted} available" } ?: "142 GB available",
             totalStorageText = storageInfo?.let { "${it.totalFormatted} total" } ?: "256 GB total",
@@ -59,8 +63,8 @@ class MapperUI {
             fullScreen = settingsUI.fullScreen,
             imageFormat = when (settingsUI.imgFormatValue) {
                 "JPEG" -> ImgFormat.JPEG
-                "RAW" -> ImgFormat.RAW
-                "JPEG+RAW", "JPEG + RAW" -> ImgFormat.JPEGRAW
+                "DNG", "RAW" -> ImgFormat.DNG
+                "JPEG+DNG", "JPEG + DNG", "JPEG+RAW", "JPEG + RAW" -> ImgFormat.JPEGDNG
                 else -> ImgFormat.JPEG
             },
             filePath = settingsUI.storagePath,

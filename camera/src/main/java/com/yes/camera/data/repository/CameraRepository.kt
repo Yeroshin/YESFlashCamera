@@ -19,6 +19,7 @@ import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureFailure
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
@@ -26,7 +27,9 @@ import android.hardware.camera2.params.RggbChannelVector
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.Image
 import android.media.ImageReader
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
@@ -37,6 +40,7 @@ import android.util.Log
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.documentfile.provider.DocumentFile
 import com.yes.camera.data.repository.AutoExposure.getIsoPriorityWithClassicSteps
 import com.yes.camera.data.repository.AutoExposure.getShutterPriorityWithClassicSteps
 import com.yes.camera.domain.model.Characteristics
@@ -49,6 +53,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -82,6 +87,11 @@ class CameraRepository(
 
     private val _characteristicsFlow = MutableStateFlow<Characteristics?>(null)
     fun subscribeCameraSettings(): StateFlow<Characteristics?> = _characteristicsFlow
+
+    fun clearCapturedBitmap() {
+        _characteristicsFlow.update { it?.copy(capturedBitmap = null) }
+        lastCapturedBitmap = null
+    }
 
     private val histogramDataBuffer = ByteArray(320 * 240)
     private val _histogramBufferFlow = MutableSharedFlow<ByteArray>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -203,7 +213,24 @@ class CameraRepository(
         }
     }
 
-    private val listenerRaw = ImageReader.OnImageAvailableListener { it.acquireLatestImage()?.close() }
+    private var lastRawImage: Image? = null
+    private var lastCaptureResult: TotalCaptureResult? = null
+    private var rawCaptureDeferred: CompletableDeferred<Image?>? = null
+
+    private val listenerRaw = ImageReader.OnImageAvailableListener { reader ->
+        reader.acquireNextImage()?.let { image ->
+            try {
+                lastRawImage?.close()
+                lastRawImage = image
+                if (rawCaptureDeferred?.isActive == true) {
+                    rawCaptureDeferred?.complete(image)
+                }
+            } catch (e: Exception) {
+                Log.e("CameraRepository", "Error processing RAW image: ${e.message}")
+                image.close()
+            }
+        }
+    }
 
     @SuppressLint("MissingPermission")
     fun openCamera(backCamera: Boolean): StateFlow<Characteristics?> {
@@ -241,7 +268,9 @@ class CameraRepository(
         val minFocus = cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val maxFocus = cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         val awbModes = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
-
+        val caps = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        val supportsRaw = caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+        val allrSizes = map?.getOutputSizes(ImageFormat.RAW_SENSOR)
         return Characteristics(
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
@@ -250,7 +279,8 @@ class CameraRepository(
             maxFocusValue = maxFocus ?: 0f,
             resolutionItems = allSizes?.map { Dimensions(it.width, it.height) } ?: emptyList(),
             resolution = Dimensions(0, 0),
-            focusMode = CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+            focusMode = CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE,
+            supportsRaw = supportsRaw
         )
     }
 
@@ -277,16 +307,19 @@ class CameraRepository(
         imageReaderRaw = ImageReader.newInstance(
             width,
             height,
-            ImageFormat.YUV_420_888,
+            ImageFormat.RAW_SENSOR,
             3).apply { setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler) }
         captureSurfaceRaw = imageReaderRaw.surface
 
-        val configs = listOf(
-            previewSurface,
-            histogramSurface,
-            captureSurfaceJpeg,
-            captureSurfaceRaw
-        ).map { OutputConfiguration(it) }
+        val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+
+        val surfaces = mutableListOf(previewSurface, histogramSurface, captureSurfaceJpeg)
+        if (supportsRaw) {
+            surfaces.add(captureSurfaceRaw)
+        }
+
+        val configs = surfaces.map { OutputConfiguration(it) }
         val config = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
             configs,
@@ -297,7 +330,6 @@ class CameraRepository(
                 persistentBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL).apply {
                     addTarget(previewSurface)
                     addTarget(histogramSurface)
-                  //  addTarget(captureSurfaceJpeg)
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     val fullSensor = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
                     set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
@@ -307,9 +339,15 @@ class CameraRepository(
                 lastCharacteristics = characteristics
                 applyState(characteristics, forceFlush = true)
             }
-            override fun onConfigureFailed(session: CameraCaptureSession) {}
+            override fun onConfigureFailed(session: CameraCaptureSession) {
+                Log.e("CameraRepository", "Camera session configuration FAILED!")
+            }
         })
-        cameraDevice.createCaptureSession(config)
+        try {
+            cameraDevice.createCaptureSession(config)
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "Create capture session error: ${e.message}", e)
+        }
     }
 
     private val myScope = CoroutineScope(SupervisorJob() + cameraThreadManager.dispatcher)
@@ -692,6 +730,11 @@ class CameraRepository(
     fun singleCapture(): Flow<Bitmap?> = flow {
         val deferred = CompletableDeferred<Bitmap?>()
         captureDeferred = deferred
+        val rawDeferred = CompletableDeferred<Image?>()
+        rawCaptureDeferred = rawDeferred
+        lastRawImage = null
+        lastCaptureResult = null
+
         try {
             val session = cameraSession
             if (session != null) {
@@ -700,24 +743,35 @@ class CameraRepository(
                     applyStateToBuilder(this, chars)
                     addTarget(captureSurfaceJpeg)
                     val format = chars.imgFormat
-                    if (format == ImgFormat.RAW || format == ImgFormat.JPEGRAW) {
+                    val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+                    val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+                    if (supportsRaw && (format == ImgFormat.DNG || format == ImgFormat.JPEGDNG)) {
                         addTarget(captureSurfaceRaw)
                     }
                 }
                 session.capture(stillBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
+                    override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                        super.onCaptureCompleted(session, request, result)
+                        lastCaptureResult = result
+                    }
                     override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
                         super.onCaptureFailed(session, request, failure)
                         if (captureDeferred?.isActive == true) {
                             captureDeferred?.complete(null)
                         }
+                        if (rawCaptureDeferred?.isActive == true) {
+                            rawCaptureDeferred?.complete(null)
+                        }
                     }
                 }, cameraThreadManager.handler)
             } else {
                 deferred.complete(null)
+                rawDeferred.complete(null)
             }
         } catch (e: Exception) {
             Log.e("CameraRepository", "Single capture error: ${e.message}")
             deferred.complete(null)
+            rawDeferred.complete(null)
         }
         val bitmap = deferred.await()
         lastCapturedBitmap = bitmap
@@ -727,7 +781,7 @@ class CameraRepository(
     /**
      * Отдельная функция сохранения изображений с переданными параметрами:
      * @param savePath Место сохранения (путь к директории/файлу)
-     * @param imageFormat Формат изображения (JPEG, RAW/DNG или JPEGRAW - и то и другое)
+     * @param imageFormat Формат изображения (JPEG, DNG или JPEGDNG - и то и другое)
      * @param resolution Разрешение снимка (Dimensions с шириной и высотой)
      */
     fun saveCapturedImage(
@@ -737,14 +791,44 @@ class CameraRepository(
     ) {
         Log.d("CameraRepository", "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}")
         lastCapturedBitmap?.let { bmp ->
+            val rawDeferred = rawCaptureDeferred
+            val capResult = lastCaptureResult
+            rawCaptureDeferred = null
+            lastRawImage = null
+            lastCaptureResult = null
+
             cameraThreadManager.ioExecutor.execute {
-                val fileName = FileNameGenerator().generateFileName()
-                val relativePath = if (savePath.startsWith("content://") || savePath.contains("/")) {
-                    "DCIM/FlashCamera"
-                } else {
-                    savePath
+                val rawImg = try {
+                    runBlocking { rawDeferred?.await() }
+                } catch (e: Exception) {
+                    null
                 }
-                ImageSaver.saveBitmap(context, bmp, fileName, relativePath)
+                val baseFileName = FileNameGenerator().generateFileName()
+
+                when (imageFormat) {
+                    ImgFormat.JPEG -> {
+                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
+                        rawImg?.close()
+                    }
+                    ImgFormat.DNG -> {
+                        if (rawImg != null && capResult != null) {
+                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
+                        } else {
+                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
+                            rawImg?.close()
+                        }
+                    }
+                    ImgFormat.JPEGDNG -> {
+                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
+                        if (rawImg != null && capResult != null) {
+                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
+                        } else {
+                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
+                            rawImg?.close()
+                        }
+                    }
+                }
+                clearCapturedBitmap()
             }
         }
     }
@@ -756,8 +840,8 @@ class CameraRepository(
         height: Int
     ) {
         val format = when (formatStr.lowercase()) {
-            "dng", "raw" -> ImgFormat.RAW
-            "jpeg+dng", "jpeg+raw", "jpegraw" -> ImgFormat.JPEGRAW
+            "dng", "raw" -> ImgFormat.DNG
+            "jpeg+dng", "jpeg+raw", "jpegdng", "jpeg_dng" -> ImgFormat.JPEGDNG
             else -> ImgFormat.JPEG
         }
         saveCapturedImage(savePath, format, Dimensions(width, height))
@@ -781,9 +865,25 @@ object ImageSaver {
             context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri -> context.contentResolver.openOutputStream(uri)?.use { it.write(jpeg) } }
         } finally { image.close() }
     }
-    fun saveBitmap(context: Context, bitmap: Bitmap, name: String, relativePath: String = "DCIM/FlashCamera") {
+    fun saveBitmap(context: Context, bitmap: Bitmap, name: String, savePath: String = "DCIM/FlashCamera") {
         try {
             val bytes = ByteArrayOutputStream().apply { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, this) }.toByteArray()
+            if (savePath.startsWith("content://")) {
+                try {
+                    val uri = Uri.parse(savePath)
+                    val docFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                    if (docFile != null && docFile.canWrite()) {
+                        val newFile = docFile.createFile("image/jpeg", "$name.jpg")
+                        if (newFile != null) {
+                            context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
+                            return
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("ImageSaver", "TreeUri save bitmap error: ${e.message}")
+                }
+            }
+            val relativePath = getRelativePath(savePath)
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, "$name.jpg")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -795,6 +895,95 @@ object ImageSaver {
         } catch (e: Exception) {
             Log.e("ImageSaver", "Save bitmap error: ${e.message}")
         }
+    }
+    fun saveDng(context: Context, cameraCharacteristics: CameraCharacteristics, captureResult: TotalCaptureResult, rawImage: Image, name: String, savePath: String = "DCIM/FlashCamera") {
+        try {
+            val dngCreator = DngCreator(cameraCharacteristics, captureResult)
+            if (savePath.startsWith("content://")) {
+                try {
+                    val uri = Uri.parse(savePath)
+                    val docFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                    if (docFile != null && docFile.canWrite()) {
+                        val newFile = docFile.createFile("image/x-adobe-dng", "$name.dng")
+                        if (newFile != null) {
+                            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
+                                dngCreator.writeImage(outputStream, rawImage)
+                            }
+                            return
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("ImageSaver", "TreeUri save DNG error: ${e.message}")
+                } finally {
+                    try { rawImage.close() } catch (_: Exception) {}
+                }
+            }
+            val relativePath = getRelativePath(savePath)
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "$name.dng")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
+                put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+            }
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    dngCreator.writeImage(outputStream, rawImage)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ImageSaver", "Save DNG error: ${e.message}", e)
+        } finally {
+            try { rawImage.close() } catch (_: Exception) {}
+        }
+    }
+
+    fun saveDngBitmap(context: Context, bitmap: Bitmap, name: String, savePath: String = "DCIM/FlashCamera") {
+        try {
+            val bytes = ByteArrayOutputStream().apply { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, this) }.toByteArray()
+            if (savePath.startsWith("content://")) {
+                try {
+                    val uri = Uri.parse(savePath)
+                    val docFile = DocumentFile.fromTreeUri(context, uri)
+                    if (docFile != null && docFile.canWrite()) {
+                        val newFile = docFile.createFile("image/x-adobe-dng", "$name.dng")
+                        if (newFile != null) {
+                            context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
+                            return
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("ImageSaver", "TreeUri save DNG bitmap error: ${e.message}")
+                }
+            }
+            val relativePath = getRelativePath(savePath)
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "$name.dng")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
+                put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+            }
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+            }
+        } catch (e: Exception) {
+            Log.e("ImageSaver", "Save DNG bitmap error: ${e.message}")
+        }
+    }
+
+    private fun getRelativePath(savePath: String): String {
+        val cleanPath = savePath.trim()
+        val externalStoragePath = Environment.getExternalStorageDirectory().absolutePath
+        if (cleanPath.startsWith(externalStoragePath)) {
+            val relative = cleanPath.removePrefix(externalStoragePath).removePrefix("/")
+            if (relative.isNotEmpty()) return relative
+        }
+        if (cleanPath.startsWith("/storage/") || cleanPath.startsWith("/sdcard/")) {
+            val dcimIndex = cleanPath.indexOf("DCIM/")
+            val picturesIndex = cleanPath.indexOf("Pictures/")
+            val index = if (dcimIndex != -1) dcimIndex else if (picturesIndex != -1) picturesIndex else -1
+            if (index != -1) {
+                return cleanPath.substring(index)
+            }
+        }
+        return cleanPath.removePrefix("/").ifEmpty { "DCIM/FlashCamera" }
     }
 }
 

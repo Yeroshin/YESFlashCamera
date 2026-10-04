@@ -9,6 +9,7 @@ import com.yes.camera.data.repository.CameraRepository
 import com.yes.camera.data.repository.MediaEncoder
 import com.yes.camera.data.repository.SettingsRepository
 import com.yes.camera.di.CameraScope
+import com.yes.camera.domain.usecase.ClearCapturedBitmapUseCase
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.SaveCapturedImageUseCase
@@ -151,6 +152,17 @@ class CameraModule {
 
 
     @Provides
+    fun providesClearCapturedBitmapUseCase(
+        @CameraDispatcher dispatcher: CoroutineDispatcher,
+        cameraRepository: CameraRepository
+    ): ClearCapturedBitmapUseCase {
+        return ClearCapturedBitmapUseCase(
+            dispatcher,
+            cameraRepository
+        )
+    }
+
+    @Provides
     fun providesCameraViewModelFactory(
         mapper: MapperUI,
         openCameraUseCase: OpenCameraUseCase,
@@ -159,6 +171,7 @@ class CameraModule {
         singleCaptureUseCase: SingleCaptureUseCase,
         saveCapturedImageUseCase: SaveCapturedImageUseCase,
         subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
+        clearCapturedBitmapUseCase: ClearCapturedBitmapUseCase
     ): CameraViewModel.Factory {
         return CameraViewModel.Factory(
             mapper,
@@ -168,6 +181,7 @@ class CameraModule {
             singleCaptureUseCase,
             saveCapturedImageUseCase,
             subscribeCameraSettingsUseCase,
+            clearCapturedBitmapUseCase
         )
     }
 

@@ -1,11 +1,14 @@
 package com.yes.camera.presentation.vm
 
 import android.graphics.SurfaceTexture
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import android.util.Log
 import com.yes.camera.domain.model.Characteristics
+import com.yes.camera.domain.usecase.ClearCapturedBitmapUseCase
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.SaveCapturedImageUseCase
@@ -32,6 +35,7 @@ class CameraViewModel(
     private val singleCaptureUseCase: SingleCaptureUseCase,
     private val saveCapturedImageUseCase: SaveCapturedImageUseCase,
     private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
+    private val clearCapturedBitmapUseCase: ClearCapturedBitmapUseCase,
 ) : BaseViewModel<Event, State, Effect>() {
     private val TAG = "CameraViewModel"
 
@@ -129,14 +133,20 @@ class CameraViewModel(
     }
 
     private fun returnToSuccessState() {
-        _characteristicsInternal.update { it.copy(capturedBitmap = null) }
-        setState {
-            copy(
-                state = CameraState.Success(
-                    characteristicsFlow = _characteristicsInternal.asStateFlow()
-                )
-            )
-        }
+        withUseCaseScope(
+            onError = { Log.e(TAG, "Clear captured bitmap error: ${it.message}") },
+            block = {
+                clearCapturedBitmapUseCase()
+                _characteristicsInternal.update { it.copy(capturedBitmap = null) }
+                setState {
+                    copy(
+                        state = CameraState.Success(
+                            characteristicsFlow = _characteristicsInternal.asStateFlow()
+                        )
+                    )
+                }
+            }
+        )
     }
 
     fun getChanges(old: Characteristics, new: Characteristics): Map<String, Pair<Any?, Any?>> {
@@ -193,13 +203,17 @@ class CameraViewModel(
                 useCaseCoroutineScope.launch {
                     subscribeCameraSettingsUseCase()
                         .collect { domainCharacteristics ->
+                            val oldBitmap = _characteristicsInternal.value.capturedBitmap
+                            val newBitmap = domainCharacteristics.capturedBitmap
+
                             _characteristicsInternal.update { currentUi ->
                                 mapper.merge(currentUi, domainCharacteristics)
                             }
-                            if (domainCharacteristics.capturedBitmap != null) {
+
+                            if (newBitmap != null && newBitmap != oldBitmap) {
                                 setState {
                                     copy(
-                                        state = CameraState.CapturedPreview(domainCharacteristics.capturedBitmap)
+                                        state = CameraState.CapturedPreview(newBitmap)
                                     )
                                 }
                             }
@@ -236,6 +250,7 @@ class CameraViewModel(
         private val singleCaptureUseCase: SingleCaptureUseCase,
         private val saveCapturedImageUseCase: SaveCapturedImageUseCase,
         private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
+        private val clearCapturedBitmapUseCase: ClearCapturedBitmapUseCase,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
@@ -247,6 +262,7 @@ class CameraViewModel(
                 singleCaptureUseCase,
                 saveCapturedImageUseCase,
                 subscribeCameraSettingsUseCase,
+                clearCapturedBitmapUseCase,
             ) as T
         }
     }

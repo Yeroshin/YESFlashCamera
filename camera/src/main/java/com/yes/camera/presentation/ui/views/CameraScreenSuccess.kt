@@ -212,8 +212,7 @@ fun CameraScreenSuccess(
             ) {
                 VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.settings, AppTheme.colors.iconPrimary, AppTheme.colors.shadow, onClick = onSettingsClick)
                 VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.flip_camera_android, AppTheme.colors.iconPrimary, AppTheme.colors.shadow)
-                RecordButton(modifier = Modifier.size(AppTheme.dimens.recordButtonSize), isChecked = false, onClick = { isCheck ->
-                    shutterBoxIsOpen = !shutterBoxIsOpen
+                RecordButton(modifier = Modifier.size(AppTheme.dimens.recordButtonSize), onClick = {
                     onSingleCapture()
                 })
             }
