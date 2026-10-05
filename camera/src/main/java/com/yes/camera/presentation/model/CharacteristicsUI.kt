@@ -34,6 +34,7 @@ data class CharacteristicsUI(
     val fullScreen: Boolean = true,
     val resolution: String? = null,
     val aspectRatio: Dimensions? = null,
+    val imgFormat: String = "JPEG",
     val isFocused: Boolean = false,
     val capturedBitmap: Bitmap? = null,
 

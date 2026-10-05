@@ -33,10 +33,12 @@ import android.os.Environment
 import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
+import java.nio.ByteBuffer
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Size
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -189,17 +191,42 @@ class CameraRepository(
         try { imageReaderRaw.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
     }
 
+    private var lastJpegBytes: ByteArray? = null
+
     private val listenerJpeg = ImageReader.OnImageAvailableListener { reader ->
         reader.acquireLatestImage()?.let { image ->
             try {
-                val bitmap = if (image.format == ImageFormat.JPEG) {
-                    jpegToBitmap(image)
+                val bytes = if (image.format == ImageFormat.JPEG) {
+                    val buffer = image.planes[0].buffer
+                    val data = ByteArray(buffer.remaining())
+                    buffer.get(data)
+                    data
                 } else if (image.format == ImageFormat.YUV_420_888) {
-                    yuv420ToBitmap(image)
+                    val out = ByteArrayOutputStream()
+                    val yBuffer = image.planes[0].buffer
+                    val uBuffer = image.planes[1].buffer
+                    val vBuffer = image.planes[2].buffer
+                    val ySize = yBuffer.remaining()
+                    val uSize = uBuffer.remaining()
+                    val vSize = vBuffer.remaining()
+                    val nv21 = ByteArray(ySize + uSize + vSize)
+                    yBuffer.get(nv21, 0, ySize)
+                    vBuffer.get(nv21, ySize, vSize)
+                    uBuffer.get(nv21, ySize + vSize, uSize)
+                    YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null).compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)
+                    out.toByteArray()
                 } else {
-                    jpegToBitmap(image)
+                    val buffer = image.planes[0].buffer
+                    val data = ByteArray(buffer.remaining())
+                    buffer.get(data)
+                    data
                 }
+
+                lastJpegBytes = bytes
+                val decodedBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 image.close()
+
+                val bitmap = if (decodedBitmap != null) processCapturedBitmap(decodedBitmap) else null
 
                 if (bitmap != null) {
                     _characteristicsFlow.update { it?.copy(capturedBitmap = bitmap, isCaptureRequested = false) }
@@ -208,22 +235,30 @@ class CameraRepository(
                 Log.e("CameraRepository", "Error processing JPEG image: ${e.message}")
                 image.close()
             } finally {
-                detachCaptureListeners()
+                try { imageReaderJpeg.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
             }
         }
     }
 
-    private var lastRawImage: Image? = null
+    private var lastRawBytes: ByteArray? = null
+    private var lastRawWidth: Int = 0
+    private var lastRawHeight: Int = 0
     private var lastCaptureResult: TotalCaptureResult? = null
 
     private val listenerRaw = ImageReader.OnImageAvailableListener { reader ->
         reader.acquireNextImage()?.let { image ->
             try {
-                lastRawImage?.close()
-                lastRawImage = image
+                val buffer = image.planes[0].buffer
+                val data = ByteArray(buffer.remaining())
+                buffer.get(data)
+                lastRawBytes = data
+                lastRawWidth = image.width
+                lastRawHeight = image.height
             } catch (e: Exception) {
                 Log.e("CameraRepository", "Error processing RAW image: ${e.message}")
+            } finally {
                 image.close()
+                try { imageReaderRaw.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
             }
         }
     }
@@ -300,11 +335,16 @@ class CameraRepository(
             3)
         captureSurfaceJpeg = imageReaderJpeg.surface
 
+        val rawSize = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            ?.getOutputSizes(ImageFormat.RAW_SENSOR)
+            ?.maxByOrNull { it.width * it.height }
+            ?: Size(width, height)
+
         imageReaderRaw = ImageReader.newInstance(
-            width,
-            height,
+            rawSize.width,
+            rawSize.height,
             ImageFormat.RAW_SENSOR,
-            3)
+            2)
         captureSurfaceRaw = imageReaderRaw.surface
 
         val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -468,7 +508,7 @@ class CameraRepository(
     fun singleCapture(): Flow<Bitmap?> = flow {
         val deferred = CompletableDeferred<Bitmap?>()
         captureDeferred = deferred
-        lastRawImage = null
+        lastRawBytes = null
         lastCaptureResult = null
 
         val current = if (::lastCharacteristics.isInitialized) lastCharacteristics else (_characteristicsFlow.value ?: Characteristics())
@@ -491,40 +531,39 @@ class CameraRepository(
         resolution: Dimensions
     ) {
         Log.d("CameraRepository", "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}")
-        lastCapturedBitmap?.let { bmp ->
-            val rawImg = lastRawImage
-            val capResult = lastCaptureResult
-            lastRawImage = null
-            lastCaptureResult = null
+        val jpegBytes = lastJpegBytes
+        val rawBytes = lastRawBytes
+        val rawWidth = lastRawWidth
+        val rawHeight = lastRawHeight
+        val capResult = lastCaptureResult
+        lastJpegBytes = null
+        lastRawBytes = null
+        lastCaptureResult = null
 
-            cameraThreadManager.ioExecutor.execute {
-                val baseFileName = FileNameGenerator().generateFileName()
+        cameraThreadManager.ioExecutor.execute {
+            val baseFileName = FileNameGenerator().generateFileName()
 
-                when (imageFormat) {
-                    ImgFormat.JPEG -> {
-                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
-                        rawImg?.close()
-                    }
-                    ImgFormat.DNG -> {
-                        if (rawImg != null && capResult != null) {
-                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
-                        } else {
-                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
-                            rawImg?.close()
-                        }
-                    }
-                    ImgFormat.JPEGDNG -> {
-                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
-                        if (rawImg != null && capResult != null) {
-                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
-                        } else {
-                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
-                            rawImg?.close()
-                        }
+            when (imageFormat) {
+                ImgFormat.JPEG -> {
+                    if (jpegBytes != null) {
+                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath)
                     }
                 }
-                clearCapturedBitmap()
+                ImgFormat.DNG -> {
+                    if (rawBytes != null && capResult != null) {
+                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath)
+                    }
+                }
+                ImgFormat.JPEGDNG -> {
+                    if (jpegBytes != null) {
+                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath)
+                    }
+                    if (rawBytes != null && capResult != null) {
+                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath)
+                    }
+                }
             }
+            clearCapturedBitmap()
         }
     }
 
@@ -887,9 +926,42 @@ object ImageSaver {
             Log.e("ImageSaver", "Save bitmap error: ${e.message}")
         }
     }
-    fun saveDng(context: Context, cameraCharacteristics: CameraCharacteristics, captureResult: TotalCaptureResult, rawImage: Image, name: String, savePath: String = "DCIM/FlashCamera") {
+    fun saveBytes(context: Context, bytes: ByteArray, name: String, savePath: String = "DCIM/FlashCamera") {
+        try {
+            if (savePath.startsWith("content://")) {
+                try {
+                    val uri = Uri.parse(savePath)
+                    val docFile = DocumentFile.fromTreeUri(context, uri)
+                    if (docFile != null && docFile.canWrite()) {
+                        val newFile = docFile.createFile("image/jpeg", "$name.jpg")
+                        if (newFile != null) {
+                            context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
+                            return
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("ImageSaver", "TreeUri save bytes error: ${e.message}")
+                }
+            }
+            val relativePath = getRelativePath(savePath)
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "$name.jpg")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+            }
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+            }
+        } catch (e: Exception) {
+            Log.e("ImageSaver", "Save bytes error: ${e.message}")
+        }
+    }
+    fun saveDngBytes(context: Context, cameraCharacteristics: CameraCharacteristics, captureResult: TotalCaptureResult, rawBytes: ByteArray, width: Int, height: Int, name: String, savePath: String = "DCIM/FlashCamera") {
         try {
             val dngCreator = DngCreator(cameraCharacteristics, captureResult)
+            val byteBuffer = ByteBuffer.wrap(rawBytes)
+            val size = Size(width, height)
+
             if (savePath.startsWith("content://")) {
                 try {
                     val uri = Uri.parse(savePath)
@@ -898,15 +970,13 @@ object ImageSaver {
                         val newFile = docFile.createFile("image/x-adobe-dng", "$name.dng")
                         if (newFile != null) {
                             context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
-                                dngCreator.writeImage(outputStream, rawImage)
+                                dngCreator.writeByteBuffer(outputStream, size, byteBuffer, 0L)
                             }
                             return
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("ImageSaver", "TreeUri save DNG error: ${e.message}")
-                } finally {
-                    try { rawImage.close() } catch (_: Exception) {}
+                    Log.e("ImageSaver", "TreeUri save DNG bytes error: ${e.message}")
                 }
             }
             val relativePath = getRelativePath(savePath)
@@ -917,13 +987,11 @@ object ImageSaver {
             }
             context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    dngCreator.writeImage(outputStream, rawImage)
+                    dngCreator.writeByteBuffer(outputStream, size, byteBuffer, 0L)
                 }
             }
         } catch (e: Exception) {
-            Log.e("ImageSaver", "Save DNG error: ${e.message}", e)
-        } finally {
-            try { rawImage.close() } catch (_: Exception) {}
+            Log.e("ImageSaver", "Save DNG bytes error: ${e.message}")
         }
     }
 
