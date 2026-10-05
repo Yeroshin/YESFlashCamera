@@ -184,6 +184,11 @@ class CameraRepository(
         }
     }
 
+    private fun detachCaptureListeners() {
+        try { imageReaderJpeg.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
+        try { imageReaderRaw.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
+    }
+
     private val listenerJpeg = ImageReader.OnImageAvailableListener { reader ->
         reader.acquireLatestImage()?.let { image ->
             try {
@@ -197,34 +202,25 @@ class CameraRepository(
                 image.close()
 
                 if (bitmap != null) {
-                    _characteristicsFlow.update { it?.copy(capturedBitmap = bitmap) }
-                }
-
-                if (captureDeferred?.isActive == true) {
-                    captureDeferred?.complete(bitmap)
+                    _characteristicsFlow.update { it?.copy(capturedBitmap = bitmap, isCaptureRequested = false) }
                 }
             } catch (e: Exception) {
                 Log.e("CameraRepository", "Error processing JPEG image: ${e.message}")
                 image.close()
-                if (captureDeferred?.isActive == true) {
-                    captureDeferred?.complete(null)
-                }
+            } finally {
+                detachCaptureListeners()
             }
         }
     }
 
     private var lastRawImage: Image? = null
     private var lastCaptureResult: TotalCaptureResult? = null
-    private var rawCaptureDeferred: CompletableDeferred<Image?>? = null
 
     private val listenerRaw = ImageReader.OnImageAvailableListener { reader ->
         reader.acquireNextImage()?.let { image ->
             try {
                 lastRawImage?.close()
                 lastRawImage = image
-                if (rawCaptureDeferred?.isActive == true) {
-                    rawCaptureDeferred?.complete(image)
-                }
             } catch (e: Exception) {
                 Log.e("CameraRepository", "Error processing RAW image: ${e.message}")
                 image.close()
@@ -301,14 +297,14 @@ class CameraRepository(
             width,
             height,
             ImageFormat.JPEG,
-            3).apply { setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler) }
+            3)
         captureSurfaceJpeg = imageReaderJpeg.surface
 
         imageReaderRaw = ImageReader.newInstance(
             width,
             height,
             ImageFormat.RAW_SENSOR,
-            3).apply { setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler) }
+            3)
         captureSurfaceRaw = imageReaderRaw.surface
 
         val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -330,6 +326,10 @@ class CameraRepository(
                 persistentBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL).apply {
                     addTarget(previewSurface)
                     addTarget(histogramSurface)
+                    addTarget(captureSurfaceJpeg)
+                    if (supportsRaw) {
+                        addTarget(captureSurfaceRaw)
+                    }
                     set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                     val fullSensor = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
                     set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
@@ -337,7 +337,7 @@ class CameraRepository(
                     set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
                 }
                 lastCharacteristics = characteristics
-                applyState(characteristics, forceFlush = true)
+                startPreviewCaptureRequest(characteristics)
             }
             override fun onConfigureFailed(session: CameraCaptureSession) {
                 Log.e("CameraRepository", "Camera session configuration FAILED!")
@@ -366,15 +366,17 @@ class CameraRepository(
     fun startPreviewCaptureRequest(characteristics: Characteristics) {
         lastCharacteristics = characteristics
         cameraThreadManager.handler.removeCallbacksAndMessages(UPDATE_TOKEN)
-        val action = Runnable { applyState(characteristics, forceFlush = true) }
+        val action = Runnable { processPreviewCaptureRequest(characteristics) }
         if (Looper.myLooper() == cameraThreadManager.handler.looper) { 
-            applyState(characteristics, forceFlush = true) 
+            processPreviewCaptureRequest(characteristics) 
         } else { 
             cameraThreadManager.handler.postAtTime(action, UPDATE_TOKEN, SystemClock.uptimeMillis()) 
         }
     }
 
-    private fun applyStateToBuilder(builder: CaptureRequest.Builder, characteristics: Characteristics) {
+    private fun processPreviewCaptureRequest(characteristics: Characteristics) {
+        val builder = persistentBuilder ?: return
+        val session = cameraSession ?: return
         val hw = _characteristicsFlow.value
         val old = appliedCharacteristics
 
@@ -405,32 +407,102 @@ class CameraRepository(
                     builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
                 }
             }
-        } catch (e: Exception) {
-            Log.e("CameraRepository", "applyStateToBuilder error: ${e.message}", e)
-        }
-    }
-
-    private fun applyState(characteristics: Characteristics, forceFlush: Boolean = false) {
-        val builder = persistentBuilder ?: return
-        val session = cameraSession ?: return
-        val old = appliedCharacteristics
-
-        try {
-            val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) || 
-                              (characteristics.shutterValue == null) != (old?.shutterValue == null) || 
-                              old == null
-
-            applyStateToBuilder(builder, characteristics)
 
             appliedCharacteristics = characteristics
 
-            if (forceFlush && modeChanged) {
-                session.stopRepeating()
-                session.capture(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
+            if (characteristics.isCaptureRequested) {
+                imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
+                if (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG) {
+                    imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
+                }
+
+                session.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
+                    override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                        super.onCaptureCompleted(session, request, result)
+                        lastCaptureResult = result
+                    }
+                    override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
+                        super.onCaptureFailed(session, request, failure)
+                        detachCaptureListeners()
+                    }
+                }, cameraThreadManager.handler)
+            } else {
+                val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) ||
+                                  (characteristics.shutterValue == null) != (old?.shutterValue == null) || 
+                                  old == null
+
+                if (modeChanged) {
+                    session.stopRepeating()
+                    session.capture(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
+                }
+                session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
             }
-            session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
-            
-        } catch (e: Exception) { Log.e("CameraRepository", "Apply error: ${e.message}", e) }
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "processPreviewCaptureRequest error: ${e.message}", e)
+        }
+    }
+
+    fun singleCapture(): Flow<Bitmap?> = flow {
+        val deferred = CompletableDeferred<Bitmap?>()
+        captureDeferred = deferred
+        lastRawImage = null
+        lastCaptureResult = null
+
+        val current = if (::lastCharacteristics.isInitialized) lastCharacteristics else (_characteristicsFlow.value ?: Characteristics())
+        startPreviewCaptureRequest(current.copy(isCaptureRequested = true))
+
+        val bitmap = deferred.await()
+        lastCapturedBitmap = bitmap
+        emit(bitmap)
+    }
+
+    /**
+     * Отдельная функция сохранения изображений с переданными параметрами:
+     * @param savePath Место сохранения (путь к директории/файлу)
+     * @param imageFormat Формат изображения (JPEG, DNG или JPEGDNG - и то и другое)
+     * @param resolution Разрешение снимка (Dimensions с шириной и высотой)
+     */
+    fun saveCapturedImage(
+        savePath: String,
+        imageFormat: ImgFormat,
+        resolution: Dimensions
+    ) {
+        Log.d("CameraRepository", "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}")
+        lastCapturedBitmap?.let { bmp ->
+            val rawImg = lastRawImage
+            val capResult = lastCaptureResult
+            lastRawImage = null
+            lastCaptureResult = null
+
+            cameraThreadManager.ioExecutor.execute {
+                val baseFileName = FileNameGenerator().generateFileName()
+
+                when (imageFormat) {
+                    ImgFormat.JPEG -> {
+                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
+                        rawImg?.close()
+                    }
+                    ImgFormat.DNG -> {
+                        if (rawImg != null && capResult != null) {
+                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
+                        } else {
+                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
+                            rawImg?.close()
+                        }
+                    }
+                    ImgFormat.JPEGDNG -> {
+                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
+                        if (rawImg != null && capResult != null) {
+                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
+                        } else {
+                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
+                            rawImg?.close()
+                        }
+                    }
+                }
+                clearCapturedBitmap()
+            }
+        }
     }
 
     private data class ExposureResult(val modeChanged: Boolean)
@@ -627,7 +699,7 @@ class CameraRepository(
             val isPriorityMode = (lastCharacteristics.isoValue == null) != (lastCharacteristics.shutterValue == null)
             if (!isAfLocked && isPriorityMode && (now - lastAeUpdateMillis > 500)) {
                 lastAeUpdateMillis = now
-                applyState(lastCharacteristics, forceFlush = false)
+                startPreviewCaptureRequest(lastCharacteristics)
             }
 
             if (now - lastUIUpdate > 100) {
@@ -656,7 +728,7 @@ class CameraRepository(
                         lastLockedFocusDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE)
                     }
                     handleFocusResult(afState == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED)
-                    applyState(lastCharacteristics, forceFlush = false)
+                    startPreviewCaptureRequest(lastCharacteristics)
                 }
             }
         }
@@ -727,111 +799,7 @@ class CameraRepository(
     private var lastCapturedBitmap: Bitmap? = null
     private var captureDeferred: CompletableDeferred<Bitmap?>? = null
 
-    fun singleCapture(): Flow<Bitmap?> = flow {
-        val deferred = CompletableDeferred<Bitmap?>()
-        captureDeferred = deferred
-        val rawDeferred = CompletableDeferred<Image?>()
-        rawCaptureDeferred = rawDeferred
-        lastRawImage = null
-        lastCaptureResult = null
 
-        try {
-            val session = cameraSession
-            if (session != null) {
-                val chars = if (::lastCharacteristics.isInitialized) lastCharacteristics else (_characteristicsFlow.value ?: Characteristics())
-                val stillBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
-                    applyStateToBuilder(this, chars)
-                    addTarget(captureSurfaceJpeg)
-                    val format = chars.imgFormat
-                    val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-                    val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
-                    if (supportsRaw && (format == ImgFormat.DNG || format == ImgFormat.JPEGDNG)) {
-                        addTarget(captureSurfaceRaw)
-                    }
-                }
-                session.capture(stillBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
-                    override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-                        super.onCaptureCompleted(session, request, result)
-                        lastCaptureResult = result
-                    }
-                    override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
-                        super.onCaptureFailed(session, request, failure)
-                        if (captureDeferred?.isActive == true) {
-                            captureDeferred?.complete(null)
-                        }
-                        if (rawCaptureDeferred?.isActive == true) {
-                            rawCaptureDeferred?.complete(null)
-                        }
-                    }
-                }, cameraThreadManager.handler)
-            } else {
-                deferred.complete(null)
-                rawDeferred.complete(null)
-            }
-        } catch (e: Exception) {
-            Log.e("CameraRepository", "Single capture error: ${e.message}")
-            deferred.complete(null)
-            rawDeferred.complete(null)
-        }
-        val bitmap = deferred.await()
-        lastCapturedBitmap = bitmap
-        emit(bitmap)
-    }
-
-    /**
-     * Отдельная функция сохранения изображений с переданными параметрами:
-     * @param savePath Место сохранения (путь к директории/файлу)
-     * @param imageFormat Формат изображения (JPEG, DNG или JPEGDNG - и то и другое)
-     * @param resolution Разрешение снимка (Dimensions с шириной и высотой)
-     */
-    fun saveCapturedImage(
-        savePath: String,
-        imageFormat: ImgFormat,
-        resolution: Dimensions
-    ) {
-        Log.d("CameraRepository", "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}")
-        lastCapturedBitmap?.let { bmp ->
-            val rawDeferred = rawCaptureDeferred
-            val capResult = lastCaptureResult
-            rawCaptureDeferred = null
-            lastRawImage = null
-            lastCaptureResult = null
-
-            cameraThreadManager.ioExecutor.execute {
-                val rawImg = try {
-                    runBlocking { rawDeferred?.await() }
-                } catch (e: Exception) {
-                    null
-                }
-                val baseFileName = FileNameGenerator().generateFileName()
-
-                when (imageFormat) {
-                    ImgFormat.JPEG -> {
-                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
-                        rawImg?.close()
-                    }
-                    ImgFormat.DNG -> {
-                        if (rawImg != null && capResult != null) {
-                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
-                        } else {
-                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
-                            rawImg?.close()
-                        }
-                    }
-                    ImgFormat.JPEGDNG -> {
-                        ImageSaver.saveBitmap(context, bmp, baseFileName, savePath)
-                        if (rawImg != null && capResult != null) {
-                            ImageSaver.saveDng(context, cameraCharacteristics, capResult, rawImg, "${baseFileName}_DNG", savePath)
-                        } else {
-                            ImageSaver.saveDngBitmap(context, bmp, "${baseFileName}_DNG", savePath)
-                            rawImg?.close()
-                        }
-                    }
-                }
-                clearCapturedBitmap()
-            }
-        }
-    }
 
     fun saveCapturedImage(
         savePath: String,

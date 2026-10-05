@@ -43,6 +43,8 @@ data class CharacteristicsUI(
     val isWbAuto: Boolean = true,
     val isFocusAuto: Boolean = true,
 
+    val isCaptureRequested: Boolean = false,
+
     val histogramData: Map<Int, Int> = emptyMap(),
     val selectedCategory: SettingsItem = SettingsItem.SHUTTER
 ) {

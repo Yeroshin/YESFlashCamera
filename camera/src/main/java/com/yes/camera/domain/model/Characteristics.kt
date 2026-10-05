@@ -33,5 +33,6 @@ data class Characteristics(
     val actualWbKelvin: Int? = null,
     val isFocused: Boolean = false,
     val capturedBitmap: Bitmap? = null,
-    val supportsRaw: Boolean = false
+    val supportsRaw: Boolean = false,
+    val isCaptureRequested: Boolean = false
 )

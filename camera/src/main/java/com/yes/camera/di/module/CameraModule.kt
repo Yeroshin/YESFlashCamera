@@ -13,7 +13,6 @@ import com.yes.camera.domain.usecase.ClearCapturedBitmapUseCase
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.SaveCapturedImageUseCase
-import com.yes.camera.domain.usecase.SingleCaptureUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
 import com.yes.camera.domain.usecase.SubscribeCameraSettingsUseCase
 import com.yes.camera.presentation.mapper.MapperUI
@@ -127,17 +126,6 @@ class CameraModule {
     }
 
     @Provides
-    fun providesSingleCaptureUseCase(
-        @CameraDispatcher dispatcher: CoroutineDispatcher,
-        cameraRepository: CameraRepository
-    ): SingleCaptureUseCase {
-        return SingleCaptureUseCase(
-            dispatcher,
-            cameraRepository
-        )
-    }
-
-    @Provides
     fun providesSaveCapturedImageUseCase(
         @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
@@ -149,7 +137,6 @@ class CameraModule {
             settingsRepository
         )
     }
-
 
     @Provides
     fun providesClearCapturedBitmapUseCase(
@@ -168,7 +155,6 @@ class CameraModule {
         openCameraUseCase: OpenCameraUseCase,
         closeCameraUseCase: CloseCameraUseCase,
         setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-        singleCaptureUseCase: SingleCaptureUseCase,
         saveCapturedImageUseCase: SaveCapturedImageUseCase,
         subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
         clearCapturedBitmapUseCase: ClearCapturedBitmapUseCase
@@ -178,7 +164,6 @@ class CameraModule {
             openCameraUseCase,
             closeCameraUseCase,
             setInputCharacteristicsUseCase,
-            singleCaptureUseCase,
             saveCapturedImageUseCase,
             subscribeCameraSettingsUseCase,
             clearCapturedBitmapUseCase

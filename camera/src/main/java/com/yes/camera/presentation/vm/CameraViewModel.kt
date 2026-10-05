@@ -12,7 +12,6 @@ import com.yes.camera.domain.usecase.ClearCapturedBitmapUseCase
 import com.yes.camera.domain.usecase.CloseCameraUseCase
 import com.yes.camera.domain.usecase.OpenCameraUseCase
 import com.yes.camera.domain.usecase.SaveCapturedImageUseCase
-import com.yes.camera.domain.usecase.SingleCaptureUseCase
 import com.yes.camera.domain.usecase.SetInputCharacteristicsUseCase
 import com.yes.camera.domain.usecase.SubscribeCameraSettingsUseCase
 import com.yes.camera.presentation.contract.CameraContract.*
@@ -32,7 +31,6 @@ class CameraViewModel(
     private val openCameraUseCase: OpenCameraUseCase,
     private val closeCameraUseCase: CloseCameraUseCase,
     private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-    private val singleCaptureUseCase: SingleCaptureUseCase,
     private val saveCapturedImageUseCase: SaveCapturedImageUseCase,
     private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
     private val clearCapturedBitmapUseCase: ClearCapturedBitmapUseCase,
@@ -89,37 +87,11 @@ class CameraViewModel(
     }
 
     private fun startVideoRecord(enabled: Boolean) {
-        withUseCaseScope(
-            onError = { Log.e(TAG, "Video record error: ${it.message}") },
-            onComplete = {
-                Log.d(
-                    TAG,
-                    "Video record command sequence completed (enabled=$enabled)"
-                )
-            },
-            block = {
-                singleCaptureUseCase(
-                    SingleCaptureUseCase.Params(enable = enabled)
-                )
-            }
-        )
+        performSingleCapture()
     }
 
     private fun performSingleCapture() {
-        withUseCaseScope(
-            onError = { Log.e(TAG, "Single capture error: ${it.message}") },
-            block = {
-                singleCaptureUseCase().collect { bitmap ->
-                    if (bitmap != null) {
-                        setState {
-                            copy(
-                                state = CameraState.CapturedPreview(bitmap)
-                            )
-                        }
-                    }
-                }
-            }
-        )
+        setCharacteristics(_characteristicsInternal.value.copy(isCaptureRequested = true))
     }
 
     private fun saveCapturedImage() {
@@ -137,7 +109,7 @@ class CameraViewModel(
             onError = { Log.e(TAG, "Clear captured bitmap error: ${it.message}") },
             block = {
                 clearCapturedBitmapUseCase()
-                _characteristicsInternal.update { it.copy(capturedBitmap = null) }
+                _characteristicsInternal.update { it.copy(capturedBitmap = null, isCaptureRequested = false) }
                 setState {
                     copy(
                         state = CameraState.Success(
@@ -247,7 +219,6 @@ class CameraViewModel(
         private val openCameraUseCase: OpenCameraUseCase,
         private val closeCameraUseCase: CloseCameraUseCase,
         private val setInputCharacteristicsUseCase: SetInputCharacteristicsUseCase,
-        private val singleCaptureUseCase: SingleCaptureUseCase,
         private val saveCapturedImageUseCase: SaveCapturedImageUseCase,
         private val subscribeCameraSettingsUseCase: SubscribeCameraSettingsUseCase,
         private val clearCapturedBitmapUseCase: ClearCapturedBitmapUseCase,
@@ -259,7 +230,6 @@ class CameraViewModel(
                 openCameraUseCase,
                 closeCameraUseCase,
                 setInputCharacteristicsUseCase,
-                singleCaptureUseCase,
                 saveCapturedImageUseCase,
                 subscribeCameraSettingsUseCase,
                 clearCapturedBitmapUseCase,
