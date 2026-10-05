@@ -92,15 +92,28 @@ fun CameraScreenSuccess(
             modifier = Modifier.padding(AppTheme.dimens.small).fillMaxWidth().padding(top = AppTheme.dimens.large),
         )
 
-        characteristics.resolution?.let {
+        Column(
+            modifier = Modifier.padding(top = AppTheme.dimens.histogramTopPadding, end = AppTheme.dimens.large).align(Alignment.TopEnd),
+            horizontalAlignment = Alignment.End
+        ) {
+            characteristics.resolution?.let {
+                Text(
+                    text = it,
+                    textAlign = TextAlign.End,
+                    style = TextStyle(
+                        color = AppTheme.colors.textPrimary,
+                        fontSize = AppTheme.dimens.textMedium,
+                        shadow = Shadow(AppTheme.colors.shadow, Offset(5f, 5f), 5f)
+                    )
+                )
+            }
             Text(
-                modifier = Modifier.padding(top = AppTheme.dimens.histogramTopPadding, end = AppTheme.dimens.large).align(Alignment.TopEnd),
-                text = it,
+                text = characteristics.imgFormat,
                 textAlign = TextAlign.End,
                 style = TextStyle(
-                    color = AppTheme.colors.textPrimary,
-                    fontSize = AppTheme.dimens.textMedium,
-                    shadow = Shadow(AppTheme.colors.shadow, Offset(5f, 5f), 5f)
+                    color = AppTheme.colors.textPrimary.copy(alpha = 0.8f),
+                    fontSize = AppTheme.dimens.textSmall,
+                    shadow = Shadow(AppTheme.colors.shadow, Offset(3f, 3f), 3f)
                 )
             )
         }

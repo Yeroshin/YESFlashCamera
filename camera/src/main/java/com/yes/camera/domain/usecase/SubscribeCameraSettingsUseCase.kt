@@ -63,6 +63,8 @@ class SubscribeCameraSettingsUseCase(
             base.copy(
                 fullscreen = settings.fullscreen,
                 resolution = settings.resolution,
+                imgFormat = settings.imgFormat,
+                supportsRaw = settings.supportsRaw || base.supportsRaw,
                 histogramData = histogram
             )
         }.catch { e ->

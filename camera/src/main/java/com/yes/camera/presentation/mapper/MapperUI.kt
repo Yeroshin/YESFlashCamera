@@ -18,6 +18,7 @@ import com.yes.camera.presentation.model.RadioGroupItem
 import com.yes.camera.presentation.model.SelectorItem
 import com.yes.camera.presentation.model.SettingsItem
 import com.yes.camera.utils.ResourceProvider
+import com.yes.shared.domain.ImgFormat
 import kotlinx.collections.immutable.persistentListOf
 import kotlin.math.abs
 
@@ -45,10 +46,11 @@ class MapperUI(
      */
     fun map(characteristics: Characteristics): CharacteristicsUI {
         val displayShutter = characteristics.shutterValue ?: characteristics.actualShutter
+        val sortedShutters = standardShutterSpeeds.entries.sortedBy { it.key }
         val shutterValueStr = displayShutter?.let { s ->
-            standardShutterSpeeds.entries.minByOrNull { abs(it.key - s) }?.value
+            sortedShutters.minByOrNull { abs(it.key - s) }?.value
         } ?: "1/60"
-        val shutterPosition = standardShutterSpeeds.toSortedMap(compareByDescending { it }).values.toList().indexOf(shutterValueStr)
+        val shutterPosition = sortedShutters.map { it.value }.indexOf(shutterValueStr).coerceAtLeast(0)
 
         val displayIso = characteristics.isoValue ?: characteristics.actualIso
         val isoValue = displayIso?.let { i -> standardIsoValues.minByOrNull { abs(it - i) } }
@@ -80,6 +82,11 @@ class MapperUI(
             fullScreen = characteristics.fullscreen ?: true,
             resolution = "${characteristics.resolution.width}x${characteristics.resolution.height}",
             aspectRatio = characteristics.resolution,
+            imgFormat = when (characteristics.imgFormat) {
+                ImgFormat.JPEG -> "JPEG"
+                ImgFormat.DNG -> "DNG"
+                ImgFormat.JPEGDNG -> "JPEG+DNG"
+            },
             touchPoint = characteristics.touchPoint?.let {
                 if (it.size >= 2) Offset(it[0], it[1]) else null
             } ?: Offset(0.5f, 0.5f),
@@ -99,7 +106,7 @@ class MapperUI(
                 RadioGroupItem.TextItem(SettingsItem.FOCUS, "FOCUS", if (characteristics.focusValue == null) "A" else displayFocus.toString()),
                 RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "MAGNIFIER", "1")
             ),
-            shutterItems = standardShutterSpeeds.toSortedMap(compareByDescending { it }).entries.map { SelectorItem(it.key.toInt(), it.value) },
+            shutterItems = standardShutterSpeeds.entries.sortedBy { it.key }.mapIndexed { i, entry -> SelectorItem(i, entry.value) },
             isoItems = standardIsoValues.mapIndexed { i, v -> SelectorItem(i, v.toString()) },
             wbItems = standardWbValues.mapIndexed { i, v -> SelectorItem(i, "${v}K") },
             wbModeItems = characteristics.wbModeItems?.map { item ->
@@ -187,6 +194,7 @@ class MapperUI(
 
             resolution = hardwareMapped.resolution,
             aspectRatio = hardwareMapped.aspectRatio,
+            imgFormat = hardwareMapped.imgFormat,
             histogramData = hardwareMapped.histogramData,
             isFocused = hardwareMapped.isFocused,
             capturedBitmap = reality.capturedBitmap,
@@ -232,6 +240,12 @@ class MapperUI(
             }
         } else null
 
+        val imgFormat = when (characteristics.imgFormat.uppercase()) {
+            "DNG", "RAW" -> ImgFormat.DNG
+            "JPEG+DNG", "JPEG + DNG", "JPEG+RAW", "JPEG + RAW", "JPEG_DNG" -> ImgFormat.JPEGDNG
+            else -> ImgFormat.JPEG
+        }
+
         return Characteristics(
             isoValue = isoValue,
             shutterValue = shutterValue,
@@ -242,7 +256,8 @@ class MapperUI(
             touchPoint = floatArrayOf(characteristics.touchPoint?.x ?: 0.5f, characteristics.touchPoint?.y ?: 0.5f),
             isFocused = characteristics.isFocused,
             capturedBitmap = characteristics.capturedBitmap,
-            isCaptureRequested = characteristics.isCaptureRequested
+            isCaptureRequested = characteristics.isCaptureRequested,
+            imgFormat = imgFormat
         )
     }
 }

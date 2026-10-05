@@ -98,6 +98,10 @@ class SettingsRepository(
             }
     }
 
+    fun subscribeSupportsRaw(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, null)
+    }
+
     suspend fun getCharacteristics(): Characteristics {
         return Characteristics(
             backCamera = getBackCamera(),
@@ -110,6 +114,7 @@ class SettingsRepository(
             fullscreen = getFullScreen(),
             resolution = getResolutionValue() ?: Dimensions(0, 0),
             imgFormat = getImgFormat(),
+            supportsRaw = getSupportsRaw() == true,
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
@@ -120,12 +125,14 @@ class SettingsRepository(
         return combine(
             subscribeFullScreen(),
             subscribeResolutionValue(),
-            subscribeImageFormat()
-        ) { fullscreen, resolution, imgFormat ->
+            subscribeImageFormat(),
+            subscribeSupportsRaw()
+        ) { fullscreen, resolution, imgFormat, supportsRaw ->
             Characteristics(
                 fullscreen = fullscreen ?: true,
                 resolution = resolution ?: Dimensions(0, 0),
-                imgFormat = imgFormat ?: ImgFormat.JPEG
+                imgFormat = imgFormat ?: ImgFormat.JPEG,
+                supportsRaw = supportsRaw == true
             )
         }
     }
