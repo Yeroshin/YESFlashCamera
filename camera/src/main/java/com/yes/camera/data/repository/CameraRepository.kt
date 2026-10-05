@@ -410,24 +410,47 @@ class CameraRepository(
 
             appliedCharacteristics = characteristics
 
+            val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+            val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+            val needRaw = supportsRaw && (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG)
+
             if (characteristics.isCaptureRequested) {
                 imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
-                if (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG) {
+                if (needRaw) {
                     imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
+                }
+
+                builder.addTarget(captureSurfaceJpeg)
+                if (needRaw) {
+                    builder.addTarget(captureSurfaceRaw)
                 }
 
                 session.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
                     override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
                         super.onCaptureCompleted(session, request, result)
                         lastCaptureResult = result
+                        try {
+                            builder.removeTarget(captureSurfaceJpeg)
+                            if (needRaw) builder.removeTarget(captureSurfaceRaw)
+                        } catch (_: Exception) {}
+                        detachCaptureListeners()
                     }
                     override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
                         super.onCaptureFailed(session, request, failure)
+                        try {
+                            builder.removeTarget(captureSurfaceJpeg)
+                            if (needRaw) builder.removeTarget(captureSurfaceRaw)
+                        } catch (_: Exception) {}
                         detachCaptureListeners()
                     }
                 }, cameraThreadManager.handler)
             } else {
-                val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) ||
+                try {
+                    builder.removeTarget(captureSurfaceJpeg)
+                    builder.removeTarget(captureSurfaceRaw)
+                } catch (_: Exception) {}
+
+                val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) || 
                                   (characteristics.shutterValue == null) != (old?.shutterValue == null) || 
                                   old == null
 
