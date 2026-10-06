@@ -202,7 +202,12 @@ fun CameraScreen(
 
                 val mag = currentChars.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
                 val frame = if (currentChars.isFocused) 1 else 0
-                renderer?.configureMagnifier(mag, frame = frame)
+                val tintColor = if (currentChars.isFocused) {
+                    android.graphics.Color.parseColor("#00ff00")
+                } else {
+                    android.graphics.Color.parseColor("#ff0000")
+                }
+                renderer?.configureMagnifier(mag, frame = frame, tintColor = tintColor)
 
                 val point = currentChars.touchPoint ?: Offset(0.5f, 0.5f)
                 val normalizedX = point.x * 2f - 1f

@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.custom.gles
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
 import android.opengl.GLES20.GL_CLAMP_TO_EDGE
@@ -166,6 +167,10 @@ class GlMagnifierAdvanced(
     private var textureWidth = 0f
     private var textureHeight = 0f
 
+    private var currentTintColor: Int = -1
+    private var pendingTintColor: Int = Color.WHITE
+    private var tintColorChanged = false
+
     fun configure(
         magnification: Float,
         magnifierSizeW: Float,
@@ -173,11 +178,17 @@ class GlMagnifierAdvanced(
         textureScale: Float = 1f,
         framesNumber: Int = 4,
         frame: Int = 0,
-        stride: Int = 2
+        stride: Int = 2,
+        tintColor: Int = Color.WHITE
     ) {
         this.magnification = magnification
         this.magnifierSizeW = magnifierSizeW
         this.magnifierSizeH = magnifierSizeH
+
+        if (pendingTintColor != tintColor) {
+            pendingTintColor = tintColor
+            tintColorChanged = true
+        }
 
         val side = minOf(width, height) * magnifierSizeW
         vertexWidth = side
@@ -270,6 +281,12 @@ class GlMagnifierAdvanced(
     }
 
     override fun draw(modelViewProjectionMatrix: FloatArray, oesTextureId: Int) {
+        if (tintColorChanged) {
+            tintColorChanged = false
+            currentTintColor = pendingTintColor
+            loadTexture(currentTintColor)
+        }
+
         shaderProgram.useProgram()
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, if (oesTextureId != 0) oesTextureId else 1)
@@ -309,17 +326,24 @@ class GlMagnifierAdvanced(
         }
     }
 
-    private fun loadTexture() {
-        glGenTextures(1, textureHandle, 0)
+    private fun loadTexture(tintColor: Int = Color.WHITE) {
+        if (textureHandle[0] == 0) {
+            glGenTextures(1, textureHandle, 0)
+        }
         val options = BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
 
-        val bitmap = BitmapFactory.decodeResource(
+        val sourceBitmap = BitmapFactory.decodeResource(
             context.resources,
             R.drawable.focus_ring,
             options
         )
+
+        val bitmap = tintBitmap(sourceBitmap, tintColor)
+        if (sourceBitmap != bitmap) {
+            sourceBitmap.recycle()
+        }
 
         glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, textureHandle[0])
@@ -349,5 +373,17 @@ class GlMagnifierAdvanced(
         bitmap.recycle()
 
         glBindTexture(GL_TEXTURE_2D, 0)
+    }
+
+    private fun tintBitmap(sourceBitmap: Bitmap, color: Int): Bitmap {
+        val width = sourceBitmap.width
+        val height = sourceBitmap.height
+        val tintedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(tintedBitmap)
+        val paint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.PorterDuffColorFilter(color, android.graphics.PorterDuff.Mode.SRC_IN)
+        }
+        canvas.drawBitmap(sourceBitmap, 0f, 0f, paint)
+        return tintedBitmap
     }
 }

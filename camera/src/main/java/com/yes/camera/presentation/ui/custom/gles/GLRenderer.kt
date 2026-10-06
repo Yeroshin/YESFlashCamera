@@ -3,6 +3,7 @@ package com.yes.camera.presentation.ui.custom.gles
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Context.ACTIVITY_SERVICE
+import android.graphics.Color
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20
@@ -181,14 +182,16 @@ class GLRenderer(
         magnification: Float,
         magnifierSizeW: Float = 0.5f,
         magnifierSizeH: Float = 0.5f,
-        frame: Int = 0
+        frame: Int = 0,
+        tintColor: Int = Color.WHITE
     ) {
         glObjects.find { it is GlMagnifierAdvanced }?.let {
             (it as GlMagnifierAdvanced).configure(
                 magnification,
                 magnifierSizeW,
                 magnifierSizeH,
-                frame = frame
+                frame = frame,
+                tintColor = tintColor
             )
         }
     }

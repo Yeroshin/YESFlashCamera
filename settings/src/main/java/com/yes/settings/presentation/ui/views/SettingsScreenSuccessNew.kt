@@ -19,7 +19,12 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -690,7 +695,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                     }
-                                    Checkbox(
+                                    SettingsSwitch(
                                         checked = settingsUI.fullScreen,
                                         onCheckedChange = { isChecked ->
                                             onSettingsChanged(settingsUI.copy(fullScreen = isChecked))
@@ -754,7 +759,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                     }
-                                    Checkbox(
+                                    SettingsSwitch(
                                         checked = gridEnabled,
                                         onCheckedChange = { isChecked ->
                                             gridEnabled = isChecked
@@ -818,7 +823,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                         )
                                     }
-                                    Checkbox(
+                                    SettingsSwitch(
                                         checked = saveLocationEnabled,
                                         onCheckedChange = { isChecked ->
                                             saveLocationEnabled = isChecked
@@ -1039,6 +1044,39 @@ fun SettingsScreenSuccessNew(
             }
         }
     }
+}
+
+@Composable
+fun SettingsSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = Color(0xFF001d36),
+            checkedTrackColor = Color(0xFFd3e2ff),
+            uncheckedThumbColor = Color(0xFF8e9099),
+            uncheckedTrackColor = Color(0xFF35383f),
+            checkedBorderColor = Color.Transparent,
+            uncheckedBorderColor = Color.Transparent
+        ),
+        thumbContent = if (checked) {
+            {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = Color.White
+                )
+            }
+        } else {
+            null
+        }
+    )
 }
 
 @Preview(widthDp = 390, heightDp = 1131)

@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.ui.views
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.view.OrientationEventListener
@@ -117,7 +118,12 @@ fun CameraScreenSuccess(
     LaunchedEffect(characteristics.magnifierValue, characteristics.isFocused) {
         val mag = characteristics.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
         val frame = if (characteristics.isFocused) 1 else 0
-        renderer.configureMagnifier(mag, frame = frame)
+        val tintColor = if (characteristics.isFocused) {
+            Color.parseColor("#81c784") // Green when focused
+        } else {
+            Color.parseColor("#d3e2ff") // Primary accent / light blue when searching
+        }
+        renderer.configureMagnifier(mag, frame = frame, tintColor = tintColor)
     }
 
     var shutterBoxIsOpen by remember { mutableStateOf(true) }
