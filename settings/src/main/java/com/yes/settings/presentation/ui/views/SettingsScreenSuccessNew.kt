@@ -92,7 +92,7 @@ fun SettingsScreenSuccessNew(
         onResult = { uri: Uri? ->
             uri?.let {
                 val path = it.toString()
-                onSettingsChanged(settingsUI.copy(storagePath = path))
+                onSettingsChanged(settingsUI.copy(storagePath = path, rawStoragePath = path))
             }
         }
     )

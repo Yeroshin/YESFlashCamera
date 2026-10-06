@@ -3,6 +3,9 @@ package com.yes.camera.presentation.ui.views
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.view.OrientationEventListener
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
@@ -12,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -29,6 +33,10 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
+enum class LayoutOrientation {
+    PORTRAIT, LANDSCAPE_LEFT, LANDSCAPE_RIGHT, REVERSE_PORTRAIT
+}
+
 @Composable
 fun CameraScreenSuccess(
     context: Context,
@@ -41,6 +49,61 @@ fun CameraScreenSuccess(
     onSelectCategory: (category: SettingsItem) -> Unit,
 ) {
     val characteristics by characteristicsFlow.collectAsState()
+
+    var layoutOrientation by remember { mutableStateOf(LayoutOrientation.PORTRAIT) }
+
+    DisposableEffect(context) {
+        val orientationEventListener = object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                val newOrientation = when (orientation) {
+                    in 45..135 -> LayoutOrientation.LANDSCAPE_RIGHT
+                    in 135..225 -> LayoutOrientation.REVERSE_PORTRAIT
+                    in 225..315 -> LayoutOrientation.LANDSCAPE_LEFT
+                    else -> LayoutOrientation.PORTRAIT
+                }
+                if (newOrientation != layoutOrientation) {
+                    layoutOrientation = newOrientation
+                }
+            }
+        }
+        if (orientationEventListener.canDetectOrientation()) {
+            orientationEventListener.enable()
+        }
+        onDispose {
+            orientationEventListener.disable()
+        }
+    }
+
+    val isLandscape = layoutOrientation == LayoutOrientation.LANDSCAPE_LEFT || layoutOrientation == LayoutOrientation.LANDSCAPE_RIGHT
+
+    // Top elements follow top edge of phone
+    val targetTopRotation = when (layoutOrientation) {
+        LayoutOrientation.PORTRAIT -> 0f
+        LayoutOrientation.LANDSCAPE_LEFT -> 90f
+        LayoutOrientation.LANDSCAPE_RIGHT -> 270f
+        LayoutOrientation.REVERSE_PORTRAIT -> 180f
+    }
+
+    // Bottom elements follow bottom edge of phone (opposite of top when in landscape)
+    val targetBottomRotation = when (layoutOrientation) {
+        LayoutOrientation.PORTRAIT -> 0f
+        LayoutOrientation.LANDSCAPE_LEFT -> 270f
+        LayoutOrientation.LANDSCAPE_RIGHT -> 90f
+        LayoutOrientation.REVERSE_PORTRAIT -> 180f
+    }
+
+    val topRotation by animateFloatAsState(
+        targetValue = targetTopRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "topRotation"
+    )
+
+    val bottomRotation by animateFloatAsState(
+        targetValue = targetBottomRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "bottomRotation"
+    )
 
     // Sync magnifier
     LaunchedEffect(characteristics.touchPoint) {
@@ -75,25 +138,35 @@ fun CameraScreenSuccess(
     }
 
     val isAutoForCategory = remember(characteristics.isAutoForSelectedCategory) { characteristics.isAutoForSelectedCategory }
-    val currentItems = remember(characteristics.currentCategoryItems) { characteristics.currentCategoryItems }
     val currentPosition = remember(characteristics.currentCategoryPosition) { characteristics.currentCategoryPosition }
 
     Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.transparent)) {
         ShutterBox(
             isOpen = shutterBoxIsOpen,
             onToggle = { shutterBoxIsOpen = !shutterBoxIsOpen },
-            modifier = Modifier.fillMaxSize().padding(top = if (characteristics.fullScreen) AppTheme.dimens.none else AppTheme.dimens.shutterTopPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = if (characteristics.fullScreen || isLandscape) AppTheme.dimens.none else AppTheme.dimens.shutterTopPadding)
         ) {}
 
+        // Top category bar (near top of phone / camera cutout) rotates with topRotation
         UniversalRadioGroup(
             items = paramsRadioGroupItems,
             selectedItem = characteristics.selectedCategory,
             onItemClick = { onSelectCategory(it as SettingsItem) },
-            modifier = Modifier.padding(AppTheme.dimens.small).fillMaxWidth().padding(top = AppTheme.dimens.large),
+            modifier = Modifier
+                .padding(AppTheme.dimens.small)
+                .fillMaxWidth()
+                .padding(top = AppTheme.dimens.large),
+            itemRotation = topRotation
         )
 
+        // Top-end resolution & format text rotates with topRotation
         Column(
-            modifier = Modifier.padding(top = AppTheme.dimens.histogramTopPadding, end = AppTheme.dimens.large).align(Alignment.TopEnd),
+            modifier = Modifier
+                .padding(top = AppTheme.dimens.histogramTopPadding, end = AppTheme.dimens.large)
+                .align(Alignment.TopEnd)
+                .graphicsLayer { rotationZ = topRotation },
             horizontalAlignment = Alignment.End
         ) {
             characteristics.resolution?.let {
@@ -118,20 +191,30 @@ fun CameraScreenSuccess(
             )
         }
 
+        // Top-start histogram rotates with topRotation
         Histogram(
-            modifier = Modifier.padding(start = AppTheme.dimens.large, top = AppTheme.dimens.histogramTopPadding).align(Alignment.TopStart),
+            modifier = Modifier
+                .padding(start = AppTheme.dimens.large, top = AppTheme.dimens.histogramTopPadding)
+                .align(Alignment.TopStart)
+                .graphicsLayer { rotationZ = topRotation },
             values = characteristics.histogramData,
             widthDp = AppTheme.dimens.histogramWidth,
             heightDp = AppTheme.dimens.histogramHeight
         )
 
+        // Bottom control bar and shutter row rotate with bottomRotation
         Column(
-            modifier = Modifier.padding(AppTheme.dimens.medium).fillMaxWidth().align(Alignment.BottomCenter),
+            modifier = Modifier
+                .padding(AppTheme.dimens.medium)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
             verticalArrangement = Arrangement.spacedBy(AppTheme.dimens.medium)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 VectorShadow(
-                    modifier = Modifier.size(AppTheme.dimens.iconLarge),
+                    modifier = Modifier
+                        .size(AppTheme.dimens.iconLarge)
+                        .graphicsLayer { rotationZ = topRotation },
                     resId = R.drawable.auto,
                     vectorColor = if (isAutoForCategory) AppTheme.colors.primaryAccent else AppTheme.colors.iconPrimary,
                     shadowColor = AppTheme.colors.shadow,
@@ -182,7 +265,8 @@ fun CameraScreenSuccess(
                                     else -> characteristics
                                 }
                                 onSetCharacteristic(updated)
-                            }
+                            },
+                            itemRotation = topRotation
                         )
                     } else {
                         key(characteristics.selectedCategory) {
@@ -211,7 +295,8 @@ fun CameraScreenSuccess(
                                         }
                                         updated.let(onSetCharacteristic)
                                     }
-                                }
+                                },
+                                itemRotation = topRotation
                             )
                         }
                     }
@@ -223,11 +308,29 @@ fun CameraScreenSuccess(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.radioGroupSpacing)
             ) {
-                VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.settings, AppTheme.colors.iconPrimary, AppTheme.colors.shadow, onClick = onSettingsClick)
-                VectorShadow(Modifier.size(AppTheme.dimens.iconLarge), R.drawable.flip_camera_android, AppTheme.colors.iconPrimary, AppTheme.colors.shadow)
-                RecordButton(modifier = Modifier.size(AppTheme.dimens.recordButtonSize), onClick = {
-                    onSingleCapture()
-                })
+                VectorShadow(
+                    modifier = Modifier
+                        .size(AppTheme.dimens.iconLarge)
+                        .graphicsLayer { rotationZ = bottomRotation },
+                    resId = R.drawable.settings,
+                    vectorColor = AppTheme.colors.iconPrimary,
+                    shadowColor = AppTheme.colors.shadow,
+                    onClick = onSettingsClick
+                )
+                VectorShadow(
+                    modifier = Modifier
+                        .size(AppTheme.dimens.iconLarge)
+                        .graphicsLayer { rotationZ = bottomRotation },
+                    resId = R.drawable.flip_camera_android,
+                    vectorColor = AppTheme.colors.iconPrimary,
+                    shadowColor = AppTheme.colors.shadow
+                )
+                RecordButton(
+                    modifier = Modifier
+                        .size(AppTheme.dimens.recordButtonSize)
+                        .graphicsLayer { rotationZ = bottomRotation },
+                    onClick = { onSingleCapture() }
+                )
             }
         }
     }

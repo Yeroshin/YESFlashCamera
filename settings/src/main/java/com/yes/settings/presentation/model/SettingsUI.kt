@@ -12,6 +12,7 @@ data class SettingsUI(
     val totalStorageText: String = "256 GB total",
     val storageProgress: Float = 0.55f,
     val storagePath: String = "/DCIM/Camera/",
+    val rawStoragePath: String = "",
     val remainingShotsText: String = "Approx. 3,155 shots",
     val bufferSizeText: String = "Buffer size: ~12 MB/shot",
     val themeValue: String = "Dark (Default)",

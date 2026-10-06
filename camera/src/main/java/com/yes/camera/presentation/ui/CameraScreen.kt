@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -259,8 +261,11 @@ fun CameraScreen(
             // onTouchPoint — закеширован (onPreviewTouch)
             //
             // Результат: При изменении ISO этот блок кода будет СКИПАТЬСЯ (Skip)!
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
             CameraPreviewContainer(
-                modifier = Modifier.padding(top = if (characteristics.fullScreen) AppTheme.dimens.none else AppTheme.dimens.cameraTopPadding),
+                modifier = Modifier.padding(top = if (characteristics.fullScreen || isLandscape) AppTheme.dimens.none else AppTheme.dimens.cameraTopPadding),
                 renderer = renderer,
                 fullScreen = isFullScreen,
                 aspectRatio = currentAspectRatio,

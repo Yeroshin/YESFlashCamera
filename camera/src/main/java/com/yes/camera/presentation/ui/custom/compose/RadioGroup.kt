@@ -12,6 +12,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import com.yes.shared.presentation.ui.theme.AppTheme
 
@@ -26,7 +27,8 @@ fun <T> UniversalRadioGroup(
     items: List<RadioUiItem<T>>,
     selectedItem: T?,
     onItemClick: (T) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    itemRotation: Float = 0f
 ) {
     Row(
         modifier = modifier
@@ -47,6 +49,7 @@ fun <T> UniversalRadioGroup(
                             role = Role.RadioButton
                         )
                         .padding(AppTheme.dimens.medium)
+                        .graphicsLayer { rotationZ = itemRotation }
                 ) {
                     item.content(isSelected)
                 }

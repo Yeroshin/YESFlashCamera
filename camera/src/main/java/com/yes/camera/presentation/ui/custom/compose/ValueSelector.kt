@@ -31,6 +31,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -576,7 +577,8 @@ fun ValueSelector(
     modifier: Modifier,
     position: Int,
     items: List<SelectorUiItem>?,
-    onSelectedItemChanged: (index: Int) -> Unit
+    onSelectedItemChanged: (index: Int) -> Unit,
+    itemRotation: Float = 0f
 ) {
     if (items.isNullOrEmpty()) return
 
@@ -661,7 +663,8 @@ fun ValueSelector(
                                     listState.animateScrollToItem(index)
                                     onSelectedItemChanged(index)
                                 }
-                            },
+                            }
+                            .graphicsLayer { rotationZ = itemRotation },
                         contentAlignment = Alignment.Center
                     ) {
                         val isSelected = index <= centerIndex

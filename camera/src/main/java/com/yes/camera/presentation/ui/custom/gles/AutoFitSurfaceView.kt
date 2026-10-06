@@ -1,17 +1,15 @@
 package com.yes.camera.presentation.ui.custom.gles
 
-
 import android.content.Context
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
-
 
 class AutoFitSurfaceView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : GLSurfaceView(context, attrs) {
 
-    private var aspectRatio = 1.0f
+    private var aspectRatio = 0.75f // Default 3:4 aspect ratio (min/max)
     private var fullscreen = true
 
     override fun performClick(): Boolean {
@@ -21,11 +19,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     fun setAspectRatio(width: Int, height: Int) {
         require(width > 0 && height > 0) { "Size cannot be negative" }
-        //  aspectRatio = width.toFloat() / height.toFloat()
-        aspectRatio =
-            if (width < height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
-
-        //  holder.setFixedSize(320,400)
+        aspectRatio = if (width < height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
         requestLayout()
     }
 
@@ -33,90 +27,46 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         this.fullscreen = fullScreen
         requestLayout()
     }
-   /* private var currentWidth = 0
-    private var currentHeight = 0*/
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        // Теперь у вас есть доступные размеры w и h
-       /* currentWidth = w
-        currentHeight = h*/
-    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
 
-        val v = width
-        val h = (width / aspectRatio).toInt()
-        if (fullscreen) {
-            setMeasuredDimension(
-                (height * aspectRatio).toInt(),
-                height
-            )
-        } else {
+        if (width <= 0 || height <= 0 || aspectRatio <= 0f) {
+            setMeasuredDimension(width, height)
+            return
+        }
 
+        if (fullscreen) {
             if (width > height) {
+                // Landscape FullScreen (Center Crop)
                 setMeasuredDimension(
-                    (height/ aspectRatio).toInt(),
+                    width,
+                    (width * aspectRatio).toInt()
+                )
+            } else {
+                // Portrait FullScreen (Center Crop)
+                setMeasuredDimension(
+                    (height * aspectRatio).toInt(),
+                    height
+                )
+            }
+        } else {
+            if (width > height) {
+                // Landscape Non-FullScreen (Fit Inside / Letterbox)
+                setMeasuredDimension(
+                    (height / aspectRatio).toInt(),
                     height
                 )
             } else {
+                // Portrait Non-FullScreen (Fit Inside / Letterbox)
                 setMeasuredDimension(
                     width,
                     (width / aspectRatio).toInt()
                 )
             }
         }
-        /*  if (fullscreen){
-              if((height*aspectRatio).toInt()<height){
-                  setMeasuredDimension(
-                      (height*aspectRatio).toInt(),
-                      height
-                  )
-
-              }else{
-                  setMeasuredDimension(
-                      width,
-                      (height*aspectRatio).toInt(),
-                  )
-
-              }
-          }else{
-              if((width*aspectRatio).toInt()>height){
-                  setMeasuredDimension(
-                      (height*aspectRatio).toInt(),
-                      height
-                  )
-              }else{
-                  setMeasuredDimension(
-                      width,
-                      (width*aspectRatio).toInt()
-                  )
-              }
-
-          }*/
-
-        /* if (aspectRatio == 0f) {
-           //  setMeasuredDimension(width, height)
-         } else {
-
-             // Performs center-crop transformation of the camera frames
-             val newWidth: Int
-             val newHeight: Int
-             val actualRatio = if (width > height) aspectRatio else 1f / aspectRatio
-             if (width < height * actualRatio) {
-                 newHeight = height
-                 newWidth = (height * actualRatio).roundToInt()
-             } else {
-                 newWidth = width
-                 newHeight = (width / actualRatio).roundToInt()
-             }
-
-             Log.d(TAG, "Measured dimensions set: $newWidth x $newHeight")
-            // setMeasuredDimension(newWidth, newHeight)
-             setMeasuredDimension(640, 1280)
-         }*/
     }
 
     companion object {
