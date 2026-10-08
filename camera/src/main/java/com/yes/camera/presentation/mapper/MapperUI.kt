@@ -6,6 +6,7 @@ import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT
+import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_OFF
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_SHADE
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_TWILIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT
@@ -174,32 +175,35 @@ class MapperUI(
             shutterItems = standardShutterSpeeds.entries.sortedBy { it.key }.mapIndexed { i, entry -> SelectorItem(i, entry.value) }.toImmutableList(),
             isoItems = standardIsoValues.mapIndexed { i, v -> SelectorItem(i, v.toString()) }.toImmutableList(),
             wbItems = standardWbValues.mapIndexed { i, v -> SelectorItem(i, "${v}K") }.toImmutableList(),
-            wbModeItems = characteristics.wbModeItems?.map { item ->
-                RadioGroupItem.IconItem(
-                    id = when (item) {
-                        CONTROL_AWB_MODE_AUTO -> ModeItem.WbItem.AUTO
-                        CONTROL_AWB_MODE_INCANDESCENT -> ModeItem.WbItem.INCANDESCENT
-                        CONTROL_AWB_MODE_FLUORESCENT -> ModeItem.WbItem.FLUORESCENT
-                        CONTROL_AWB_MODE_WARM_FLUORESCENT -> ModeItem.WbItem.WARM_FLUORESCENT
-                        CONTROL_AWB_MODE_DAYLIGHT -> ModeItem.WbItem.DAYLIGHT
-                        CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> ModeItem.WbItem.CLOUDY_DAYLIGHT
-                        CONTROL_AWB_MODE_TWILIGHT -> ModeItem.WbItem.TWILIGHT
-                        CONTROL_AWB_MODE_SHADE -> ModeItem.WbItem.SHADE
-                        else -> ModeItem.WbItem.AUTO
-                    },
-                    iconRes = when (item) {
-                        CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
-                        CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
-                        CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.fluorescent
-                        CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.fluorescent
-                        CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
-                        CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_cloudy
-                        CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
-                        CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
-                        else -> R.drawable.wb_auto
-                    }
-                )
-            } ?: emptyList(),
+            wbModeItems = characteristics.wbModeItems
+                ?.filter { it != CONTROL_AWB_MODE_OFF }
+                ?.map { item ->
+                    RadioGroupItem.IconItem(
+                        id = when (item) {
+                            CONTROL_AWB_MODE_AUTO -> ModeItem.WbItem.AUTO
+                            CONTROL_AWB_MODE_INCANDESCENT -> ModeItem.WbItem.INCANDESCENT
+                            CONTROL_AWB_MODE_FLUORESCENT -> ModeItem.WbItem.FLUORESCENT
+                            CONTROL_AWB_MODE_WARM_FLUORESCENT -> ModeItem.WbItem.WARM_FLUORESCENT
+                            CONTROL_AWB_MODE_DAYLIGHT -> ModeItem.WbItem.DAYLIGHT
+                            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> ModeItem.WbItem.CLOUDY_DAYLIGHT
+                            CONTROL_AWB_MODE_TWILIGHT -> ModeItem.WbItem.TWILIGHT
+                            CONTROL_AWB_MODE_SHADE -> ModeItem.WbItem.SHADE
+                            else -> ModeItem.WbItem.AUTO
+                        },
+                        iconRes = when (item) {
+                            CONTROL_AWB_MODE_AUTO -> R.drawable.wb_auto
+                            CONTROL_AWB_MODE_INCANDESCENT -> R.drawable.wb_incandescent
+                            CONTROL_AWB_MODE_FLUORESCENT -> R.drawable.fluorescent
+                            CONTROL_AWB_MODE_WARM_FLUORESCENT -> R.drawable.fluorescent
+                            CONTROL_AWB_MODE_DAYLIGHT -> R.drawable.wb_sunny
+                            CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> R.drawable.wb_cloudy
+                            CONTROL_AWB_MODE_TWILIGHT -> R.drawable.wb_twilight
+                            CONTROL_AWB_MODE_SHADE -> R.drawable.wb_shade
+                            else -> R.drawable.wb_auto
+                        }
+                    )
+                }
+                ?.distinctBy { it.id } ?: emptyList(),
             wbMode = when (characteristics.wbMode) {
                 CONTROL_AWB_MODE_AUTO -> ModeItem.WbItem.AUTO
                 CONTROL_AWB_MODE_INCANDESCENT -> ModeItem.WbItem.INCANDESCENT

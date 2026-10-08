@@ -21,6 +21,7 @@ import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.ColorSpaceTransform
 import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.RggbChannelVector
@@ -38,6 +39,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Rational
 import android.util.Size
 import android.view.Surface
 import android.widget.Toast
@@ -86,6 +88,10 @@ class CameraRepository(
     private lateinit var histogramSurface: Surface
     private lateinit var captureSurfaceJpeg: Surface
     private lateinit var captureSurfaceRaw: Surface
+
+    private var sensorBaseRGain = 2.0f
+    private var sensorBaseBGain = 1.8f
+    private var lastColorTransform: ColorSpaceTransform? = null
 
     private val _characteristicsFlow = MutableStateFlow<Characteristics?>(null)
     fun subscribeCameraSettings(): StateFlow<Characteristics?> = _characteristicsFlow
@@ -302,6 +308,7 @@ class CameraRepository(
         val caps = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
         val supportsRaw = caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
         val allrSizes = map?.getOutputSizes(ImageFormat.RAW_SENSOR)
+
         return Characteristics(
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
@@ -426,6 +433,9 @@ class CameraRepository(
                 builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
                 builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(characteristics.wbValue))
                 builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                if (lastColorTransform != null) {
+                    builder.set(CaptureRequest.COLOR_CORRECTION_TRANSFORM, lastColorTransform)
+                }
             } else {
                 builder.set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
             }
@@ -765,6 +775,14 @@ class CameraRepository(
             val sExp = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
             val fDist = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: 0f
             val wbG = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            val transform = result.get(CaptureResult.COLOR_CORRECTION_TRANSFORM)
+            if (transform != null) {
+                lastColorTransform = transform
+            }
+            if (wbG != null && lastCharacteristics.wbValue == null) {
+                sensorBaseRGain = wbG.red.coerceAtLeast(0.5f)
+                sensorBaseBGain = wbG.blue.coerceAtLeast(0.5f)
+            }
 
             val isPriorityMode = (lastCharacteristics.isoValue == null) != (lastCharacteristics.shutterValue == null)
             if (!isAfLocked && isPriorityMode && (now - lastAeUpdateMillis > 500)) {
@@ -845,20 +863,54 @@ class CameraRepository(
     }
 
     private fun rgbToKelvin(rgb: RggbChannelVector): Int {
-        var minTemp = 1000f; var maxTemp = 40000f
-        repeat(20) { val temp = (minTemp + maxTemp) / 2; val testRgb = kelvinToRgb(temp) ?: return@repeat; if ((testRgb.blue / testRgb.red) >= (rgb.blue / rgb.red)) maxTemp = temp else minTemp = temp }
+        val rGain = rgb.red.coerceAtLeast(0.01f)
+        val bGain = rgb.blue.coerceAtLeast(0.01f)
+
+        val rComp = (rGain / sensorBaseRGain).coerceAtLeast(0.01f)
+        val bComp = (bGain / sensorBaseBGain).coerceAtLeast(0.01f)
+
+        val rgbD65 = kelvinToRgb(6500f)
+        val ratioD65 = rgbD65.blue / rgbD65.red.coerceAtLeast(0.01f)
+
+        val illuminantBlueOverRed = (rComp / bComp) * ratioD65
+
+        var minTemp = 1000f
+        var maxTemp = 12000f
+        repeat(20) {
+            val temp = (minTemp + maxTemp) / 2f
+            val testRgb = kelvinToRgb(temp)
+            val testRatio = testRgb.blue / testRgb.red.coerceAtLeast(0.01f)
+            if (testRatio >= illuminantBlueOverRed) {
+                maxTemp = temp
+            } else {
+                minTemp = temp
+            }
+        }
         return ((minTemp + maxTemp) / 2f + 0.5f).toInt()
     }
 
     private fun convertTemperatureToRggb(kelvin: Int): RggbChannelVector {
-        val t = kelvin / 100.0f
-        val red = if (t <= 66) 255f else (329.698727446 * (t - 60.0).pow(-0.1332047592)).toFloat().coerceIn(0f, 255f)
-        val green = if (t <= 66) (99.4708025861 * ln(t.toDouble()) - 161.1195681661).toFloat().coerceIn(0f, 255f) else (288.1221695283 * (t - 60.0).pow(-0.0755148492)).toFloat().coerceIn(0f, 255f)
-        val blue = if (t >= 66) 255f else if (t <= 19) 0f else (138.5177312231 * ln(t.toDouble() - 10.0) - 305.0447927307).toFloat().coerceIn(0f, 255f)
-        return RggbChannelVector((red / 255f) * 2f, green / 255f, green / 255f, (blue / 255f) * 2f)
+        val rgb = kelvinToRgb(kelvin.toFloat())
+        val rLight = rgb.red.coerceAtLeast(1f)
+        val gLight = rgb.greenEven.coerceAtLeast(1f)
+        val bLight = rgb.blue.coerceAtLeast(1f)
+
+        val rgbD65 = kelvinToRgb(6500f)
+        val rD65 = rgbD65.red.coerceAtLeast(1f)
+        val gD65 = rgbD65.greenEven.coerceAtLeast(1f)
+        val bD65 = rgbD65.blue.coerceAtLeast(1f)
+
+        val rComp = (gLight / rLight) / (gD65 / rD65)
+        val bComp = (gLight / bLight) / (gD65 / bD65)
+
+        val rGain = (sensorBaseRGain * rComp).coerceIn(0.5f, 5.0f)
+        val gGain = 1.0f
+        val bGain = (sensorBaseBGain * bComp).coerceIn(0.5f, 5.0f)
+
+        return RggbChannelVector(rGain, gGain, gGain, bGain)
     }
 
-    private fun kelvinToRgb(kelvin: Float): RggbChannelVector? {
+    private fun kelvinToRgb(kelvin: Float): RggbChannelVector {
         val t = kelvin / 100.0
         val r = if (t < 66.0) 255.0 else (351.97690566805693 + 0.114206453484165 * (t - 55.0) - 40.25366309332127 * ln(t - 55.0)).coerceIn(0.0, 255.0)
         val g = if (t < 66.0) (-155.25485562709179 - 0.44596950469579133 * (t - 2.0) + 104.49216199393888 * ln(t - 2.0)).coerceIn(0.0, 255.0) else (325.4494125711974 + 0.07943456536662342 * (t - 50.0) - 28.0852963507957 * ln(t - 50.0)).coerceIn(0.0, 255.0)

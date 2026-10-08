@@ -150,7 +150,7 @@ fun CameraScreenSuccess(
                                 )
                             )
                             VectorShadow(
-                                Modifier.size(AppTheme.dimens.iconDefault),
+                                Modifier.size(AppTheme.dimens.iconSmall),
                                 vectorColor = if (isSelected) activeColor else AppTheme.colors.iconPrimary,
                                 shadowColor = shadowColor,
                                 resId = data.iconRes
