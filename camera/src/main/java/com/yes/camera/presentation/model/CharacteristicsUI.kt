@@ -31,7 +31,7 @@ data class CharacteristicsUI(
     val focusMode: ModeItem.FocusItem? = null,
     val magnifierValue: String? = null,
     val touchPoint: Offset? = Offset(0.5f, 0.5f),
-    val fullScreen: Boolean = true,
+    val fullScreen: Boolean = false,
     val resolution: String? = null,
     val aspectRatio: Dimensions? = null,
     val imgFormat: String = "JPEG",
@@ -86,6 +86,7 @@ sealed interface RadioGroupItem  {
 
     data class IconItem(
         override val id: Enum<*>,
+        val title: String = "",
         val iconRes: Int
     ) : RadioGroupItem
 

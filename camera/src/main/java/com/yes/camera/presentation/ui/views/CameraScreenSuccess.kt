@@ -24,6 +24,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yes.camera.R
 import com.yes.camera.presentation.model.*
 import com.yes.camera.presentation.ui.adapter.TextSelectorContent
@@ -135,11 +136,27 @@ fun CameraScreenSuccess(
         characteristics.characteristicsItems.map { data ->
             RadioUiItem(id = data.id) { isSelected ->
                 when (data) {
-                    is RadioGroupItem.IconItem -> Icon(
-                        painterResource(data.iconRes),
-                        null,
-                        tint = if (isSelected) AppTheme.colors.secondaryAccent else AppTheme.colors.iconPrimary
-                    )
+                    is RadioGroupItem.IconItem -> {
+                        val activeColor = AppTheme.colors.primaryAccent
+                        val normalColor = AppTheme.colors.textPrimary
+                        val shadowColor = AppTheme.colors.shadow
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = data.title,
+                                style = TextStyle(
+                                    color = if (isSelected) activeColor else normalColor,
+                                    fontSize = 8.sp,
+                                    shadow = Shadow(shadowColor, Offset(5f, 5f), 5f)
+                                )
+                            )
+                            VectorShadow(
+                                Modifier.size(AppTheme.dimens.iconDefault),
+                                vectorColor = if (isSelected) activeColor else AppTheme.colors.iconPrimary,
+                                shadowColor = shadowColor,
+                                resId = data.iconRes
+                            )
+                        }
+                    }
                     is RadioGroupItem.TextItem -> TextRadioContent(data.title, data.currentValue, isSelected)
                 }
             }

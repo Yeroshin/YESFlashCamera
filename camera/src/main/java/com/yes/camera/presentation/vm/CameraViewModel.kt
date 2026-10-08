@@ -173,10 +173,8 @@ class CameraViewModel(
 
     private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
         withUseCaseScope(
-            loadingUpdater = { isLoading ->
-                if (isLoading) {
-                    setState { copy(state = CameraState.Loading) }
-                }
+            loadingUpdater = { _ ->
+                // Do not switch to CameraState.Loading to prevent preview flashing black
             },
             onError = {
                 setState { copy(state = CameraState.Error(it)) }

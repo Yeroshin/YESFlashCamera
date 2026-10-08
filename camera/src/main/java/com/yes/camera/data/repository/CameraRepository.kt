@@ -363,7 +363,7 @@ class CameraRepository(
             object : CameraCaptureSession.StateCallback() {
             override fun onConfigured(session: CameraCaptureSession) {
                 cameraSession = session
-                persistentBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL).apply {
+                persistentBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
                     addTarget(previewSurface)
                     addTarget(histogramSurface)
                     addTarget(captureSurfaceJpeg)
@@ -692,11 +692,17 @@ class CameraRepository(
     }
 
     private fun updateFocus(builder: CaptureRequest.Builder, new: Characteristics, old: Characteristics?) {
-        val isManual = new.focusValue != null && new.focusMode != -1
-        val wasManual = old?.focusValue != null && old?.focusMode != -1
+        val isManual = new.focusValue != null && new.focusMode != -1 && new.focusMode != -2 && new.focusMode != -3
+        val wasManual = old?.focusValue != null && old?.focusMode != -1 && old?.focusMode != -2 && old?.focusMode != -3
         val modeChanged = new.focusMode != old?.focusMode || isManual != wasManual
 
-        if (isManual) {
+        if (new.focusMode == -2 || new.focusMode == -3) {
+            if (modeChanged || new.focusValue != old?.focusValue) {
+                isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
+                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, new.focusValue ?: 0f)
+            }
+        } else if (isManual) {
             if (modeChanged || new.focusValue != old?.focusValue) {
                 isAfLocked = false; isWaitingForFocus = false; lastLockedFocusDistance = null
                 builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
@@ -841,7 +847,7 @@ class CameraRepository(
     private fun rgbToKelvin(rgb: RggbChannelVector): Int {
         var minTemp = 1000f; var maxTemp = 40000f
         repeat(20) { val temp = (minTemp + maxTemp) / 2; val testRgb = kelvinToRgb(temp) ?: return@repeat; if ((testRgb.blue / testRgb.red) >= (rgb.blue / rgb.red)) maxTemp = temp else minTemp = temp }
-        return (minTemp + maxTemp).toInt() / 2
+        return ((minTemp + maxTemp) / 2f + 0.5f).toInt()
     }
 
     private fun convertTemperatureToRggb(kelvin: Int): RggbChannelVector {
