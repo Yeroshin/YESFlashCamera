@@ -591,9 +591,11 @@ class CameraRepository(
             iso != null && shutter != null -> {
                 AE = false
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
-                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
-                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))
+                val clampedIso = if (new.isoRange.first > 0 && new.isoRange.last > 0) iso.coerceIn(new.isoRange.first, new.isoRange.last) else iso
+                val clampedShutter = if (new.shutterRange.first > 0 && new.shutterRange.last > 0) shutter.coerceIn(new.shutterRange.first, new.shutterRange.last) else shutter
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
+                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(clampedShutter, 33_333_333L))
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
             }
             iso != null -> {

@@ -21,8 +21,11 @@ import com.yes.shared.presentation.vm.BaseDependency
 import com.yes.shared.presentation.vm.BaseViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Stable
@@ -142,16 +145,30 @@ class CameraViewModel(
         return changes
     }
 
+    private var previewJob: Job? = null
+    private var persistenceJob: Job? = null
+
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
         _characteristicsInternal.value = characteristics
         val domainModel = mapper.map(characteristics)
 
-        launchHybridUseCase(
-            block = setInputCharacteristicsUseCase.bind(
-                SetInputCharacteristicsUseCase.Params(domainModel)
-            ),
-            onComplete = { Log.d(TAG, "Characteristics update and persistence completed") }
-        )
+        // 1. Throttled hardware preview request (50ms) to prevent flooding Camera2 setRepeatingRequest during drag
+        previewJob?.cancel()
+        previewJob = useCaseCoroutineScope.launch {
+            delay(50)
+            setInputCharacteristicsUseCase.runSync(SetInputCharacteristicsUseCase.Params(domainModel))
+        }
+
+        // 2. Debounced background disk persistence (300ms debounce prevents DataStore I/O spam during slider drag)
+        persistenceJob?.cancel()
+        persistenceJob = useCaseCoroutineScope.launch {
+            delay(300)
+            try {
+                setInputCharacteristicsUseCase.run(SetInputCharacteristicsUseCase.Params(domainModel))
+            } catch (e: Exception) {
+                Log.e(TAG, "Persistence error: ${e.message}")
+            }
+        }
     }
 
     private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
@@ -179,7 +196,8 @@ class CameraViewModel(
                             val newBitmap = domainCharacteristics.capturedBitmap
 
                             _characteristicsInternal.update { currentUi ->
-                                mapper.merge(currentUi, domainCharacteristics)
+                                val merged = mapper.merge(currentUi, domainCharacteristics)
+                                if (currentUi == merged) currentUi else merged
                             }
 
                             if (newBitmap != null && newBitmap != oldBitmap) {

@@ -20,20 +20,45 @@ import com.yes.camera.presentation.model.SettingsItem
 import com.yes.camera.utils.ResourceProvider
 import com.yes.shared.domain.ImgFormat
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.abs
 
 class MapperUI(
     private val resources: ResourceProvider
 ) {
-    private val standardShutterSpeeds = mapOf(
+    private val allStandardShutterSpeeds = mapOf(
+        250_000L to "1/4000",
+        500_000L to "1/2000",
+        1_000_000L to "1/1000",
         2_000_000L to "1/500",
         4_000_000L to "1/250",
         8_000_000L to "1/125",
         16_000_000L to "1/60",
+        33_333_333L to "1/30",
+        66_666_666L to "1/15",
+        125_000_000L to "1/8",
+        250_000_000L to "1/4",
+        500_000_000L to "1/2",
+        1_000_000_000L to "1s",
+        2_000_000_000L to "2s",
+        4_000_000_000L to "4s"
     )
-    private val standardIsoValues = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400)
+
+    private val allStandardIsoValues = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600)
     private val standardWbValues = listOf(1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000)
     
+    private fun getSupportedShutterSpeeds(range: LongRange): Map<Long, String> {
+        if (range.first <= 0L || range.last <= 0L) return allStandardShutterSpeeds
+        val filtered = allStandardShutterSpeeds.filter { (ns, _) -> ns in range }
+        return if (filtered.isEmpty()) allStandardShutterSpeeds else filtered
+    }
+
+    private fun getSupportedIsoValues(range: IntRange): List<Int> {
+        if (range.first <= 0 || range.last <= 0) return allStandardIsoValues
+        val filtered = allStandardIsoValues.filter { iso -> iso in range }
+        return if (filtered.isEmpty()) allStandardIsoValues else filtered
+    }
+
     private fun generateFocusValues(min: Float, max: Float, step: Float): List<Float> {
         val size = ((max - min) / step).toInt() + 1
         return List(size) { i -> min + i * step }
@@ -45,6 +70,9 @@ class MapperUI(
      * Maps purely from Hardware/Domain reality.
      */
     fun map(characteristics: Characteristics): CharacteristicsUI {
+        val standardShutterSpeeds = getSupportedShutterSpeeds(characteristics.shutterRange)
+        val standardIsoValues = getSupportedIsoValues(characteristics.isoRange)
+
         val displayShutter = characteristics.shutterValue ?: characteristics.actualShutter
         val sortedShutters = standardShutterSpeeds.entries.sortedBy { it.key }
         val shutterValueStr = displayShutter?.let { s ->
@@ -106,9 +134,9 @@ class MapperUI(
                 RadioGroupItem.TextItem(SettingsItem.FOCUS, "FOCUS", if (characteristics.focusValue == null) "A" else displayFocus.toString()),
                 RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "MAGNIFIER", "1")
             ),
-            shutterItems = standardShutterSpeeds.entries.sortedBy { it.key }.mapIndexed { i, entry -> SelectorItem(i, entry.value) },
-            isoItems = standardIsoValues.mapIndexed { i, v -> SelectorItem(i, v.toString()) },
-            wbItems = standardWbValues.mapIndexed { i, v -> SelectorItem(i, "${v}K") },
+            shutterItems = standardShutterSpeeds.entries.sortedBy { it.key }.mapIndexed { i, entry -> SelectorItem(i, entry.value) }.toImmutableList(),
+            isoItems = standardIsoValues.mapIndexed { i, v -> SelectorItem(i, v.toString()) }.toImmutableList(),
+            wbItems = standardWbValues.mapIndexed { i, v -> SelectorItem(i, "${v}K") }.toImmutableList(),
             wbModeItems = characteristics.wbModeItems?.map { item ->
                 RadioGroupItem.IconItem(
                     id = when (item) {
@@ -146,7 +174,7 @@ class MapperUI(
                 CONTROL_AWB_MODE_SHADE -> ModeItem.WbItem.SHADE
                 else -> ModeItem.WbItem.AUTO
             },
-            focusItems = focusValues.map { SelectorItem(it.toInt(), it.toString()) },
+            focusItems = focusValues.map { SelectorItem(it.toInt(), it.toString()) }.toImmutableList(),
             focusModeItems = ModeItem.FocusItem.entries.map { item ->
                 RadioGroupItem.IconItem(
                     id = item,
@@ -163,7 +191,7 @@ class MapperUI(
                 -1 -> ModeItem.FocusItem.TOUCH
                 else -> ModeItem.FocusItem.CONTINUOUS
             },
-            magnifierItems = standardMagnifierValues.map { SelectorItem(it.toInt(), it.toString()) },
+            magnifierItems = standardMagnifierValues.map { SelectorItem(it.toInt(), it.toString()) }.toImmutableList(),
             magnifierValue = "1",
             histogramData = characteristics.histogramData
         )
@@ -212,7 +240,7 @@ class MapperUI(
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
         val isoValue = if (characteristics.isIsoAuto) null else characteristics.isoValue?.toIntOrNull()
-        val shutterValue = if (characteristics.isShutterAuto) null else standardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
+        val shutterValue = if (characteristics.isShutterAuto) null else allStandardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
         
         val wbValue = if (characteristics.isWbAuto) null else characteristics.wbValue?.filter { it.isDigit() }?.toIntOrNull()
         val wbMode = if (characteristics.isWbAuto) {

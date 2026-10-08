@@ -14,6 +14,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -24,8 +26,10 @@ import com.yes.camera.presentation.contract.CameraContract
 import com.yes.camera.presentation.ui.CameraScreen
 import com.yes.camera.presentation.vm.CameraViewModel
 import com.yes.flashcamera.presentation.ui.theme.FlashCameraTheme
+import com.yes.settings.presentation.contract.SettingsContract
 import com.yes.settings.presentation.ui.SettingsScreen
 import com.yes.settings.presentation.wm.SettingsViewModel
+import com.yes.shared.presentation.ui.theme.AppColors
 
 private const val PERMISSIONS_REQUEST_CODE = 10
 
@@ -183,7 +187,16 @@ class MainActivity : ComponentActivity() {
 
         ///////////////////////////
         setContent {
-            FlashCameraTheme {
+            val settingsState by settingsViewModel.uiState.collectAsState()
+            val themeValue = (settingsState.state as? SettingsContract.SettingsState.Success)?.settings?.themeValue ?: "Dark (Default)"
+            val appColors = when (themeValue) {
+                "Light", "Светлая" -> AppColors.light()
+                "AMOLED Black", "AMOLED Чёрная" -> AppColors.amoled()
+                "High Contrast", "Высокий контраст" -> AppColors.highContrast()
+                else -> AppColors.dark()
+            }
+
+            FlashCameraTheme(colors = appColors) {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = "Camera") {
                     composable("Camera",

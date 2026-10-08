@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.yes.settings.BuildConfig
 import com.yes.settings.R
 import com.yes.settings.presentation.model.SettingsUI
+import com.yes.shared.presentation.ui.theme.AppTheme
 
 /**
  * Оптимизированный оберточный класс списка для предотвращения лишних рекомпозиций в Compose.
@@ -118,7 +119,7 @@ fun SettingsScreenSuccessNew(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(color = Color(0xff131316))
+            .background(color = AppTheme.colors.background)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -141,12 +142,12 @@ fun SettingsScreenSuccessNew(
                             Image(
                                 painter = painterResource(id = R.drawable.arrow_back),
                                 contentDescription = stringResource(R.string.cd_back),
-                                colorFilter = ColorFilter.tint(Color(0xffe4e1e6))
+                                colorFilter = ColorFilter.tint(AppTheme.colors.textPrimary)
                             )
                         }
                         Text(
                             text = stringResource(R.string.camera_settings_title),
-                            color = Color(0xffe4e1e6),
+                            color = AppTheme.colors.textPrimary,
                             lineHeight = 1.33.em,
                             style = TextStyle(
                                 fontSize = 18.sp,
@@ -157,7 +158,7 @@ fun SettingsScreenSuccessNew(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xff131316)
+                    containerColor = AppTheme.colors.background
                 ),
                 modifier = Modifier.shadow(elevation = 8.dp)
             )
@@ -165,7 +166,7 @@ fun SettingsScreenSuccessNew(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = Color(0xff131316))
+                    .background(color = AppTheme.colors.background)
             ) {
                 LazyColumn(
                     modifier = Modifier
@@ -183,7 +184,7 @@ fun SettingsScreenSuccessNew(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(shape = RoundedCornerShape(32.dp))
-                                    .background(color = Color(0xff1f1f22))
+                                    .background(color = AppTheme.colors.surface)
                             ) {
                                 // Категория 1.1: Разрешение снимков (Photo resolution)
                                 Column(
@@ -201,12 +202,12 @@ fun SettingsScreenSuccessNew(
                                             modifier = Modifier
                                                 .requiredSize(size = 40.dp)
                                                 .clip(shape = RoundedCornerShape(9999.dp))
-                                                .background(color = Color(0xff2a2a2d))
+                                                .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
                                         ) {
                                             Image(
                                                 painter = painterResource(id = R.drawable.camera),
                                                 contentDescription = stringResource(R.string.cd_resolution),
-                                                colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                             )
                                         }
                                         Column(
@@ -215,7 +216,7 @@ fun SettingsScreenSuccessNew(
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.photo_resolution_title),
-                                                color = Color(0xffe4e1e6),
+                                                color = AppTheme.colors.textPrimary,
                                                 lineHeight = 1.5.em,
                                                 style = TextStyle(
                                                     fontSize = 16.sp,
@@ -226,7 +227,7 @@ fun SettingsScreenSuccessNew(
                                             )
                                             Text(
                                                 text = if (settingsUI.resolutionValue.isNotEmpty()) settingsUI.resolutionValue else stringResource(R.string.standard_resolution),
-                                                color = Color(0xffc3c6d0),
+                                                color = AppTheme.colors.textSecondary,
                                                 lineHeight = 1.43.em,
                                                 style = TextStyle(
                                                     fontSize = 14.sp,
@@ -253,12 +254,12 @@ fun SettingsScreenSuccessNew(
                                                 .menuAnchor()
                                                 .fillMaxWidth()
                                                 .clip(shape = RoundedCornerShape(16.dp))
-                                                .background(color = Color(0xff0e0e11))
+                                                .background(color = AppTheme.colors.background)
                                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                                         ) {
                                             Text(
                                                 text = if (settingsUI.resolutionValue.isNotEmpty()) settingsUI.resolutionValue else (settingsUI.resolutionItems.list.firstOrNull() ?: stringResource(R.string.select_resolution)),
-                                                color = Color(0xffd3e2ff),
+                                                color = AppTheme.colors.primaryAccent,
                                                 style = TextStyle(
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Medium,
@@ -268,7 +269,7 @@ fun SettingsScreenSuccessNew(
                                             Image(
                                                 painter = painterResource(id = R.drawable.arrow_back),
                                                 contentDescription = stringResource(R.string.cd_expand),
-                                                colorFilter = ColorFilter.tint(Color(0xffc3c6d0)),
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary),
                                                 modifier = Modifier
                                                     .requiredSize(20.dp)
                                                     .graphicsLayer(rotationZ = 270f)
@@ -279,7 +280,7 @@ fun SettingsScreenSuccessNew(
                                             expanded = resolutionExpanded,
                                             onDismissRequest = { resolutionExpanded = false },
                                             modifier = Modifier
-                                                .background(color = Color(0xff1f1f22))
+                                                .background(color = AppTheme.colors.surface)
                                         ) {
                                             val resList = settingsUI.resolutionItems.list.ifEmpty {
                                                 listOf(
@@ -300,7 +301,7 @@ fun SettingsScreenSuccessNew(
                                                     text = {
                                                         Text(
                                                             text = resItem,
-                                                            color = if (resItem == settingsUI.resolutionValue) Color(0xffd3e2ff) else Color(0xffc3c6d0),
+                                                            color = if (resItem == settingsUI.resolutionValue) AppTheme.colors.primaryAccent else AppTheme.colors.textSecondary,
                                                             style = TextStyle(fontSize = 14.sp)
                                                         )
                                                     },
@@ -316,7 +317,7 @@ fun SettingsScreenSuccessNew(
                                 }
 
                                 HorizontalDivider(
-                                    color = Color(0xff43474f).copy(alpha = 0.3f),
+                                    color = AppTheme.colors.stroke.copy(alpha = 0.3f),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(start = 56.dp, end = 16.dp)
@@ -338,12 +339,12 @@ fun SettingsScreenSuccessNew(
                                             modifier = Modifier
                                                 .requiredSize(size = 40.dp)
                                                 .clip(shape = RoundedCornerShape(9999.dp))
-                                                .background(color = Color(0xff2a2a2d))
+                                                .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
                                         ) {
                                             Image(
                                                 painter = painterResource(id = R.drawable.film),
                                                 contentDescription = stringResource(R.string.cd_format),
-                                                colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                             )
                                         }
                                         Column(
@@ -357,7 +358,7 @@ fun SettingsScreenSuccessNew(
                                             ) {
                                                 Text(
                                                     text = stringResource(R.string.raw_jpeg_control_title),
-                                                    color = Color(0xffe4e1e6),
+                                                    color = AppTheme.colors.textPrimary,
                                                     lineHeight = 1.5.em,
                                                     style = TextStyle(
                                                         fontSize = 16.sp,
@@ -368,12 +369,12 @@ fun SettingsScreenSuccessNew(
                                                 Row(
                                                     modifier = Modifier
                                                         .clip(shape = RoundedCornerShape(16.dp))
-                                                        .background(color = Color(0xff353438))
+                                                        .background(color = AppTheme.colors.surface.copy(alpha = 0.8f))
                                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                                 ) {
                                                     Text(
                                                         text = formatBadgeText,
-                                                        color = Color(0xff80cfff),
+                                                        color = AppTheme.colors.primaryAccent,
                                                         lineHeight = 1.45.em,
                                                         style = TextStyle(
                                                             fontSize = 11.sp,
@@ -384,7 +385,7 @@ fun SettingsScreenSuccessNew(
                                             }
                                             Text(
                                                 text = formatDescText,
-                                                color = Color(0xffc3c6d0),
+                                                color = AppTheme.colors.textSecondary,
                                                 lineHeight = 1.43.em,
                                                 style = TextStyle(
                                                     fontSize = 14.sp,
@@ -410,12 +411,12 @@ fun SettingsScreenSuccessNew(
                                                 .menuAnchor()
                                                 .fillMaxWidth()
                                                 .clip(shape = RoundedCornerShape(16.dp))
-                                                .background(color = Color(0xff0e0e11))
+                                                .background(color = AppTheme.colors.background)
                                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                                         ) {
                                             Text(
                                                 text = if (settingsUI.imgFormatValue.isNotEmpty()) settingsUI.imgFormatValue else (settingsUI.imgFormatItems.list.firstOrNull() ?: "JPEG"),
-                                                color = Color(0xffd3e2ff),
+                                                color = AppTheme.colors.primaryAccent,
                                                 style = TextStyle(
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Medium,
@@ -425,7 +426,7 @@ fun SettingsScreenSuccessNew(
                                             Image(
                                                 painter = painterResource(id = R.drawable.arrow_back),
                                                 contentDescription = stringResource(R.string.cd_expand),
-                                                colorFilter = ColorFilter.tint(Color(0xffc3c6d0)),
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary),
                                                 modifier = Modifier
                                                     .requiredSize(20.dp)
                                                     .graphicsLayer(rotationZ = 270f)
@@ -436,7 +437,7 @@ fun SettingsScreenSuccessNew(
                                             expanded = formatExpanded,
                                             onDismissRequest = { formatExpanded = false },
                                             modifier = Modifier
-                                                .background(color = Color(0xff1f1f22))
+                                                .background(color = AppTheme.colors.surface)
                                         ) {
                                             val formatList = settingsUI.imgFormatItems.list.ifEmpty {
                                                 listOf("JPEG", "RAW", "JPEG+RAW")
@@ -475,17 +476,17 @@ fun SettingsScreenSuccessNew(
                                             Image(
                                                 painter = painterResource(id = R.drawable.info),
                                                 contentDescription = stringResource(R.string.cd_info),
-                                                colorFilter = ColorFilter.tint(Color(0xffd3e2ff))
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.primaryAccent)
                                             )
                                             Text(
                                                 text = bufferSizeText,
-                                                color = Color(0xffc3c6d0),
+                                                color = AppTheme.colors.textSecondary,
                                                 style = MaterialTheme.typography.labelSmall
                                             )
                                         }
                                         Text(
                                             text = stringResource(R.string.ultra_hdr_enabled),
-                                            color = Color(0xff80cfff),
+                                            color = AppTheme.colors.primaryAccent,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
@@ -505,7 +506,7 @@ fun SettingsScreenSuccessNew(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(shape = RoundedCornerShape(32.dp))
-                                    .background(color = Color(0xff1f1f22))
+                                    .background(color = AppTheme.colors.surface)
                                     .padding(all = 16.dp)
                             ) {
                                 Row(
@@ -518,12 +519,12 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier
                                             .requiredSize(size = 40.dp)
                                             .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = Color(0xff2a2a2d))
+                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.card),
                                             contentDescription = stringResource(R.string.cd_storage),
-                                            colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
+                                            colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                         )
                                     }
                                     Column(
@@ -532,7 +533,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.storage_location_title),
-                                            color = Color(0xffe4e1e6),
+                                            color = AppTheme.colors.textPrimary,
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
                                                 fontSize = 16.sp,
@@ -542,7 +543,7 @@ fun SettingsScreenSuccessNew(
                                         )
                                         Text(
                                             text = settingsUI.storagePath,
-                                            color = Color(0xffc3c6d0),
+                                            color = AppTheme.colors.textSecondary,
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
                                                 fontSize = 14.sp,
@@ -556,13 +557,13 @@ fun SettingsScreenSuccessNew(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier
                                             .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = Color(0xff353438))
+                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.8f))
                                             .clickable { dirPickerLauncher.launch(null) }
                                             .padding(horizontal = 16.dp, vertical = 6.dp)
                                     ) {
                                         Text(
                                             text = stringResource(R.string.change_button),
-                                            color = Color(0xffd3e2ff),
+                                            color = AppTheme.colors.primaryAccent,
                                             textAlign = TextAlign.Center,
                                             style = MaterialTheme.typography.labelMedium
                                         )
@@ -575,7 +576,7 @@ fun SettingsScreenSuccessNew(
                                         .fillMaxWidth()
                                         .padding(top = 16.dp)
                                         .clip(shape = RoundedCornerShape(24.dp))
-                                        .background(color = Color(0xff0e0e11))
+                                        .background(color = AppTheme.colors.background)
                                         .padding(all = 16.dp)
                                 ) {
                                     Row(
@@ -585,12 +586,12 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Text(
                                             text = settingsUI.availableStorageText,
-                                            color = Color(0xffe4e1e6),
+                                            color = AppTheme.colors.textPrimary,
                                             style = MaterialTheme.typography.labelMedium
                                         )
                                         Text(
                                             text = settingsUI.totalStorageText,
-                                            color = Color(0xffc3c6d0),
+                                            color = AppTheme.colors.textSecondary,
                                             style = MaterialTheme.typography.labelMedium
                                         )
                                     }
@@ -600,14 +601,14 @@ fun SettingsScreenSuccessNew(
                                             .padding(top = 8.dp)
                                             .requiredHeight(height = 10.dp)
                                             .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = Color(0xff353438))
+                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.8f))
                                     ) {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxHeight()
                                                 .fillMaxWidth(settingsUI.storageProgress.coerceIn(0f, 1f))
                                                 .clip(shape = RoundedCornerShape(9999.dp))
-                                                .background(color = Color(0xffd3e2ff))
+                                                .background(color = AppTheme.colors.primaryAccent)
                                         )
                                     }
                                     Row(
@@ -619,12 +620,12 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Text(
                                             text = settingsUI.remainingShotsText,
-                                            color = Color(0xffc3c6d0),
+                                            color = AppTheme.colors.textSecondary,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                         Text(
                                             text = stringResource(R.string.storage_percent_used, (settingsUI.storageProgress * 100).toInt()),
-                                            color = Color(0xffd3e2ff),
+                                            color = AppTheme.colors.primaryAccent,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
@@ -644,7 +645,7 @@ fun SettingsScreenSuccessNew(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(shape = RoundedCornerShape(32.dp))
-                                    .background(color = Color(0xff1f1f22))
+                                    .background(color = AppTheme.colors.surface)
                             ) {
                                 // Категория 3.1: Полноэкранный видоискатель (Full screen viewfinder)
                                 Row(
@@ -704,7 +705,7 @@ fun SettingsScreenSuccessNew(
                                 }
 
                                 HorizontalDivider(
-                                    color = Color(0xff43474f).copy(alpha = 0.3f),
+                                    color = AppTheme.colors.stroke.copy(alpha = 0.3f),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(start = 56.dp, end = 16.dp)
@@ -727,12 +728,12 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier
                                             .requiredSize(size = 40.dp)
                                             .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = Color(0xff2a2a2d))
+                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.grid),
                                             contentDescription = stringResource(R.string.cd_grid),
-                                            colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
+                                            colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                         )
                                     }
                                     Column(
@@ -741,7 +742,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.grid_and_level_title),
-                                            color = Color(0xffe4e1e6),
+                                            color = AppTheme.colors.textPrimary,
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
                                                 fontSize = 16.sp,
@@ -751,7 +752,7 @@ fun SettingsScreenSuccessNew(
                                         )
                                         Text(
                                             text = stringResource(R.string.grid_and_level_desc),
-                                            color = Color(0xffc3c6d0),
+                                            color = AppTheme.colors.textSecondary,
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
                                                 fontSize = 14.sp,
@@ -768,7 +769,7 @@ fun SettingsScreenSuccessNew(
                                 }
 
                                 HorizontalDivider(
-                                    color = Color(0xff43474f).copy(alpha = 0.3f),
+                                    color = AppTheme.colors.stroke.copy(alpha = 0.3f),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(start = 56.dp, end = 16.dp)
@@ -791,12 +792,12 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier
                                             .requiredSize(size = 40.dp)
                                             .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = Color(0xff2a2a2d))
+                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.location),
                                             contentDescription = stringResource(R.string.cd_location),
-                                            colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
+                                            colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                         )
                                     }
                                     Column(
@@ -805,7 +806,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.save_location_title),
-                                            color = Color(0xffe4e1e6),
+                                            color = AppTheme.colors.textPrimary,
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
                                                 fontSize = 16.sp,
@@ -815,7 +816,7 @@ fun SettingsScreenSuccessNew(
                                         )
                                         Text(
                                             text = stringResource(R.string.save_location_desc),
-                                            color = Color(0xffc3c6d0),
+                                            color = AppTheme.colors.textSecondary,
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
                                                 fontSize = 14.sp,
@@ -845,7 +846,7 @@ fun SettingsScreenSuccessNew(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(shape = RoundedCornerShape(32.dp))
-                                    .background(color = Color(0xff1f1f22))
+                                    .background(color = AppTheme.colors.surface)
                                     .padding(all = 16.dp)
                             ) {
                                 Row(
@@ -858,12 +859,12 @@ fun SettingsScreenSuccessNew(
                                         modifier = Modifier
                                             .requiredSize(size = 40.dp)
                                             .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = Color(0xff2a2a2d))
+                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
                                     ) {
                                         Image(
                                             painter = painterResource(id = R.drawable.screen),
                                             contentDescription = stringResource(R.string.cd_theme),
-                                            colorFilter = ColorFilter.tint(Color(0xffc3c6d0))
+                                            colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                         )
                                     }
                                     Column(
@@ -872,7 +873,7 @@ fun SettingsScreenSuccessNew(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.app_theme_title),
-                                            color = Color(0xffe4e1e6),
+                                            color = AppTheme.colors.textPrimary,
                                             lineHeight = 1.5.em,
                                             style = TextStyle(
                                                 fontSize = 16.sp,
@@ -882,7 +883,7 @@ fun SettingsScreenSuccessNew(
                                         )
                                         Text(
                                             text = stringResource(R.string.app_theme_desc),
-                                            color = Color(0xffc3c6d0),
+                                            color = AppTheme.colors.textSecondary,
                                             lineHeight = 1.43.em,
                                             style = TextStyle(
                                                 fontSize = 14.sp,
@@ -907,12 +908,12 @@ fun SettingsScreenSuccessNew(
                                             .menuAnchor()
                                             .fillMaxWidth()
                                             .clip(shape = RoundedCornerShape(16.dp))
-                                            .background(color = Color(0xff0e0e11))
+                                            .background(color = AppTheme.colors.background)
                                             .padding(horizontal = 16.dp, vertical = 14.dp)
                                     ) {
                                         Text(
                                             text = if (settingsUI.themeValue.isNotEmpty()) settingsUI.themeValue else stringResource(R.string.theme_dark_default),
-                                            color = Color(0xffd3e2ff),
+                                            color = AppTheme.colors.primaryAccent,
                                             style = TextStyle(
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Medium,
@@ -922,7 +923,7 @@ fun SettingsScreenSuccessNew(
                                         Image(
                                             painter = painterResource(id = R.drawable.arrow_back),
                                             contentDescription = stringResource(R.string.cd_expand),
-                                            colorFilter = ColorFilter.tint(Color(0xffc3c6d0)),
+                                            colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary),
                                             modifier = Modifier
                                                 .requiredSize(20.dp)
                                                 .graphicsLayer(rotationZ = 270f)
@@ -933,14 +934,15 @@ fun SettingsScreenSuccessNew(
                                         expanded = themeExpanded,
                                         onDismissRequest = { themeExpanded = false },
                                         modifier = Modifier
-                                            .background(color = Color(0xff1f1f22))
+                                            .background(color = AppTheme.colors.surface)
                                     ) {
                                         val themeList = settingsUI.themeItems.list.ifEmpty {
                                             listOf(
                                                 stringResource(R.string.theme_dark_default),
                                                 stringResource(R.string.theme_amoled_black),
                                                 stringResource(R.string.theme_system_dark),
-                                                stringResource(R.string.theme_high_contrast)
+                                                stringResource(R.string.theme_high_contrast),
+                                                stringResource(R.string.theme_light)
                                             )
                                         }
                                         themeList.forEach { themeItem ->
@@ -948,7 +950,7 @@ fun SettingsScreenSuccessNew(
                                                 text = {
                                                     Text(
                                                         text = themeItem,
-                                                        color = if (themeItem == settingsUI.themeValue) Color(0xffd3e2ff) else Color(0xffc3c6d0),
+                                                        color = if (themeItem == settingsUI.themeValue) AppTheme.colors.primaryAccent else AppTheme.colors.textSecondary,
                                                         style = TextStyle(fontSize = 14.sp)
                                                     )
                                                 },
@@ -983,7 +985,7 @@ fun SettingsScreenSuccessNew(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(shape = RoundedCornerShape(9999.dp))
-                                        .background(color = Color(0xff1f1f22))
+                                        .background(color = AppTheme.colors.surface)
                                         .clickable {
                                             onSettingsChanged(
                                                 SettingsUI(
@@ -1002,11 +1004,11 @@ fun SettingsScreenSuccessNew(
                                     Image(
                                         painter = painterResource(id = R.drawable.reset),
                                         contentDescription = stringResource(R.string.cd_reset),
-                                        colorFilter = ColorFilter.tint(Color(0xffffb4ab))
+                                        colorFilter = ColorFilter.tint(AppTheme.colors.recordActive)
                                     )
                                     Text(
                                         text = stringResource(R.string.reset_camera_settings),
-                                        color = Color(0xffffb4ab),
+                                        color = AppTheme.colors.recordActive,
                                         textAlign = TextAlign.Center,
                                         lineHeight = 1.43.em,
                                         style = MaterialTheme.typography.labelLarge
@@ -1020,19 +1022,19 @@ fun SettingsScreenSuccessNew(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.yes_flash_camera),
-                                        color = Color(0xffc3c6d0).copy(alpha = 0.6f),
+                                        color = AppTheme.colors.textSecondary.copy(alpha = 0.6f),
                                         lineHeight = 1.45.em,
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                     Text(
                                         text = "•",
-                                        color = Color(0xffc3c6d0).copy(alpha = 0.6f),
+                                        color = AppTheme.colors.textSecondary.copy(alpha = 0.6f),
                                         lineHeight = 1.45.em,
                                         style = MaterialTheme.typography.labelSmall
                                     )
                                     Text(
                                         text = stringResource(R.string.app_version_format, BuildConfig.VERSION_NAME),
-                                        color = Color(0xffc3c6d0).copy(alpha = 0.6f),
+                                        color = AppTheme.colors.textSecondary.copy(alpha = 0.6f),
                                         lineHeight = 1.45.em,
                                         style = MaterialTheme.typography.labelSmall
                                     )

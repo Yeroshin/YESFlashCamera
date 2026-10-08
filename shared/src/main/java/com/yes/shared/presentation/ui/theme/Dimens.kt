@@ -21,7 +21,7 @@ data class AppDimens(
     // Top Paddings
     val shutterTopPadding: Dp = 64.dp,
     val cameraTopPadding: Dp = 84.dp,
-    val histogramTopPadding: Dp = 98.dp,
+    val histogramTopPadding: Dp = 114.dp,
 
     // Component & Icon Sizes
     val iconSmall: Dp = 14.dp,

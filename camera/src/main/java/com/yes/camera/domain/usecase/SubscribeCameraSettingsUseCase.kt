@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
@@ -42,15 +43,18 @@ class SubscribeCameraSettingsUseCase(
             }
             .onStart { emit(mutableMapOf()) } 
             .sample(100.milliseconds)
+            .distinctUntilChanged()
 
         // 2. Поток характеристик из камеры. 
         // Начинаем с текущего значения (даже если оно null), чтобы не блокировать combine.
         val cameraCharacteristicsFlow = cameraRepository.subscribeCameraSettings()
             .onStart { emit(cameraRepository.subscribeCameraSettings().value) }
+            .distinctUntilChanged()
 
         // 3. Поток настроек.
         val settingsFlow = settingsRepository.subscribeSettings()
             .onStart { emit(settingsRepository.getCharacteristics()) }
+            .distinctUntilChanged()
 
         // 4. Объединение данных.
         return combine(

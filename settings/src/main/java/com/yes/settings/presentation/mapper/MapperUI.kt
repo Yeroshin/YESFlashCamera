@@ -56,7 +56,7 @@ class MapperUI {
             } ?: "Buffer size: ~12 MB/shot",
             themeValue = settings.themeValue?.ifEmpty { "Dark (Default)" } ?: "Dark (Default)",
             themeItems = ImmutableCollection(
-                list = listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast")
+                list = listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast", "Light")
             )
         )
     }

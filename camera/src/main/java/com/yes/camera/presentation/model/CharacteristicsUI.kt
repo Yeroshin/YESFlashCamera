@@ -9,13 +9,13 @@ import kotlinx.collections.immutable.ImmutableList
 
 @Immutable
 data class CharacteristicsUI(
-    val shutterItems: List<SelectorItem> = emptyList(),
-    val isoItems: List<SelectorItem> = emptyList(),
-    val wbItems: List<SelectorItem> = emptyList(),
+    val shutterItems: ImmutableList<SelectorItem> = persistentListOf(),
+    val isoItems: ImmutableList<SelectorItem> = persistentListOf(),
+    val wbItems: ImmutableList<SelectorItem> = persistentListOf(),
     val wbModeItems: List<RadioGroupItem> = emptyList(),
-    val focusItems: List<SelectorItem> = emptyList(),
+    val focusItems: ImmutableList<SelectorItem> = persistentListOf(),
     val focusModeItems: List<RadioGroupItem> = emptyList(),
-    val magnifierItems: List<SelectorItem> = emptyList(),
+    val magnifierItems: ImmutableList<SelectorItem> = persistentListOf(),
     val characteristicsItems: ImmutableList<RadioGroupItem> = persistentListOf(),
 
     val backCamera: Boolean = true,
@@ -96,6 +96,7 @@ sealed interface RadioGroupItem  {
     ) : RadioGroupItem
 }
 
+@Immutable
 data class SelectorItem(
     val id: Int,
     val value: String

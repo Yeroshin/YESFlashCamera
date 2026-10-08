@@ -180,7 +180,7 @@ fun CameraScreen(
             ) { surfaceTexture ->
 
                 surface = surfaceTexture
-                surfaceTexture.setDefaultBufferSize(640, 480/*,4096,3072*//*1920, 1080*/)
+                surfaceTexture.setDefaultBufferSize(1920, 1080/*,4096,3072*//*1920, 1080*/)
                 cameraViewModel.setEvent(
                     CameraContract.Event.OnOpenCamera(true, surfaceTexture)
                 )
