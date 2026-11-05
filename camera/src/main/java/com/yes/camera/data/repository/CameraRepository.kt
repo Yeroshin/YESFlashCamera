@@ -97,8 +97,13 @@ class CameraRepository(
     fun subscribeCameraSettings(): StateFlow<Characteristics?> = _characteristicsFlow
 
     fun clearCapturedBitmap() {
-        _characteristicsFlow.update { it?.copy(capturedBitmap = null) }
+        _characteristicsFlow.update { it?.copy(capturedBitmap = null, isCaptureRequested = false) }
+        if (::lastCharacteristics.isInitialized) {
+            lastCharacteristics = lastCharacteristics.copy(isCaptureRequested = false)
+        }
         lastCapturedBitmap = null
+        lastJpegBytes = null
+        lastRawBytes = null
     }
 
     private val histogramDataBuffer = ByteArray(320 * 240)
@@ -411,7 +416,7 @@ class CameraRepository(
     private val UPDATE_TOKEN = Any()
 
     fun startPreviewCaptureRequest(characteristics: Characteristics) {
-        lastCharacteristics = characteristics
+        lastCharacteristics = characteristics.copy(isCaptureRequested = false)
         cameraThreadManager.handler.removeCallbacksAndMessages(UPDATE_TOKEN)
         val action = Runnable { processPreviewCaptureRequest(characteristics) }
         if (Looper.myLooper() == cameraThreadManager.handler.looper) { 

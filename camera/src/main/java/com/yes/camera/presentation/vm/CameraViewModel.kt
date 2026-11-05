@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.vm
 
+import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -94,7 +95,12 @@ class CameraViewModel(
     }
 
     private fun performSingleCapture() {
-        setCharacteristics(_characteristicsInternal.value.copy(isCaptureRequested = true))
+        val captureCharacteristics = _characteristicsInternal.value.copy(isCaptureRequested = true)
+        _characteristicsInternal.update { it.copy(isCaptureRequested = false) }
+        val domainModel = mapper.map(captureCharacteristics)
+        useCaseCoroutineScope.launch {
+            setInputCharacteristicsUseCase.runSync(SetInputCharacteristicsUseCase.Params(domainModel))
+        }
     }
 
     private fun saveCapturedImage() {
@@ -147,6 +153,8 @@ class CameraViewModel(
 
     private var previewJob: Job? = null
     private var persistenceJob: Job? = null
+    private var subscriptionJob: Job? = null
+    private var lastHandledBitmap: Bitmap? = null
 
     private fun setCharacteristics(characteristics: CharacteristicsUI) {
         _characteristicsInternal.value = characteristics
@@ -172,14 +180,10 @@ class CameraViewModel(
     }
 
     private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
-        withUseCaseScope(
-            loadingUpdater = { _ ->
-                // Do not switch to CameraState.Loading to prevent preview flashing black
-            },
-            onError = {
-                setState { copy(state = CameraState.Error(it)) }
-            },
-            block = {
+        subscriptionJob?.cancel()
+        lastHandledBitmap = null
+        subscriptionJob = useCaseCoroutineScope.launch {
+            try {
                 openCameraUseCase(
                     OpenCameraUseCase.Params(backCamera, surfaceTexture)
                 )
@@ -187,37 +191,39 @@ class CameraViewModel(
                 val firstData = subscribeCameraSettingsUseCase().first()
                 _characteristicsInternal.value = mapper.map(firstData)
 
-                useCaseCoroutineScope.launch {
-                    subscribeCameraSettingsUseCase()
-                        .collect { domainCharacteristics ->
-                            val oldBitmap = _characteristicsInternal.value.capturedBitmap
-                            val newBitmap = domainCharacteristics.capturedBitmap
+                subscribeCameraSettingsUseCase()
+                    .collect { domainCharacteristics ->
+                        val newBitmap = domainCharacteristics.capturedBitmap
 
-                            _characteristicsInternal.update { currentUi ->
-                                val merged = mapper.merge(currentUi, domainCharacteristics)
-                                if (currentUi == merged) currentUi else merged
-                            }
-
-                            if (newBitmap != null && newBitmap != oldBitmap) {
-                                setState {
-                                    copy(
-                                        state = CameraState.CapturedPreview(newBitmap)
-                                    )
-                                }
-                            }
+                        _characteristicsInternal.update { currentUi ->
+                            val merged = mapper.merge(currentUi, domainCharacteristics)
+                            if (currentUi == merged) currentUi else merged
                         }
-                }
 
-                setState {
-                    copy(
-                        state = CameraState.Success(
-                            characteristicsFlow = _characteristicsInternal.asStateFlow()
-                        )
-                    )
-                }
-            },
-            onComplete = { Log.d(TAG, "Camera opening sequence finished") }
-        )
+                        if (newBitmap != null && newBitmap != lastHandledBitmap) {
+                            lastHandledBitmap = newBitmap
+                            setState {
+                                copy(
+                                    state = CameraState.CapturedPreview(newBitmap)
+                                )
+                            }
+                        } else if (newBitmap == null) {
+                            lastHandledBitmap = null
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Open camera error: ${e.message}", e)
+                setState { copy(state = CameraState.Error(e)) }
+            }
+        }
+
+        setState {
+            copy(
+                state = CameraState.Success(
+                    characteristicsFlow = _characteristicsInternal.asStateFlow()
+                )
+            )
+        }
     }
 
     private fun closeCamera() {
