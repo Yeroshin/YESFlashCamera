@@ -1,6 +1,8 @@
 package com.yes.settings.presentation.ui.views
 
+import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -47,6 +49,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -85,6 +88,8 @@ fun SettingsScreenSuccessNew(
     onSettingsChanged: (SettingsUI) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     var gridEnabled by remember {
         mutableStateOf(true)
     }
@@ -97,6 +102,12 @@ fun SettingsScreenSuccessNew(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri: Uri? ->
             uri?.let {
+                val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                try {
+                    context.contentResolver.takePersistableUriPermission(it, takeFlags)
+                } catch (e: Exception) {
+                    Log.e("SettingsScreen", "Failed to take persistable URI permission: ${e.message}")
+                }
                 val path = it.toString()
                 onSettingsChanged(settingsUI.copy(storagePath = path, rawStoragePath = path))
             }

@@ -1094,6 +1094,29 @@ object ImageSaver {
 
     private fun getRelativePath(savePath: String): String {
         val cleanPath = savePath.trim()
+
+        if (cleanPath.startsWith("content://")) {
+            val decoded = try { Uri.decode(cleanPath) } catch (_: Exception) { cleanPath }
+            if (decoded.contains("tree/")) {
+                val treePart = decoded.substringAfter("tree/")
+                val parts = treePart.split(":")
+                if (parts.size >= 2) {
+                    val pathPart = if (parts.size > 2) {
+                        parts.subList(2, parts.size).joinToString(":")
+                    } else {
+                        parts[1]
+                    }
+                    if (pathPart.isNotEmpty() && !pathPart.startsWith("content")) {
+                        return pathPart.trim('/')
+                    }
+                }
+            }
+            val primaryIdx = decoded.indexOf("primary:")
+            if (primaryIdx != -1) {
+                return decoded.substring(primaryIdx + 8).trim('/')
+            }
+        }
+
         val externalStoragePath = Environment.getExternalStorageDirectory().absolutePath
         if (cleanPath.startsWith(externalStoragePath)) {
             val relative = cleanPath.removePrefix(externalStoragePath).removePrefix("/")
