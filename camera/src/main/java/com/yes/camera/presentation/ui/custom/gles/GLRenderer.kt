@@ -200,6 +200,7 @@ class GLRenderer(
         Log.d("DEBUG", "onSurfaceCreated called")
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
         if (checkSupport()) {
+            glObjects.clear()
             createSurfaceTexture()
             addGlObjects(
                 listOf(
@@ -288,6 +289,17 @@ class GLRenderer(
         )
         glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0)
         return textureHandle[0]
+    }
+
+    fun onPause() {
+        glSurfaceView?.queueEvent {
+            release()
+        }
+        glSurfaceView?.onPause()
+    }
+
+    fun onResume() {
+        glSurfaceView?.onResume()
     }
 
     fun release() {

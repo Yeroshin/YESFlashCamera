@@ -47,6 +47,9 @@ import com.yes.camera.presentation.ui.views.CameraScreenSuccess
 import com.yes.camera.presentation.ui.views.CapturedImageScreen
 import com.yes.camera.presentation.ui.views.ErrorScreen
 import com.yes.camera.presentation.vm.CameraViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.yes.shared.presentation.ui.PermissionManager
 import com.yes.shared.utils.CameraThreadManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -187,6 +190,30 @@ fun CameraScreen(
             }
         } else null
 
+    }
+
+    val lifecycleOwner = context as? LifecycleOwner
+    DisposableEffect(lifecycleOwner, renderer) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    renderer?.onPause()
+                    surface = null
+                    cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    renderer?.onResume()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose {
+            lifecycleOwner?.lifecycle?.removeObserver(observer)
+            renderer?.onPause()
+            surface = null
+            cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
+        }
     }
     var surfaceViewSize by remember { mutableStateOf(IntSize.Zero) }
 

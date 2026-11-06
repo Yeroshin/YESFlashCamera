@@ -212,8 +212,13 @@ class CameraViewModel(
                         }
                     }
             } catch (e: Exception) {
-                Log.e(TAG, "Open camera error: ${e.message}", e)
-                setState { copy(state = CameraState.Error(e)) }
+                if (e is java.util.concurrent.CancellationException) {
+                    Log.e(TAG, "Error: ${e.message}")
+                }else{
+                    Log.e(TAG, "Open camera error: ${e.message}", e)
+                    setState { copy(state = CameraState.Error(e)) }
+                }
+
             }
         }
 

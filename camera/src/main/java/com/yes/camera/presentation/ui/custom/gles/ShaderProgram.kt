@@ -27,9 +27,9 @@ import com.yes.camera.presentation.ui.custom.gles.ShaderProgram.ShaderHelper.cre
 import com.yes.camera.utils.FileUtils
 
 class ShaderProgram(
-    context: Context,
-    vertexShaderResourceId: Int,
-    fragmentShaderResourceId: Int
+    private val context: Context,
+    private val vertexShaderResourceId: Int,
+    private val fragmentShaderResourceId: Int
 ) {
     var programId: Int = ShaderHelper.buildProgram(
         createShader(context, GL_VERTEX_SHADER, vertexShaderResourceId),
@@ -37,6 +37,12 @@ class ShaderProgram(
     )
 
     fun useProgram() {
+        if (programId == 0) {
+            programId = ShaderHelper.buildProgram(
+                createShader(context, GL_VERTEX_SHADER, vertexShaderResourceId),
+                createShader(context, GL_FRAGMENT_SHADER, fragmentShaderResourceId)
+            )
+        }
         val error1 = glGetError()
         if (error1 != GLES30.GL_NO_ERROR) {
             Log.e("TextureLoad", "OpenGL Error: $error1")

@@ -281,7 +281,7 @@ class GlMagnifierAdvanced(
     }
 
     override fun draw(modelViewProjectionMatrix: FloatArray, oesTextureId: Int) {
-        if (tintColorChanged) {
+        if (tintColorChanged || textureHandle[0] == 0) {
             tintColorChanged = false
             currentTintColor = pendingTintColor
             loadTexture(currentTintColor)
