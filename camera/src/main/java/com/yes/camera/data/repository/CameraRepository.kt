@@ -329,6 +329,10 @@ class CameraRepository(
 
     fun startSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
         filePath = characteristics.filePath
+        val width = if (characteristics.resolution.width > 0) characteristics.resolution.width else 1920
+        val height = if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
+
+        glSurfaceTexture.setDefaultBufferSize(width, height)
         previewSurface = Surface(glSurfaceTexture)
         imageReaderHistogram = ImageReader.newInstance(
           320,
@@ -336,9 +340,6 @@ class CameraRepository(
           ImageFormat.YUV_420_888, 3
           ).apply { setOnImageAvailableListener(listenerHistogram, cameraThreadManager.handler) }
         histogramSurface = imageReaderHistogram.surface
-
-        val width = if (characteristics.resolution.width > 0) characteristics.resolution.width else 1920
-        val height = if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
 
         imageReaderJpeg = ImageReader.newInstance(
             width,
