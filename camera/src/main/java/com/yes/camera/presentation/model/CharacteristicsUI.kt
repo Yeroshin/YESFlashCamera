@@ -37,6 +37,7 @@ data class CharacteristicsUI(
     val imgFormat: String = "JPEG",
     val isFocused: Boolean = false,
     val capturedBitmap: Bitmap? = null,
+    val gridEnabled: Boolean = true,
 
     // Flags for Auto/Manual status from Domain
     val isShutterAuto: Boolean = true,

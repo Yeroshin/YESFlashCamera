@@ -13,6 +13,7 @@ import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.IMGFO
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONS
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONVALUE
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.THEMEVALUE
+import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.GRID_ENABLED
 import com.yes.settings.domain.model.Settings
 import com.yes.settings.domain.model.StorageInfo
 import com.yes.shared.data.dataSource.SettingsDataSource
@@ -46,6 +47,7 @@ class SettingsRepository(
         val FILEPATH = stringPreferencesKey("filePath")
         val THEMEVALUE = stringPreferencesKey("themeValue")
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
+        val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
     }
 
     private val defaultDcimPath by lazy {
@@ -103,6 +105,13 @@ class SettingsRepository(
             } else {
                 preferences.remove(THEMEVALUE)
             }
+
+            // GRID_ENABLED
+            if (settings.gridEnabled != null) {
+                preferences[GRID_ENABLED] = settings.gridEnabled
+            } else {
+                preferences.remove(GRID_ENABLED)
+            }
         }
     }
 
@@ -114,7 +123,8 @@ class SettingsRepository(
             subscribeImageFormat(),
             subscribeFilePath(),
             subscribeThemeValue(),
-            subscribeSupportsRaw()
+            subscribeSupportsRaw(),
+            subscribeGridEnabled()
         ) { array ->
             Settings(
                 resolutionValue = array[0] as Dimensions?,
@@ -123,8 +133,21 @@ class SettingsRepository(
                 imageFormat = array[3] as ImgFormat?,
                 filePath = array[4] as String?,
                 themeValue = array[5] as String?,
-                supportsRaw = array[6] as Boolean?
+                supportsRaw = array[6] as Boolean?,
+                gridEnabled = array[7] as Boolean?
             )
+        }
+    }
+
+    fun subscribeGridEnabled(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.GRID_ENABLED, true)
+    }
+
+    suspend fun setGridEnabled(enabled: Boolean?) {
+        enabled?.let {
+            settingsDataSource.set(it, PreferencesKeys.GRID_ENABLED)
+        } ?: run {
+            settingsDataSource.remove(PreferencesKeys.GRID_ENABLED)
         }
     }
 

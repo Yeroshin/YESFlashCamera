@@ -69,6 +69,7 @@ class SubscribeCameraSettingsUseCase(
                 resolution = settings.resolution,
                 imgFormat = settings.imgFormat,
                 supportsRaw = settings.supportsRaw || base.supportsRaw,
+                gridEnabled = settings.gridEnabled,
                 histogramData = histogram
             )
         }.catch { e ->

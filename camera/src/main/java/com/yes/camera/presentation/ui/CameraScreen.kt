@@ -55,6 +55,7 @@ import com.yes.shared.utils.CameraThreadManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import androidx.core.graphics.toColorInt
 
 
 /*
@@ -232,9 +233,9 @@ fun CameraScreen(
                 val mag = currentChars.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
                 val frame = if (currentChars.isFocused) 1 else 0
                 val tintColor = if (currentChars.isFocused) {
-                    android.graphics.Color.parseColor("#00ff00")
+                    "#00ff00".toColorInt()
                 } else {
-                    android.graphics.Color.parseColor("#ff0000")
+                    "#ff0000".toColorInt()
                 }
                 renderer?.configureMagnifier(mag, frame = frame, tintColor = tintColor)
 
@@ -303,6 +304,7 @@ fun CameraScreen(
                 renderer = renderer,
                 fullScreen = isFullScreen,
                 aspectRatio = currentAspectRatio,
+                gridEnabled = characteristics.gridEnabled,
                 onSizeChanged = onSizeChangedIndexed,
                 onTouchPoint = onPreviewTouch
             )

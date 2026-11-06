@@ -10,5 +10,6 @@ data class Settings(
     val imageFormat: ImgFormat? = null,
     val filePath: String? = null,
     val themeValue: String? = null,
-    val supportsRaw: Boolean? = null
+    val supportsRaw: Boolean? = null,
+    val gridEnabled: Boolean? = true
 )

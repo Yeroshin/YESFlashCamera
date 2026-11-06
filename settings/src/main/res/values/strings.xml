@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Screen Header -->
+    <string name="camera_settings_title">Camera Settings</string>
+    <string name="cd_back">Back</string>
+
+    <!-- Photo Resolution -->
+    <string name="photo_resolution_title">Photo resolution</string>
+    <string name="standard_resolution">Standard resolution</string>
+    <string name="select_resolution">Select resolution</string>
+    <string name="cd_resolution">Resolution</string>
+    <string name="cd_expand">Expand</string>
+
+    <!-- Raw / JPEG Control -->
+    <string name="raw_jpeg_control_title">Raw / JPEG control</string>
+    <string name="cd_format">Format</string>
+    <string name="format_badge_jpeg_dng">JPEG + DNG</string>
+    <string name="format_badge_dng_14bit">DNG 14-bit</string>
+    <string name="format_badge_jpeg_8bit">JPEG 8-bit</string>
+    <string name="format_desc_jpeg_dng">Save both sensor raw data and compressed image</string>
+    <string name="format_desc_dng">Save uncompressed raw sensor data (DNG)</string>
+    <string name="format_desc_jpeg">Save standard compressed JPEG image</string>
+    <string name="buffer_size_jpeg_dng">Buffer size: ~47 MB/shot</string>
+    <string name="buffer_size_dng">Buffer size: ~35 MB/shot</string>
+    <string name="buffer_size_jpeg">Buffer size: ~12 MB/shot</string>
+    <string name="cd_info">Info</string>
+    <string name="ultra_hdr_enabled">Ultra HDR enabled</string>
+
+    <!-- Storage Location -->
+    <string name="storage_location_title">Storage location</string>
+    <string name="cd_storage">Storage</string>
+    <string name="change_button">Change</string>
+    <string name="storage_percent_used">%1$d%% used</string>
+
+    <!-- Viewfinder, Grid & Location -->
+    <string name="full_screen_viewfinder_title">Full screen viewfinder</string>
+    <string name="full_screen_viewfinder_desc">19.5:9 crop preview instead of\nstandard 4:3</string>
+    <string name="cd_viewfinder">Viewfinder</string>
+
+    <string name="grid_and_level_title">Grid and level</string>
+    <string name="grid_and_level_desc">Tilt level indicator and 3×3\ngolden ratio guide</string>
+    <string name="cd_grid">Grid</string>
+
+    <string name="save_location_title">Save location</string>
+    <string name="save_location_desc">Add GPS coordinates to photo\nEXIF metadata</string>
+    <string name="cd_location">Location tags</string>
+
+    <!-- App Theme -->
+    <string name="app_theme_title">App Theme</string>
+    <string name="app_theme_desc">Select application visual style and color mode</string>
+    <string name="cd_theme">Theme</string>
+    <string name="theme_dark_default">Dark (Default)</string>
+    <string name="theme_amoled_black">AMOLED Black</string>
+    <string name="theme_system_dark">System Dark</string>
+    <string name="theme_high_contrast">High Contrast</string>
+    <string name="theme_light">Light</string>
+
+    <!-- Reset & Version -->
+    <string name="reset_camera_settings">Reset camera settings</string>
+    <string name="cd_reset">Reset</string>
+    <string name="yes_flash_camera">YES Flash Camera</string>
+    <string name="app_version_format">Version %1$s</string>
+</resources>

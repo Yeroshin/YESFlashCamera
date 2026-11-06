@@ -57,7 +57,8 @@ class MapperUI {
             themeValue = settings.themeValue?.ifEmpty { "Dark (Default)" } ?: "Dark (Default)",
             themeItems = ImmutableCollection(
                 list = listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast", "Light")
-            )
+            ),
+            gridEnabled = settings.gridEnabled ?: true
         )
     }
 
@@ -81,7 +82,8 @@ class MapperUI {
                 else -> ImgFormat.JPEG
             },
             filePath = rawPath,
-            themeValue = settingsUI.themeValue
+            themeValue = settingsUI.themeValue,
+            gridEnabled = settingsUI.gridEnabled
         )
     }
 

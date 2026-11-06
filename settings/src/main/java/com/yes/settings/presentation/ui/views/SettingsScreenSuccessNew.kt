@@ -90,10 +90,6 @@ fun SettingsScreenSuccessNew(
 ) {
     val context = LocalContext.current
 
-    var gridEnabled by remember {
-        mutableStateOf(true)
-    }
-
     var saveLocationEnabled by remember {
         mutableStateOf(false)
     }
@@ -729,7 +725,7 @@ fun SettingsScreenSuccessNew(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            gridEnabled = !gridEnabled
+                                            onSettingsChanged(settingsUI.copy(gridEnabled = !settingsUI.gridEnabled))
                                         }
                                         .padding(all = 16.dp)
                                 ) {
@@ -772,9 +768,9 @@ fun SettingsScreenSuccessNew(
                                         )
                                     }
                                     SettingsSwitch(
-                                        checked = gridEnabled,
+                                        checked = settingsUI.gridEnabled,
                                         onCheckedChange = { isChecked ->
-                                            gridEnabled = isChecked
+                                            onSettingsChanged(settingsUI.copy(gridEnabled = isChecked))
                                         }
                                     )
                                 }
@@ -1004,10 +1000,10 @@ fun SettingsScreenSuccessNew(
                                                     resolutionItems = settingsUI.resolutionItems,
                                                     fullScreen = true,
                                                     imgFormatValue = settingsUI.imgFormatItems.list.firstOrNull() ?: "JPEG",
-                                                    imgFormatItems = settingsUI.imgFormatItems
+                                                    imgFormatItems = settingsUI.imgFormatItems,
+                                                    gridEnabled = true
                                                 )
                                             )
-                                            gridEnabled = true
                                             saveLocationEnabled = false
                                         }
                                         .padding(horizontal = 16.dp, vertical = 14.dp)

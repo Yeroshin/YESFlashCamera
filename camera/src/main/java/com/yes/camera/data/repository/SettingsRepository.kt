@@ -48,6 +48,15 @@ class SettingsRepository(
         val FILEPATH = stringPreferencesKey("filePath")
         val IMGFORMAT = stringPreferencesKey("imgFormat")
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
+        val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
+    }
+
+    fun subscribeGridEnabled(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.GRID_ENABLED, true)
+    }
+
+    suspend fun getGridEnabled(): Boolean? {
+        return settingsDataSource.subscribe(PreferencesKeys.GRID_ENABLED, true).first()
     }
 
     suspend fun getSupportsRaw(): Boolean? {
@@ -115,6 +124,7 @@ class SettingsRepository(
             resolution = getResolutionValue() ?: Dimensions(0, 0),
             imgFormat = getImgFormat(),
             supportsRaw = getSupportsRaw() == true,
+            gridEnabled = getGridEnabled() == true,
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
@@ -126,13 +136,15 @@ class SettingsRepository(
             subscribeFullScreen(),
             subscribeResolutionValue(),
             subscribeImageFormat(),
-            subscribeSupportsRaw()
-        ) { fullscreen, resolution, imgFormat, supportsRaw ->
+            subscribeSupportsRaw(),
+            subscribeGridEnabled()
+        ) { fullscreen, resolution, imgFormat, supportsRaw, gridEnabled ->
             Characteristics(
                 fullscreen = fullscreen ?: true,
                 resolution = resolution ?: Dimensions(0, 0),
                 imgFormat = imgFormat ?: ImgFormat.JPEG,
-                supportsRaw = supportsRaw == true
+                supportsRaw = supportsRaw == true,
+                gridEnabled = gridEnabled ?: true
             )
         }
     }

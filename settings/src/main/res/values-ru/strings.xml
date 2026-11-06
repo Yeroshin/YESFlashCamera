@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Screen Header -->
+    <string name="camera_settings_title">Настройки камеры</string>
+    <string name="cd_back">Назад</string>
+
+    <!-- Photo Resolution -->
+    <string name="photo_resolution_title">Разрешение снимков</string>
+    <string name="standard_resolution">Стандартное разрешение</string>
+    <string name="select_resolution">Выберите разрешение</string>
+    <string name="cd_resolution">Разрешение</string>
+    <string name="cd_expand">Развернуть</string>
+
+    <!-- Raw / JPEG Control -->
+    <string name="raw_jpeg_control_title">Формат съёмки (RAW / JPEG)</string>
+    <string name="cd_format">Формат</string>
+    <string name="format_badge_jpeg_dng">JPEG + DNG</string>
+    <string name="format_badge_dng_14bit">DNG 14-бит</string>
+    <string name="format_badge_jpeg_8bit">JPEG 8-бит</string>
+    <string name="format_desc_jpeg_dng">Сохранять сырые данные сенсора и сжатое фото</string>
+    <string name="format_desc_dng">Сохранять несжатые сырые данные сенсора (DNG)</string>
+    <string name="format_desc_jpeg">Сохранять стандартное сжатое фото JPEG</string>
+    <string name="buffer_size_jpeg_dng">Размер буфера: ~47 МБ/кадр</string>
+    <string name="buffer_size_dng">Размер буфера: ~35 МБ/кадр</string>
+    <string name="buffer_size_jpeg">Размер буфера: ~12 МБ/кадр</string>
+    <string name="cd_info">Информация</string>
+    <string name="ultra_hdr_enabled">Ultra HDR включён</string>
+
+    <!-- Storage Location -->
+    <string name="storage_location_title">Место хранения</string>
+    <string name="cd_storage">Память</string>
+    <string name="change_button">Изменить</string>
+    <string name="storage_percent_used">Использовано %1$d%%</string>
+
+    <!-- Viewfinder, Grid & Location -->
+    <string name="full_screen_viewfinder_title">Полноэкранный видоискатель</string>
+    <string name="full_screen_viewfinder_desc">Кадрирование кадра 19.5:9 вместо\nстандартного 4:3</string>
+    <string name="cd_viewfinder">Видоискатель</string>
+
+    <string name="grid_and_level_title">Сетка и уровень</string>
+    <string name="grid_and_level_desc">Индикатор наклона и сетка 3×3\nпо правилу золотого сечения</string>
+    <string name="cd_grid">Сетка</string>
+
+    <string name="save_location_title">Геометки</string>
+    <string name="save_location_desc">Добавлять GPS-координаты в EXIF\nметаданные снимков</string>
+    <string name="cd_location">Геометки</string>
+
+    <!-- App Theme -->
+    <string name="app_theme_title">Тема приложения</string>
+    <string name="app_theme_desc">Выберите визуальный стиль и цветовой режим приложения</string>
+    <string name="cd_theme">Тема</string>
+    <string name="theme_dark_default">Тёмная (По умолчанию)</string>
+    <string name="theme_amoled_black">AMOLED Чёрная</string>
+    <string name="theme_system_dark">Системная тёмная</string>
+    <string name="theme_high_contrast">Высокий контраст</string>
+    <string name="theme_light">Светлая</string>
+
+    <!-- Reset & Version -->
+    <string name="reset_camera_settings">Сбросить настройки камеры</string>
+    <string name="cd_reset">Сброс</string>
+    <string name="yes_flash_camera">YES Flash Camera</string>
+    <string name="app_version_format">Версия %1$s</string>
+</resources>
