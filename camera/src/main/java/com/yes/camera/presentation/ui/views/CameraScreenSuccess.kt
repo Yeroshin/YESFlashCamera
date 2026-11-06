@@ -276,7 +276,7 @@ fun CameraScreenSuccess(
                     onSetCharacteristic(updated)
                 },
                 onValueIndexChanged = { index: Int, newValue: String? ->
-                    if (index != currentPosition || isAutoForCategory || characteristics.selectedCategory == SettingsItem.MAGNIFIER) {
+                    if (/*index != currentPosition || */isAutoForCategory || characteristics.selectedCategory == SettingsItem.MAGNIFIER) {
                         val updated = when (characteristics.selectedCategory) {
                             SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = false, shutterValue = newValue, shutterPosition = index)
                             SettingsItem.ISO -> characteristics.copy(isIsoAuto = false, isoValue = newValue, isoPosition = index)
