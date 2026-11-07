@@ -65,6 +65,12 @@ class SubscribeCameraSettingsUseCase(
             // Если данных от камеры еще нет, берем данные из настроек как базу
             val base = cameraData ?: settings
             base.copy(
+                isoValue = settings.isoValue,
+                shutterValue = settings.shutterValue,
+                wbValue = settings.wbValue,
+                wbMode = settings.wbMode ?: base.wbMode,
+                focusValue = settings.focusValue,
+                focusMode = settings.focusMode ?: base.focusMode,
                 fullscreen = settings.fullscreen,
                 resolution = settings.resolution,
                 imgFormat = settings.imgFormat,

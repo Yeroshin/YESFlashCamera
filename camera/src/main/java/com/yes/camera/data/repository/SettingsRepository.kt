@@ -137,17 +137,48 @@ class SettingsRepository(
             subscribeResolutionValue(),
             subscribeImageFormat(),
             subscribeSupportsRaw(),
-            subscribeGridEnabled()
-        ) { fullscreen, resolution, imgFormat, supportsRaw, gridEnabled ->
+            subscribeGridEnabled(),
+            subscribeIsoValue(),
+            subscribeShutterValue(),
+            subscribeWbValue(),
+            subscribeWbMode(),
+            subscribeFocusValue(),
+            subscribeFocusMode()
+        ) { args: Array<Any?> ->
+            val fullscreen = args[0] as? Boolean
+            val resolution = args[1] as? Dimensions
+            val imgFormat = args[2] as? ImgFormat
+            val supportsRaw = args[3] as? Boolean
+            val gridEnabled = args[4] as? Boolean
+            val isoValue = args[5] as? Int
+            val shutterValue = args[6] as? Long
+            val wbValue = args[7] as? Int
+            val wbMode = args[8] as? Int
+            val focusValue = args[9] as? Float
+            val focusMode = args[10] as? Int
+
             Characteristics(
                 fullscreen = fullscreen ?: true,
                 resolution = resolution ?: Dimensions(0, 0),
                 imgFormat = imgFormat ?: ImgFormat.JPEG,
                 supportsRaw = supportsRaw == true,
-                gridEnabled = gridEnabled ?: true
+                gridEnabled = gridEnabled ?: true,
+                isoValue = isoValue,
+                shutterValue = shutterValue,
+                wbValue = wbValue,
+                wbMode = wbMode,
+                focusValue = focusValue,
+                focusMode = focusMode
             )
         }
     }
+
+    fun subscribeIsoValue(): Flow<Int?> = settingsDataSource.subscribe(ISOVALUE, null)
+    fun subscribeShutterValue(): Flow<Long?> = settingsDataSource.subscribe(SHUTTERVALUE, null)
+    fun subscribeWbValue(): Flow<Int?> = settingsDataSource.subscribe(WBVALUE, null)
+    fun subscribeWbMode(): Flow<Int?> = settingsDataSource.subscribe(WBMODE, CONTROL_AWB_MODE_AUTO)
+    fun subscribeFocusValue(): Flow<Float?> = settingsDataSource.subscribe(FOCUSVALUE, null)
+    fun subscribeFocusMode(): Flow<Int?> = settingsDataSource.subscribe(FOCUSMODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE)
 
     suspend fun getFullScreen(): Boolean? {
         return settingsDataSource.subscribe(FULLSCREEN, null).first()

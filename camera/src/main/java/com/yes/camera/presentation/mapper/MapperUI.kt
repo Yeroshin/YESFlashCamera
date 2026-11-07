@@ -248,18 +248,23 @@ class MapperUI(
         val hardwareMapped = map(reality)
         
         return intent.copy(
-            shutterValue = if (intent.isShutterAuto) hardwareMapped.shutterValue else intent.shutterValue,
-            shutterPosition = if (intent.isShutterAuto) hardwareMapped.shutterPosition else intent.shutterPosition,
+            isShutterAuto = hardwareMapped.isShutterAuto,
+            isIsoAuto = hardwareMapped.isIsoAuto,
+            isWbAuto = hardwareMapped.isWbAuto,
+            isFocusAuto = hardwareMapped.isFocusAuto,
+
+            shutterValue = if (hardwareMapped.isShutterAuto) hardwareMapped.shutterValue else (intent.shutterValue ?: hardwareMapped.shutterValue),
+            shutterPosition = if (hardwareMapped.isShutterAuto) hardwareMapped.shutterPosition else intent.shutterPosition,
             
-            isoValue = if (intent.isIsoAuto) hardwareMapped.isoValue else intent.isoValue,
-            isoPosition = if (intent.isIsoAuto) hardwareMapped.isoPosition else intent.isoPosition,
+            isoValue = if (hardwareMapped.isIsoAuto) hardwareMapped.isoValue else (intent.isoValue ?: hardwareMapped.isoValue),
+            isoPosition = if (hardwareMapped.isIsoAuto) hardwareMapped.isoPosition else intent.isoPosition,
             
-            wbValue = if (intent.isWbAuto) hardwareMapped.wbValue else intent.wbValue,
-            wbPosition = if (intent.isWbAuto) hardwareMapped.wbPosition else intent.wbPosition,
+            wbValue = if (hardwareMapped.isWbAuto) hardwareMapped.wbValue else (intent.wbValue ?: hardwareMapped.wbValue),
+            wbPosition = if (hardwareMapped.isWbAuto) hardwareMapped.wbPosition else intent.wbPosition,
             wbMode = intent.wbMode ?: hardwareMapped.wbMode,
             
-            focusValue = if (intent.isFocusAuto) hardwareMapped.focusValue else intent.focusValue,
-            focusPosition = if (intent.isFocusAuto) hardwareMapped.focusPosition else intent.focusPosition,
+            focusValue = if (hardwareMapped.isFocusAuto) hardwareMapped.focusValue else (intent.focusValue ?: hardwareMapped.focusValue),
+            focusPosition = if (hardwareMapped.isFocusAuto) hardwareMapped.focusPosition else intent.focusPosition,
             focusMode = intent.focusMode ?: hardwareMapped.focusMode,
 
             resolution = hardwareMapped.resolution,
