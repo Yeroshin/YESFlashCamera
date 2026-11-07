@@ -147,6 +147,7 @@ Supporting components for hardware and system interop:
 
 ## ARCHITECTURE DECISIONS LOG (CHANGELOG)
 *This section is automatically maintained by the AI Agent.*
+- **[2026-03-31] User Intent Flag for ValueSelector (`isUserAction`):** Replaced `index != currentPosition` check with an explicit `isUserAction` boolean flag passed from `ValueSelector` on drag settlement or click, ensuring manual mode updates correctly even when selecting a value equal to `currentPosition` while preventing phantom updates during auto-metering synchronization.
 - **[2026-03-31] Anti-Garbage Code Rule:** Added strict policy to immediately roll back unsuccessful trial changes to prevent accumulating garbage code.
 - **[2026-03-31] GLRenderer Architecture & Dynamic Texture Contract:** Documented GLRenderer rendering pipeline, touch raycasting, dynamic OES texture binding, and lifecycle release rules.
 - **[2026-03-31] Camera Hardware Resolutions Persistence:** Documented and verified that upon camera startup (`OpenCameraUseCase`), available hardware resolutions are fetched from `CameraCharacteristics` and persisted via `SettingsRepository.setResolutions(...)` into the shared DataStore repository, allowing the `:settings` module to seamlessly retrieve and display them in `SettingsScreenSuccessNew`.

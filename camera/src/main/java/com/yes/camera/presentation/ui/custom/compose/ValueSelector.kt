@@ -577,7 +577,7 @@ fun ValueSelector(
     modifier: Modifier,
     position: Int,
     items: List<SelectorUiItem>?,
-    onSelectedItemChanged: (index: Int) -> Unit,
+    onSelectedItemChanged: (index: Int, isUserAction: Boolean) -> Unit,
     itemRotation: Float = 0f
 ) {
     if (items.isNullOrEmpty()) return
@@ -633,7 +633,7 @@ fun ValueSelector(
             }
                 .collect { (isScrolling, currentCenter) ->
                     if (!isScrolling && wasDragged) {
-                        onSelectedItemChanged(currentCenter)
+                        onSelectedItemChanged(currentCenter, true)
                         wasDragged = false
                     }
                 }
@@ -661,7 +661,7 @@ fun ValueSelector(
                             ) {
                                 coroutineScope.launch {
                                     listState.animateScrollToItem(index)
-                                    onSelectedItemChanged(index)
+                                    onSelectedItemChanged(index, true)
                                 }
                             }
                             .graphicsLayer { rotationZ = itemRotation },

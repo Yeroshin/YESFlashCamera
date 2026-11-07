@@ -275,8 +275,8 @@ fun CameraScreenSuccess(
                     val updated = characteristics.copy(isFocusAuto = true, focusValue = null, focusMode = mode)
                     onSetCharacteristic(updated)
                 },
-                onValueIndexChanged = { index: Int, newValue: String? ->
-                    if (/*index != currentPosition || */isAutoForCategory || characteristics.selectedCategory == SettingsItem.MAGNIFIER) {
+                onValueIndexChanged = { index: Int, newValue: String?, isUserAction: Boolean ->
+                    if (isUserAction || isAutoForCategory || characteristics.selectedCategory == SettingsItem.MAGNIFIER) {
                         val updated = when (characteristics.selectedCategory) {
                             SettingsItem.SHUTTER -> characteristics.copy(isShutterAuto = false, shutterValue = newValue, shutterPosition = index)
                             SettingsItem.ISO -> characteristics.copy(isIsoAuto = false, isoValue = newValue, isoPosition = index)
@@ -384,7 +384,7 @@ private fun CameraControlBar(
     onAutoToggle: () -> Unit,
     onWbModeClick: (ModeItem.WbItem) -> Unit,
     onFocusModeClick: (ModeItem.FocusItem) -> Unit,
-    onValueIndexChanged: (Int, String?) -> Unit
+    onValueIndexChanged: (Int, String?, Boolean) -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         VectorShadow(
@@ -442,12 +442,12 @@ private fun CameraControlBar(
                         modifier = Modifier.fillMaxSize(),
                         position = currentPosition,
                         items = uiItems,
-                        onSelectedItemChanged = { index ->
+                        onSelectedItemChanged = { index, isUserAction ->
                             val newValue = categoryItems.getOrNull(index)?.value
                             if (selectedCategory == SettingsItem.MAGNIFIER) {
                                 renderer.configureMagnifier(newValue?.replace("x", "")?.toFloatOrNull() ?: 1f)
                             }
-                            onValueIndexChanged(index, newValue)
+                            onValueIndexChanged(index, newValue, isUserAction)
                         },
                         itemRotation = topRotation
                     )
