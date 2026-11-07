@@ -375,3 +375,6 @@ Supporting components for hardware and system interop:
   - Updated `CameraLocationProvider` to actively request fresh coordinates via `LocationManager.requestLocationUpdates()` and `startTracking()` / `stopTracking()` lifecycle hooks in `CameraRepository`.
   - Fixed `SubscribeCameraSettingsUseCase` by adding `saveLocation = settings.saveLocation` to the settings combination flow, ensuring the active location setting from DataStore successfully reaches the camera repository during image capture.
   - Configured Camera2 capture requests with `CaptureRequest.JPEG_GPS_LOCATION` and `DngCreator.setLocation(location)` for native hardware JPEG and DNG raw EXIF GPS embedding, with `ExifInterface` fallback during image export.
+- **[2026-03-31] Sequential File Naming (`IMG_0001` format with auto-incrementing index):**
+  - Implemented `ImageSaver.generateNextFileName(context, savePath)` which scans existing files across DocumentFile (`content://` URIs), MediaStore, and local directories for files matching `IMG_XXXX`.
+  - Automatically formats saved frames as `IMG_0001`, `IMG_0002`, etc., incrementing the index based on existing files in the active save directory.

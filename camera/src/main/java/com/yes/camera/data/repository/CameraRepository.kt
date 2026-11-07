@@ -70,7 +70,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.Arrays
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.pow
@@ -573,7 +575,7 @@ class CameraRepository(
         lastCaptureResult = null
 
         cameraThreadManager.ioExecutor.execute {
-            val baseFileName = FileNameGenerator().generateFileName()
+            val baseFileName = ImageSaver.generateNextFileName(context, savePath)
 
             when (imageFormat) {
                 ImgFormat.JPEG -> {
@@ -583,7 +585,7 @@ class CameraRepository(
                 }
                 ImgFormat.DNG -> {
                     if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath, location)
+                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, baseFileName, savePath, location)
                     }
                 }
                 ImgFormat.JPEGDNG -> {
@@ -591,7 +593,7 @@ class CameraRepository(
                         ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
                     }
                     if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath, location)
+                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, baseFileName, savePath, location)
                     }
                 }
             }
@@ -961,6 +963,89 @@ class CameraRepository(
 }
 
 object ImageSaver {
+    fun generateNextFileName(context: Context, savePath: String): String {
+        val existingNumbers = mutableSetOf<Int>()
+        val pattern = Regex("^IMG_(\\d+)(?:\\..*)?$", RegexOption.IGNORE_CASE)
+
+        fun parseFileName(name: String?) {
+            if (name != null) {
+                val match = pattern.find(name)
+                if (match != null) {
+                    match.groupValues[1].toIntOrNull()?.let { existingNumbers.add(it) }
+                }
+            }
+        }
+
+        try {
+            if (savePath.startsWith("content://")) {
+                try {
+                    val uri = Uri.parse(savePath)
+                    val docFile = DocumentFile.fromTreeUri(context, uri)
+                    if (docFile != null && docFile.isDirectory) {
+                        for (file in docFile.listFiles()) {
+                            parseFileName(file.name)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("ImageSaver", "Error reading DocumentFile for file naming: ${e.message}")
+                }
+            }
+
+            val relativePath = getRelativePath(savePath)
+            val projection = arrayOf(MediaStore.Images.Media.DISPLAY_NAME)
+            
+            val selection = "${MediaStore.Images.Media.RELATIVE_PATH} = ?"
+            val selectionArgs = arrayOf(relativePath)
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                null
+            )?.use { cursor ->
+                val nameCol = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+                while (cursor.moveToNext()) {
+                    if (nameCol != -1) {
+                        parseFileName(cursor.getString(nameCol))
+                    }
+                }
+            }
+
+            val selectionLike = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+            val selectionArgsLike = arrayOf("%$relativePath%")
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selectionLike,
+                selectionArgsLike,
+                null
+            )?.use { cursor ->
+                val nameCol = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+                while (cursor.moveToNext()) {
+                    if (nameCol != -1) {
+                        parseFileName(cursor.getString(nameCol))
+                    }
+                }
+            }
+
+            val targetDir = when {
+                savePath.startsWith("/storage/") || savePath.startsWith("/sdcard/") -> File(savePath)
+                else -> File(Environment.getExternalStorageDirectory(), relativePath)
+            }
+            if (targetDir.exists() && targetDir.isDirectory) {
+                targetDir.listFiles()?.forEach { file ->
+                    parseFileName(file.name)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ImageSaver", "Error generating next file name: ${e.message}")
+        }
+
+        val maxNum = existingNumbers.maxOrNull() ?: 0
+        val nextNum = maxNum + 1
+        return String.format(Locale.US, "IMG_%04d", nextNum)
+    }
+
     private fun Image.toNv21(): ByteArray {
         val y = planes[0].buffer.apply { rewind() }
         val u = planes[1].buffer.apply { rewind() }
