@@ -35,5 +35,6 @@ data class Characteristics(
     val capturedBitmap: Bitmap? = null,
     val supportsRaw: Boolean = false,
     val isCaptureRequested: Boolean = false,
-    val gridEnabled: Boolean = true
+    val gridEnabled: Boolean = true,
+    val saveLocation: Boolean = false
 )

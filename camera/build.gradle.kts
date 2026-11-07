@@ -91,5 +91,6 @@ dependencies {
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
     implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.exifinterface:exifinterface:1.4.2")
 
 }

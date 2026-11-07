@@ -49,6 +49,19 @@ class SettingsRepository(
         val IMGFORMAT = stringPreferencesKey("imgFormat")
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
         val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
+        val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
+    }
+
+    fun subscribeSaveLocation(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.SAVE_LOCATION, false)
+    }
+
+    suspend fun getSaveLocation(): Boolean? {
+        return settingsDataSource.subscribe(PreferencesKeys.SAVE_LOCATION, false).first()
+    }
+
+    suspend fun setSaveLocation(enabled: Boolean) {
+        settingsDataSource.set(enabled, PreferencesKeys.SAVE_LOCATION)
     }
 
     fun subscribeGridEnabled(): Flow<Boolean?> {
@@ -125,6 +138,7 @@ class SettingsRepository(
             imgFormat = getImgFormat(),
             supportsRaw = getSupportsRaw() == true,
             gridEnabled = getGridEnabled() == true,
+            saveLocation = getSaveLocation() == true,
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
@@ -138,6 +152,7 @@ class SettingsRepository(
             subscribeImageFormat(),
             subscribeSupportsRaw(),
             subscribeGridEnabled(),
+            subscribeSaveLocation(),
             subscribeIsoValue(),
             subscribeShutterValue(),
             subscribeWbValue(),
@@ -150,12 +165,13 @@ class SettingsRepository(
             val imgFormat = args[2] as? ImgFormat
             val supportsRaw = args[3] as? Boolean
             val gridEnabled = args[4] as? Boolean
-            val isoValue = args[5] as? Int
-            val shutterValue = args[6] as? Long
-            val wbValue = args[7] as? Int
-            val wbMode = args[8] as? Int
-            val focusValue = args[9] as? Float
-            val focusMode = args[10] as? Int
+            val saveLocation = args[5] as? Boolean
+            val isoValue = args[6] as? Int
+            val shutterValue = args[7] as? Long
+            val wbValue = args[8] as? Int
+            val wbMode = args[9] as? Int
+            val focusValue = args[10] as? Float
+            val focusMode = args[11] as? Int
 
             Characteristics(
                 fullscreen = fullscreen ?: true,
@@ -163,6 +179,7 @@ class SettingsRepository(
                 imgFormat = imgFormat ?: ImgFormat.JPEG,
                 supportsRaw = supportsRaw == true,
                 gridEnabled = gridEnabled ?: true,
+                saveLocation = saveLocation == true,
                 isoValue = isoValue,
                 shutterValue = shutterValue,
                 wbValue = wbValue,

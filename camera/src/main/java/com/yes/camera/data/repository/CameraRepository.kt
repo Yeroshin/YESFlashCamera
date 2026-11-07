@@ -3,6 +3,9 @@ package com.yes.camera.data.repository
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
+import android.location.Location
+import androidx.exifinterface.media.ExifInterface
+import com.yes.camera.utils.CameraLocationProvider
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
@@ -88,6 +91,8 @@ class CameraRepository(
     private lateinit var histogramSurface: Surface
     private lateinit var captureSurfaceJpeg: Surface
     private lateinit var captureSurfaceRaw: Surface
+
+    private val cameraLocationProvider by lazy { CameraLocationProvider(context) }
 
     private var sensorBaseRGain = 2.0f
     private var sensorBaseBGain = 1.8f
@@ -294,6 +299,7 @@ class CameraRepository(
     }
 
     fun closeCamera() {
+        cameraLocationProvider.stopTracking()
         cameraSession?.close()
         cameraDevice.close()
         previewSurface.release()
@@ -328,6 +334,7 @@ class CameraRepository(
     }
 
     fun startSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
+        cameraLocationProvider.startTracking()
         filePath = characteristics.filePath
         val width = if (characteristics.resolution.width > 0) characteristics.resolution.width else 1920
         val height = if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
@@ -471,6 +478,12 @@ class CameraRepository(
             val needRaw = supportsRaw && (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG)
 
             if (characteristics.isCaptureRequested) {
+                if (characteristics.saveLocation) {
+                    val location = cameraLocationProvider.getCurrentLocation()
+                    if (location != null) {
+                        builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
+                    }
+                }
                 imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
                 if (needRaw) {
                     imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
@@ -552,6 +565,9 @@ class CameraRepository(
         val rawWidth = lastRawWidth
         val rawHeight = lastRawHeight
         val capResult = lastCaptureResult
+        val saveLocation = appliedCharacteristics?.saveLocation == true
+        val location = if (saveLocation) cameraLocationProvider.getCurrentLocation() else null
+
         lastJpegBytes = null
         lastRawBytes = null
         lastCaptureResult = null
@@ -562,20 +578,20 @@ class CameraRepository(
             when (imageFormat) {
                 ImgFormat.JPEG -> {
                     if (jpegBytes != null) {
-                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath)
+                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
                     }
                 }
                 ImgFormat.DNG -> {
                     if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath)
+                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath, location)
                     }
                 }
                 ImgFormat.JPEGDNG -> {
                     if (jpegBytes != null) {
-                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath)
+                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
                     }
                     if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath)
+                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, "${baseFileName}_DNG", savePath, location)
                     }
                 }
             }
@@ -992,8 +1008,9 @@ object ImageSaver {
             Log.e("ImageSaver", "Save bitmap error: ${e.message}")
         }
     }
-    fun saveBytes(context: Context, bytes: ByteArray, name: String, savePath: String = "DCIM/FlashCamera") {
+    fun saveBytes(context: Context, bytes: ByteArray, name: String, savePath: String = "DCIM/FlashCamera", location: Location? = null) {
         try {
+            var targetUri: Uri? = null
             if (savePath.startsWith("content://")) {
                 try {
                     val uri = Uri.parse(savePath)
@@ -1001,30 +1018,48 @@ object ImageSaver {
                     if (docFile != null && docFile.canWrite()) {
                         val newFile = docFile.createFile("image/jpeg", "$name.jpg")
                         if (newFile != null) {
+                            targetUri = newFile.uri
                             context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
-                            return
                         }
                     }
                 } catch (e: Exception) {
                     Log.e("ImageSaver", "TreeUri save bytes error: ${e.message}")
                 }
             }
-            val relativePath = getRelativePath(savePath)
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, "$name.jpg")
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+            if (targetUri == null) {
+                val relativePath = getRelativePath(savePath)
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, "$name.jpg")
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
+                }
+                targetUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                targetUri?.let { uri ->
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                }
             }
-            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+
+            if (location != null && targetUri != null) {
+                try {
+                    context.contentResolver.openFileDescriptor(targetUri, "rw")?.use { pfd ->
+                        val exif = ExifInterface(pfd.fileDescriptor)
+                        exif.setGpsInfo(location)
+                        exif.saveAttributes()
+                    }
+                } catch (e: Exception) {
+                    Log.e("ImageSaver", "Failed to write GPS Exif: ${e.message}")
+                }
             }
         } catch (e: Exception) {
             Log.e("ImageSaver", "Save bytes error: ${e.message}")
         }
     }
-    fun saveDngBytes(context: Context, cameraCharacteristics: CameraCharacteristics, captureResult: TotalCaptureResult, rawBytes: ByteArray, width: Int, height: Int, name: String, savePath: String = "DCIM/FlashCamera") {
+    fun saveDngBytes(context: Context, cameraCharacteristics: CameraCharacteristics, captureResult: TotalCaptureResult, rawBytes: ByteArray, width: Int, height: Int, name: String, savePath: String = "DCIM/FlashCamera", location: Location? = null) {
         try {
             val dngCreator = DngCreator(cameraCharacteristics, captureResult)
+            if (location != null) {
+                dngCreator.setLocation(location)
+            }
             val byteBuffer = ByteBuffer.wrap(rawBytes)
             val size = Size(width, height)
 

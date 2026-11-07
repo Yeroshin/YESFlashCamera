@@ -14,6 +14,7 @@ import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.RESOL
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.RESOLUTIONVALUE
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.THEMEVALUE
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.GRID_ENABLED
+import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.SAVE_LOCATION
 import com.yes.settings.domain.model.Settings
 import com.yes.settings.domain.model.StorageInfo
 import com.yes.shared.data.dataSource.SettingsDataSource
@@ -48,6 +49,19 @@ class SettingsRepository(
         val THEMEVALUE = stringPreferencesKey("themeValue")
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
         val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
+        val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
+    }
+
+    fun subscribeSaveLocation(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.SAVE_LOCATION, false)
+    }
+
+    suspend fun setSaveLocation(enabled: Boolean?) {
+        enabled?.let {
+            settingsDataSource.set(it, PreferencesKeys.SAVE_LOCATION)
+        } ?: run {
+            settingsDataSource.remove(PreferencesKeys.SAVE_LOCATION)
+        }
     }
 
     private val defaultDcimPath by lazy {
@@ -112,6 +126,13 @@ class SettingsRepository(
             } else {
                 preferences.remove(GRID_ENABLED)
             }
+
+            // SAVE_LOCATION
+            if (settings.saveLocation != null) {
+                preferences[SAVE_LOCATION] = settings.saveLocation
+            } else {
+                preferences.remove(SAVE_LOCATION)
+            }
         }
     }
 
@@ -124,7 +145,8 @@ class SettingsRepository(
             subscribeFilePath(),
             subscribeThemeValue(),
             subscribeSupportsRaw(),
-            subscribeGridEnabled()
+            subscribeGridEnabled(),
+            subscribeSaveLocation()
         ) { array ->
             Settings(
                 resolutionValue = array[0] as Dimensions?,
@@ -134,7 +156,8 @@ class SettingsRepository(
                 filePath = array[4] as String?,
                 themeValue = array[5] as String?,
                 supportsRaw = array[6] as Boolean?,
-                gridEnabled = array[7] as Boolean?
+                gridEnabled = array[7] as Boolean?,
+                saveLocation = array[8] as Boolean?
             )
         }
     }

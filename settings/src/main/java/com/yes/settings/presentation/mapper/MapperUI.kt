@@ -58,7 +58,8 @@ class MapperUI {
             themeItems = ImmutableCollection(
                 list = listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast", "Light")
             ),
-            gridEnabled = settings.gridEnabled ?: true
+            gridEnabled = settings.gridEnabled ?: true,
+            saveLocation = settings.saveLocation ?: false
         )
     }
 
@@ -83,7 +84,8 @@ class MapperUI {
             },
             filePath = rawPath,
             themeValue = settingsUI.themeValue,
-            gridEnabled = settingsUI.gridEnabled
+            gridEnabled = settingsUI.gridEnabled,
+            saveLocation = settingsUI.saveLocation
         )
     }
 

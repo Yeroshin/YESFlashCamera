@@ -11,5 +11,6 @@ data class Settings(
     val filePath: String? = null,
     val themeValue: String? = null,
     val supportsRaw: Boolean? = null,
-    val gridEnabled: Boolean? = true
+    val gridEnabled: Boolean? = true,
+    val saveLocation: Boolean? = false
 )

@@ -150,6 +150,7 @@ class MapperUI(
                 ImgFormat.JPEGDNG -> "JPEG+DNG"
             },
             gridEnabled = characteristics.gridEnabled,
+            saveLocation = characteristics.saveLocation,
             touchPoint = characteristics.touchPoint?.let {
                 if (it.size >= 2) Offset(it[0], it[1]) else null
             } ?: Offset(0.5f, 0.5f),
@@ -271,6 +272,7 @@ class MapperUI(
             aspectRatio = hardwareMapped.aspectRatio,
             imgFormat = hardwareMapped.imgFormat,
             gridEnabled = hardwareMapped.gridEnabled,
+            saveLocation = hardwareMapped.saveLocation,
             histogramData = hardwareMapped.histogramData,
             isFocused = hardwareMapped.isFocused,
             capturedBitmap = reality.capturedBitmap,
@@ -338,7 +340,8 @@ class MapperUI(
             capturedBitmap = characteristics.capturedBitmap,
             isCaptureRequested = characteristics.isCaptureRequested,
             imgFormat = imgFormat,
-            gridEnabled = characteristics.gridEnabled
+            gridEnabled = characteristics.gridEnabled,
+            saveLocation = characteristics.saveLocation
         )
     }
 

@@ -369,3 +369,8 @@ Supporting components for hardware and system interop:
   - Subscribed to manual control settings (`ISOVALUE`, `SHUTTERVALUE`, `WBVALUE`, `WBMODE`, `FOCUSVALUE`, `FOCUSMODE`) in `SettingsRepository.subscribeSettings()`.
   - Updated `SubscribeCameraSettingsUseCase` to merge persisted manual values from DataStore (`settings`) into `base` characteristics.
   - Updated `MapperUI.merge()` to sync `isShutterAuto`, `isIsoAuto`, `isWbAuto`, `isFocusAuto` from hardware mapped reality, preserving persisted manual modes across screen openings.
+- **[2026-03-31] GPS EXIF Metadata Saving & Active Location Fix (`CameraLocationProvider`, `CameraRepository`, `Settings`):**
+  - Added `saveLocation` setting across `:settings` and `:camera` modules, persisted via DataStore and toggled via `SettingsScreenSuccessNew` with runtime location permission requests (`ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION`).
+  - Updated `CameraLocationProvider` to actively request fresh coordinates via `LocationManager.requestLocationUpdates()` and `startTracking()` / `stopTracking()` lifecycle hooks in `CameraRepository`.
+  - Fixed `SubscribeCameraSettingsUseCase` by adding `saveLocation = settings.saveLocation` to the settings combination flow, ensuring the active location setting from DataStore successfully reaches the camera repository during image capture.
+  - Configured Camera2 capture requests with `CaptureRequest.JPEG_GPS_LOCATION` and `DngCreator.setLocation(location)` for native hardware JPEG and DNG raw EXIF GPS embedding, with `ExifInterface` fallback during image export.

@@ -1,8 +1,11 @@
 package com.yes.settings.presentation.ui.views
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -90,8 +93,36 @@ fun SettingsScreenSuccessNew(
 ) {
     val context = LocalContext.current
 
-    var saveLocationEnabled by remember {
-        mutableStateOf(false)
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+            if (granted) {
+                onSettingsChanged(settingsUI.copy(saveLocation = true))
+            } else {
+                onSettingsChanged(settingsUI.copy(saveLocation = false))
+            }
+        }
+    )
+
+    val toggleLocation = { targetState: Boolean ->
+        if (targetState) {
+            val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (fine || coarse) {
+                onSettingsChanged(settingsUI.copy(saveLocation = true))
+            } else {
+                locationPermissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
+        } else {
+            onSettingsChanged(settingsUI.copy(saveLocation = false))
+        }
     }
 
     val dirPickerLauncher = rememberLauncherForActivityResult(
@@ -789,7 +820,7 @@ fun SettingsScreenSuccessNew(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            saveLocationEnabled = !saveLocationEnabled
+                                            toggleLocation(!settingsUI.saveLocation)
                                         }
                                         .padding(all = 16.dp)
                                 ) {
@@ -832,9 +863,9 @@ fun SettingsScreenSuccessNew(
                                         )
                                     }
                                     SettingsSwitch(
-                                        checked = saveLocationEnabled,
+                                        checked = settingsUI.saveLocation,
                                         onCheckedChange = { isChecked ->
-                                            saveLocationEnabled = isChecked
+                                            toggleLocation(isChecked)
                                         }
                                     )
                                 }
@@ -1001,10 +1032,10 @@ fun SettingsScreenSuccessNew(
                                                     fullScreen = true,
                                                     imgFormatValue = settingsUI.imgFormatItems.list.firstOrNull() ?: "JPEG",
                                                     imgFormatItems = settingsUI.imgFormatItems,
-                                                    gridEnabled = true
+                                                    gridEnabled = true,
+                                                    saveLocation = false
                                                 )
                                             )
-                                            saveLocationEnabled = false
                                         }
                                         .padding(horizontal = 16.dp, vertical = 14.dp)
                                 ) {

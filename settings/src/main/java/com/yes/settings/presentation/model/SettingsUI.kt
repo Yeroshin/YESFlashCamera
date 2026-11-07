@@ -17,5 +17,6 @@ data class SettingsUI(
     val bufferSizeText: String = "Buffer size: ~12 MB/shot",
     val themeValue: String = "Dark (Default)",
     val themeItems: ImmutableCollection<String> = ImmutableCollection(listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast")),
-    val gridEnabled: Boolean = true
+    val gridEnabled: Boolean = true,
+    val saveLocation: Boolean = false
 )
