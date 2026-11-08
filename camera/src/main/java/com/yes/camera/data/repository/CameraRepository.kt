@@ -281,6 +281,27 @@ class CameraRepository(
         }
     }
 
+    fun getCameraSensorOrientation(backCamera: Boolean): Int {
+        val facing = if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
+        val targetId = cameraManager.cameraIdList.firstOrNull { id ->
+            cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) == facing
+        } ?: cameraManager.cameraIdList.firstOrNull()
+
+        return targetId?.let {
+            cameraManager.getCameraCharacteristics(it).get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+        } ?: 90
+    }
+
+    fun updateCharacteristicsForSwitch(backCamera: Boolean, sensorOrientation: Int) {
+        val current = _characteristicsFlow.value ?: Characteristics(backCamera = backCamera, sensorOrientation = sensorOrientation)
+        _characteristicsFlow.update {
+            current.copy(
+                backCamera = backCamera,
+                sensorOrientation = sensorOrientation
+            )
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun openCamera(backCamera: Boolean): StateFlow<Characteristics?> {
         val facing = if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT

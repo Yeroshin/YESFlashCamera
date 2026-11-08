@@ -25,8 +25,12 @@ class OpenCameraUseCase(
         // 1. Закрываем текущую камеру и сессию, освобождая ресурсы перед открытием новой камеры
         closeCameraUseCase()
 
-        // 2. Сохраняем и открываем выбранную камеру (основную или фронтальную)
+        // 2. Получаем ориентацию сенсора целевой камеры и обновляем характеристики (поворот проекции на закрытой камере ДО открытия новой)
+        val targetOrientation = cameraRepository.getCameraSensorOrientation(params.backCamera)
         settingsRepository.setBackCamera(params.backCamera)
+        cameraRepository.updateCharacteristicsForSwitch(params.backCamera, targetOrientation)
+
+        // 3. Открываем выбранную камеру (основную или фронтальную)
         val settingsCharacteristics = settingsRepository.getCharacteristics()
         val cameraCharacteristics = cameraRepository.openCamera(params.backCamera)
 
