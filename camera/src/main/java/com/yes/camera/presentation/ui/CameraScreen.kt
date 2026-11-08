@@ -347,6 +347,14 @@ fun CameraScreen(
                                 CameraContract.Event.OnSelectCategory(category)
                             )
                         },
+                        onSwitchCamera = {
+                            surface?.let { surfaceTexture ->
+                                val currentBack = currentState.characteristicsFlow.value.backCamera
+                                cameraViewModel.setEvent(
+                                    CameraContract.Event.OnOpenCamera(!currentBack, surfaceTexture)
+                                )
+                            }
+                        }
                     )
                 }
 

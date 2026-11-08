@@ -84,12 +84,14 @@ class CameraModule {
     fun providesOpenCameraUseCase(
         @CameraDispatcher dispatcher: CoroutineDispatcher,
         cameraRepository: CameraRepository,
-        settingsRepository: SettingsRepository
+        settingsRepository: SettingsRepository,
+        closeCameraUseCase: CloseCameraUseCase
     ): OpenCameraUseCase {
         return OpenCameraUseCase(
             dispatcher,
             cameraRepository,
-            settingsRepository
+            settingsRepository,
+            closeCameraUseCase
         )
     }
     @Provides

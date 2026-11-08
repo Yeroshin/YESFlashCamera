@@ -378,3 +378,9 @@ Supporting components for hardware and system interop:
 - **[2026-03-31] Sequential File Naming (`IMG_0001` format with auto-incrementing index):**
   - Implemented `ImageSaver.generateNextFileName(context, savePath)` which scans existing files across DocumentFile (`content://` URIs), MediaStore, and local directories for files matching `IMG_XXXX`.
   - Automatically formats saved frames as `IMG_0001`, `IMG_0002`, etc., incrementing the index based on existing files in the active save directory.
+- **[2026-03-31] Camera Switching / Front-Back Camera Flip:**
+  - Added `onSwitchCamera: () -> Unit` parameter to `CameraScreenSuccess` and wired `onClick = onSwitchCamera` to the flip camera `VectorShadow` icon (`resId = R.drawable.flip_camera_android`).
+  - In `CameraScreen`, wired `onSwitchCamera` to dispatch `CameraContract.Event.OnOpenCamera(!currentBack, surfaceTexture)`.
+  - Injected `CloseCameraUseCase` into `OpenCameraUseCase`. Prior to initializing the new camera device and session, `OpenCameraUseCase` explicitly invokes `closeCameraUseCase()` to release all current camera resources, active sessions, and `ImageReader` surfaces.
+  - Updated `OpenCameraUseCase` to persist the selected camera facing (`backCamera`) to DataStore, query hardware characteristics for the requested camera, and dynamically re-bind the GL surface texture and resolutions.
+  - Updated `CameraRepository` to safely close existing camera devices/sessions/image readers before opening the new camera facing and properly expose `backCamera` in `Characteristics` and `MapperUI`.

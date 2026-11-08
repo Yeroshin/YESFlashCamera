@@ -52,6 +52,7 @@ fun CameraScreenSuccess(
     onSingleCapture: () -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
     onSelectCategory: (category: SettingsItem) -> Unit,
+    onSwitchCamera: () -> Unit = {}
 ) {
     val characteristics by characteristicsFlow.collectAsState()
 
@@ -309,7 +310,8 @@ fun CameraScreenSuccess(
                         .graphicsLayer { rotationZ = bottomRotation },
                     resId = R.drawable.flip_camera_android,
                     vectorColor = AppTheme.colors.iconPrimary,
-                    shadowColor = AppTheme.colors.shadow
+                    shadowColor = AppTheme.colors.shadow,
+                    onClick = onSwitchCamera
                 )
                 RecordButton(
                     modifier = Modifier

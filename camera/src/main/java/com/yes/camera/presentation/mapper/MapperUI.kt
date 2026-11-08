@@ -133,6 +133,7 @@ class MapperUI(
         }
 
         return CharacteristicsUI(
+            backCamera = characteristics.backCamera ?: true,
             shutterValue = shutterValueStr,
             shutterPosition = shutterPosition,
             isoValue = isoValue?.toString() ?: "",
@@ -249,6 +250,7 @@ class MapperUI(
         val hardwareMapped = map(reality)
         
         return intent.copy(
+            backCamera = reality.backCamera ?: intent.backCamera,
             isShutterAuto = hardwareMapped.isShutterAuto,
             isIsoAuto = hardwareMapped.isIsoAuto,
             isWbAuto = hardwareMapped.isWbAuto,
@@ -329,6 +331,7 @@ class MapperUI(
         }
 
         return Characteristics(
+            backCamera = characteristics.backCamera,
             isoValue = isoValue,
             shutterValue = shutterValue,
             wbValue = wbValue,

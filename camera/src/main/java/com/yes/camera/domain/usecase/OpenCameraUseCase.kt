@@ -16,21 +16,26 @@ import kotlinx.coroutines.flow.first
 class OpenCameraUseCase(
     dispatcher: CoroutineDispatcher,
     private val cameraRepository: CameraRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val closeCameraUseCase: CloseCameraUseCase
 ) : UseCase<OpenCameraUseCase.Params, Unit>(dispatcher) {
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override suspend fun run(params: Params) {
-        // 1. Получаем настройки и открываем камеру
-        val settingsCharacteristics = settingsRepository.getCharacteristics()
-        val cameraCharacteristics = cameraRepository.openCamera(settingsCharacteristics.backCamera ?: true)
+        // 1. Закрываем текущую камеру и сессию, освобождая ресурсы перед открытием новой камеры
+        closeCameraUseCase()
 
-        // 2. Ждем получения аппаратных характеристик (поддерживаемые размеры и т.д.)
+        // 2. Сохраняем и открываем выбранную камеру (основную или фронтальную)
+        settingsRepository.setBackCamera(params.backCamera)
+        val settingsCharacteristics = settingsRepository.getCharacteristics()
+        val cameraCharacteristics = cameraRepository.openCamera(params.backCamera)
+
+        // 3. Ждем получения аппаратных характеристик (поддерживаемые размеры и т.д.)
         val hardwareInfo = cameraCharacteristics.filterNotNull().first()
 
-        // 3. Определяем рабочее разрешение
-        // Если в настройках 0x0 или пусто - берем максимальное доступное
-        val selectedResolution = if (settingsCharacteristics.resolution.width > 0) {
+        // 4. Определяем рабочее разрешение для этой камеры
+        val selectedResolution = if (settingsCharacteristics.resolution.width > 0 &&
+            hardwareInfo.resolutionItems.contains(settingsCharacteristics.resolution)) {
             settingsCharacteristics.resolution
         } else {
             val bestSize = hardwareInfo.resolutionItems.maxByOrNull { it.width * it.height } ?: Dimensions(640, 480)
@@ -38,16 +43,20 @@ class OpenCameraUseCase(
             bestSize
         }
 
-        // 4. Сохраняем список всех доступных разрешений
+        // 5. Сохраняем список всех доступных разрешений
         settingsRepository.setResolutions(hardwareInfo.resolutionItems)
 
-        // 4.1. Записываем актуальную поддержку RAW/DNG в настройки
+        // 5.1. Записываем актуальную поддержку RAW/DNG в настройки
         settingsRepository.setSupportsRaw(hardwareInfo.supportsRaw)
 
-        // 5. Запускаем сессию с валидными данными
+        // 6. Запускаем сессию с открытой камерой
         cameraRepository.startSession(
             params.glSurfaceTexture,
-            settingsCharacteristics.copy(resolution = selectedResolution)
+            settingsCharacteristics.copy(
+                backCamera = params.backCamera,
+                resolution = selectedResolution,
+                supportsRaw = hardwareInfo.supportsRaw
+            )
         )
     }
 

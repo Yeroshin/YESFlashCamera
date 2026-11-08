@@ -284,9 +284,11 @@ class CameraRepository(
     @SuppressLint("MissingPermission")
     fun openCamera(backCamera: Boolean): StateFlow<Characteristics?> {
         val facing = if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
-        cameraManager.cameraIdList.firstOrNull { id ->
+        val targetId = cameraManager.cameraIdList.firstOrNull { id ->
             cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) == facing
-        }?.let { id ->
+        } ?: cameraManager.cameraIdList.firstOrNull()
+
+        targetId?.let { id ->
             cameraManager.openCamera(id, object : CameraDevice.StateCallback() {
                 override fun onOpened(camera: CameraDevice) {
                     cameraDevice = camera
@@ -302,9 +304,22 @@ class CameraRepository(
 
     fun closeCamera() {
         cameraLocationProvider.stopTracking()
-        cameraSession?.close()
-        cameraDevice.close()
-        previewSurface.release()
+        try { cameraSession?.close() } catch (_: Exception) {}
+        if (::cameraDevice.isInitialized) {
+            try { cameraDevice.close() } catch (_: Exception) {}
+        }
+        if (::previewSurface.isInitialized) {
+            try { previewSurface.release() } catch (_: Exception) {}
+        }
+        if (::imageReaderHistogram.isInitialized) {
+            try { imageReaderHistogram.close() } catch (_: Exception) {}
+        }
+        if (::imageReaderJpeg.isInitialized) {
+            try { imageReaderJpeg.close() } catch (_: Exception) {}
+        }
+        if (::imageReaderRaw.isInitialized) {
+            try { imageReaderRaw.close() } catch (_: Exception) {}
+        }
         cameraSession = null
         persistentBuilder = null
         _characteristicsFlow.update { null }
@@ -320,9 +335,11 @@ class CameraRepository(
         val awbModes = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
         val caps = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
         val supportsRaw = caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
-        val allrSizes = map?.getOutputSizes(ImageFormat.RAW_SENSOR)
+        val lensFacing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
+        val isBack = lensFacing == CameraCharacteristics.LENS_FACING_BACK
 
         return Characteristics(
+            backCamera = isBack,
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
             wbModeItems = awbModes,

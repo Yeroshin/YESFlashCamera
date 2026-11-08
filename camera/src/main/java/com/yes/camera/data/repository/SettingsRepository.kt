@@ -158,7 +158,8 @@ class SettingsRepository(
             subscribeWbValue(),
             subscribeWbMode(),
             subscribeFocusValue(),
-            subscribeFocusMode()
+            subscribeFocusMode(),
+            subscribeBackCamera()
         ) { args: Array<Any?> ->
             val fullscreen = args[0] as? Boolean
             val resolution = args[1] as? Dimensions
@@ -172,8 +173,10 @@ class SettingsRepository(
             val wbMode = args[9] as? Int
             val focusValue = args[10] as? Float
             val focusMode = args[11] as? Int
+            val backCamera = args[12] as? Boolean
 
             Characteristics(
+                backCamera = backCamera ?: true,
                 fullscreen = fullscreen ?: true,
                 resolution = resolution ?: Dimensions(0, 0),
                 imgFormat = imgFormat ?: ImgFormat.JPEG,
@@ -205,6 +208,10 @@ class SettingsRepository(
         return settingsDataSource.subscribe(FULLSCREEN, null)
     }
 
+    fun subscribeBackCamera(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(BACKCAMERA, true)
+    }
+
     suspend fun setBackCamera(backCamera: Boolean?) {
         backCamera?.let {
             settingsDataSource.set(it, BACKCAMERA)
@@ -214,7 +221,7 @@ class SettingsRepository(
     }
 
     private suspend fun getBackCamera(): Boolean? {
-        return settingsDataSource.subscribe(BACKCAMERA, null).first()
+        return settingsDataSource.subscribe(BACKCAMERA, true).first()
     }
 
     suspend fun setResolutions(dimensions: List<Dimensions>?) {
