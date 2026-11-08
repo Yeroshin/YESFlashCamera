@@ -337,9 +337,11 @@ class CameraRepository(
         val supportsRaw = caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
         val lensFacing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
         val isBack = lensFacing == CameraCharacteristics.LENS_FACING_BACK
+        val sensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
 
         return Characteristics(
             backCamera = isBack,
+            sensorOrientation = sensorOrientation,
             isoRange = iso?.let { IntRange(it.lower, it.upper) } ?: IntRange(0, 0),
             shutterRange = exposure?.let { LongRange(it.lower, it.upper) } ?: LongRange(0, 0),
             wbModeItems = awbModes,

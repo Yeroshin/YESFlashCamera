@@ -19,6 +19,7 @@ data class CharacteristicsUI(
     val characteristicsItems: ImmutableList<RadioGroupItem> = persistentListOf(),
 
     val backCamera: Boolean = true,
+    val sensorOrientation: Int = 90,
     val shutterValue: String? = null,
     val shutterPosition: Int = 0,
     val isoValue: String? = null,

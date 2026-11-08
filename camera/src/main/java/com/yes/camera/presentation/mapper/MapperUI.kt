@@ -134,6 +134,7 @@ class MapperUI(
 
         return CharacteristicsUI(
             backCamera = characteristics.backCamera ?: true,
+            sensorOrientation = characteristics.sensorOrientation,
             shutterValue = shutterValueStr,
             shutterPosition = shutterPosition,
             isoValue = isoValue?.toString() ?: "",
@@ -332,6 +333,7 @@ class MapperUI(
 
         return Characteristics(
             backCamera = characteristics.backCamera,
+            sensorOrientation = characteristics.sensorOrientation,
             isoValue = isoValue,
             shutterValue = shutterValue,
             wbValue = wbValue,

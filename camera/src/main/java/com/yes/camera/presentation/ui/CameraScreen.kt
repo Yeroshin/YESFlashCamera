@@ -274,6 +274,11 @@ fun CameraScreen(
             // because of the remember block below.
             val characteristics by (characteristicsFlow ?: MutableStateFlow(CharacteristicsUI())).collectAsState()
 
+            LaunchedEffect(characteristics.sensorOrientation, characteristics.backCamera) {
+                renderer.sensorOrientation = characteristics.sensorOrientation
+                renderer.isBackCamera = characteristics.backCamera
+            }
+
             val isFullScreen = remember(characteristics.fullScreen) {
                 characteristics.fullScreen
             }

@@ -6,6 +6,7 @@ import com.yes.shared.domain.ImgFormat
 
 data class Characteristics(
     val backCamera: Boolean? = null,
+    val sensorOrientation: Int = 90,
     val isoValue: Int? = null,
     val isoRange: IntRange = IntRange(0, 0),
     val shutterValue: Long? = null,

@@ -384,3 +384,8 @@ Supporting components for hardware and system interop:
   - Injected `CloseCameraUseCase` into `OpenCameraUseCase`. Prior to initializing the new camera device and session, `OpenCameraUseCase` explicitly invokes `closeCameraUseCase()` to release all current camera resources, active sessions, and `ImageReader` surfaces.
   - Updated `OpenCameraUseCase` to persist the selected camera facing (`backCamera`) to DataStore, query hardware characteristics for the requested camera, and dynamically re-bind the GL surface texture and resolutions.
   - Updated `CameraRepository` to safely close existing camera devices/sessions/image readers before opening the new camera facing and properly expose `backCamera` in `Characteristics` and `MapperUI`.
+- **[2026-03-31] Correctly Oriented & Unmirrored Live Preview for Both Cameras (`GlCamera`, `GLRenderer`, `CameraRepository`):**
+  - Added `sensorOrientation` query (`CameraCharacteristics.SENSOR_ORIENTATION`) and propagation through `Characteristics`, `CharacteristicsUI`, and `MapperUI`.
+  - Updated `GlCamera.setProjection(...)` to dynamically calculate the exact rotation angle based on active `sensorOrientation`, display rotation (`windowManager.defaultDisplay.rotation`), and camera facing (`isBackCamera`), preventing sideways preview orientation.
+  - Applied horizontal mirroring scale on the view matrix when `isBackCamera == false` (front camera) to ensure unmirrored, upright live preview for both back and front cameras.
+  - Added custom thread-safe property setters for `isBackCamera` and `sensorOrientation` in `GLRenderer` that automatically invoke `glCamera.setProjection(...)` via `glSurfaceView?.queueEvent(...)` upon camera switching, ensuring real-time orientation and mirroring updates.

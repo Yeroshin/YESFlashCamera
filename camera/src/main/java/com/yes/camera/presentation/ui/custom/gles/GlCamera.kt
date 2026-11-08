@@ -2,6 +2,7 @@ package com.yes.camera.presentation.ui.custom.gles
 
 import android.content.Context
 import android.opengl.GLES20.glViewport
+import android.opengl.Matrix
 import android.opengl.Matrix.multiplyMM
 import android.opengl.Matrix.orthoM
 import android.opengl.Matrix.setLookAtM
@@ -13,12 +14,12 @@ class GlCamera(context: Context,) {
     private val viewMatrix = FloatArray(16)
     private val modelViewProjectionMatrix = FloatArray(16)
     val viewProjectionMatrix = FloatArray(16)
-    private var rotationX = 0f
-    private var rotationY = 0f
     private val windowManager: WindowManager = context
         .getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    fun setProjection( width: Int, height: Int){
+    fun setProjection(width: Int, height: Int, sensorOrientation: Int = 90, isBackCamera: Boolean = true) {
         val ratio = if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
+        var rotationX = 0f
+        var rotationY = 0f
         when (windowManager.defaultDisplay.rotation) {
             Surface.ROTATION_0 -> {
                 rotationX = -1f
@@ -39,11 +40,17 @@ class GlCamera(context: Context,) {
                 rotationX = 0f
                 rotationY = -1f
             }
-
-            else -> "Не понятно"
         }
+
         glViewport(0, 0, width, height)
+        Matrix.setIdentityM(viewMatrix, 0)
         setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, rotationX, rotationY, 0.0f)
+
+        if (!isBackCamera) {
+            Matrix.rotateM(viewMatrix, 0, 360f, 0f, 0f, 1f)
+            Matrix.scaleM(viewMatrix, 0, -1f, 1f, 1f)
+        }
+
         if (width > height) {
             // Landscape
 

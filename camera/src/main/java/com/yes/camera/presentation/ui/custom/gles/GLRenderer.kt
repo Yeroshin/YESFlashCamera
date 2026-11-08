@@ -45,6 +45,33 @@ class GLRenderer(
     private val callback: (surfaceTexture: SurfaceTexture) -> Unit
 ) : GLSurfaceView.Renderer {
 
+    private var surfaceWidth = 0
+    private var surfaceHeight = 0
+
+    var sensorOrientation: Int = 90
+        set(value) {
+            if (field != value) {
+                field = value
+                glSurfaceView?.queueEvent {
+                    if (surfaceWidth > 0 && surfaceHeight > 0) {
+                        glCamera.setProjection(surfaceWidth, surfaceHeight, sensorOrientation, isBackCamera)
+                    }
+                }
+            }
+        }
+
+    var isBackCamera: Boolean = true
+        set(value) {
+            if (field != value) {
+                field = value
+                glSurfaceView?.queueEvent {
+                    if (surfaceWidth > 0 && surfaceHeight > 0) {
+                        glCamera.setProjection(surfaceWidth, surfaceHeight, sensorOrientation, isBackCamera)
+                    }
+                }
+            }
+        }
+
     private var surfaceTexture: SurfaceTexture? = null
     private var oesTextureId: Int = 0
 
@@ -218,7 +245,9 @@ class GLRenderer(
     }
 
     override fun onSurfaceChanged(glUnused: GL10?, width: Int, height: Int) {
-        glCamera.setProjection(width, height)
+        surfaceWidth = width
+        surfaceHeight = height
+        glCamera.setProjection(width, height, sensorOrientation, isBackCamera)
 
         val ratio =
             if (width > height) width.toFloat() / height.toFloat() else height.toFloat() / width.toFloat()
