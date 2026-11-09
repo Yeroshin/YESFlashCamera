@@ -1,6 +1,7 @@
 package com.yes.camera.presentation.mapper
 
 import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+import android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_OFF
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_AUTO
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
 import android.hardware.camera2.CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT
@@ -125,7 +126,11 @@ class MapperUI(
             ModeItem.FocusItem.TOUCH -> "TOUCH"
             ModeItem.FocusItem.INFINITE -> "INF"
         }
-        val isFocusAuto = characteristics.focusValue == null || characteristics.focusMode == -2 || characteristics.focusMode == -3 || characteristics.focusMode == CONTROL_AF_MODE_CONTINUOUS_PICTURE || characteristics.focusMode == -1
+        val isFocusAuto = when (characteristics.focusMode) {
+            CONTROL_AF_MODE_CONTINUOUS_PICTURE, -1, -2, -3 -> true
+            0 -> false
+            else -> characteristics.focusValue == null
+        }
         val focusDisplayStr = if (isFocusAuto) {
             focusModeStr
         } else {
@@ -257,18 +262,50 @@ class MapperUI(
             isWbAuto = hardwareMapped.isWbAuto,
             isFocusAuto = hardwareMapped.isFocusAuto,
 
-            shutterValue = if (hardwareMapped.isShutterAuto) hardwareMapped.shutterValue else (intent.shutterValue ?: hardwareMapped.shutterValue),
-            shutterPosition = if (hardwareMapped.isShutterAuto) hardwareMapped.shutterPosition else intent.shutterPosition,
+            shutterValue = if (hardwareMapped.isShutterAuto) {
+                hardwareMapped.shutterValue
+            } else {
+                intent.shutterValue?.takeIf { it.isNotBlank() } ?: hardwareMapped.shutterValue
+            },
+            shutterPosition = if (hardwareMapped.isShutterAuto) {
+                hardwareMapped.shutterPosition
+            } else {
+                if (intent.shutterValue.isNullOrBlank()) hardwareMapped.shutterPosition else intent.shutterPosition
+            },
             
-            isoValue = if (hardwareMapped.isIsoAuto) hardwareMapped.isoValue else (intent.isoValue ?: hardwareMapped.isoValue),
-            isoPosition = if (hardwareMapped.isIsoAuto) hardwareMapped.isoPosition else intent.isoPosition,
+            isoValue = if (hardwareMapped.isIsoAuto) {
+                hardwareMapped.isoValue
+            } else {
+                intent.isoValue?.takeIf { it.isNotBlank() } ?: hardwareMapped.isoValue
+            },
+            isoPosition = if (hardwareMapped.isIsoAuto) {
+                hardwareMapped.isoPosition
+            } else {
+                if (intent.isoValue.isNullOrBlank()) hardwareMapped.isoPosition else intent.isoPosition
+            },
             
-            wbValue = if (hardwareMapped.isWbAuto) hardwareMapped.wbValue else (intent.wbValue ?: hardwareMapped.wbValue),
-            wbPosition = if (hardwareMapped.isWbAuto) hardwareMapped.wbPosition else intent.wbPosition,
+            wbValue = if (hardwareMapped.isWbAuto) {
+                hardwareMapped.wbValue
+            } else {
+                intent.wbValue?.takeIf { it.isNotBlank() } ?: hardwareMapped.wbValue
+            },
+            wbPosition = if (hardwareMapped.isWbAuto) {
+                hardwareMapped.wbPosition
+            } else {
+                if (intent.wbValue.isNullOrBlank()) hardwareMapped.wbPosition else intent.wbPosition
+            },
             wbMode = intent.wbMode ?: hardwareMapped.wbMode,
             
-            focusValue = if (hardwareMapped.isFocusAuto) hardwareMapped.focusValue else (intent.focusValue ?: hardwareMapped.focusValue),
-            focusPosition = if (hardwareMapped.isFocusAuto) hardwareMapped.focusPosition else intent.focusPosition,
+            focusValue = if (hardwareMapped.isFocusAuto) {
+                hardwareMapped.focusValue
+            } else {
+                intent.focusValue?.takeIf { it.isNotBlank() } ?: hardwareMapped.focusValue
+            },
+            focusPosition = if (hardwareMapped.isFocusAuto) {
+                hardwareMapped.focusPosition
+            } else {
+                if (intent.focusValue.isNullOrBlank()) hardwareMapped.focusPosition else intent.focusPosition
+            },
             focusMode = intent.focusMode ?: hardwareMapped.focusMode,
 
             resolution = hardwareMapped.resolution,
@@ -323,7 +360,9 @@ class MapperUI(
                 ModeItem.FocusItem.INFINITE -> { focusValue = characteristics.focusItems.map { it.value.toFloat() }.minOrNull(); -3 }
                 else -> CONTROL_AF_MODE_CONTINUOUS_PICTURE
             }
-        } else null
+        } else {
+            0
+        }
 
         val imgFormat = when (characteristics.imgFormat.uppercase()) {
             "DNG", "RAW" -> ImgFormat.DNG

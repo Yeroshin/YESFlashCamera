@@ -167,10 +167,9 @@ class CameraViewModel(
             setInputCharacteristicsUseCase.runSync(SetInputCharacteristicsUseCase.Params(domainModel))
         }
 
-        // 2. Debounced background disk persistence (300ms debounce prevents DataStore I/O spam during slider drag)
+        // 2. Immediate background disk persistence
         persistenceJob?.cancel()
         persistenceJob = useCaseCoroutineScope.launch {
-            delay(300)
             try {
                 setInputCharacteristicsUseCase.run(SetInputCharacteristicsUseCase.Params(domainModel))
             } catch (e: Exception) {
