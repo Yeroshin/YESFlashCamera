@@ -184,7 +184,7 @@ class SettingsRepository(
     }
 
     fun subscribeSupportsRaw(): Flow<Boolean?> {
-        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, true)
+        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, false)
     }
 
     suspend fun setFullscreen(fullscreen: Boolean?) {

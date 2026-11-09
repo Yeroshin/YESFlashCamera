@@ -74,7 +74,7 @@ class SubscribeCameraSettingsUseCase(
                 fullscreen = settings.fullscreen,
                 resolution = settings.resolution,
                 imgFormat = settings.imgFormat,
-                supportsRaw = settings.supportsRaw || base.supportsRaw,
+                supportsRaw = cameraData?.supportsRaw ?: settings.supportsRaw,
                 gridEnabled = settings.gridEnabled,
                 saveLocation = settings.saveLocation,
                 histogramData = histogram

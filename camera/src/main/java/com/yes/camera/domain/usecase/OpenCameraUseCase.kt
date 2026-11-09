@@ -23,22 +23,18 @@ class OpenCameraUseCase(
         // 1. Закрываем текущую камеру и сессию перед открытием новой
         closeCameraUseCase()
 
-        // 2. Считываем камеру и ее настройки из settingsrepository
+        // 2. Считываем сохраненное значение выбранной камеры из settingsrepository
         val savedBack = settingsRepository.getBackCamera()
-        val savedResolutions = settingsRepository.getResolutions()
 
         // 3. Определяем целевую камеру: при смене камеры (params.backCamera != null) или по сохраненному значению
-        val isCameraSwitch = params.backCamera != null && params.backCamera != savedBack
         val targetBack = params.backCamera ?: savedBack ?: true
 
         // 4. Получаем ориентацию сенсора и обновляем проекцию
         val targetOrientation = cameraRepository.getCameraSensorOrientation(targetBack)
         cameraRepository.updateCharacteristicsForSwitch(targetBack, targetOrientation)
 
-        // 5. При смене камеры или первом запуске записываем камеру в settingsrepository
-        if (savedBack == null || savedResolutions.isNullOrEmpty() || isCameraSwitch) {
-            settingsRepository.setBackCamera(targetBack)
-        }
+        // 5. Записываем текущую камеру в settingsrepository
+        settingsRepository.setBackCamera(targetBack)
 
         // 6. Открываем выбранную камеру через camerarepository
         val cameraCharacteristics = cameraRepository.openCamera(targetBack)
@@ -46,11 +42,9 @@ class OpenCameraUseCase(
         // 7. Считываем актуальные настройки и характеристики из camerarepository
         val hardwareInfo = cameraCharacteristics.filterNotNull().first { it.resolutionItems.isNotEmpty() }
 
-        // 8. Если настроек не было в settingsrepository или произошла смена камеры, записываем их туда
-        if (savedBack == null || savedResolutions.isNullOrEmpty() || isCameraSwitch) {
-            settingsRepository.setResolutions(hardwareInfo.resolutionItems)
-            settingsRepository.setSupportsRaw(hardwareInfo.supportsRaw)
-        }
+        // 8. Всегда записываем актуальные характеристики открытой камеры в settingsrepository
+        settingsRepository.setResolutions(hardwareInfo.resolutionItems)
+        settingsRepository.setSupportsRaw(hardwareInfo.supportsRaw)
 
         // 9. Определяем рабочее разрешение для открытой камеры
         val currentResolutionValue = settingsRepository.getResolutionValue()

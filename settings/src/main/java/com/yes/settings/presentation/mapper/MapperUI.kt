@@ -59,7 +59,9 @@ class MapperUI {
                 list = listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast", "Light")
             ),
             gridEnabled = settings.gridEnabled ?: true,
-            saveLocation = settings.saveLocation ?: false
+            saveLocation = settings.saveLocation ?: false,
+            supportsRaw = settings.supportsRaw == true,
+            backCamera = settings.backCamera ?: true
         )
     }
 
@@ -78,14 +80,16 @@ class MapperUI {
             fullScreen = settingsUI.fullScreen,
             imageFormat = when (settingsUI.imgFormatValue) {
                 "JPEG" -> ImgFormat.JPEG
-                "DNG", "RAW" -> ImgFormat.DNG
-                "JPEG+DNG", "JPEG + DNG", "JPEG+RAW", "JPEG + RAW" -> ImgFormat.JPEGDNG
+                "DNG" -> ImgFormat.DNG
+                "JPEG+DNG", "JPEG + DNG" -> ImgFormat.JPEGDNG
                 else -> ImgFormat.JPEG
             },
             filePath = rawPath,
             themeValue = settingsUI.themeValue,
             gridEnabled = settingsUI.gridEnabled,
-            saveLocation = settingsUI.saveLocation
+            saveLocation = settingsUI.saveLocation,
+            supportsRaw = settingsUI.supportsRaw,
+            backCamera = settingsUI.backCamera
         )
     }
 

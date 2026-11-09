@@ -143,13 +143,13 @@ fun SettingsScreenSuccessNew(
 
     val formatUpper = settingsUI.imgFormatValue.uppercase()
     val formatBadgeText = when {
-        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> stringResource(R.string.format_badge_jpeg_dng)
-        formatUpper.contains("RAW") -> stringResource(R.string.format_badge_dng_14bit)
+        formatUpper.contains("JPEG+DNG") || formatUpper.contains("JPEG + DNG") -> stringResource(R.string.format_badge_jpeg_dng)
+        formatUpper.contains("DNG") -> stringResource(R.string.format_badge_dng_14bit)
         else -> stringResource(R.string.format_badge_jpeg_8bit)
     }
     val formatDescText = when {
-        formatUpper.contains("JPEG+RAW") || formatUpper.contains("JPEG + RAW") -> stringResource(R.string.format_desc_jpeg_dng)
-        formatUpper.contains("RAW") -> stringResource(R.string.format_desc_dng)
+        formatUpper.contains("JPEG+DNG") || formatUpper.contains("JPEG + DNG") -> stringResource(R.string.format_desc_jpeg_dng)
+        formatUpper.contains("DNG") -> stringResource(R.string.format_desc_dng)
         else -> stringResource(R.string.format_desc_jpeg)
     }
     val bufferSizeText = settingsUI.bufferSizeText
@@ -465,7 +465,7 @@ fun SettingsScreenSuccessNew(
                                                 .background(color = AppTheme.colors.surface)
                                         ) {
                                             val formatList = settingsUI.imgFormatItems.list.ifEmpty {
-                                                listOf("JPEG", "RAW", "JPEG+RAW")
+                                                listOf("JPEG", "DNG", "JPEG+DNG")
                                             }
                                             formatList.forEach { fmtItem ->
                                                 DropdownMenuItem(
@@ -1114,8 +1114,8 @@ private fun SettingsScreenSuccessNewPreview() {
             resolutionValue = "50 MP",
             resolutionItems = ImmutableCollection(listOf("12 MP", "50 MP")),
             fullScreen = true,
-            imgFormatValue = "JPEG + RAW",
-            imgFormatItems = ImmutableCollection(listOf("JPEG", "RAW", "JPEG + RAW"))
+            imgFormatValue = "JPEG+DNG",
+            imgFormatItems = ImmutableCollection(listOf("JPEG", "DNG", "JPEG+DNG"))
         ),
         onBackClick = {},
         onSettingsChanged = {}
