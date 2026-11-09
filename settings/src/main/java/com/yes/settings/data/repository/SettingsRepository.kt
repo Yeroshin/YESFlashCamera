@@ -1,12 +1,11 @@
 package com.yes.settings.data.repository
 
 import android.content.Context
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
 import android.os.Environment
 import android.os.StatFs
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.BACKCAMERA
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.FILEPATH
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.FULLSCREEN
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.IMGFORMAT
@@ -22,25 +21,15 @@ import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class SettingsRepository(
     private val settingsDataSource: SettingsDataSource,
     private val context: Context
 ) {
-    private fun isDeviceSupportsRaw(): Boolean {
-        return try {
-            val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-            manager.cameraIdList.any { id ->
-                val chars = manager.getCameraCharacteristics(id)
-                val caps = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-                caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
     object PreferencesKeys {
+        val BACKCAMERA = booleanPreferencesKey("backCamera")
         val RESOLUTIONS = stringPreferencesKey("resolutionItems")
         val RESOLUTIONVALUE = stringPreferencesKey("resolutionValue")
         val FULLSCREEN = booleanPreferencesKey("fullScreen")
@@ -50,6 +39,22 @@ class SettingsRepository(
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
         val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
         val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
+    }
+
+    fun subscribeBackCamera(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(BACKCAMERA, true)
+    }
+
+    suspend fun getBackCamera(): Boolean? {
+        return settingsDataSource.subscribe(BACKCAMERA, null).first()
+    }
+
+    suspend fun setBackCamera(backCamera: Boolean?) {
+        backCamera?.let {
+            settingsDataSource.set(it, BACKCAMERA)
+        } ?: run {
+            settingsDataSource.remove(BACKCAMERA)
+        }
     }
 
     fun subscribeSaveLocation(): Flow<Boolean?> {
@@ -90,10 +95,12 @@ class SettingsRepository(
 
             // RESOLUTIONS
             if (settings.resolutionItems != null) {
-                preferences[RESOLUTIONS] = settings.resolutionItems.joinToString(",") { "${it.height}x${it.width}" }
+                preferences[RESOLUTIONS] = settings.resolutionItems.joinToString(",") { "${it.width}x${it.height}" }
             } else {
                 preferences.remove(RESOLUTIONS)
             }
+
+
 
             // IMGFORMAT
             if (settings.imageFormat != null) {
@@ -146,7 +153,8 @@ class SettingsRepository(
             subscribeThemeValue(),
             subscribeSupportsRaw(),
             subscribeGridEnabled(),
-            subscribeSaveLocation()
+            subscribeSaveLocation(),
+            subscribeBackCamera()
         ) { array ->
             Settings(
                 resolutionValue = array[0] as Dimensions?,
@@ -157,7 +165,8 @@ class SettingsRepository(
                 themeValue = array[5] as String?,
                 supportsRaw = array[6] as Boolean?,
                 gridEnabled = array[7] as Boolean?,
-                saveLocation = array[8] as Boolean?
+                saveLocation = array[8] as Boolean?,
+                backCamera = array[9] as Boolean?
             )
         }
     }
@@ -175,7 +184,7 @@ class SettingsRepository(
     }
 
     fun subscribeSupportsRaw(): Flow<Boolean?> {
-        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, isDeviceSupportsRaw())
+        return settingsDataSource.subscribe(PreferencesKeys.SUPPORTS_RAW, true)
     }
 
     suspend fun setFullscreen(fullscreen: Boolean?) {
@@ -214,7 +223,7 @@ class SettingsRepository(
     suspend fun setResolutions(dimensions: List<Dimensions>?) {
         dimensions?.let { list ->
             settingsDataSource.set(
-                list.joinToString(",") { "${it.height}x${it.width}" },
+                list.joinToString(",") { "${it.width}x${it.height}" },
                 RESOLUTIONS
             )
         } ?: run {
@@ -225,14 +234,15 @@ class SettingsRepository(
     fun subscribeResolutions(): Flow<List<Dimensions>?> {
         return settingsDataSource.subscribe(
             RESOLUTIONS,
-            "3000x4000,3456x4608,4224x5632,4928x6560,6000x8000,6144x8192,6936x9248,9000x12000"
+            ""
         ).map { str ->
-            str?.split(",")
+            str?.takeIf { it.isNotEmpty() }
+                ?.split(",")
                 ?.mapNotNull { resolution ->
                     val parts = resolution.trim().split("x")
                     if (parts.size == 2) {
-                        val height = parts[0].trim().toIntOrNull()
-                        val width = parts[1].trim().toIntOrNull()
+                        val width = parts[0].trim().toIntOrNull()
+                        val height = parts[1].trim().toIntOrNull()
                         if (width != null && height != null) Dimensions(width, height) else null
                     } else null
                 }

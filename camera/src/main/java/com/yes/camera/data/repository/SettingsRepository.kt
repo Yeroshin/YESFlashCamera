@@ -220,14 +220,14 @@ class SettingsRepository(
         }
     }
 
-    private suspend fun getBackCamera(): Boolean? {
-        return settingsDataSource.subscribe(BACKCAMERA, true).first()
+    suspend fun getBackCamera(): Boolean? {
+        return settingsDataSource.subscribe(BACKCAMERA, null).first()
     }
 
     suspend fun setResolutions(dimensions: List<Dimensions>?) {
         dimensions?.let {
             settingsDataSource.set(
-                it.joinToString(",") { dim -> "${dim.height}x${dim.width}" },
+                it.joinToString(",") { dim -> "${dim.width}x${dim.height}" },
                 RESOLUTIONS
             )
         } ?: run {
@@ -240,8 +240,8 @@ class SettingsRepository(
             ?.split(",")?.mapNotNull { resolution ->
                 val parts = resolution.trim().split("x")
                 if (parts.size == 2) {
-                    val width = parts[1].trim().toIntOrNull()
-                    val height = parts[0].trim().toIntOrNull()
+                    val width = parts[0].trim().toIntOrNull()
+                    val height = parts[1].trim().toIntOrNull()
                     if (width != null && height != null) Dimensions(width, height) else null
                 } else null
             }

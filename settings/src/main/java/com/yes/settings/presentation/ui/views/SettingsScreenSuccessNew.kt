@@ -320,20 +320,7 @@ fun SettingsScreenSuccessNew(
                                             modifier = Modifier
                                                 .background(color = AppTheme.colors.surface)
                                         ) {
-                                            val resList = settingsUI.resolutionItems.list.ifEmpty {
-                                                listOf(
-                                                    "12 MP (4000x3000)",
-                                                    "16 MP (4608x3456)",
-                                                    "24 MP (5632x4224)",
-                                                    "32 MP (6560x4928)",
-                                                    "48 MP (8000x6000)",
-                                                    "50 MP (8192x6144)",
-                                                    "64 MP (9248x6936)",
-                                                    "108 MP (12000x9000)",
-                                                    "12 MP",
-                                                    "50 MP"
-                                                )
-                                            }
+                                            val resList = settingsUI.resolutionItems.list
                                             resList.forEach { resItem ->
                                                 DropdownMenuItem(
                                                     text = {
