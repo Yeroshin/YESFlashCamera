@@ -179,7 +179,7 @@ class CameraViewModel(
         }
     }
 
-    private fun openCamera(backCamera: Boolean, surfaceTexture: SurfaceTexture) {
+    private fun openCamera(backCamera: Boolean?, surfaceTexture: SurfaceTexture) {
         subscriptionJob?.cancel()
         lastHandledBitmap = null
         subscriptionJob = useCaseCoroutineScope.launch {

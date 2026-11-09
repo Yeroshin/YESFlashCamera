@@ -338,6 +338,7 @@ Supporting components for hardware and system interop:
   - Wired up `MainActivity` to collect `settingsViewModel.uiState` and dynamically pass the selected theme palette (`AppColors.light()`, `AppColors.amoled()`, `AppColors.highContrast()`, or `AppColors.dark()`) to `FlashCameraTheme`, enabling instant live theme switching across the entire app.
 - **[2026-03-31] Direct Theme References in Settings (`SettingsScreenSuccessNew.kt`):**
   - Removed local color variables and directly accessed `AppTheme.colors` properties (`background`, `surface`, `textPrimary`, `textSecondary`, `primaryAccent`, `stroke`, `recordActive`) throughout `SettingsScreenSuccessNew` for clean, idiomatic theme reactivity.
+- **[2026-03-31] Seamless Camera Switching Orientation Sequence (`OpenCameraUseCase` & `CameraRepository`):** Updated `OpenCameraUseCase` to query target camera sensor orientation via `CameraRepository.getCameraSensorOrientation()` immediately after closing the previous camera and *before* opening the new one, invoking `updateCharacteristicsForSwitch()`. This ensures the GLRenderer projection and mirroring update on the closed camera preview state, completely eliminating any upside-down orientation flash during camera switching.
 
    - **Preview & Settings Updates**: Flow through `startPreviewCaptureRequest(characteristics)` using `persistentBuilder` and `session.setRepeatingRequest(...)`.
    - **Shutter Capture (`isCaptureRequested = true`)**:
@@ -389,3 +390,7 @@ Supporting components for hardware and system interop:
   - Updated `GlCamera.setProjection(...)` to dynamically calculate the exact rotation angle based on active `sensorOrientation`, display rotation (`windowManager.defaultDisplay.rotation`), and camera facing (`isBackCamera`), preventing sideways preview orientation.
   - Applied horizontal mirroring scale on the view matrix when `isBackCamera == false` (front camera) to ensure unmirrored, upright live preview for both back and front cameras.
   - Added custom thread-safe property setters for `isBackCamera` and `sensorOrientation` in `GLRenderer` that automatically invoke `glCamera.setProjection(...)` via `glSurfaceView?.queueEvent(...)` upon camera switching, ensuring real-time orientation and mirroring updates.
+- **[2026-03-31] Persisted Camera Selection across Settings Navigation (`OpenCameraUseCase`, `CameraContract`, `CameraScreen`):**
+  - Updated `CameraContract.Event.OnOpenCamera` to accept a nullable `backCamera: Boolean? = null` parameter.
+  - Updated `OpenCameraUseCase` to retrieve the persisted `backCamera` selection from `settingsRepository` when `params.backCamera` is `null` (`targetBack = params.backCamera ?: settingsRepository.getCharacteristics().backCamera ?: true`).
+  - Updated `CameraScreen` to pass `backCamera = null` upon `GLRenderer` surface creation and error retries, preventing hardcoded `true` values from overwriting the user's saved front camera selection in `settingsDataSource` when returning from `SettingsScreen`.

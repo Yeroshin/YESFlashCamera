@@ -188,7 +188,7 @@ fun CameraScreen(
                     1920, 1080
                 /*,4096,3072*//*1920, 1080*/)*/
                 cameraViewModel.setEvent(
-                    CameraContract.Event.OnOpenCamera(true, surfaceTexture)
+                    CameraContract.Event.OnOpenCamera(backCamera = null, surfaceTexture = surfaceTexture)
                 )
             }
         } else null
@@ -379,7 +379,7 @@ fun CameraScreen(
                     ErrorScreen(error = currentState.error) {
                         surface?.let {
                             cameraViewModel.setEvent(
-                                CameraContract.Event.OnOpenCamera(true, it)
+                                CameraContract.Event.OnOpenCamera(backCamera = null, surfaceTexture = it)
                             )
                         }
 

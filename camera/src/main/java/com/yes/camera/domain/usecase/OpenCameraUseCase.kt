@@ -25,19 +25,22 @@ class OpenCameraUseCase(
         // 1. Закрываем текущую камеру и сессию, освобождая ресурсы перед открытием новой камеры
         closeCameraUseCase()
 
-        // 2. Получаем ориентацию сенсора целевой камеры и обновляем характеристики (поворот проекции на закрытой камере ДО открытия новой)
-        val targetOrientation = cameraRepository.getCameraSensorOrientation(params.backCamera)
-        settingsRepository.setBackCamera(params.backCamera)
-        cameraRepository.updateCharacteristicsForSwitch(params.backCamera, targetOrientation)
+        // 2. Определяем целевую камеру: явно переданную или сохраненную в настройках
+        val targetBack = params.backCamera ?: settingsRepository.getCharacteristics().backCamera ?: true
 
-        // 3. Открываем выбранную камеру (основную или фронтальную)
+        // 3. Получаем ориентацию сенсора целевой камеры и обновляем характеристики (поворот проекции на закрытой камере ДО открытия новой)
+        val targetOrientation = cameraRepository.getCameraSensorOrientation(targetBack)
+        settingsRepository.setBackCamera(targetBack)
+        cameraRepository.updateCharacteristicsForSwitch(targetBack, targetOrientation)
+
+        // 4. Открываем выбранную камеру (основную или фронтальную)
         val settingsCharacteristics = settingsRepository.getCharacteristics()
-        val cameraCharacteristics = cameraRepository.openCamera(params.backCamera)
+        val cameraCharacteristics = cameraRepository.openCamera(targetBack)
 
-        // 3. Ждем получения аппаратных характеристик (поддерживаемые размеры и т.д.)
+        // 5. Ждем получения аппаратных характеристик (поддерживаемые размеры и т.д.)
         val hardwareInfo = cameraCharacteristics.filterNotNull().first()
 
-        // 4. Определяем рабочее разрешение для этой камеры
+        // 6. Определяем рабочее разрешение для этой камеры
         val selectedResolution = if (settingsCharacteristics.resolution.width > 0 &&
             hardwareInfo.resolutionItems.contains(settingsCharacteristics.resolution)) {
             settingsCharacteristics.resolution
@@ -47,17 +50,17 @@ class OpenCameraUseCase(
             bestSize
         }
 
-        // 5. Сохраняем список всех доступных разрешений
+        // 7. Сохраняем список всех доступных разрешений
         settingsRepository.setResolutions(hardwareInfo.resolutionItems)
 
-        // 5.1. Записываем актуальную поддержку RAW/DNG в настройки
+        // 7.1. Записываем актуальную поддержку RAW/DNG в настройки
         settingsRepository.setSupportsRaw(hardwareInfo.supportsRaw)
 
-        // 6. Запускаем сессию с открытой камерой
+        // 8. Запускаем сессию с открытой камерой
         cameraRepository.startSession(
             params.glSurfaceTexture,
             settingsCharacteristics.copy(
-                backCamera = params.backCamera,
+                backCamera = targetBack,
                 resolution = selectedResolution,
                 supportsRaw = hardwareInfo.supportsRaw
             )
@@ -65,7 +68,7 @@ class OpenCameraUseCase(
     }
 
     data class Params(
-        val backCamera: Boolean,
+        val backCamera: Boolean? = null,
         val glSurfaceTexture: SurfaceTexture
     )
 }

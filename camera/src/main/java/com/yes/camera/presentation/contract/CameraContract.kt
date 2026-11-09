@@ -16,7 +16,7 @@ class CameraContract {
         data object OnSaveCapturedImage : Event()
         data object OnCancelCapturedImage : Event()
         data class OnOpenCamera(
-            val backCamera:Boolean,
+            val backCamera: Boolean? = null,
             val surfaceTexture: SurfaceTexture
         ): Event()
         data object OnCloseCamera: Event()
