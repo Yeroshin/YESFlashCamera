@@ -77,6 +77,7 @@ class SubscribeCameraSettingsUseCase(
                 supportsRaw = cameraData?.supportsRaw ?: settings.supportsRaw,
                 gridEnabled = settings.gridEnabled,
                 saveLocation = settings.saveLocation,
+                externalFlash = settings.externalFlash,
                 histogramData = histogram
             )
         }.catch { e ->

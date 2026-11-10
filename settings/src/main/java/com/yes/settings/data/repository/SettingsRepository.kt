@@ -39,6 +39,19 @@ class SettingsRepository(
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
         val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
         val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
+        val EXTERNAL_FLASH = booleanPreferencesKey("externalFlash")
+    }
+
+    fun subscribeExternalFlash(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.EXTERNAL_FLASH, false)
+    }
+
+    suspend fun setExternalFlash(enabled: Boolean?) {
+        enabled?.let {
+            settingsDataSource.set(it, PreferencesKeys.EXTERNAL_FLASH)
+        } ?: run {
+            settingsDataSource.remove(PreferencesKeys.EXTERNAL_FLASH)
+        }
     }
 
     fun subscribeBackCamera(): Flow<Boolean?> {
@@ -140,6 +153,13 @@ class SettingsRepository(
             } else {
                 preferences.remove(SAVE_LOCATION)
             }
+
+            // EXTERNAL_FLASH
+            if (settings.externalFlash != null) {
+                preferences[PreferencesKeys.EXTERNAL_FLASH] = settings.externalFlash
+            } else {
+                preferences.remove(PreferencesKeys.EXTERNAL_FLASH)
+            }
         }
     }
 
@@ -154,6 +174,7 @@ class SettingsRepository(
             subscribeSupportsRaw(),
             subscribeGridEnabled(),
             subscribeSaveLocation(),
+            subscribeExternalFlash(),
             subscribeBackCamera()
         ) { array ->
             Settings(
@@ -166,7 +187,8 @@ class SettingsRepository(
                 supportsRaw = array[6] as Boolean?,
                 gridEnabled = array[7] as Boolean?,
                 saveLocation = array[8] as Boolean?,
-                backCamera = array[9] as Boolean?
+                externalFlash = array[9] as Boolean?,
+                backCamera = array[10] as Boolean?
             )
         }
     }

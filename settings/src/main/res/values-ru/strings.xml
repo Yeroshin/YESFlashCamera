@@ -45,6 +45,10 @@
     <string name="save_location_desc">Добавлять GPS-координаты в EXIF\nметаданные снимков</string>
     <string name="cd_location">Геометки</string>
 
+    <string name="external_flash_title">Внешняя вспышка</string>
+    <string name="external_flash_desc">Внешняя вспышка</string>
+    <string name="external_flash">Внешняя вспышка</string>
+
     <!-- App Theme -->
     <string name="app_theme_title">Тема приложения</string>
     <string name="app_theme_desc">Выберите визуальный стиль и цветовой режим приложения</string>

@@ -50,6 +50,19 @@ class SettingsRepository(
         val SUPPORTS_RAW = booleanPreferencesKey("supportsRaw")
         val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
         val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
+        val EXTERNAL_FLASH = booleanPreferencesKey("externalFlash")
+    }
+
+    fun subscribeExternalFlash(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.EXTERNAL_FLASH, false)
+    }
+
+    suspend fun getExternalFlash(): Boolean? {
+        return settingsDataSource.subscribe(PreferencesKeys.EXTERNAL_FLASH, false).first()
+    }
+
+    suspend fun setExternalFlash(enabled: Boolean) {
+        settingsDataSource.set(enabled, PreferencesKeys.EXTERNAL_FLASH)
     }
 
     fun subscribeSaveLocation(): Flow<Boolean?> {
@@ -139,6 +152,7 @@ class SettingsRepository(
             supportsRaw = getSupportsRaw() == true,
             gridEnabled = getGridEnabled() == true,
             saveLocation = getSaveLocation() == true,
+            externalFlash = getExternalFlash() == true,
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
@@ -153,6 +167,7 @@ class SettingsRepository(
             subscribeSupportsRaw(),
             subscribeGridEnabled(),
             subscribeSaveLocation(),
+            subscribeExternalFlash(),
             subscribeIsoValue(),
             subscribeShutterValue(),
             subscribeWbValue(),
@@ -167,13 +182,14 @@ class SettingsRepository(
             val supportsRaw = args[3] as? Boolean
             val gridEnabled = args[4] as? Boolean
             val saveLocation = args[5] as? Boolean
-            val isoValue = args[6] as? Int
-            val shutterValue = args[7] as? Long
-            val wbValue = args[8] as? Int
-            val wbMode = args[9] as? Int
-            val focusValue = args[10] as? Float
-            val focusMode = args[11] as? Int
-            val backCamera = args[12] as? Boolean
+            val externalFlash = args[6] as? Boolean
+            val isoValue = args[7] as? Int
+            val shutterValue = args[8] as? Long
+            val wbValue = args[9] as? Int
+            val wbMode = args[10] as? Int
+            val focusValue = args[11] as? Float
+            val focusMode = args[12] as? Int
+            val backCamera = args[13] as? Boolean
 
             Characteristics(
                 backCamera = backCamera ?: true,
@@ -183,6 +199,7 @@ class SettingsRepository(
                 supportsRaw = supportsRaw == true,
                 gridEnabled = gridEnabled ?: true,
                 saveLocation = saveLocation == true,
+                externalFlash = externalFlash == true,
                 isoValue = isoValue,
                 shutterValue = shutterValue,
                 wbValue = wbValue,

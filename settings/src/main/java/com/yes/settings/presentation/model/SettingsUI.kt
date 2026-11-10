@@ -19,6 +19,7 @@ data class SettingsUI(
     val themeItems: ImmutableCollection<String> = ImmutableCollection(listOf("Dark (Default)", "AMOLED Black", "System Dark", "High Contrast", "Light")),
     val gridEnabled: Boolean = true,
     val saveLocation: Boolean = false,
+    val externalFlash: Boolean = false,
     val supportsRaw: Boolean = false,
     val backCamera: Boolean = true,
 )

@@ -60,6 +60,7 @@ class MapperUI {
             ),
             gridEnabled = settings.gridEnabled ?: true,
             saveLocation = settings.saveLocation ?: false,
+            externalFlash = settings.externalFlash ?: false,
             supportsRaw = settings.supportsRaw == true,
             backCamera = settings.backCamera ?: true
         )
@@ -88,6 +89,7 @@ class MapperUI {
             themeValue = settingsUI.themeValue,
             gridEnabled = settingsUI.gridEnabled,
             saveLocation = settingsUI.saveLocation,
+            externalFlash = settingsUI.externalFlash,
             supportsRaw = settingsUI.supportsRaw,
             backCamera = settingsUI.backCamera
         )

@@ -414,3 +414,6 @@ Supporting components for hardware and system interop:
   - Updated `CameraContract.Event.OnOpenCamera` to accept a nullable `backCamera: Boolean? = null` parameter.
   - Updated `OpenCameraUseCase` to retrieve the persisted `backCamera` selection from `settingsRepository` when `params.backCamera` is `null` (`targetBack = params.backCamera ?: settingsRepository.getCharacteristics().backCamera ?: true`).
   - Updated `CameraScreen` to pass `backCamera = null` upon `GLRenderer` surface creation and error retries, preventing hardcoded `true` values from overwriting the user's saved front camera selection in `settingsDataSource` when returning from `SettingsScreen`.
+- **[2026-03-31] External Flash Toggle Implementation (`SettingsScreenSuccessNew`, `SettingsRepository`, `Characteristics`):**
+  - Fixed copy-paste bug in `SettingsScreenSuccessNew.kt` under Category 3.4 (External flash) which previously invoked `toggleLocation`.
+  - Added `externalFlash` boolean setting across `:settings` and `:camera` modules (`Settings`, `SettingsUI`, `Characteristics`, `CharacteristicsUI`, `SettingsRepository`, `SubscribeCameraSettingsUseCase`, and `MapperUI`), ensuring external flash preferences are persisted in DataStore and synchronized across the app.

@@ -13,5 +13,6 @@ data class Settings(
     val supportsRaw: Boolean? = null,
     val gridEnabled: Boolean? = true,
     val saveLocation: Boolean? = false,
+    val externalFlash: Boolean? = false,
     val backCamera: Boolean? = null
 )

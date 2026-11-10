@@ -308,7 +308,7 @@ fun CameraScreenSuccess(
                     modifier = Modifier
                         .size(AppTheme.dimens.iconLarge)
                         .graphicsLayer { rotationZ = bottomRotation },
-                    resId = R.drawable.flash_on,
+                    resId = com.yes.shared.R.drawable.flash_on,
                     vectorColor = if (characteristics.flashEnabled) AppTheme.colors.primaryAccent else AppTheme.colors.iconPrimary,
                     shadowColor = AppTheme.colors.shadow,
                     onClick = {

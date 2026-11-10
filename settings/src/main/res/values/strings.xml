@@ -45,6 +45,10 @@
     <string name="save_location_desc">Add GPS coordinates to photo\nEXIF metadata</string>
     <string name="cd_location">Location tags</string>
 
+    <string name="external_flash_title">External flash</string>
+    <string name="external_flash_desc">External flash</string>
+    <string name="external_flash">External flash</string>
+
     <!-- App Theme -->
     <string name="app_theme_title">App Theme</string>
     <string name="app_theme_desc">Select application visual style and color mode</string>
