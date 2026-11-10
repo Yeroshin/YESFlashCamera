@@ -40,6 +40,7 @@ data class CharacteristicsUI(
     val capturedBitmap: Bitmap? = null,
     val gridEnabled: Boolean = true,
     val saveLocation: Boolean = false,
+    val flashEnabled: Boolean = false,
 
     // Flags for Auto/Manual status from Domain
     val isShutterAuto: Boolean = true,

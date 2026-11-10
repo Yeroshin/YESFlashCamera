@@ -37,5 +37,6 @@ data class Characteristics(
     val supportsRaw: Boolean = false,
     val isCaptureRequested: Boolean = false,
     val gridEnabled: Boolean = true,
-    val saveLocation: Boolean = false
+    val saveLocation: Boolean = false,
+    val flashEnabled: Boolean = false
 )

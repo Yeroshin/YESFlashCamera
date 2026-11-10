@@ -520,41 +520,34 @@ class CameraRepository(
             val needRaw = supportsRaw && (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG)
 
             if (characteristics.isCaptureRequested) {
-                if (characteristics.saveLocation) {
-                    val location = cameraLocationProvider.getCurrentLocation()
-                    if (location != null) {
-                        builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
+                val needPrecapture = characteristics.flashEnabled && characteristics.isoValue == null && characteristics.shutterValue == null
+                if (needPrecapture) {
+                    try {
+                        val precaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                            addTarget(previewSurface)
+                            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                            set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
+                            characteristics.touchPoint?.let { point ->
+                                val rect = meteringRectangle(point)
+                                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
+                                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rect))
+                            }
+                        }
+                        session.capture(precaptureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
+                            override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                                executeStillCapture(builder, session, needRaw, characteristics)
+                            }
+                            override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
+                                executeStillCapture(builder, session, needRaw, characteristics)
+                            }
+                        }, cameraThreadManager.handler)
+                    } catch (e: Exception) {
+                        Log.e("CameraRepository", "Precapture trigger error: ${e.message}", e)
+                        executeStillCapture(builder, session, needRaw, characteristics)
                     }
+                } else {
+                    executeStillCapture(builder, session, needRaw, characteristics)
                 }
-                imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
-                if (needRaw) {
-                    imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
-                }
-
-                builder.addTarget(captureSurfaceJpeg)
-                if (needRaw) {
-                    builder.addTarget(captureSurfaceRaw)
-                }
-
-                session.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
-                    override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-                        super.onCaptureCompleted(session, request, result)
-                        lastCaptureResult = result
-                        try {
-                            builder.removeTarget(captureSurfaceJpeg)
-                            if (needRaw) builder.removeTarget(captureSurfaceRaw)
-                        } catch (_: Exception) {}
-                        detachCaptureListeners()
-                    }
-                    override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
-                        super.onCaptureFailed(session, request, failure)
-                        try {
-                            builder.removeTarget(captureSurfaceJpeg)
-                            if (needRaw) builder.removeTarget(captureSurfaceRaw)
-                        } catch (_: Exception) {}
-                        detachCaptureListeners()
-                    }
-                }, cameraThreadManager.handler)
             } else {
                 try {
                     builder.removeTarget(captureSurfaceJpeg)
@@ -573,6 +566,59 @@ class CameraRepository(
             }
         } catch (e: Exception) {
             Log.e("CameraRepository", "processPreviewCaptureRequest error: ${e.message}", e)
+        }
+    }
+
+    private fun executeStillCapture(
+        builder: CaptureRequest.Builder,
+        session: CameraCaptureSession,
+        needRaw: Boolean,
+        characteristics: Characteristics
+    ) {
+        try {
+            if (characteristics.saveLocation) {
+                val location = cameraLocationProvider.getCurrentLocation()
+                if (location != null) {
+                    builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
+                }
+            }
+            builder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
+            imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
+            if (needRaw) {
+                imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
+            }
+
+            builder.addTarget(captureSurfaceJpeg)
+            if (needRaw) {
+                builder.addTarget(captureSurfaceRaw)
+            }
+
+            session.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
+                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                    super.onCaptureCompleted(session, request, result)
+                    lastCaptureResult = result
+                    try {
+                        builder.removeTarget(captureSurfaceJpeg)
+                        if (needRaw) builder.removeTarget(captureSurfaceRaw)
+                    } catch (_: Exception) {}
+                    detachCaptureListeners()
+                }
+                override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
+                    super.onCaptureFailed(session, request, failure)
+                    try {
+                        builder.removeTarget(captureSurfaceJpeg)
+                        if (needRaw) builder.removeTarget(captureSurfaceRaw)
+                    } catch (_: Exception) {}
+                    detachCaptureListeners()
+                }
+            }, cameraThreadManager.handler)
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "executeStillCapture error: ${e.message}", e)
+            try {
+                builder.removeTarget(captureSurfaceJpeg)
+                if (needRaw) builder.removeTarget(captureSurfaceRaw)
+            } catch (_: Exception) {}
+            detachCaptureListeners()
         }
     }
 
@@ -659,12 +705,13 @@ class CameraRepository(
         when {
             iso == null && shutter == null -> {
                 AE = true
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, if (new.flashEnabled) CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH else CaptureRequest.CONTROL_AE_MODE_ON)
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
             }
             iso != null && shutter != null -> {
                 AE = false
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.FLASH_MODE, if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
                 val clampedIso = if (new.isoRange.first > 0 && new.isoRange.last > 0) iso.coerceIn(new.isoRange.first, new.isoRange.last) else iso
                 val clampedShutter = if (new.shutterRange.first > 0 && new.shutterRange.last > 0) shutter.coerceIn(new.shutterRange.first, new.shutterRange.last) else shutter
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)
@@ -679,6 +726,7 @@ class CameraRepository(
                 val bI = hw?.actualIso ?: 100
                 val calcShutter = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, iso, meanLum.toInt())
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.FLASH_MODE, if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, calcShutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(calcShutter, 33_333_333L))
@@ -691,6 +739,7 @@ class CameraRepository(
                 val bI = hw?.actualIso ?: 100
                 val calcIso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter!!, meanLum.toInt())
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.FLASH_MODE, if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, calcIso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))

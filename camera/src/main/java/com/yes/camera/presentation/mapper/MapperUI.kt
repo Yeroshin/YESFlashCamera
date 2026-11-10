@@ -158,6 +158,7 @@ class MapperUI(
             },
             gridEnabled = characteristics.gridEnabled,
             saveLocation = characteristics.saveLocation,
+            flashEnabled = characteristics.flashEnabled,
             touchPoint = characteristics.touchPoint?.let {
                 if (it.size >= 2) Offset(it[0], it[1]) else null
             } ?: Offset(0.5f, 0.5f),
@@ -257,6 +258,7 @@ class MapperUI(
         
         return intent.copy(
             backCamera = reality.backCamera ?: intent.backCamera,
+            flashEnabled = intent.flashEnabled,
             isShutterAuto = hardwareMapped.isShutterAuto,
             isIsoAuto = hardwareMapped.isIsoAuto,
             isWbAuto = hardwareMapped.isWbAuto,
@@ -385,7 +387,8 @@ class MapperUI(
             isCaptureRequested = characteristics.isCaptureRequested,
             imgFormat = imgFormat,
             gridEnabled = characteristics.gridEnabled,
-            saveLocation = characteristics.saveLocation
+            saveLocation = characteristics.saveLocation,
+            flashEnabled = characteristics.flashEnabled
         )
     }
 

@@ -614,17 +614,17 @@ fun ValueSelector(
             }
         }
 
-        LaunchedEffect(safeIndex) {
-            if (!listState.isScrollInProgress && centerIndex != safeIndex) {
-                listState.scrollToItem(safeIndex)
-            }
-        }
-
         var wasDragged by remember { mutableStateOf(false) }
         val isDragged by listState.interactionSource.collectIsDraggedAsState()
 
         LaunchedEffect(isDragged) {
             if (isDragged) wasDragged = true
+        }
+
+        LaunchedEffect(safeIndex) {
+            if (!isDragged && !listState.isScrollInProgress && centerIndex != safeIndex) {
+                listState.animateScrollToItem(safeIndex)
+            }
         }
 
         LaunchedEffect(listState) {

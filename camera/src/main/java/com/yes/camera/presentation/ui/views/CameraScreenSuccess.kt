@@ -308,7 +308,19 @@ fun CameraScreenSuccess(
                     modifier = Modifier
                         .size(AppTheme.dimens.iconLarge)
                         .graphicsLayer { rotationZ = bottomRotation },
-                    resId = R.drawable.flip_camera_android,
+                    resId = R.drawable.flash_on,
+                    vectorColor = if (characteristics.flashEnabled) AppTheme.colors.primaryAccent else AppTheme.colors.iconPrimary,
+                    shadowColor = AppTheme.colors.shadow,
+                    onClick = {
+                        val updated = characteristics.copy(flashEnabled = !characteristics.flashEnabled)
+                        onSetCharacteristic(updated)
+                    }
+                )
+                VectorShadow(
+                    modifier = Modifier
+                        .size(AppTheme.dimens.iconLarge)
+                        .graphicsLayer { rotationZ = bottomRotation },
+                    resId = R.drawable.cameraswitch,
                     vectorColor = AppTheme.colors.iconPrimary,
                     shadowColor = AppTheme.colors.shadow,
                     onClick = onSwitchCamera
