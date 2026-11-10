@@ -48,6 +48,7 @@
     <string name="external_flash_title">External flash</string>
     <string name="external_flash_desc">External flash</string>
     <string name="external_flash">External flash</string>
+    <string name="external_flash_power">Flash power: %1$d%%</string>
 
     <!-- App Theme -->
     <string name="app_theme_title">App Theme</string>

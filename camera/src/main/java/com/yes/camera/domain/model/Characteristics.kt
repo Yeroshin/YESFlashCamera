@@ -39,5 +39,6 @@ data class Characteristics(
     val gridEnabled: Boolean = true,
     val saveLocation: Boolean = false,
     val externalFlash: Boolean = false,
+    val externalFlashPower: Int = 100,
     val flashEnabled: Boolean = false
 )

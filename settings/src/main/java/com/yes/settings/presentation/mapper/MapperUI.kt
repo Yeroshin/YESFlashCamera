@@ -61,6 +61,7 @@ class MapperUI {
             gridEnabled = settings.gridEnabled ?: true,
             saveLocation = settings.saveLocation ?: false,
             externalFlash = settings.externalFlash ?: false,
+            externalFlashPower = settings.externalFlashPower ?: 100,
             supportsRaw = settings.supportsRaw == true,
             backCamera = settings.backCamera ?: true
         )
@@ -90,6 +91,7 @@ class MapperUI {
             gridEnabled = settingsUI.gridEnabled,
             saveLocation = settingsUI.saveLocation,
             externalFlash = settingsUI.externalFlash,
+            externalFlashPower = settingsUI.externalFlashPower,
             supportsRaw = settingsUI.supportsRaw,
             backCamera = settingsUI.backCamera
         )

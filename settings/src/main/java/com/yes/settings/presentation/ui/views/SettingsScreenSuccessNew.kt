@@ -30,6 +30,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import kotlin.math.roundToInt
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -858,60 +861,95 @@ fun SettingsScreenSuccessNew(
                                 }
 
                                 // Категория 3.4: Внешняя вспышка (External flash)
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.Start),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            onSettingsChanged(settingsUI.copy(externalFlash = !settingsUI.externalFlash))
-                                        }
-                                        .padding(all = 16.dp)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
-                                        horizontalArrangement = Arrangement.Center,
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.Start),
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
-                                            .requiredSize(size = 40.dp)
-                                            .clip(shape = RoundedCornerShape(9999.dp))
-                                            .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSettingsChanged(settingsUI.copy(externalFlash = !settingsUI.externalFlash))
+                                            }
+                                            .padding(all = 16.dp)
                                     ) {
-                                        Image(
-                                            painter = painterResource(id = com.yes.shared.R.drawable.flash_on),
-                                            contentDescription = stringResource(R.string.external_flash),
-                                            colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
-                                        )
-                                    }
-                                    Column(
-                                        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
-                                        modifier = Modifier.weight(weight = 1f)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.external_flash_title),
-                                            color = AppTheme.colors.textPrimary,
-                                            lineHeight = 1.5.em,
-                                            style = TextStyle(
-                                                fontSize = 16.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                letterSpacing = 0.15.sp
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .requiredSize(size = 40.dp)
+                                                .clip(shape = RoundedCornerShape(9999.dp))
+                                                .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
+                                        ) {
+                                            Image(
+                                                painter = painterResource(id = com.yes.shared.R.drawable.flash_on),
+                                                contentDescription = stringResource(R.string.external_flash),
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
                                             )
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.external_flash_desc),
-                                            color = AppTheme.colors.textSecondary,
-                                            lineHeight = 1.43.em,
-                                            style = TextStyle(
-                                                fontSize = 14.sp,
-                                                letterSpacing = 0.25.sp
-                                            )
-                                        )
-                                    }
-                                    SettingsSwitch(
-                                        checked = settingsUI.externalFlash,
-                                        onCheckedChange = { isChecked ->
-                                            onSettingsChanged(settingsUI.copy(externalFlash = isChecked))
                                         }
-                                    )
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
+                                            modifier = Modifier.weight(weight = 1f)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.external_flash_title),
+                                                color = AppTheme.colors.textPrimary,
+                                                lineHeight = 1.5.em,
+                                                style = TextStyle(
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    letterSpacing = 0.15.sp
+                                                )
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.external_flash_desc),
+                                                color = AppTheme.colors.textSecondary,
+                                                lineHeight = 1.43.em,
+                                                style = TextStyle(
+                                                    fontSize = 14.sp,
+                                                    letterSpacing = 0.25.sp
+                                                )
+                                            )
+                                        }
+                                        SettingsSwitch(
+                                            checked = settingsUI.externalFlash,
+                                            onCheckedChange = { isChecked ->
+                                                onSettingsChanged(settingsUI.copy(externalFlash = isChecked))
+                                            }
+                                        )
+                                    }
+
+                                    if (settingsUI.externalFlash) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 72.dp, end = 16.dp, bottom = 16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.external_flash_power, settingsUI.externalFlashPower),
+                                                color = AppTheme.colors.textPrimary,
+                                                style = TextStyle(
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    letterSpacing = 0.15.sp
+                                                )
+                                            )
+                                            Slider(
+                                                value = settingsUI.externalFlashPower.toFloat(),
+                                                onValueChange = { newValue ->
+                                                    onSettingsChanged(settingsUI.copy(externalFlashPower = newValue.roundToInt()))
+                                                },
+                                                valueRange = 0f..100f,
+                                                colors = SliderDefaults.colors(
+                                                    thumbColor = AppTheme.colors.primaryAccent,
+                                                    activeTrackColor = AppTheme.colors.primaryAccent,
+                                                    inactiveTrackColor = AppTheme.colors.stroke.copy(alpha = 0.5f)
+                                                )
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1078,7 +1116,8 @@ fun SettingsScreenSuccessNew(
                                                     imgFormatItems = settingsUI.imgFormatItems,
                                                     gridEnabled = true,
                                                     saveLocation = false,
-                                                    externalFlash = false
+                                                    externalFlash = false,
+                                                    externalFlashPower = 100
                                                 )
                                             )
                                         }

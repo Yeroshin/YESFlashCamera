@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import android.os.StatFs
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.BACKCAMERA
 import com.yes.settings.data.repository.SettingsRepository.PreferencesKeys.FILEPATH
@@ -40,6 +41,19 @@ class SettingsRepository(
         val GRID_ENABLED = booleanPreferencesKey("gridEnabled")
         val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
         val EXTERNAL_FLASH = booleanPreferencesKey("externalFlash")
+        val EXTERNAL_FLASH_POWER = intPreferencesKey("externalFlashPower")
+    }
+
+    fun subscribeExternalFlashPower(): Flow<Int?> {
+        return settingsDataSource.subscribe(PreferencesKeys.EXTERNAL_FLASH_POWER, 100)
+    }
+
+    suspend fun setExternalFlashPower(power: Int?) {
+        power?.let {
+            settingsDataSource.set(it, PreferencesKeys.EXTERNAL_FLASH_POWER)
+        } ?: run {
+            settingsDataSource.remove(PreferencesKeys.EXTERNAL_FLASH_POWER)
+        }
     }
 
     fun subscribeExternalFlash(): Flow<Boolean?> {
@@ -160,6 +174,13 @@ class SettingsRepository(
             } else {
                 preferences.remove(PreferencesKeys.EXTERNAL_FLASH)
             }
+
+            // EXTERNAL_FLASH_POWER
+            if (settings.externalFlashPower != null) {
+                preferences[PreferencesKeys.EXTERNAL_FLASH_POWER] = settings.externalFlashPower
+            } else {
+                preferences.remove(PreferencesKeys.EXTERNAL_FLASH_POWER)
+            }
         }
     }
 
@@ -175,6 +196,7 @@ class SettingsRepository(
             subscribeGridEnabled(),
             subscribeSaveLocation(),
             subscribeExternalFlash(),
+            subscribeExternalFlashPower(),
             subscribeBackCamera()
         ) { array ->
             Settings(
@@ -188,7 +210,8 @@ class SettingsRepository(
                 gridEnabled = array[7] as Boolean?,
                 saveLocation = array[8] as Boolean?,
                 externalFlash = array[9] as Boolean?,
-                backCamera = array[10] as Boolean?
+                externalFlashPower = array[10] as Int?,
+                backCamera = array[11] as Boolean?
             )
         }
     }

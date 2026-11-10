@@ -48,6 +48,7 @@
     <string name="external_flash_title">Внешняя вспышка</string>
     <string name="external_flash_desc">Внешняя вспышка</string>
     <string name="external_flash">Внешняя вспышка</string>
+    <string name="external_flash_power">Мощность вспышки: %1$d%%</string>
 
     <!-- App Theme -->
     <string name="app_theme_title">Тема приложения</string>

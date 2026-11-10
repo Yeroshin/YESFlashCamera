@@ -417,3 +417,6 @@ Supporting components for hardware and system interop:
 - **[2026-03-31] External Flash Toggle Implementation (`SettingsScreenSuccessNew`, `SettingsRepository`, `Characteristics`):**
   - Fixed copy-paste bug in `SettingsScreenSuccessNew.kt` under Category 3.4 (External flash) which previously invoked `toggleLocation`.
   - Added `externalFlash` boolean setting across `:settings` and `:camera` modules (`Settings`, `SettingsUI`, `Characteristics`, `CharacteristicsUI`, `SettingsRepository`, `SubscribeCameraSettingsUseCase`, and `MapperUI`), ensuring external flash preferences are persisted in DataStore and synchronized across the app.
+- **[2026-03-31] External Flash Power Slider Implementation (`SettingsScreenSuccessNew`, DataStore, `Characteristics`):**
+  - Added external flash power slider (0 to 100%) in `SettingsScreenSuccessNew.kt` directly under the External Flash toggle.
+  - Added `externalFlashPower` property across `:settings` and `:camera` modules (`Settings`, `SettingsUI`, `Characteristics`, `CharacteristicsUI`, `SettingsRepository`, `SubscribeCameraSettingsUseCase`, and `MapperUI`), persisting selected power values in DataStore and exposing them in `Characteristics` within the `:camera` module.

@@ -41,6 +41,7 @@ data class CharacteristicsUI(
     val gridEnabled: Boolean = true,
     val saveLocation: Boolean = false,
     val externalFlash: Boolean = false,
+    val externalFlashPower: Int = 100,
     val flashEnabled: Boolean = false,
 
     // Flags for Auto/Manual status from Domain

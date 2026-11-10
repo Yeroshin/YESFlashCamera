@@ -20,6 +20,7 @@ data class SettingsUI(
     val gridEnabled: Boolean = true,
     val saveLocation: Boolean = false,
     val externalFlash: Boolean = false,
+    val externalFlashPower: Int = 100,
     val supportsRaw: Boolean = false,
     val backCamera: Boolean = true,
 )

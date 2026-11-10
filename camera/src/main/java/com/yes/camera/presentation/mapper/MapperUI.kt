@@ -159,6 +159,7 @@ class MapperUI(
             gridEnabled = characteristics.gridEnabled,
             saveLocation = characteristics.saveLocation,
             externalFlash = characteristics.externalFlash,
+            externalFlashPower = characteristics.externalFlashPower,
             flashEnabled = characteristics.flashEnabled,
             touchPoint = characteristics.touchPoint?.let {
                 if (it.size >= 2) Offset(it[0], it[1]) else null
@@ -317,6 +318,7 @@ class MapperUI(
             gridEnabled = hardwareMapped.gridEnabled,
             saveLocation = hardwareMapped.saveLocation,
             externalFlash = hardwareMapped.externalFlash,
+            externalFlashPower = hardwareMapped.externalFlashPower,
             histogramData = hardwareMapped.histogramData,
             isFocused = hardwareMapped.isFocused,
             capturedBitmap = reality.capturedBitmap,
@@ -391,6 +393,7 @@ class MapperUI(
             gridEnabled = characteristics.gridEnabled,
             saveLocation = characteristics.saveLocation,
             externalFlash = characteristics.externalFlash,
+            externalFlashPower = characteristics.externalFlashPower,
             flashEnabled = characteristics.flashEnabled
         )
     }
