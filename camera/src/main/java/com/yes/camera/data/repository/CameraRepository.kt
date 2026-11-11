@@ -577,8 +577,8 @@ class CameraRepository(
         val height =
             if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
 
-        // glSurfaceTexture.setDefaultBufferSize(width, height)
-        glSurfaceTexture.setDefaultBufferSize(640, 480)
+         glSurfaceTexture.setDefaultBufferSize(width, height)
+      //  glSurfaceTexture.setDefaultBufferSize(640, 480)
         previewSurface = Surface(glSurfaceTexture)
         imageReaderHistogram = ImageReader.newInstance(
             320,

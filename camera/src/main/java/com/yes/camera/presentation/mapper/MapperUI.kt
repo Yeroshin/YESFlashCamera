@@ -86,14 +86,17 @@ class MapperUI(
         } ?: "1/60"
         val shutterPosition =
             sortedShutters.map { it.value }.indexOf(shutterValueStr).coerceAtLeast(0)
-        val shutterItems =if (characteristics.externalFlash){
+       /* val shutterItems =if (characteristics.externalFlash){
             listOf(
                 SelectorItem(0,"1/15")
             ).toImmutableList()
         }else {
             standardShutterSpeeds.entries.sortedBy { it.key }
                 .mapIndexed { i, entry -> SelectorItem(i, entry.value) }.toImmutableList()
-        }
+        }*/
+        val shutterItems = standardShutterSpeeds.entries.sortedBy { it.key }
+                .mapIndexed { i, entry -> SelectorItem(i, entry.value) }.toImmutableList()
+
 
         ////////////////////
         val displayIso = characteristics.isoValue ?: characteristics.actualIso
