@@ -363,6 +363,21 @@ class CameraRepository(
         }
     }
 
+    private fun restorePreviewRepeatingRequest() {
+        val builder = persistentBuilder ?: return
+        val session = cameraSession ?: return
+        try {
+            builder.removeTarget(captureSurfaceJpeg)
+            session.setRepeatingRequest(
+                builder.build(),
+                repeatingCaptureCallback,
+                cameraThreadManager.handler
+            )
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "Error restoring preview repeating request: ${e.message}")
+        }
+    }
+
     private val listenerJpeg = ImageReader.OnImageAvailableListener { reader ->
         reader.acquireLatestImage()?.use { image ->
             try {
@@ -388,6 +403,7 @@ class CameraRepository(
                                 processAndStoreJpegBytes(peakBytes)
                             } ?: processAndStoreJpeg(image)
                             detachJpegListener()
+                            restorePreviewRepeatingRequest()
                         }
                     }
                     lastLuma = luma
@@ -874,6 +890,7 @@ class CameraRepository(
                         } catch (_: Exception) {
                         }
                         detachCaptureListeners()
+                        restorePreviewRepeatingRequest()
                     }
                 },
                 cameraThreadManager.handler
@@ -886,6 +903,7 @@ class CameraRepository(
             } catch (_: Exception) {
             }
             detachCaptureListeners()
+            restorePreviewRepeatingRequest()
         }
     }
 

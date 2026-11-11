@@ -88,7 +88,7 @@ class MapperUI(
             sortedShutters.map { it.value }.indexOf(shutterValueStr).coerceAtLeast(0)
         val shutterItems =if (characteristics.externalFlash){
             listOf(
-                SelectorItem(0,"1/60")
+                SelectorItem(0,"1/15")
             ).toImmutableList()
         }else {
             standardShutterSpeeds.entries.sortedBy { it.key }
