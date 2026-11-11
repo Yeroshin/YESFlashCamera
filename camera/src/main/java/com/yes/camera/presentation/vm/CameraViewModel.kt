@@ -91,7 +91,12 @@ class CameraViewModel(
     }
 
     private fun startVideoRecord(enabled: Boolean) {
-        performSingleCapture()
+        val captureCharacteristics = _characteristicsInternal.value.copy(isCaptureRequested = enabled)
+        _characteristicsInternal.update { it.copy(isCaptureRequested = enabled) }
+        val domainModel = mapper.map(captureCharacteristics)
+        useCaseCoroutineScope.launch {
+            setInputCharacteristicsUseCase.runSync(SetInputCharacteristicsUseCase.Params(domainModel))
+        }
     }
 
     private fun performSingleCapture() {

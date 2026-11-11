@@ -8,14 +8,16 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import com.yes.shared.presentation.ui.theme.AppTheme
 
 @Composable
 fun RecordButton(
     modifier: Modifier = Modifier,
+    isChecked: Boolean = false,
+    activeColor: Color = if (isChecked) AppTheme.colors.recordActive else AppTheme.colors.primaryAccent,
     onClick: () -> Unit = {}
 ) {
-    val activeColor = AppTheme.colors.primaryAccent
     val bgBlack = AppTheme.colors.background
     val btnBg = AppTheme.colors.textPrimary
 

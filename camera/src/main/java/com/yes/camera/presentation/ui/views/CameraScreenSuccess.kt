@@ -325,11 +325,30 @@ fun CameraScreenSuccess(
                     shadowColor = AppTheme.colors.shadow,
                     onClick = onSwitchCamera
                 )
+                var isRecordEnabled by remember { mutableStateOf(false) }
+                LaunchedEffect(characteristics.externalFlash) {
+                    if (!characteristics.externalFlash) {
+                        isRecordEnabled = false
+                    }
+                }
                 RecordButton(
                     modifier = Modifier
                         .size(AppTheme.dimens.recordButtonSize)
                         .graphicsLayer { rotationZ = bottomRotation },
-                    onClick = { onSingleCapture() }
+                    isChecked = characteristics.externalFlash && isRecordEnabled,
+                    activeColor = if (characteristics.externalFlash && isRecordEnabled) {
+                        AppTheme.colors.recordActive
+                    } else {
+                        AppTheme.colors.primaryAccent
+                    },
+                    onClick = {
+                        if (characteristics.externalFlash) {
+                            isRecordEnabled = !isRecordEnabled
+                            onStartVideoRecord(isRecordEnabled)
+                        } else {
+                            onSingleCapture()
+                        }
+                    }
                 )
             }
         }

@@ -423,3 +423,9 @@ Supporting components for hardware and system interop:
 - **[2026-03-31] External Flash Power Slider Implementation (`SettingsScreenSuccessNew`, DataStore, `Characteristics`):**
   - Added external flash power slider (0 to 100%) in `SettingsScreenSuccessNew.kt` directly under the External Flash toggle.
   - Added `externalFlashPower` property across `:settings` and `:camera` modules (`Settings`, `SettingsUI`, `Characteristics`, `CharacteristicsUI`, `SettingsRepository`, `SubscribeCameraSettingsUseCase`, and `MapperUI`), persisting selected power values in DataStore and exposing them in `Characteristics` within the `:camera` module.
+- **[2026-03-31] RecordButton Switch Behavior in External Flash Mode:**
+  - Updated `RecordButton` and `CameraScreenSuccess` so that when `characteristics.externalFlash == true`, `RecordButton` operates like a toggle switch. It stores its enabled state after being pressed and changes its active color to `recordActive` (`AppTheme.colors.recordActive`, which is `RedActive`).
+- **[2026-03-31] RecordButton Toggling & Resource Cleanup (`CameraViewModel`, `CameraRepository`):**
+  - Updated `CameraViewModel.startVideoRecord` and `CameraRepository` so that pressing `RecordButton` again (toggling off/disabling) sends `isCaptureRequested = false` to `CameraRepository`. `CameraRepository` then detaches capture listeners (`detachCaptureListeners()`), clears external flash peak buffers, and releases resources cleanly.
+
+

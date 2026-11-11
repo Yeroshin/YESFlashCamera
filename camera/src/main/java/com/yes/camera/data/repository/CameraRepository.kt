@@ -803,14 +803,14 @@ class CameraRepository(
                     executeStillCapture(builder, session, needRaw, characteristics)
                 }
             } else {
+                detachCaptureListeners()
+                flashCaptured = false
+                bufferedPeakBytes = null
+                lastLuma = 0.0
                 try {
-
                     builder.removeTarget(captureSurfaceJpeg)
-
-
                     builder.removeTarget(captureSurfaceRaw)
                 } catch (_: Exception) {
-
                 }
 
                 val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) ||
