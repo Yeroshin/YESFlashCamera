@@ -46,9 +46,11 @@ class MapperUI(
         4_000_000_000L to "4s"
     )
 
-    private val allStandardIsoValues = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600)
-    private val standardWbValues = listOf(1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000)
-    
+    private val allStandardIsoValues =
+        listOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600)
+    private val standardWbValues =
+        listOf(1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000)
+
     private fun getSupportedShutterSpeeds(range: LongRange): Map<Long, String> {
         if (range.first <= 0L || range.last <= 0L) return allStandardShutterSpeeds
         val filtered = allStandardShutterSpeeds.filter { (ns, _) -> ns in range }
@@ -65,7 +67,7 @@ class MapperUI(
         val size = ((max - min) / step).toInt() + 1
         return List(size) { i -> min + i * step }
     }
-    
+
     private val standardMagnifierValues = listOf(1F, 2F, 3F, 4F, 5F, 6F, 7F, 8F, 9F, 10F)
 
     /**
@@ -76,16 +78,28 @@ class MapperUI(
         val standardIsoValues = getSupportedIsoValues(characteristics.isoRange)
 
         val displayShutter = characteristics.shutterValue ?: characteristics.actualShutter
+
+
         val sortedShutters = standardShutterSpeeds.entries.sortedBy { it.key }
         val shutterValueStr = displayShutter?.let { s ->
             sortedShutters.minByOrNull { abs(it.key - s) }?.value
         } ?: "1/60"
-        val shutterPosition = sortedShutters.map { it.value }.indexOf(shutterValueStr).coerceAtLeast(0)
+        val shutterPosition =
+            sortedShutters.map { it.value }.indexOf(shutterValueStr).coerceAtLeast(0)
+        val shutterItems =if (characteristics.externalFlash){
+            listOf(
+                SelectorItem(0,"1/60")
+            ).toImmutableList()
+        }else {
+            standardShutterSpeeds.entries.sortedBy { it.key }
+                .mapIndexed { i, entry -> SelectorItem(i, entry.value) }.toImmutableList()
+        }
 
+        ////////////////////
         val displayIso = characteristics.isoValue ?: characteristics.actualIso
         val isoValue = displayIso?.let { i -> standardIsoValues.minByOrNull { abs(it - i) } }
         val isoPosition = isoValue?.let { standardIsoValues.indexOf(it) } ?: 0
-        
+
         val displayWb = characteristics.wbValue ?: characteristics.actualWbKelvin
         val wbValueStr = displayWb?.let { "${it}K" } ?: "A"
         val wbPosition = displayWb?.let { w ->
@@ -106,7 +120,8 @@ class MapperUI(
         }
         val isWbAuto = characteristics.wbValue == null
 
-        val focusValues = generateFocusValues(characteristics.maxFocusValue, characteristics.minFocusValue, 1f)
+        val focusValues =
+            generateFocusValues(characteristics.maxFocusValue, characteristics.minFocusValue, 1f)
         val displayFocus = characteristics.focusValue ?: characteristics.actualFocusDistance
         val focusPosition = displayFocus?.let { f ->
             val closest = focusValues.minByOrNull { abs(it - f) }
@@ -175,18 +190,28 @@ class MapperUI(
 
             characteristicsItems = persistentListOf(
                 RadioGroupItem.TextItem(SettingsItem.SHUTTER, "SHUTTER", shutterValueStr),
-                RadioGroupItem.TextItem(SettingsItem.ISO, "ISO", isoValue?.toString() ?: characteristics.actualIso?.toString() ?: ""),
+                RadioGroupItem.TextItem(
+                    SettingsItem.ISO,
+                    "ISO",
+                    isoValue?.toString() ?: characteristics.actualIso?.toString() ?: ""
+                ),
                 RadioGroupItem.TextItem(SettingsItem.WB, "WB", wbValueStr),
                 if (isFocusAuto) {
-                    RadioGroupItem.IconItem(SettingsItem.FOCUS, "FOCUS", getFocusIconRes(focusModeEnum))
+                    RadioGroupItem.IconItem(
+                        SettingsItem.FOCUS,
+                        "FOCUS",
+                        getFocusIconRes(focusModeEnum)
+                    )
                 } else {
                     RadioGroupItem.TextItem(SettingsItem.FOCUS, "FOCUS", focusDisplayStr)
                 },
                 RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "MAGNIFIER", "1")
             ),
-            shutterItems = standardShutterSpeeds.entries.sortedBy { it.key }.mapIndexed { i, entry -> SelectorItem(i, entry.value) }.toImmutableList(),
-            isoItems = standardIsoValues.mapIndexed { i, v -> SelectorItem(i, v.toString()) }.toImmutableList(),
-            wbItems = standardWbValues.mapIndexed { i, v -> SelectorItem(i, "${v}K") }.toImmutableList(),
+            shutterItems = shutterItems,
+            isoItems = standardIsoValues.mapIndexed { i, v -> SelectorItem(i, v.toString()) }
+                .toImmutableList(),
+            wbItems = standardWbValues.mapIndexed { i, v -> SelectorItem(i, "${v}K") }
+                .toImmutableList(),
             wbModeItems = characteristics.wbModeItems
                 ?.filter { it != CONTROL_AWB_MODE_OFF }
                 ?.map { item ->
@@ -227,7 +252,8 @@ class MapperUI(
                 CONTROL_AWB_MODE_SHADE -> ModeItem.WbItem.SHADE
                 else -> ModeItem.WbItem.AUTO
             },
-            focusItems = focusValues.map { SelectorItem(it.toInt(), it.toString()) }.toImmutableList(),
+            focusItems = focusValues.map { SelectorItem(it.toInt(), it.toString()) }
+                .toImmutableList(),
             focusModeItems = ModeItem.FocusItem.entries.map { item ->
                 RadioGroupItem.IconItem(
                     id = item,
@@ -244,7 +270,8 @@ class MapperUI(
                 -1 -> ModeItem.FocusItem.TOUCH
                 else -> ModeItem.FocusItem.CONTINUOUS
             },
-            magnifierItems = standardMagnifierValues.map { SelectorItem(it.toInt(), it.toString()) }.toImmutableList(),
+            magnifierItems = standardMagnifierValues.map { SelectorItem(it.toInt(), it.toString()) }
+                .toImmutableList(),
             magnifierValue = "1",
             histogramData = characteristics.histogramData
         )
@@ -257,7 +284,7 @@ class MapperUI(
      */
     fun merge(intent: CharacteristicsUI, reality: Characteristics): CharacteristicsUI {
         val hardwareMapped = map(reality)
-        
+
         return intent.copy(
             backCamera = reality.backCamera ?: intent.backCamera,
             flashEnabled = intent.flashEnabled,
@@ -276,7 +303,7 @@ class MapperUI(
             } else {
                 if (intent.shutterValue.isNullOrBlank()) hardwareMapped.shutterPosition else intent.shutterPosition
             },
-            
+
             isoValue = if (hardwareMapped.isIsoAuto) {
                 hardwareMapped.isoValue
             } else {
@@ -287,7 +314,7 @@ class MapperUI(
             } else {
                 if (intent.isoValue.isNullOrBlank()) hardwareMapped.isoPosition else intent.isoPosition
             },
-            
+
             wbValue = if (hardwareMapped.isWbAuto) {
                 hardwareMapped.wbValue
             } else {
@@ -299,7 +326,7 @@ class MapperUI(
                 if (intent.wbValue.isNullOrBlank()) hardwareMapped.wbPosition else intent.wbPosition
             },
             wbMode = intent.wbMode ?: hardwareMapped.wbMode,
-            
+
             focusValue = if (hardwareMapped.isFocusAuto) {
                 hardwareMapped.focusValue
             } else {
@@ -323,26 +350,53 @@ class MapperUI(
             isFocused = hardwareMapped.isFocused,
             capturedBitmap = reality.capturedBitmap,
             isCaptureRequested = intent.isCaptureRequested || reality.isCaptureRequested,
-            
+
             characteristicsItems = persistentListOf(
-                RadioGroupItem.TextItem(SettingsItem.SHUTTER, "SHUTTER", if (intent.isShutterAuto) hardwareMapped.shutterValue ?: "" else intent.shutterValue ?: ""),
-                RadioGroupItem.TextItem(SettingsItem.ISO, "ISO", if (intent.isIsoAuto) (hardwareMapped.isoValue ?: "") else (intent.isoValue ?: "")),
-                (hardwareMapped.characteristicsItems.firstOrNull { it.id == SettingsItem.WB } ?: RadioGroupItem.TextItem(SettingsItem.WB, "WB", "A")),
+                RadioGroupItem.TextItem(
+                    SettingsItem.SHUTTER,
+                    "SHUTTER",
+                    if (intent.isShutterAuto) hardwareMapped.shutterValue
+                        ?: "" else intent.shutterValue ?: ""
+                ),
+                RadioGroupItem.TextItem(
+                    SettingsItem.ISO,
+                    "ISO",
+                    if (intent.isIsoAuto) (hardwareMapped.isoValue ?: "") else (intent.isoValue
+                        ?: "")
+                ),
+                (hardwareMapped.characteristicsItems.firstOrNull { it.id == SettingsItem.WB }
+                    ?: RadioGroupItem.TextItem(SettingsItem.WB, "WB", "A")),
                 if (intent.isFocusAuto) {
-                    RadioGroupItem.IconItem(SettingsItem.FOCUS, "FOCUS", getFocusIconRes(intent.focusMode ?: hardwareMapped.focusMode))
+                    RadioGroupItem.IconItem(
+                        SettingsItem.FOCUS,
+                        "FOCUS",
+                        getFocusIconRes(intent.focusMode ?: hardwareMapped.focusMode)
+                    )
                 } else {
-                    RadioGroupItem.TextItem(SettingsItem.FOCUS, "FOCUS", intent.focusValue?.takeIf { it.isNotBlank() } ?: hardwareMapped.focusValue ?: "")
+                    RadioGroupItem.TextItem(
+                        SettingsItem.FOCUS,
+                        "FOCUS",
+                        intent.focusValue?.takeIf { it.isNotBlank() } ?: hardwareMapped.focusValue
+                        ?: "")
                 },
-                RadioGroupItem.TextItem(SettingsItem.MAGNIFIER, "MAGNIFIER", intent.magnifierValue ?: "1")
+                RadioGroupItem.TextItem(
+                    SettingsItem.MAGNIFIER,
+                    "MAGNIFIER",
+                    intent.magnifierValue ?: "1"
+                )
             )
         )
     }
 
     fun map(characteristics: CharacteristicsUI): Characteristics {
-        val isoValue = if (characteristics.isIsoAuto) null else characteristics.isoValue?.toIntOrNull()
-        val shutterValue = if (characteristics.isShutterAuto) null else allStandardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
-        
-        val wbValue = if (characteristics.isWbAuto) null else characteristics.wbValue?.filter { it.isDigit() }?.toIntOrNull()
+        val isoValue =
+            if (characteristics.isIsoAuto) null else characteristics.isoValue?.toIntOrNull()
+        val shutterValue =
+            if (characteristics.isShutterAuto) null else allStandardShutterSpeeds.entries.firstOrNull { it.value == characteristics.shutterValue }?.key
+
+        val wbValue =
+            if (characteristics.isWbAuto) null else characteristics.wbValue?.filter { it.isDigit() }
+                ?.toIntOrNull()
         val wbMode = if (characteristics.isWbAuto) {
             when (characteristics.wbMode) {
                 ModeItem.WbItem.AUTO -> CONTROL_AWB_MODE_AUTO
@@ -357,13 +411,22 @@ class MapperUI(
             }
         } else null
 
-        var focusValue: Float? = if (characteristics.isFocusAuto) null else characteristics.focusValue?.toFloatOrNull()
+        var focusValue: Float? =
+            if (characteristics.isFocusAuto) null else characteristics.focusValue?.toFloatOrNull()
         val focusMode: Int? = if (characteristics.isFocusAuto) {
             when (characteristics.focusMode) {
-                ModeItem.FocusItem.MACRO -> { focusValue = characteristics.focusItems.map { it.value.toFloat() }.maxOrNull(); -2 }
+                ModeItem.FocusItem.MACRO -> {
+                    focusValue =
+                        characteristics.focusItems.map { it.value.toFloat() }.maxOrNull(); -2
+                }
+
                 ModeItem.FocusItem.CONTINUOUS -> CONTROL_AF_MODE_CONTINUOUS_PICTURE
                 ModeItem.FocusItem.TOUCH -> -1
-                ModeItem.FocusItem.INFINITE -> { focusValue = characteristics.focusItems.map { it.value.toFloat() }.minOrNull(); -3 }
+                ModeItem.FocusItem.INFINITE -> {
+                    focusValue =
+                        characteristics.focusItems.map { it.value.toFloat() }.minOrNull(); -3
+                }
+
                 else -> CONTROL_AF_MODE_CONTINUOUS_PICTURE
             }
         } else {
@@ -385,7 +448,10 @@ class MapperUI(
             wbMode = wbMode,
             focusValue = focusValue,
             focusMode = focusMode,
-            touchPoint = floatArrayOf(characteristics.touchPoint?.x ?: 0.5f, characteristics.touchPoint?.y ?: 0.5f),
+            touchPoint = floatArrayOf(
+                characteristics.touchPoint?.x ?: 0.5f,
+                characteristics.touchPoint?.y ?: 0.5f
+            ),
             isFocused = characteristics.isFocused,
             capturedBitmap = characteristics.capturedBitmap,
             isCaptureRequested = characteristics.isCaptureRequested,

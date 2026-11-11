@@ -114,7 +114,9 @@ class CameraRepository(
     }
 
     private val histogramDataBuffer = ByteArray(320 * 240)
-    private val _histogramBufferFlow = MutableSharedFlow<ByteArray>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val _histogramBufferFlow =
+        MutableSharedFlow<ByteArray>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
     fun subscribeHistogramBuffer(): Flow<ByteArray> = _histogramBufferFlow
 
     private lateinit var imageReaderHistogram: ImageReader
@@ -135,20 +137,56 @@ class CameraRepository(
             val srcRowOffset = srcY * rowStride
             val targetRowOffset = y * 320
             for (x in 0 until 320) {
-                histogramDataBuffer[targetRowOffset + x] = buffer.get(srcRowOffset + (x * srcW / 320))
+                histogramDataBuffer[targetRowOffset + x] =
+                    buffer.get(srcRowOffset + (x * srcW / 320))
             }
         }
         _histogramBufferFlow.tryEmit(histogramDataBuffer)
-        
+
         // Автоматический анализ гистограммы для детекции вспышки (порог разницы яркостей = 25.0)
         checkAndSaveFlashFrame(brightnessThreshold = 25.0)
 
         image.close()
     }
 
+    //////////////////
+    private var prevLum = 0.0
+    private var currLum = 0.0
+    private var nextLum = 0.0
+
+    /**
+     * Функция анализа гистограммы для обнаружения вспышки и сохранения кадра.
+     * Если текущий кадр светлее предыдущего и следующего больше чем на заданный brightnessThreshold,
+     * а также принудительно устанавливается безопасный диапазон выдержек (чтобы исключить половинную экспозицию),
+     * то кадр автоматически сохраняется.
+     */
+    fun checkAndSaveFlashFrame(
+        brightnessThreshold: Double,
+        minSafeShutterNs: Long = 4_000_000L,
+        maxSafeShutterNs: Long = 33_333_333L
+    ) {
+        val currentMeanLum = calculateMeanLuminance()
+
+        // Сдвиг скользящего окна по 3 кадрам [предыдущий, текущий, следующий]
+        prevLum = currLum
+        currLum = nextLum
+        nextLum = currentMeanLum
+
+        // Детекция пика (вспышки): текущий кадр ярче предыдущего и следующего на величину порога
+        if (currLum > prevLum + brightnessThreshold && currLum > nextLum + brightnessThreshold) {
+            // Принудительно задаем безопасный диапазон выдержек для предотвращения артефактов rolling shutter
+            //  applyForcedShutterRange(minSafeShutterNs, maxSafeShutterNs)
+            println("hello")
+            // Сохраняем кадр
+            //    triggerFlashCapture()
+        }
+    }
+    /////////////////
+
     private fun processCapturedBitmap(bitmap: Bitmap): Bitmap {
         return try {
-            val orientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
+            val orientation =
+                cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
             val lensFacing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
             val isFront = lensFacing == CameraCharacteristics.LENS_FACING_FRONT
 
@@ -158,7 +196,8 @@ class CameraRepository(
                     postScale(-1f, 1f)
                 }
             }
-            val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val rotated =
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
             if (rotated != bitmap) {
                 bitmap.recycle()
             }
@@ -196,7 +235,8 @@ class CameraRepository(
             val out = ByteArrayOutputStream()
             yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)
             val imageBytes = out.toByteArray()
-            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size) ?: return null
+            val bitmap =
+                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size) ?: return null
             processCapturedBitmap(bitmap)
         } catch (e: Exception) {
             Log.e("CameraRepository", "Error converting YUV to Bitmap: ${e.message}")
@@ -205,11 +245,25 @@ class CameraRepository(
     }
 
     private fun detachCaptureListeners() {
-        try { imageReaderJpeg.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
-        try { imageReaderRaw.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
+        try {
+            imageReaderJpeg.setOnImageAvailableListener(null, null)
+        } catch (_: Exception) {
+        }
+        try {
+            imageReaderRaw.setOnImageAvailableListener(null, null)
+        } catch (_: Exception) {
+        }
     }
 
     private var lastJpegBytes: ByteArray? = null
+
+    ////////////////////////////
+    private val listenerExternalFlashJpeg = ImageReader.OnImageAvailableListener { reader ->
+        reader.acquireNextImage()?.let { image ->
+
+        }
+    }
+    ////////////////////////////
 
     private val listenerJpeg = ImageReader.OnImageAvailableListener { reader ->
         reader.acquireLatestImage()?.let { image ->
@@ -220,7 +274,7 @@ class CameraRepository(
                     buffer.get(data)
                     data
                 } else if (image.format == ImageFormat.YUV_420_888) {
-                    val out = ByteArrayOutputStream()
+                    /*
                     val yBuffer = image.planes[0].buffer
                     val uBuffer = image.planes[1].buffer
                     val vBuffer = image.planes[2].buffer
@@ -231,7 +285,50 @@ class CameraRepository(
                     yBuffer.get(nv21, 0, ySize)
                     vBuffer.get(nv21, ySize, vSize)
                     uBuffer.get(nv21, ySize + vSize, uSize)
-                    YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null).compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)
+                    */
+                    val out = ByteArrayOutputStream()
+                    val width = image.width
+                    val height = image.height
+                    val ySize = width * height
+                    val uvSize = width * height / 2
+                    val nv21 = ByteArray(ySize + uvSize)
+
+                    val yBuffer = image.planes[0].buffer
+                    val uBuffer = image.planes[1].buffer
+                    val vBuffer = image.planes[2].buffer
+
+                    val yRowStride = image.planes[0].rowStride
+                    var pos = 0
+                    if (yRowStride == width) {
+                        yBuffer.get(nv21, 0, ySize)
+                        pos = ySize
+                    } else {
+                        for (row in 0 until height) {
+                            yBuffer.position(row * yRowStride)
+                            yBuffer.get(nv21, pos, width)
+                            pos += width
+                        }
+                    }
+                    val uvRowStride = image.planes[1].rowStride
+                    val uvPixelStride = image.planes[1].pixelStride
+                    val uvHeight = height / 2
+                    val uvWidth = width / 2
+
+                    for (row in 0 until uvHeight) {
+                        for (col in 0 until uvWidth) {
+                            val uvIndex = row * uvRowStride + col * uvPixelStride
+                            nv21[pos++] = vBuffer.get(uvIndex) // V
+                            nv21[pos++] = uBuffer.get(uvIndex) // U
+                        }
+                    }
+
+                    YuvImage(
+                        nv21,
+                        ImageFormat.NV21,
+                        width ,
+                        height,
+                        null
+                    ).compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)
                     out.toByteArray()
                 } else {
                     val buffer = image.planes[0].buffer
@@ -244,16 +341,26 @@ class CameraRepository(
                 val decodedBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 image.close()
 
-                val bitmap = if (decodedBitmap != null) processCapturedBitmap(decodedBitmap) else null
+                val bitmap =
+                    if (decodedBitmap != null) processCapturedBitmap(decodedBitmap) else null
 
                 if (bitmap != null) {
-                    _characteristicsFlow.update { it?.copy(capturedBitmap = bitmap, isCaptureRequested = false) }
+                    _characteristicsFlow.update {
+                        it?.copy(
+                            capturedBitmap = bitmap,
+                            isCaptureRequested = false
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("CameraRepository", "Error processing JPEG image: ${e.message}")
                 image.close()
             } finally {
-                try { imageReaderJpeg.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
+                try {
+                    imageReaderJpeg.setOnImageAvailableListener(null, null)
+                } catch (_: Exception) {
+
+                }
             }
         }
     }
@@ -276,24 +383,33 @@ class CameraRepository(
                 Log.e("CameraRepository", "Error processing RAW image: ${e.message}")
             } finally {
                 image.close()
-                try { imageReaderRaw.setOnImageAvailableListener(null, null) } catch (_: Exception) {}
+                try {
+                    imageReaderRaw.setOnImageAvailableListener(null, null)
+                } catch (_: Exception) {
+                }
             }
         }
     }
 
     fun getCameraSensorOrientation(backCamera: Boolean): Int {
-        val facing = if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
+        val facing =
+            if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
         val targetId = cameraManager.cameraIdList.firstOrNull { id ->
-            cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) == facing
+            cameraManager.getCameraCharacteristics(id)
+                .get(CameraCharacteristics.LENS_FACING) == facing
         } ?: cameraManager.cameraIdList.firstOrNull()
 
         return targetId?.let {
-            cameraManager.getCameraCharacteristics(it).get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+            cameraManager.getCameraCharacteristics(it).get(CameraCharacteristics.SENSOR_ORIENTATION)
+                ?: 90
         } ?: 90
     }
 
     fun updateCharacteristicsForSwitch(backCamera: Boolean, sensorOrientation: Int) {
-        val current = _characteristicsFlow.value ?: Characteristics(backCamera = backCamera, sensorOrientation = sensorOrientation)
+        val current = _characteristicsFlow.value ?: Characteristics(
+            backCamera = backCamera,
+            sensorOrientation = sensorOrientation
+        )
         _characteristicsFlow.update {
             current.copy(
                 backCamera = backCamera,
@@ -304,9 +420,11 @@ class CameraRepository(
 
     @SuppressLint("MissingPermission")
     fun openCamera(backCamera: Boolean): StateFlow<Characteristics?> {
-        val facing = if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
+        val facing =
+            if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
         val targetId = cameraManager.cameraIdList.firstOrNull { id ->
-            cameraManager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) == facing
+            cameraManager.getCameraCharacteristics(id)
+                .get(CameraCharacteristics.LENS_FACING) == facing
         } ?: cameraManager.cameraIdList.firstOrNull()
 
         targetId?.let { id ->
@@ -316,6 +434,7 @@ class CameraRepository(
                     cameraCharacteristics = cameraManager.getCameraCharacteristics(camera.id)
                     _characteristicsFlow.value = getCameraCharacteristics(camera.id)
                 }
+
                 override fun onDisconnected(camera: CameraDevice) = camera.close()
                 override fun onError(camera: CameraDevice, error: Int) = camera.close()
             }, cameraThreadManager.handler)
@@ -325,21 +444,39 @@ class CameraRepository(
 
     fun closeCamera() {
         cameraLocationProvider.stopTracking()
-        try { cameraSession?.close() } catch (_: Exception) {}
+        try {
+            cameraSession?.close()
+        } catch (_: Exception) {
+        }
         if (::cameraDevice.isInitialized) {
-            try { cameraDevice.close() } catch (_: Exception) {}
+            try {
+                cameraDevice.close()
+            } catch (_: Exception) {
+            }
         }
         if (::previewSurface.isInitialized) {
-            try { previewSurface.release() } catch (_: Exception) {}
+            try {
+                previewSurface.release()
+            } catch (_: Exception) {
+            }
         }
         if (::imageReaderHistogram.isInitialized) {
-            try { imageReaderHistogram.close() } catch (_: Exception) {}
+            try {
+                imageReaderHistogram.close()
+            } catch (_: Exception) {
+            }
         }
         if (::imageReaderJpeg.isInitialized) {
-            try { imageReaderJpeg.close() } catch (_: Exception) {}
+            try {
+                imageReaderJpeg.close()
+            } catch (_: Exception) {
+            }
         }
         if (::imageReaderRaw.isInitialized) {
-            try { imageReaderRaw.close() } catch (_: Exception) {}
+            try {
+                imageReaderRaw.close()
+            } catch (_: Exception) {
+            }
         }
         cameraSession = null
         persistentBuilder = null
@@ -350,15 +487,20 @@ class CameraRepository(
         val map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val allSizes = map?.getOutputSizes(ImageFormat.JPEG)
         val iso = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-        val exposure = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
-        val minFocus = cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
-        val maxFocus = cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
+        val exposure =
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        val minFocus =
+            cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val maxFocus =
+            cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE)
         val awbModes = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES)
         val caps = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-        val supportsRaw = caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+        val supportsRaw =
+            caps?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
         val lensFacing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
         val isBack = lensFacing == CameraCharacteristics.LENS_FACING_BACK
-        val sensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+        val sensorOrientation =
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
 
         return Characteristics(
             backCamera = isBack,
@@ -378,39 +520,46 @@ class CameraRepository(
     fun startSession(glSurfaceTexture: SurfaceTexture, characteristics: Characteristics) {
         cameraLocationProvider.startTracking()
         filePath = characteristics.filePath
-        val width = if (characteristics.resolution.width > 0) characteristics.resolution.width else 1920
-        val height = if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
+        val width =
+            if (characteristics.resolution.width > 0) characteristics.resolution.width else 1920
+        val height =
+            if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
 
         glSurfaceTexture.setDefaultBufferSize(width, height)
         previewSurface = Surface(glSurfaceTexture)
         imageReaderHistogram = ImageReader.newInstance(
-          320,
-          240,
-          ImageFormat.YUV_420_888, 3
-          ).apply { setOnImageAvailableListener(listenerHistogram, cameraThreadManager.handler) }
+            320,
+            240,
+            ImageFormat.YUV_420_888, 3
+        ).apply { setOnImageAvailableListener(listenerHistogram, cameraThreadManager.handler) }
         histogramSurface = imageReaderHistogram.surface
 
         imageReaderJpeg = ImageReader.newInstance(
             width,
             height,
-            ImageFormat.JPEG,
-            3)
+            ImageFormat.YUV_420_888,
+            3
+        )
         captureSurfaceJpeg = imageReaderJpeg.surface
 
-        val rawSize = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            ?.getOutputSizes(ImageFormat.RAW_SENSOR)
-            ?.maxByOrNull { it.width * it.height }
-            ?: Size(width, height)
+        val rawSize =
+            cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                ?.getOutputSizes(ImageFormat.RAW_SENSOR)
+                ?.maxByOrNull { it.width * it.height }
+                ?: Size(width, height)
 
         imageReaderRaw = ImageReader.newInstance(
             rawSize.width,
             rawSize.height,
             ImageFormat.RAW_SENSOR,
-            2)
+            2
+        )
         captureSurfaceRaw = imageReaderRaw.surface
 
-        val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-        val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+        val capabilities =
+            cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        val supportsRaw =
+            capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
 
         val surfaces = mutableListOf(previewSurface, histogramSurface, captureSurfaceJpeg)
         if (supportsRaw) {
@@ -423,28 +572,40 @@ class CameraRepository(
             configs,
             cameraThreadManager.executor,
             object : CameraCaptureSession.StateCallback() {
-            override fun onConfigured(session: CameraCaptureSession) {
-                cameraSession = session
-                persistentBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
-                    addTarget(previewSurface)
-                    addTarget(histogramSurface)
-                    addTarget(captureSurfaceJpeg)
-                    if (supportsRaw) {
-                        addTarget(captureSurfaceRaw)
-                    }
-                    set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                    val fullSensor = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
-                    set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
-                    set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
-                    set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
+                override fun onConfigured(session: CameraCaptureSession) {
+                    cameraSession = session
+                    persistentBuilder =
+                        cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                            addTarget(previewSurface)
+                            addTarget(histogramSurface)
+                            addTarget(captureSurfaceJpeg)
+                            if (supportsRaw) {
+                                addTarget(captureSurfaceRaw)
+                            }
+                            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                            val fullSensor =
+                                cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
+                            set(
+                                CaptureRequest.CONTROL_AE_REGIONS,
+                                arrayOf(MeteringRectangle(fullSensor, 1000))
+                            )
+                            set(
+                                CaptureRequest.CONTROL_AF_TRIGGER,
+                                CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                            )
+                            set(
+                                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
+                            )
+                        }
+                    lastCharacteristics = characteristics
+                    startPreviewCaptureRequest(characteristics)
                 }
-                lastCharacteristics = characteristics
-                startPreviewCaptureRequest(characteristics)
-            }
-            override fun onConfigureFailed(session: CameraCaptureSession) {
-                Log.e("CameraRepository", "Camera session configuration FAILED!")
-            }
-        })
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    Log.e("CameraRepository", "Camera session configuration FAILED!")
+                }
+            })
         try {
             cameraDevice.createCaptureSession(config)
         } catch (e: Exception) {
@@ -455,13 +616,13 @@ class CameraRepository(
     private val myScope = CoroutineScope(SupervisorJob() + cameraThreadManager.dispatcher)
     internal lateinit var lastCharacteristics: Characteristics
     internal var appliedCharacteristics: Characteristics? = null
-    
+
     private var AE = false
     private var af = false
     private var isAfLocked = false
     private var isWaitingForFocus = false
     internal var lastLockedFocusDistance: Float? = null
-    
+
     private var lastAeUpdateMillis = 0L
     private val UPDATE_TOKEN = Any()
 
@@ -469,10 +630,10 @@ class CameraRepository(
         lastCharacteristics = characteristics.copy(isCaptureRequested = false)
         cameraThreadManager.handler.removeCallbacksAndMessages(UPDATE_TOKEN)
         val action = Runnable { processPreviewCaptureRequest(characteristics) }
-        if (Looper.myLooper() == cameraThreadManager.handler.looper) { 
-            processPreviewCaptureRequest(characteristics) 
-        } else { 
-            cameraThreadManager.handler.postAtTime(action, UPDATE_TOKEN, SystemClock.uptimeMillis()) 
+        if (Looper.myLooper() == cameraThreadManager.handler.looper) {
+            processPreviewCaptureRequest(characteristics)
+        } else {
+            cameraThreadManager.handler.postAtTime(action, UPDATE_TOKEN, SystemClock.uptimeMillis())
         }
     }
 
@@ -486,13 +647,22 @@ class CameraRepository(
             // 1. БАЛАНС БЕЛОГО
             if (characteristics.wbValue != null) {
                 builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF)
-                builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, convertTemperatureToRggb(characteristics.wbValue))
-                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                builder.set(
+                    CaptureRequest.COLOR_CORRECTION_GAINS,
+                    convertTemperatureToRggb(characteristics.wbValue)
+                )
+                builder.set(
+                    CaptureRequest.COLOR_CORRECTION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX
+                )
                 if (lastColorTransform != null) {
                     builder.set(CaptureRequest.COLOR_CORRECTION_TRANSFORM, lastColorTransform)
                 }
             } else {
-                builder.set(CaptureRequest.CONTROL_AWB_MODE, characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                builder.set(
+                    CaptureRequest.CONTROL_AWB_MODE,
+                    characteristics.wbMode ?: CaptureRequest.CONTROL_AWB_MODE_AUTO
+                )
             }
 
             // 2. ЭКСПОЗИЦИЯ
@@ -507,40 +677,68 @@ class CameraRepository(
                 builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
                 builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rect))
             } else {
-                val fullSensor = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+                val fullSensor =
+                    cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
                 if (fullSensor != null) {
-                    builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(MeteringRectangle(fullSensor, 1000)))
+                    builder.set(
+                        CaptureRequest.CONTROL_AE_REGIONS,
+                        arrayOf(MeteringRectangle(fullSensor, 1000))
+                    )
                 }
             }
 
             appliedCharacteristics = characteristics
 
-            val capabilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-            val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
-            val needRaw = supportsRaw && (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG)
+            val capabilities =
+                cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+            val supportsRaw =
+                capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+            val needRaw =
+                supportsRaw && (characteristics.imgFormat == ImgFormat.DNG || characteristics.imgFormat == ImgFormat.JPEGDNG)
 
             if (characteristics.isCaptureRequested) {
-                val needPrecapture = characteristics.flashEnabled && characteristics.isoValue == null && characteristics.shutterValue == null
+                val needPrecapture =
+                    characteristics.flashEnabled && characteristics.isoValue == null && characteristics.shutterValue == null && !characteristics.externalFlash
                 if (needPrecapture) {
                     try {
-                        val precaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
-                            addTarget(previewSurface)
-                            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
-                            set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
-                            characteristics.touchPoint?.let { point ->
-                                val rect = meteringRectangle(point)
-                                set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
-                                set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rect))
+                        val precaptureBuilder =
+                            cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                                addTarget(previewSurface)
+                                set(
+                                    CaptureRequest.CONTROL_AE_MODE,
+                                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH
+                                )
+                                set(
+                                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
+                                )
+                                characteristics.touchPoint?.let { point ->
+                                    val rect = meteringRectangle(point)
+                                    set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
+                                    set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rect))
+                                }
                             }
-                        }
-                        session.capture(precaptureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
-                            override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-                                executeStillCapture(builder, session, needRaw, characteristics)
-                            }
-                            override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
-                                executeStillCapture(builder, session, needRaw, characteristics)
-                            }
-                        }, cameraThreadManager.handler)
+                        session.capture(
+                            precaptureBuilder.build(),
+                            object : CameraCaptureSession.CaptureCallback() {
+                                override fun onCaptureCompleted(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    result: TotalCaptureResult
+                                ) {
+                                    executeStillCapture(builder, session, needRaw, characteristics)
+                                }
+
+                                override fun onCaptureFailed(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    failure: CaptureFailure
+                                ) {
+                                    executeStillCapture(builder, session, needRaw, characteristics)
+                                }
+                            },
+                            cameraThreadManager.handler
+                        )
                     } catch (e: Exception) {
                         Log.e("CameraRepository", "Precapture trigger error: ${e.message}", e)
                         executeStillCapture(builder, session, needRaw, characteristics)
@@ -552,17 +750,27 @@ class CameraRepository(
                 try {
                     builder.removeTarget(captureSurfaceJpeg)
                     builder.removeTarget(captureSurfaceRaw)
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
 
-                val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) || 
-                                  (characteristics.shutterValue == null) != (old?.shutterValue == null) || 
-                                  old == null
+                }
+
+                val modeChanged = (characteristics.isoValue == null) != (old?.isoValue == null) ||
+                        (characteristics.shutterValue == null) != (old?.shutterValue == null) ||
+                        old == null
 
                 if (modeChanged) {
                     session.stopRepeating()
-                    session.capture(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
+                    session.capture(
+                        builder.build(),
+                        repeatingCaptureCallback,
+                        cameraThreadManager.handler
+                    )
                 }
-                session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
+                session.setRepeatingRequest(
+                    builder.build(),
+                    repeatingCaptureCallback,
+                    cameraThreadManager.handler
+                )
             }
         } catch (e: Exception) {
             Log.e("CameraRepository", "processPreviewCaptureRequest error: ${e.message}", e)
@@ -582,7 +790,10 @@ class CameraRepository(
                     builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
                 }
             }
-            builder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
+            builder.set(
+                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
+            )
             imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
             if (needRaw) {
                 imageReaderRaw.setOnImageAvailableListener(listenerRaw, cameraThreadManager.handler)
@@ -594,21 +805,32 @@ class CameraRepository(
             }
 
             session.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                override fun onCaptureCompleted(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    result: TotalCaptureResult
+                ) {
                     super.onCaptureCompleted(session, request, result)
                     lastCaptureResult = result
                     try {
                         builder.removeTarget(captureSurfaceJpeg)
                         if (needRaw) builder.removeTarget(captureSurfaceRaw)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
                     detachCaptureListeners()
                 }
-                override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
+
+                override fun onCaptureFailed(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    failure: CaptureFailure
+                ) {
                     super.onCaptureFailed(session, request, failure)
                     try {
                         builder.removeTarget(captureSurfaceJpeg)
                         if (needRaw) builder.removeTarget(captureSurfaceRaw)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
                     detachCaptureListeners()
                 }
             }, cameraThreadManager.handler)
@@ -617,7 +839,8 @@ class CameraRepository(
             try {
                 builder.removeTarget(captureSurfaceJpeg)
                 if (needRaw) builder.removeTarget(captureSurfaceRaw)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             detachCaptureListeners()
         }
     }
@@ -628,7 +851,9 @@ class CameraRepository(
         lastRawBytes = null
         lastCaptureResult = null
 
-        val current = if (::lastCharacteristics.isInitialized) lastCharacteristics else (_characteristicsFlow.value ?: Characteristics())
+        val current =
+            if (::lastCharacteristics.isInitialized) lastCharacteristics else (_characteristicsFlow.value
+                ?: Characteristics())
         startPreviewCaptureRequest(current.copy(isCaptureRequested = true))
 
         val bitmap = deferred.await()
@@ -647,7 +872,10 @@ class CameraRepository(
         imageFormat: ImgFormat,
         resolution: Dimensions
     ) {
-        Log.d("CameraRepository", "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}")
+        Log.d(
+            "CameraRepository",
+            "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}"
+        )
         val jpegBytes = lastJpegBytes
         val rawBytes = lastRawBytes
         val rawWidth = lastRawWidth
@@ -669,17 +897,39 @@ class CameraRepository(
                         ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
                     }
                 }
+
                 ImgFormat.DNG -> {
                     if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, baseFileName, savePath, location)
+                        ImageSaver.saveDngBytes(
+                            context,
+                            cameraCharacteristics,
+                            capResult,
+                            rawBytes,
+                            rawWidth,
+                            rawHeight,
+                            baseFileName,
+                            savePath,
+                            location
+                        )
                     }
                 }
+
                 ImgFormat.JPEGDNG -> {
                     if (jpegBytes != null) {
                         ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
                     }
                     if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(context, cameraCharacteristics, capResult, rawBytes, rawWidth, rawHeight, baseFileName, savePath, location)
+                        ImageSaver.saveDngBytes(
+                            context,
+                            cameraCharacteristics,
+                            capResult,
+                            rawBytes,
+                            rawWidth,
+                            rawHeight,
+                            baseFileName,
+                            savePath,
+                            location
+                        )
                     }
                 }
             }
@@ -690,56 +940,95 @@ class CameraRepository(
     private data class ExposureResult(val modeChanged: Boolean)
 
     private fun updateExposure(
-        builder: CaptureRequest.Builder, 
-        new: Characteristics, 
-        old: Characteristics?, 
+        builder: CaptureRequest.Builder,
+        new: Characteristics,
+        old: Characteristics?,
         hw: Characteristics?
     ): ExposureResult {
         val iso = new.isoValue
         val shutter = new.shutterValue
-        
-        val modeChanged = (iso == null) != (old?.isoValue == null) || 
-                          (shutter == null) != (old?.shutterValue == null) || 
-                          old == null
+
+        val modeChanged = (iso == null) != (old?.isoValue == null) ||
+                (shutter == null) != (old?.shutterValue == null) ||
+                old == null
 
         when {
             iso == null && shutter == null -> {
                 AE = true
-                builder.set(CaptureRequest.CONTROL_AE_MODE, if (new.flashEnabled) CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH else CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(
+                    CaptureRequest.CONTROL_AE_MODE,
+                    if (new.flashEnabled) CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH else CaptureRequest.CONTROL_AE_MODE_ON
+                )
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, isWaitingForFocus)
             }
+
             iso != null && shutter != null -> {
                 AE = false
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                builder.set(CaptureRequest.FLASH_MODE, if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
-                val clampedIso = if (new.isoRange.first > 0 && new.isoRange.last > 0) iso.coerceIn(new.isoRange.first, new.isoRange.last) else iso
-                val clampedShutter = if (new.shutterRange.first > 0 && new.shutterRange.last > 0) shutter.coerceIn(new.shutterRange.first, new.shutterRange.last) else shutter
+                builder.set(
+                    CaptureRequest.FLASH_MODE,
+                    if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF
+                )
+                val clampedIso = if (new.isoRange.first > 0 && new.isoRange.last > 0) iso.coerceIn(
+                    new.isoRange.first,
+                    new.isoRange.last
+                ) else iso
+                val clampedShutter =
+                    if (new.shutterRange.first > 0 && new.shutterRange.last > 0) shutter.coerceIn(
+                        new.shutterRange.first,
+                        new.shutterRange.last
+                    ) else shutter
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, clampedIso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
-                builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(clampedShutter, 33_333_333L))
+                builder.set(
+                    CaptureRequest.SENSOR_FRAME_DURATION,
+                    maxOf(clampedShutter, 33_333_333L)
+                )
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
             }
+
             iso != null -> {
                 AE = false
                 val meanLum = calculateMeanLuminance()
                 val bS = hw?.actualShutter ?: 33_333_333L
                 val bI = hw?.actualIso ?: 100
-                val calcShutter = getShutterPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, iso, meanLum.toInt())
+                val calcShutter = getShutterPriorityWithClassicSteps(
+                    null,
+                    cameraCharacteristics,
+                    bI,
+                    bS,
+                    iso,
+                    meanLum.toInt()
+                )
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                builder.set(CaptureRequest.FLASH_MODE, if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
+                builder.set(
+                    CaptureRequest.FLASH_MODE,
+                    if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF
+                )
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, calcShutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(calcShutter, 33_333_333L))
                 builder.set(CaptureRequest.CONTROL_AE_LOCK, false)
             }
+
             else -> { // shutter != null
                 AE = false
                 val meanLum = calculateMeanLuminance()
                 val bS = hw?.actualShutter ?: 33_333_333L
                 val bI = hw?.actualIso ?: 100
-                val calcIso = getIsoPriorityWithClassicSteps(null, cameraCharacteristics, bI, bS, shutter!!, meanLum.toInt())
+                val calcIso = getIsoPriorityWithClassicSteps(
+                    null,
+                    cameraCharacteristics,
+                    bI,
+                    bS,
+                    shutter!!,
+                    meanLum.toInt()
+                )
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                builder.set(CaptureRequest.FLASH_MODE, if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
+                builder.set(
+                    CaptureRequest.FLASH_MODE,
+                    if (new.flashEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF
+                )
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, calcIso)
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutter)
                 builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(shutter, 33_333_333L))
@@ -757,33 +1046,6 @@ class CameraRepository(
         return if (histogramDataBuffer.isEmpty()) 128.0 else sum.toDouble() / (histogramDataBuffer.size / 8)
     }
 
-    private var prevLum = 0.0
-    private var currLum = 0.0
-    private var nextLum = 0.0
-
-    /**
-     * Функция анализа гистограммы для обнаружения вспышки и сохранения кадра.
-     * Если текущий кадр светлее предыдущего и следующего больше чем на заданный brightnessThreshold,
-     * а также принудительно устанавливается безопасный диапазон выдержек (чтобы исключить половинную экспозицию),
-     * то кадр автоматически сохраняется.
-     */
-    fun checkAndSaveFlashFrame(brightnessThreshold: Double, minSafeShutterNs: Long = 4_000_000L, maxSafeShutterNs: Long = 33_333_333L) {
-        val currentMeanLum = calculateMeanLuminance()
-
-        // Сдвиг скользящего окна по 3 кадрам [предыдущий, текущий, следующий]
-        prevLum = currLum
-        currLum = nextLum
-        nextLum = currentMeanLum
-
-        // Детекция пика (вспышки): текущий кадр ярче предыдущего и следующего на величину порога
-        if (currLum > prevLum + brightnessThreshold && currLum > nextLum + brightnessThreshold) {
-            // Принудительно задаем безопасный диапазон выдержек для предотвращения артефактов rolling shutter
-            applyForcedShutterRange(minSafeShutterNs, maxSafeShutterNs)
-
-            // Сохраняем кадр
-            triggerFlashCapture()
-        }
-    }
 
     private fun applyForcedShutterRange(minNs: Long, maxNs: Long) {
         val builder = persistentBuilder ?: return
@@ -792,7 +1054,11 @@ class CameraRepository(
         builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, clampedShutter)
         builder.set(CaptureRequest.SENSOR_FRAME_DURATION, maxOf(clampedShutter, 33_333_333L))
         try {
-            cameraSession?.setRepeatingRequest(builder.build(), repeatingCaptureCallback, cameraThreadManager.handler)
+            cameraSession?.setRepeatingRequest(
+                builder.build(),
+                repeatingCaptureCallback,
+                cameraThreadManager.handler
+            )
         } catch (e: Exception) {
             Log.e("CameraRepository", "Forced shutter range error: ${e.message}")
         }
@@ -801,22 +1067,37 @@ class CameraRepository(
     private fun triggerFlashCapture() {
         val session = cameraSession ?: return
         try {
-            val captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
-                addTarget(imageReaderJpeg.surface)
-            }
-            session.capture(captureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-                    Log.d("CameraRepository", "Flash detected! Frame saved via ImageSaver.")
+            val captureBuilder =
+                cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
+                    addTarget(imageReaderJpeg.surface)
                 }
-            }, cameraThreadManager.handler)
+            session.capture(
+                captureBuilder.build(),
+                object : CameraCaptureSession.CaptureCallback() {
+                    override fun onCaptureCompleted(
+                        session: CameraCaptureSession,
+                        request: CaptureRequest,
+                        result: TotalCaptureResult
+                    ) {
+                        Log.d("CameraRepository", "Flash detected! Frame saved via ImageSaver.")
+                    }
+                },
+                cameraThreadManager.handler
+            )
         } catch (e: Exception) {
             Log.e("CameraRepository", "Flash capture error: ${e.message}")
         }
     }
 
-    private fun updateFocus(builder: CaptureRequest.Builder, new: Characteristics, old: Characteristics?) {
-        val isManual = new.focusValue != null && new.focusMode != -1 && new.focusMode != -2 && new.focusMode != -3
-        val wasManual = old?.focusValue != null && old?.focusMode != -1 && old?.focusMode != -2 && old?.focusMode != -3
+    private fun updateFocus(
+        builder: CaptureRequest.Builder,
+        new: Characteristics,
+        old: Characteristics?
+    ) {
+        val isManual =
+            new.focusValue != null && new.focusMode != -1 && new.focusMode != -2 && new.focusMode != -3
+        val wasManual =
+            old?.focusValue != null && old?.focusMode != -1 && old?.focusMode != -2 && old?.focusMode != -3
         val modeChanged = new.focusMode != old?.focusMode || isManual != wasManual
 
         if (new.focusMode == -2 || new.focusMode == -3) {
@@ -845,11 +1126,17 @@ class CameraRepository(
 
                     if (pointChanged || modeChanged) {
                         isAfLocked = false; isWaitingForFocus = true; lastLockedFocusDistance = null
-                        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                        builder.set(
+                            CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_AUTO
+                        )
                         _characteristicsFlow.update { it?.copy(isFocused = false) }
                         launchAfTrigger(builder, rect)
                     } else if (isAfLocked && lastLockedFocusDistance != null) {
-                        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        builder.set(
+                            CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_OFF
+                        )
                         builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, lastLockedFocusDistance)
                     }
                 }
@@ -868,21 +1155,29 @@ class CameraRepository(
                 addTarget(previewSurface)
                 set(CaptureRequest.CONTROL_AE_MODE, base.get(CaptureRequest.CONTROL_AE_MODE))
                 set(CaptureRequest.SENSOR_SENSITIVITY, base.get(CaptureRequest.SENSOR_SENSITIVITY))
-                set(CaptureRequest.SENSOR_EXPOSURE_TIME, base.get(CaptureRequest.SENSOR_EXPOSURE_TIME))
+                set(
+                    CaptureRequest.SENSOR_EXPOSURE_TIME,
+                    base.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+                )
                 set(CaptureRequest.CONTROL_AE_REGIONS, base.get(CaptureRequest.CONTROL_AE_REGIONS))
-                set(CaptureRequest.CONTROL_AE_LOCK, true) 
+                set(CaptureRequest.CONTROL_AE_LOCK, true)
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
                 set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rect))
                 set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
             }
             af = true
             session.capture(trigger.build(), repeatingCaptureCallback, cameraThreadManager.handler)
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        }
     }
 
     private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
         private var lastUIUpdate = 0L
-        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
             val now = System.currentTimeMillis()
             val sIso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: 100
             val sExp = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 10_000_000L
@@ -897,7 +1192,8 @@ class CameraRepository(
                 sensorBaseBGain = wbG.blue.coerceAtLeast(0.5f)
             }
 
-            val isPriorityMode = (lastCharacteristics.isoValue == null) != (lastCharacteristics.shutterValue == null)
+            val isPriorityMode =
+                (lastCharacteristics.isoValue == null) != (lastCharacteristics.shutterValue == null)
             if (!isAfLocked && isPriorityMode && (now - lastAeUpdateMillis > 500)) {
                 lastAeUpdateMillis = now
                 startPreviewCaptureRequest(lastCharacteristics)
@@ -909,11 +1205,14 @@ class CameraRepository(
                 val afState = result.get(CaptureResult.CONTROL_AF_STATE)
                 val focused = afState == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED
                 _characteristicsFlow.update { current ->
-                    val base = current ?: Characteristics(isoRange = IntRange(0, 0), shutterRange = LongRange(0, 0))
+                    val base = current ?: Characteristics(
+                        isoRange = IntRange(0, 0),
+                        shutterRange = LongRange(0, 0)
+                    )
                     base.copy(
-                        actualIso = sIso, 
-                        actualShutter = sExp, 
-                        actualFocusDistance = fDist, 
+                        actualIso = sIso,
+                        actualShutter = sExp,
+                        actualFocusDistance = fDist,
                         actualWbKelvin = kelvin,
                         isFocused = focused
                     )
@@ -936,11 +1235,12 @@ class CameraRepository(
     }
 
     private fun handleFocusResult(success: Boolean) {
-        myScope.launch(Dispatchers.Main) { 
+        myScope.launch(Dispatchers.Main) {
             if (success) {
                 triggerVibration(context)
             }
-            Toast.makeText(context, if (success) "FOCUSED" else "Not focused", Toast.LENGTH_SHORT).show() 
+            Toast.makeText(context, if (success) "FOCUSED" else "Not focused", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -948,14 +1248,25 @@ class CameraRepository(
     private fun triggerVibration(context: Context) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                val vibratorManager =
+                    context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
                 val vibrator = vibratorManager?.defaultVibrator
-                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                vibrator?.vibrate(
+                    VibrationEffect.createOneShot(
+                        50,
+                        VibrationEffect.DEFAULT_AMPLITUDE
+                    )
+                )
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                    vibrator?.vibrate(
+                        VibrationEffect.createOneShot(
+                            50,
+                            VibrationEffect.DEFAULT_AMPLITUDE
+                        )
+                    )
                 } else {
                     @Suppress("DEPRECATION")
                     vibrator?.vibrate(50)
@@ -967,11 +1278,25 @@ class CameraRepository(
     }
 
     private fun meteringRectangle(touchPoint: FloatArray): MeteringRectangle {
-        val sensorSize = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
+        val sensorSize =
+            cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)!!
         val orientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)!!
         val coords = touchPoint.copyOf()
-        Matrix().apply { postRotate(-orientation.toFloat(), 0.5f, 0.5f); postScale(sensorSize.width().toFloat(), sensorSize.height().toFloat()); mapPoints(coords) }
-        val rect = Rect((coords[0] - 150).toInt().coerceIn(0, sensorSize.width()), (coords[1] - 150).toInt().coerceIn(0, sensorSize.height()), (coords[0] + 150).toInt().coerceIn(0, sensorSize.width()), (coords[1] + 150).toInt().coerceIn(0, sensorSize.height()))
+        Matrix().apply {
+            postRotate(
+                -orientation.toFloat(),
+                0.5f,
+                0.5f
+            ); postScale(sensorSize.width().toFloat(), sensorSize.height().toFloat()); mapPoints(
+            coords
+        )
+        }
+        val rect = Rect(
+            (coords[0] - 150).toInt().coerceIn(0, sensorSize.width()),
+            (coords[1] - 150).toInt().coerceIn(0, sensorSize.height()),
+            (coords[0] + 150).toInt().coerceIn(0, sensorSize.width()),
+            (coords[1] + 150).toInt().coerceIn(0, sensorSize.height())
+        )
         return MeteringRectangle(rect, MeteringRectangle.METERING_WEIGHT_MAX)
     }
 
@@ -1025,15 +1350,29 @@ class CameraRepository(
 
     private fun kelvinToRgb(kelvin: Float): RggbChannelVector {
         val t = kelvin / 100.0
-        val r = if (t < 66.0) 255.0 else (351.97690566805693 + 0.114206453484165 * (t - 55.0) - 40.25366309332127 * ln(t - 55.0)).coerceIn(0.0, 255.0)
-        val g = if (t < 66.0) (-155.25485562709179 - 0.44596950469579133 * (t - 2.0) + 104.49216199393888 * ln(t - 2.0)).coerceIn(0.0, 255.0) else (325.4494125711974 + 0.07943456536662342 * (t - 50.0) - 28.0852963507957 * ln(t - 50.0)).coerceIn(0.0, 255.0)
-        val b = if (t >= 66.0) 255.0 else if (t <= 20.0) 0.0 else (-254.76935184120902 + 0.8274096064007395 * (t - 10.0) + 115.67994401066147 * ln(t - 10.0)).coerceIn(0.0, 255.0)
+        val r =
+            if (t < 66.0) 255.0 else (351.97690566805693 + 0.114206453484165 * (t - 55.0) - 40.25366309332127 * ln(
+                t - 55.0
+            )).coerceIn(0.0, 255.0)
+        val g =
+            if (t < 66.0) (-155.25485562709179 - 0.44596950469579133 * (t - 2.0) + 104.49216199393888 * ln(
+                t - 2.0
+            )).coerceIn(
+                0.0,
+                255.0
+            ) else (325.4494125711974 + 0.07943456536662342 * (t - 50.0) - 28.0852963507957 * ln(t - 50.0)).coerceIn(
+                0.0,
+                255.0
+            )
+        val b =
+            if (t >= 66.0) 255.0 else if (t <= 20.0) 0.0 else (-254.76935184120902 + 0.8274096064007395 * (t - 10.0) + 115.67994401066147 * ln(
+                t - 10.0
+            )).coerceIn(0.0, 255.0)
         return RggbChannelVector(r.toFloat(), g.toFloat(), g.toFloat(), b.toFloat())
     }
 
     private var lastCapturedBitmap: Bitmap? = null
     private var captureDeferred: CompletableDeferred<Bitmap?>? = null
-
 
 
     fun saveCapturedImage(
@@ -1082,7 +1421,7 @@ object ImageSaver {
 
             val relativePath = getRelativePath(savePath)
             val projection = arrayOf(MediaStore.Images.Media.DISPLAY_NAME)
-            
+
             val selection = "${MediaStore.Images.Media.RELATIVE_PATH} = ?"
             val selectionArgs = arrayOf(relativePath)
             context.contentResolver.query(
@@ -1140,28 +1479,69 @@ object ImageSaver {
         val u = planes[1].buffer.apply { rewind() }
         val v = planes[2].buffer.apply { rewind() }
         val out = ByteArray(width * height * 3 / 2); y.get(out, 0, y.capacity())
-        if (planes[2].pixelStride == 2) { v.get(out, y.capacity(), v.capacity()); out[out.size - 1] = u.get(u.capacity() - 1) } 
-        else { var offset = out.size - 1; for (i in v.capacity() - 1 downTo 0) { out[offset--] = u[i]; out[offset--] = v[i] } }
+        if (planes[2].pixelStride == 2) {
+            v.get(out, y.capacity(), v.capacity()); out[out.size - 1] = u.get(u.capacity() - 1)
+        } else {
+            var offset = out.size - 1; for (i in v.capacity() - 1 downTo 0) {
+                out[offset--] = u[i]; out[offset--] = v[i]
+            }
+        }
         return out
     }
+
     fun saveImage(context: Context, image: Image, name: String) {
         try {
-            val jpeg = ByteArrayOutputStream().apply { YuvImage(image.toNv21(), ImageFormat.NV21, image.width, image.height, null).compressToJpeg(Rect(0, 0, image.width, image.height), 95, this) }.toByteArray()
-            val values = ContentValues().apply { put(MediaStore.Images.Media.DISPLAY_NAME, "$name.jpg"); put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg"); put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/FlashCamera") }
-            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri -> context.contentResolver.openOutputStream(uri)?.use { it.write(jpeg) } }
-        } finally { image.close() }
+            val jpeg = ByteArrayOutputStream().apply {
+                YuvImage(
+                    image.toNv21(),
+                    ImageFormat.NV21,
+                    image.width,
+                    image.height,
+                    null
+                ).compressToJpeg(Rect(0, 0, image.width, image.height), 95, this)
+            }.toByteArray()
+            val values = ContentValues().apply {
+                put(
+                    MediaStore.Images.Media.DISPLAY_NAME,
+                    "$name.jpg"
+                ); put(
+                MediaStore.Images.Media.MIME_TYPE,
+                "image/jpeg"
+            ); put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/FlashCamera")
+            }
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?.let { uri ->
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(jpeg) }
+                }
+        } finally {
+            image.close()
+        }
     }
-    fun saveBitmap(context: Context, bitmap: Bitmap, name: String, savePath: String = "DCIM/FlashCamera") {
+
+    fun saveBitmap(
+        context: Context,
+        bitmap: Bitmap,
+        name: String,
+        savePath: String = "DCIM/FlashCamera"
+    ) {
         try {
-            val bytes = ByteArrayOutputStream().apply { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, this) }.toByteArray()
+            val bytes = ByteArrayOutputStream().apply {
+                bitmap.compress(
+                    Bitmap.CompressFormat.JPEG,
+                    95,
+                    this
+                )
+            }.toByteArray()
             if (savePath.startsWith("content://")) {
                 try {
                     val uri = Uri.parse(savePath)
-                    val docFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                    val docFile =
+                        androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
                     if (docFile != null && docFile.canWrite()) {
                         val newFile = docFile.createFile("image/jpeg", "$name.jpg")
                         if (newFile != null) {
-                            context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
+                            context.contentResolver.openOutputStream(newFile.uri)
+                                ?.use { it.write(bytes) }
                             return
                         }
                     }
@@ -1175,14 +1555,22 @@ object ImageSaver {
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
             }
-            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-            }
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?.let { uri ->
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                }
         } catch (e: Exception) {
             Log.e("ImageSaver", "Save bitmap error: ${e.message}")
         }
     }
-    fun saveBytes(context: Context, bytes: ByteArray, name: String, savePath: String = "DCIM/FlashCamera", location: Location? = null) {
+
+    fun saveBytes(
+        context: Context,
+        bytes: ByteArray,
+        name: String,
+        savePath: String = "DCIM/FlashCamera",
+        location: Location? = null
+    ) {
         try {
             var targetUri: Uri? = null
             if (savePath.startsWith("content://")) {
@@ -1193,7 +1581,8 @@ object ImageSaver {
                         val newFile = docFile.createFile("image/jpeg", "$name.jpg")
                         if (newFile != null) {
                             targetUri = newFile.uri
-                            context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
+                            context.contentResolver.openOutputStream(newFile.uri)
+                                ?.use { it.write(bytes) }
                         }
                     }
                 } catch (e: Exception) {
@@ -1207,7 +1596,10 @@ object ImageSaver {
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                     put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
                 }
-                targetUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                targetUri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    values
+                )
                 targetUri?.let { uri ->
                     context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 }
@@ -1228,7 +1620,18 @@ object ImageSaver {
             Log.e("ImageSaver", "Save bytes error: ${e.message}")
         }
     }
-    fun saveDngBytes(context: Context, cameraCharacteristics: CameraCharacteristics, captureResult: TotalCaptureResult, rawBytes: ByteArray, width: Int, height: Int, name: String, savePath: String = "DCIM/FlashCamera", location: Location? = null) {
+
+    fun saveDngBytes(
+        context: Context,
+        cameraCharacteristics: CameraCharacteristics,
+        captureResult: TotalCaptureResult,
+        rawBytes: ByteArray,
+        width: Int,
+        height: Int,
+        name: String,
+        savePath: String = "DCIM/FlashCamera",
+        location: Location? = null
+    ) {
         try {
             val dngCreator = DngCreator(cameraCharacteristics, captureResult)
             if (location != null) {
@@ -1240,13 +1643,15 @@ object ImageSaver {
             if (savePath.startsWith("content://")) {
                 try {
                     val uri = Uri.parse(savePath)
-                    val docFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
+                    val docFile =
+                        androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
                     if (docFile != null && docFile.canWrite()) {
                         val newFile = docFile.createFile("image/x-adobe-dng", "$name.dng")
                         if (newFile != null) {
-                            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
-                                dngCreator.writeByteBuffer(outputStream, size, byteBuffer, 0L)
-                            }
+                            context.contentResolver.openOutputStream(newFile.uri)
+                                ?.use { outputStream ->
+                                    dngCreator.writeByteBuffer(outputStream, size, byteBuffer, 0L)
+                                }
                             return
                         }
                     }
@@ -1260,19 +1665,31 @@ object ImageSaver {
                 put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
             }
-            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    dngCreator.writeByteBuffer(outputStream, size, byteBuffer, 0L)
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?.let { uri ->
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        dngCreator.writeByteBuffer(outputStream, size, byteBuffer, 0L)
+                    }
                 }
-            }
         } catch (e: Exception) {
             Log.e("ImageSaver", "Save DNG bytes error: ${e.message}")
         }
     }
 
-    fun saveDngBitmap(context: Context, bitmap: Bitmap, name: String, savePath: String = "DCIM/FlashCamera") {
+    fun saveDngBitmap(
+        context: Context,
+        bitmap: Bitmap,
+        name: String,
+        savePath: String = "DCIM/FlashCamera"
+    ) {
         try {
-            val bytes = ByteArrayOutputStream().apply { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, this) }.toByteArray()
+            val bytes = ByteArrayOutputStream().apply {
+                bitmap.compress(
+                    Bitmap.CompressFormat.JPEG,
+                    100,
+                    this
+                )
+            }.toByteArray()
             if (savePath.startsWith("content://")) {
                 try {
                     val uri = Uri.parse(savePath)
@@ -1280,7 +1697,8 @@ object ImageSaver {
                     if (docFile != null && docFile.canWrite()) {
                         val newFile = docFile.createFile("image/x-adobe-dng", "$name.dng")
                         if (newFile != null) {
-                            context.contentResolver.openOutputStream(newFile.uri)?.use { it.write(bytes) }
+                            context.contentResolver.openOutputStream(newFile.uri)
+                                ?.use { it.write(bytes) }
                             return
                         }
                     }
@@ -1294,9 +1712,10 @@ object ImageSaver {
                 put(MediaStore.Images.Media.MIME_TYPE, "image/x-adobe-dng")
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
             }
-            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-            }
+            context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?.let { uri ->
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                }
         } catch (e: Exception) {
             Log.e("ImageSaver", "Save DNG bitmap error: ${e.message}")
         }
@@ -1306,7 +1725,11 @@ object ImageSaver {
         val cleanPath = savePath.trim()
 
         if (cleanPath.startsWith("content://")) {
-            val decoded = try { Uri.decode(cleanPath) } catch (_: Exception) { cleanPath }
+            val decoded = try {
+                Uri.decode(cleanPath)
+            } catch (_: Exception) {
+                cleanPath
+            }
             if (decoded.contains("tree/")) {
                 val treePart = decoded.substringAfter("tree/")
                 val parts = treePart.split(":")
@@ -1335,7 +1758,8 @@ object ImageSaver {
         if (cleanPath.startsWith("/storage/") || cleanPath.startsWith("/sdcard/")) {
             val dcimIndex = cleanPath.indexOf("DCIM/")
             val picturesIndex = cleanPath.indexOf("Pictures/")
-            val index = if (dcimIndex != -1) dcimIndex else if (picturesIndex != -1) picturesIndex else -1
+            val index =
+                if (dcimIndex != -1) dcimIndex else if (picturesIndex != -1) picturesIndex else -1
             if (index != -1) {
                 return cleanPath.substring(index)
             }
@@ -1345,24 +1769,54 @@ object ImageSaver {
 }
 
 object AutoExposure {
-    private val SHUTTERS = listOf(125_000L, 250_000L, 500_000L, 1_000_000L, 2_000_000L, 4_000_000L, 8_000_000L, 16_666_666L, 33_333_333L, 66_666_666L, 125_000_000L, 250_000_000L, 500_000_000L, 1_000_000_000L)
+    private val SHUTTERS = listOf(
+        125_000L,
+        250_000L,
+        500_000L,
+        1_000_000L,
+        2_000_000L,
+        4_000_000L,
+        8_000_000L,
+        16_666_666L,
+        33_333_333L,
+        66_666_666L,
+        125_000_000L,
+        250_000_000L,
+        500_000_000L,
+        1_000_000_000L
+    )
     private val ISOS = listOf(50, 100, 200, 400, 800, 1600, 3200, 6400)
-    
-    fun getShutterPriorityWithClassicSteps(rb: CaptureRequest.Builder?, chars: CameraCharacteristics, aeIso: Int, aeExp: Long, targetIso: Int, currentLum: Int): Long {
+
+    fun getShutterPriorityWithClassicSteps(
+        rb: CaptureRequest.Builder?,
+        chars: CameraCharacteristics,
+        aeIso: Int,
+        aeExp: Long,
+        targetIso: Int,
+        currentLum: Int
+    ): Long {
         if (targetIso <= 0) return aeExp
         val lumFactor = if (currentLum > 0) 128.0 / currentLum.toDouble() else 1.0
         val ideal = (aeExp * (aeIso.toDouble() / targetIso.toDouble()) * lumFactor).toLong()
-        
+
         val closest = SHUTTERS.minByOrNull { abs(ln(it.toDouble() / ideal)) } ?: ideal
         val range = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
     }
-    
-    fun getIsoPriorityWithClassicSteps(rb: CaptureRequest.Builder?, chars: CameraCharacteristics, aeIso: Int, aeExp: Long, targetExp: Long, currentLum: Int): Int {
+
+    fun getIsoPriorityWithClassicSteps(
+        rb: CaptureRequest.Builder?,
+        chars: CameraCharacteristics,
+        aeIso: Int,
+        aeExp: Long,
+        targetExp: Long,
+        currentLum: Int
+    ): Int {
         if (targetExp <= 0) return aeIso
         val lumFactor = if (currentLum > 0) 128.0 / currentLum.toDouble() else 1.0
-        val ideal = (aeIso.toDouble() * (aeExp.toDouble() / targetExp.toDouble()) * lumFactor).toInt()
-        
+        val ideal =
+            (aeIso.toDouble() * (aeExp.toDouble() / targetExp.toDouble()) * lumFactor).toInt()
+
         val closest = ISOS.minByOrNull { abs(ln(it.toDouble() / ideal)) } ?: ideal
         val range = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
         return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
