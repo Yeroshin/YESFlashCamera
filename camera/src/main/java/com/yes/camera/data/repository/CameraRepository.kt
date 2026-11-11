@@ -262,9 +262,9 @@ class CameraRepository(
     private var lastJpegBytes: ByteArray? = null
 
     ////////////////////////////
-    private var prevFrameLum = 0.0
-    private var currFrameLum = 0.0
-    private var nextFrameLum = 0.0
+    private var lastLuma = 0.0
+    private var bufferedPeakBytes: ByteArray? = null
+    private var flashCaptured = false
 
     private fun getLuma(image: Image): Double {
         val buffer = image.planes[0].buffer
@@ -337,8 +337,7 @@ class CameraRepository(
         }
     }
 
-    private fun processAndStoreJpeg(image: Image) {
-        val bytes = imageToJpegBytes(image)
+    private fun processAndStoreJpegBytes(bytes: ByteArray) {
         lastJpegBytes = bytes
         val decodedBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         val bitmap = decodedBitmap?.let { processCapturedBitmap(it) }
@@ -352,6 +351,11 @@ class CameraRepository(
         }
     }
 
+    private fun processAndStoreJpeg(image: Image) {
+        val bytes = imageToJpegBytes(image)
+        processAndStoreJpegBytes(bytes)
+    }
+
     private fun detachJpegListener() {
         try {
             imageReaderJpeg.setOnImageAvailableListener(null, null)
@@ -363,17 +367,30 @@ class CameraRepository(
         reader.acquireLatestImage()?.use { image ->
             try {
                 if (externalFlash) {
-                    val brightnessThreshold = 25.0
+                    if (flashCaptured) return@use
                     val luma = getLuma(image)
-
-                    prevFrameLum = currFrameLum
-                    currFrameLum = nextFrameLum
-                    nextFrameLum = luma
-
-                    if (currFrameLum > prevFrameLum + brightnessThreshold && currFrameLum > nextFrameLum + brightnessThreshold) {
-                        processAndStoreJpeg(image)
-                        detachJpegListener()
+                    if (lastLuma == 0.0) {
+                        lastLuma = luma
+                        return@use
                     }
+
+                    val riseThreshold = 20.0
+                    val dropThreshold = 20.0
+
+                    if (bufferedPeakBytes == null) {
+                        if (luma > lastLuma + riseThreshold) {
+                            bufferedPeakBytes = imageToJpegBytes(image)
+                        }
+                    } else {
+                        if (luma < lastLuma - dropThreshold) {
+                            flashCaptured = true
+                            bufferedPeakBytes?.let { peakBytes ->
+                                processAndStoreJpegBytes(peakBytes)
+                            } ?: processAndStoreJpeg(image)
+                            detachJpegListener()
+                        }
+                    }
+                    lastLuma = luma
                 } else {
                     processAndStoreJpeg(image)
                     detachJpegListener()
@@ -809,6 +826,9 @@ class CameraRepository(
         characteristics: Characteristics
     ) {
         try {
+            lastLuma = 0.0
+            bufferedPeakBytes = null
+            flashCaptured = false
             if (characteristics.saveLocation) {
                 val location = cameraLocationProvider.getCurrentLocation()
                 if (location != null) {
