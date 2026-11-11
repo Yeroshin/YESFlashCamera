@@ -13,7 +13,6 @@ import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.graphics.YuvImage
-import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
@@ -42,7 +41,6 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.MediaStore
 import android.util.Log
-import android.util.Rational
 import android.util.Size
 import android.view.Surface
 import android.widget.Toast
@@ -51,16 +49,13 @@ import androidx.documentfile.provider.DocumentFile
 import com.yes.camera.data.repository.AutoExposure.getIsoPriorityWithClassicSteps
 import com.yes.camera.data.repository.AutoExposure.getShutterPriorityWithClassicSteps
 import com.yes.camera.domain.model.Characteristics
-import com.yes.camera.utils.ImageComparator
 import com.yes.shared.domain.Dimensions
 import com.yes.shared.domain.ImgFormat
 import com.yes.shared.utils.CameraThreadManager
-import com.yes.shared.utils.FileNameGenerator
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -75,7 +70,6 @@ import java.util.Arrays
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ln
-import kotlin.math.pow
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class CameraRepository(
@@ -93,6 +87,7 @@ class CameraRepository(
     private lateinit var histogramSurface: Surface
     private lateinit var captureSurfaceJpeg: Surface
     private lateinit var captureSurfaceRaw: Surface
+    private lateinit var captureExternalFlashSurface: Surface
 
     private val cameraLocationProvider by lazy { CameraLocationProvider(context) }
 
@@ -149,6 +144,14 @@ class CameraRepository(
         image.close()
     }
 
+    private fun calculateMeanLuminance(dataBuffer: ByteArray): Double {
+        var sum = 0L
+        for (i in dataBuffer.indices step 8) {
+            sum += dataBuffer[i].toInt() and 0xFF
+        }
+        return if (dataBuffer.isEmpty()) 128.0 else sum.toDouble() / (dataBuffer.size / 8)
+    }
+
     //////////////////
     private var prevLum = 0.0
     private var currLum = 0.0
@@ -165,7 +168,7 @@ class CameraRepository(
         minSafeShutterNs: Long = 4_000_000L,
         maxSafeShutterNs: Long = 33_333_333L
     ) {
-        val currentMeanLum = calculateMeanLuminance()
+        val currentMeanLum = calculateMeanLuminance(histogramDataBuffer)
 
         // Сдвиг скользящего окна по 3 кадрам [предыдущий, текущий, следующий]
         prevLum = currLum
@@ -178,7 +181,8 @@ class CameraRepository(
             //  applyForcedShutterRange(minSafeShutterNs, maxSafeShutterNs)
             println("hello")
             // Сохраняем кадр
-            //    triggerFlashCapture()
+            val builder = persistentBuilder ?: return
+            triggerFlashCapture(builder)
         }
     }
     /////////////////
@@ -258,109 +262,124 @@ class CameraRepository(
     private var lastJpegBytes: ByteArray? = null
 
     ////////////////////////////
-    private val listenerExternalFlashJpeg = ImageReader.OnImageAvailableListener { reader ->
-        reader.acquireNextImage()?.let { image ->
+    private var prevFrameLum = 0.0
+    private var currFrameLum = 0.0
+    private var nextFrameLum = 0.0
 
+    private fun getLuma(image: Image): Double {
+        val buffer = image.planes[0].buffer
+        val limit = buffer.remaining()
+        if (limit <= 0) return 128.0
+
+        var sum = 0L
+        var count = 0
+        val step = (limit / 1000).coerceAtLeast(1)
+        var i = 0
+        while (i < limit) {
+            sum += (buffer.get(i).toInt() and 0xFF)
+            count++
+            i += step
+        }
+        return if (count > 0) sum.toDouble() / count else 128.0
+    }
+
+    private fun imageToJpegBytes(image: Image): ByteArray {
+        return if (image.format == ImageFormat.YUV_420_888) {
+            val out = ByteArrayOutputStream()
+            val width = image.width
+            val height = image.height
+            val ySize = width * height
+            val uvSize = width * height / 2
+            val nv21 = ByteArray(ySize + uvSize)
+
+            val yBuffer = image.planes[0].buffer
+            val uBuffer = image.planes[1].buffer
+            val vBuffer = image.planes[2].buffer
+
+            val yRowStride = image.planes[0].rowStride
+            var pos = 0
+            if (yRowStride == width) {
+                yBuffer.get(nv21, 0, ySize)
+                pos = ySize
+            } else {
+                for (row in 0 until height) {
+                    yBuffer.position(row * yRowStride)
+                    yBuffer.get(nv21, pos, width)
+                    pos += width
+                }
+            }
+            val uvRowStride = image.planes[1].rowStride
+            val uvPixelStride = image.planes[1].pixelStride
+            val uvHeight = height / 2
+            val uvWidth = width / 2
+
+            for (row in 0 until uvHeight) {
+                for (col in 0 until uvWidth) {
+                    val uvIndex = row * uvRowStride + col * uvPixelStride
+                    nv21[pos++] = vBuffer.get(uvIndex) // V
+                    nv21[pos++] = uBuffer.get(uvIndex) // U
+                }
+            }
+
+            YuvImage(
+                nv21,
+                ImageFormat.NV21,
+                width,
+                height,
+                null
+            ).compressToJpeg(Rect(0, 0, width, height), 100, out)
+            out.toByteArray()
+        } else {
+            val buffer = image.planes[0].buffer
+            val data = ByteArray(buffer.remaining())
+            buffer.get(data)
+            data
         }
     }
-    ////////////////////////////
+
+    private fun processAndStoreJpeg(image: Image) {
+        val bytes = imageToJpegBytes(image)
+        lastJpegBytes = bytes
+        val decodedBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        val bitmap = decodedBitmap?.let { processCapturedBitmap(it) }
+        if (bitmap != null) {
+            _characteristicsFlow.update {
+                it?.copy(
+                    capturedBitmap = bitmap,
+                    isCaptureRequested = false
+                )
+            }
+        }
+    }
+
+    private fun detachJpegListener() {
+        try {
+            imageReaderJpeg.setOnImageAvailableListener(null, null)
+        } catch (_: Exception) {
+        }
+    }
 
     private val listenerJpeg = ImageReader.OnImageAvailableListener { reader ->
-        reader.acquireLatestImage()?.let { image ->
+        reader.acquireLatestImage()?.use { image ->
             try {
-                val bytes = if (image.format == ImageFormat.JPEG) {
-                    val buffer = image.planes[0].buffer
-                    val data = ByteArray(buffer.remaining())
-                    buffer.get(data)
-                    data
-                } else if (image.format == ImageFormat.YUV_420_888) {
-                    /*
-                    val yBuffer = image.planes[0].buffer
-                    val uBuffer = image.planes[1].buffer
-                    val vBuffer = image.planes[2].buffer
-                    val ySize = yBuffer.remaining()
-                    val uSize = uBuffer.remaining()
-                    val vSize = vBuffer.remaining()
-                    val nv21 = ByteArray(ySize + uSize + vSize)
-                    yBuffer.get(nv21, 0, ySize)
-                    vBuffer.get(nv21, ySize, vSize)
-                    uBuffer.get(nv21, ySize + vSize, uSize)
-                    */
-                    val out = ByteArrayOutputStream()
-                    val width = image.width
-                    val height = image.height
-                    val ySize = width * height
-                    val uvSize = width * height / 2
-                    val nv21 = ByteArray(ySize + uvSize)
+                if (externalFlash) {
+                    val brightnessThreshold = 25.0
+                    val luma = getLuma(image)
 
-                    val yBuffer = image.planes[0].buffer
-                    val uBuffer = image.planes[1].buffer
-                    val vBuffer = image.planes[2].buffer
+                    prevFrameLum = currFrameLum
+                    currFrameLum = nextFrameLum
+                    nextFrameLum = luma
 
-                    val yRowStride = image.planes[0].rowStride
-                    var pos = 0
-                    if (yRowStride == width) {
-                        yBuffer.get(nv21, 0, ySize)
-                        pos = ySize
-                    } else {
-                        for (row in 0 until height) {
-                            yBuffer.position(row * yRowStride)
-                            yBuffer.get(nv21, pos, width)
-                            pos += width
-                        }
+                    if (currFrameLum > prevFrameLum + brightnessThreshold && currFrameLum > nextFrameLum + brightnessThreshold) {
+                        processAndStoreJpeg(image)
+                        detachJpegListener()
                     }
-                    val uvRowStride = image.planes[1].rowStride
-                    val uvPixelStride = image.planes[1].pixelStride
-                    val uvHeight = height / 2
-                    val uvWidth = width / 2
-
-                    for (row in 0 until uvHeight) {
-                        for (col in 0 until uvWidth) {
-                            val uvIndex = row * uvRowStride + col * uvPixelStride
-                            nv21[pos++] = vBuffer.get(uvIndex) // V
-                            nv21[pos++] = uBuffer.get(uvIndex) // U
-                        }
-                    }
-
-                    YuvImage(
-                        nv21,
-                        ImageFormat.NV21,
-                        width ,
-                        height,
-                        null
-                    ).compressToJpeg(Rect(0, 0, image.width, image.height), 100, out)
-                    out.toByteArray()
                 } else {
-                    val buffer = image.planes[0].buffer
-                    val data = ByteArray(buffer.remaining())
-                    buffer.get(data)
-                    data
-                }
-
-                lastJpegBytes = bytes
-                val decodedBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                image.close()
-
-                val bitmap =
-                    if (decodedBitmap != null) processCapturedBitmap(decodedBitmap) else null
-
-                if (bitmap != null) {
-                    _characteristicsFlow.update {
-                        it?.copy(
-                            capturedBitmap = bitmap,
-                            isCaptureRequested = false
-                        )
-                    }
+                    processAndStoreJpeg(image)
+                    detachJpegListener()
                 }
             } catch (e: Exception) {
-                Log.e("CameraRepository", "Error processing JPEG image: ${e.message}")
-                image.close()
-            } finally {
-                try {
-                    imageReaderJpeg.setOnImageAvailableListener(null, null)
-                } catch (_: Exception) {
-
-                }
+                Log.e("CameraRepository", "Error processing JPEG image: ${e.message}", e)
             }
         }
     }
@@ -525,7 +544,8 @@ class CameraRepository(
         val height =
             if (characteristics.resolution.height > 0) characteristics.resolution.height else 1080
 
-        glSurfaceTexture.setDefaultBufferSize(width, height)
+        // glSurfaceTexture.setDefaultBufferSize(width, height)
+        glSurfaceTexture.setDefaultBufferSize(640, 480)
         previewSurface = Surface(glSurfaceTexture)
         imageReaderHistogram = ImageReader.newInstance(
             320,
@@ -538,7 +558,7 @@ class CameraRepository(
             width,
             height,
             ImageFormat.YUV_420_888,
-            3
+            4
         )
         captureSurfaceJpeg = imageReaderJpeg.surface
 
@@ -637,12 +657,13 @@ class CameraRepository(
         }
     }
 
+    private var externalFlash = false
     private fun processPreviewCaptureRequest(characteristics: Characteristics) {
         val builder = persistentBuilder ?: return
         val session = cameraSession ?: return
         val hw = _characteristicsFlow.value
         val old = appliedCharacteristics
-
+        externalFlash = characteristics.externalFlash
         try {
             // 1. БАЛАНС БЕЛОГО
             if (characteristics.wbValue != null) {
@@ -743,12 +764,17 @@ class CameraRepository(
                         Log.e("CameraRepository", "Precapture trigger error: ${e.message}", e)
                         executeStillCapture(builder, session, needRaw, characteristics)
                     }
+                } else if (characteristics.externalFlash) {
+                    executeExternalFlashStillCapture(builder, session, characteristics)
                 } else {
                     executeStillCapture(builder, session, needRaw, characteristics)
                 }
             } else {
                 try {
+
                     builder.removeTarget(captureSurfaceJpeg)
+
+
                     builder.removeTarget(captureSurfaceRaw)
                 } catch (_: Exception) {
 
@@ -774,6 +800,72 @@ class CameraRepository(
             }
         } catch (e: Exception) {
             Log.e("CameraRepository", "processPreviewCaptureRequest error: ${e.message}", e)
+        }
+    }
+
+    private fun executeExternalFlashStillCapture(
+        builder: CaptureRequest.Builder,
+        session: CameraCaptureSession,
+        characteristics: Characteristics
+    ) {
+        try {
+            if (characteristics.saveLocation) {
+                val location = cameraLocationProvider.getCurrentLocation()
+                if (location != null) {
+                    builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
+                }
+            }
+            builder.set(
+                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
+            )
+            imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
+
+            builder.addTarget(captureSurfaceJpeg)
+
+
+            session.setRepeatingRequest(
+                builder.build(),
+                object : CameraCaptureSession.CaptureCallback() {
+                    override fun onCaptureCompleted(
+                        session: CameraCaptureSession,
+                        request: CaptureRequest,
+                        result: TotalCaptureResult
+                    ) {
+                        super.onCaptureCompleted(session, request, result)
+                        lastCaptureResult = result
+                        try {
+                          //  builder.removeTarget(captureSurfaceJpeg)
+
+                        } catch (_: Exception) {
+                        }
+                       // detachCaptureListeners()
+                    }
+
+                    override fun onCaptureFailed(
+                        session: CameraCaptureSession,
+                        request: CaptureRequest,
+                        failure: CaptureFailure
+                    ) {
+                        super.onCaptureFailed(session, request, failure)
+                        try {
+                            builder.removeTarget(captureSurfaceJpeg)
+
+                        } catch (_: Exception) {
+                        }
+                        detachCaptureListeners()
+                    }
+                },
+                cameraThreadManager.handler
+            )
+        } catch (e: Exception) {
+            Log.e("CameraRepository", "executeStillCapture error: ${e.message}", e)
+            try {
+                builder.removeTarget(captureSurfaceJpeg)
+
+            } catch (_: Exception) {
+            }
+            detachCaptureListeners()
         }
     }
 
@@ -989,7 +1081,7 @@ class CameraRepository(
 
             iso != null -> {
                 AE = false
-                val meanLum = calculateMeanLuminance()
+                val meanLum = calculateMeanLuminance(histogramDataBuffer)
                 val bS = hw?.actualShutter ?: 33_333_333L
                 val bI = hw?.actualIso ?: 100
                 val calcShutter = getShutterPriorityWithClassicSteps(
@@ -1013,7 +1105,7 @@ class CameraRepository(
 
             else -> { // shutter != null
                 AE = false
-                val meanLum = calculateMeanLuminance()
+                val meanLum = calculateMeanLuminance(histogramDataBuffer)
                 val bS = hw?.actualShutter ?: 33_333_333L
                 val bI = hw?.actualIso ?: 100
                 val calcIso = getIsoPriorityWithClassicSteps(
@@ -1038,14 +1130,6 @@ class CameraRepository(
         return ExposureResult(modeChanged)
     }
 
-    private fun calculateMeanLuminance(): Double {
-        var sum = 0L
-        for (i in histogramDataBuffer.indices step 8) {
-            sum += histogramDataBuffer[i].toInt() and 0xFF
-        }
-        return if (histogramDataBuffer.isEmpty()) 128.0 else sum.toDouble() / (histogramDataBuffer.size / 8)
-    }
-
 
     private fun applyForcedShutterRange(minNs: Long, maxNs: Long) {
         val builder = persistentBuilder ?: return
@@ -1064,13 +1148,51 @@ class CameraRepository(
         }
     }
 
-    private fun triggerFlashCapture() {
+    private fun triggerFlashCapture(
+        builder: CaptureRequest.Builder,
+    ) {
         val session = cameraSession ?: return
         try {
             val captureBuilder =
                 cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
                     addTarget(imageReaderJpeg.surface)
                 }
+            imageReaderJpeg.setOnImageAvailableListener(listenerJpeg, cameraThreadManager.handler)
+
+
+            builder.addTarget(captureSurfaceJpeg)
+
+
+            session.capture(builder.build(), object : CameraCaptureSession.CaptureCallback() {
+                override fun onCaptureCompleted(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    result: TotalCaptureResult
+                ) {
+                    super.onCaptureCompleted(session, request, result)
+                    lastCaptureResult = result
+                    try {
+                        builder.removeTarget(captureSurfaceJpeg)
+
+                    } catch (_: Exception) {
+                    }
+                    detachCaptureListeners()
+                }
+
+                override fun onCaptureFailed(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    failure: CaptureFailure
+                ) {
+                    super.onCaptureFailed(session, request, failure)
+                    try {
+                        builder.removeTarget(captureSurfaceJpeg)
+
+                    } catch (_: Exception) {
+                    }
+                    detachCaptureListeners()
+                }
+            }, cameraThreadManager.handler)
             session.capture(
                 captureBuilder.build(),
                 object : CameraCaptureSession.CaptureCallback() {
@@ -1822,3 +1944,7 @@ object AutoExposure {
         return range?.let { closest.coerceIn(it.lower, it.upper) } ?: closest
     }
 }
+
+
+
+
