@@ -239,7 +239,7 @@ fun CameraScreenSuccess(
                     val startHeight = if (previewSize.height > 0) previewSize.height.toFloat() else rootHeightPx * 0.7f
 
                     // End geometry (strictly on the left, strictly above parameter value selector with small padding)
-                    val thumbHeightPx = with(density) { 90.dp.toPx() }
+                    val thumbHeightPx = with(density) {180.dp.toPx() }
                     val thumbWidthPx = thumbHeightPx * aspectRatio
 
                     val leftPaddingPx = with(density) { 16.dp.toPx() }

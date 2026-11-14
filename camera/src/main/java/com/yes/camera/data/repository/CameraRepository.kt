@@ -42,6 +42,7 @@ import android.os.VibratorManager
 import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
+import android.view.OrientationEventListener
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -187,15 +188,58 @@ class CameraRepository(
     }
     /////////////////
 
+    private var deviceOrientationDegrees: Int = 0
+
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                deviceOrientationDegrees = ((orientation + 45) / 90 * 90) % 360
+            }
+        }
+    }
+
+    private fun computeJpegOrientation(): Int {
+        val sensorOrientation =
+            if (::cameraCharacteristics.isInitialized) {
+                cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+            } else 90
+
+        val lensFacing =
+            if (::cameraCharacteristics.isInitialized) {
+                cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
+            } else null
+        val isFront = lensFacing == CameraCharacteristics.LENS_FACING_FRONT
+
+        val deviceOrientation = deviceOrientationDegrees
+
+        return if (isFront) {
+            (sensorOrientation - deviceOrientation + 360) % 360
+        } else {
+            (sensorOrientation + deviceOrientation) % 360
+        }
+    }
+
+    private fun degreesToExifOrientation(degrees: Int): Int {
+        return when ((degrees % 360 + 360) % 360) {
+            0 -> ExifInterface.ORIENTATION_NORMAL
+            90 -> ExifInterface.ORIENTATION_ROTATE_90
+            180 -> ExifInterface.ORIENTATION_ROTATE_180
+            270 -> ExifInterface.ORIENTATION_ROTATE_270
+            else -> ExifInterface.ORIENTATION_NORMAL
+        }
+    }
+
     private fun processCapturedBitmap(bitmap: Bitmap): Bitmap {
         return try {
-            val orientation =
-                cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
-            val lensFacing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
+            val jpegOrientation = computeJpegOrientation()
+            val lensFacing = if (::cameraCharacteristics.isInitialized) {
+                cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)
+            } else null
             val isFront = lensFacing == CameraCharacteristics.LENS_FACING_FRONT
 
             val matrix = Matrix().apply {
-                postRotate(orientation.toFloat())
+                postRotate(jpegOrientation.toFloat())
                 if (isFront) {
                     postScale(-1f, 1f)
                 }
@@ -472,6 +516,9 @@ class CameraRepository(
 
     @SuppressLint("MissingPermission")
     fun openCamera(backCamera: Boolean): StateFlow<Characteristics?> {
+        if (orientationEventListener.canDetectOrientation()) {
+            orientationEventListener.enable()
+        }
         val facing =
             if (backCamera) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
         val targetId = cameraManager.cameraIdList.firstOrNull { id ->
@@ -495,6 +542,10 @@ class CameraRepository(
     }
 
     fun closeCamera() {
+        try {
+            orientationEventListener.disable()
+        } catch (_: Exception) {
+        }
         cameraLocationProvider.stopTracking()
         try {
             cameraSession?.close()
@@ -851,6 +902,8 @@ class CameraRepository(
                     builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
                 }
             }
+            val jpegOrientation = computeJpegOrientation()
+            builder.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation)
             builder.set(
                 CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                 CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
@@ -920,6 +973,8 @@ class CameraRepository(
                     builder.set(CaptureRequest.JPEG_GPS_LOCATION, location)
                 }
             }
+            val jpegOrientation = computeJpegOrientation()
+            builder.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation)
             builder.set(
                 CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
                 CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE
@@ -1013,6 +1068,8 @@ class CameraRepository(
         val capResult = lastCaptureResult
         val saveLocation = appliedCharacteristics?.saveLocation == true
         val location = if (saveLocation) cameraLocationProvider.getCurrentLocation() else null
+        val jpegOrientation = computeJpegOrientation()
+        val exifOrientation = degreesToExifOrientation(jpegOrientation)
 
         lastJpegBytes = null
         lastRawBytes = null
@@ -1024,7 +1081,7 @@ class CameraRepository(
             when (imageFormat) {
                 ImgFormat.JPEG -> {
                     if (jpegBytes != null) {
-                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
+                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location, exifOrientation)
                     }
                 }
 
@@ -1039,14 +1096,15 @@ class CameraRepository(
                             rawHeight,
                             baseFileName,
                             savePath,
-                            location
+                            location,
+                            exifOrientation
                         )
                     }
                 }
 
                 ImgFormat.JPEGDNG -> {
                     if (jpegBytes != null) {
-                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location)
+                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location, exifOrientation)
                     }
                     if (rawBytes != null && capResult != null) {
                         ImageSaver.saveDngBytes(
@@ -1058,7 +1116,8 @@ class CameraRepository(
                             rawHeight,
                             baseFileName,
                             savePath,
-                            location
+                            location,
+                            exifOrientation
                         )
                     }
                 }
@@ -1729,7 +1788,8 @@ object ImageSaver {
         bytes: ByteArray,
         name: String,
         savePath: String = "DCIM/FlashCamera",
-        location: Location? = null
+        location: Location? = null,
+        exifOrientation: Int? = null
     ) {
         try {
             var targetUri: Uri? = null
@@ -1765,15 +1825,20 @@ object ImageSaver {
                 }
             }
 
-            if (location != null && targetUri != null) {
+            if ((location != null || exifOrientation != null) && targetUri != null) {
                 try {
                     context.contentResolver.openFileDescriptor(targetUri, "rw")?.use { pfd ->
                         val exif = ExifInterface(pfd.fileDescriptor)
-                        exif.setGpsInfo(location)
+                        if (location != null) {
+                            exif.setGpsInfo(location)
+                        }
+                        if (exifOrientation != null) {
+                            exif.setAttribute(ExifInterface.TAG_ORIENTATION, exifOrientation.toString())
+                        }
                         exif.saveAttributes()
                     }
                 } catch (e: Exception) {
-                    Log.e("ImageSaver", "Failed to write GPS Exif: ${e.message}")
+                    Log.e("ImageSaver", "Failed to write EXIF metadata: ${e.message}")
                 }
             }
         } catch (e: Exception) {
@@ -1790,12 +1855,16 @@ object ImageSaver {
         height: Int,
         name: String,
         savePath: String = "DCIM/FlashCamera",
-        location: Location? = null
+        location: Location? = null,
+        exifOrientation: Int? = null
     ) {
         try {
             val dngCreator = DngCreator(cameraCharacteristics, captureResult)
             if (location != null) {
                 dngCreator.setLocation(location)
+            }
+            if (exifOrientation != null) {
+                dngCreator.setOrientation(exifOrientation)
             }
             val byteBuffer = ByteBuffer.wrap(rawBytes)
             val size = Size(width, height)

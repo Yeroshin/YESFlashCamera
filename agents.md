@@ -147,8 +147,7 @@ Supporting components for hardware and system interop:
 
 ## ARCHITECTURE DECISIONS LOG (CHANGELOG)
 *This section is automatically maintained by the AI Agent.*
-## ARCHITECTURE DECISIONS LOG (CHANGELOG)
-*This section is automatically maintained by the AI Agent.*
+- **[2026-03-31] Single Back Navigation in Captured Photo Preview (`CapturedImageScreen`):** Removed the "Save" and "Cancel" buttons from `CapturedImageScreen`. Photo saving happens automatically upon capture without manual confirmation. Added a top-left back navigation button (`VectorShadow` with `R.drawable.arrow_back`) that returns the user to the live camera preview.
 - **[2026-03-31] Preserving `supportsRaw` and `backCamera` in `SettingsUI` & `MapperUI`:** Updated `SettingsUI` and `MapperUI` (`map(settings, storageInfo)` and `map(settingsUI)`) to carry over `supportsRaw` and `backCamera` bidirectionally, preventing `supportsRaw` from resetting to `null`/false when saving other settings such as image format or resolution.
 - **[2026-03-31] Unification of DNG Capture Format Terminology (`SettingsScreenSuccessNew` & `MapperUI`):** Removed all legacy references to `"RAW"` and `"JPEG+RAW"` from `SettingsScreenSuccessNew` and `MapperUI`, replacing them uniformly with `"DNG"` and `"JPEG+DNG"` to match the project's standard DNG capture format model.
 - **[2026-03-31] Fixed RAW Support Latching in `SubscribeCameraSettingsUseCase`:** Replaced logical OR (`settings.supportsRaw || base.supportsRaw`) with direct active camera capability (`cameraData?.supportsRaw ?: settings.supportsRaw`), ensuring `supportsRaw` correctly updates (and does not permanently latch to `true`) when switching between cameras with and without RAW support.
@@ -424,6 +423,12 @@ Supporting components for hardware and system interop:
   - Added `histogramEnabled` boolean preference across `:settings` and `:camera` modules (`Settings`, `SettingsUI`, `Characteristics`, `CharacteristicsUI`, `SettingsRepository`, DataStore preferences, `SubscribeCameraSettingsUseCase`, and `MapperUI`).
   - Wired up Category 3.5 in `SettingsScreenSuccessNew.kt` to toggle histogram visibility with `SettingsSwitch`.
   - Conditionalized rendering of `Histogram` in `CameraScreenSuccess.kt` based on `characteristics.histogramEnabled`.
+- **[2026-03-31] EXIF & Hardware Orientation Alignment for Saved Photos (`CameraRepository.kt` & `ImageSaver`):**
+  - Added physical device orientation tracking via `OrientationEventListener` in `CameraRepository`.
+  - Implemented `computeJpegOrientation()` to dynamically calculate the combined hardware sensor and physical device orientation angle (`(sensorOrientation ± deviceOrientation) % 360`) for both back and front cameras.
+  - Set `CaptureRequest.JPEG_ORIENTATION` on still capture requests, allowing the hardware JPEG encoder to embed native EXIF orientation metadata into the output stream.
+  - Updated `ImageSaver.saveBytes(...)` to write `ExifInterface.TAG_ORIENTATION` into saved JPEG file descriptors, and `ImageSaver.saveDngBytes(...)` to pass EXIF orientation to `DngCreator.setOrientation(...)`.
+  - Refactored `processCapturedBitmap` to rotate in-memory bitmaps by `jpegOrientation` (with front-camera horizontal mirroring), ensuring saved JPEG/DNG files and in-app preview screens display upright in any orientation.
 - **[2026-03-31] Persisted Camera Selection across Settings Navigation (`OpenCameraUseCase`, `CameraContract`, `CameraScreen`):**
   - Updated `CameraContract.Event.OnOpenCamera` to accept a nullable `backCamera: Boolean? = null` parameter.
   - Updated `OpenCameraUseCase` to retrieve the persisted `backCamera` selection from `settingsRepository` when `params.backCamera` is `null` (`targetBack = params.backCamera ?: settingsRepository.getCharacteristics().backCamera ?: true`).

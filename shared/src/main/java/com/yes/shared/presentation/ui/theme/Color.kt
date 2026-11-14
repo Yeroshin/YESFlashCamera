@@ -53,7 +53,7 @@ data class AppColors(
         )
 
         fun highContrast(): AppColors = AppColors(
-            primaryAccent = Color(0xFFFFEB3B),
+            primaryAccent = Color(0xFFff9c00),
             secondaryAccent = Color(0xFF00E676),
             textPrimary = Color(0xFFFFFFFF),
             surface = Color(0xFF1E1E1E),

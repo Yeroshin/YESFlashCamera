@@ -860,6 +860,13 @@ fun SettingsScreenSuccessNew(
                                     )
                                 }
 
+                                HorizontalDivider(
+                                    color = AppTheme.colors.stroke.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 56.dp, end = 16.dp)
+                                )
+
                                 // Категория 3.4: Внешняя вспышка (External flash)
                                 Column(
                                     modifier = Modifier.fillMaxWidth()
@@ -951,6 +958,13 @@ fun SettingsScreenSuccessNew(
                                         }
                                     }
                                 }
+
+                                HorizontalDivider(
+                                    color = AppTheme.colors.stroke.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 56.dp, end = 16.dp)
+                                )
 
                                 // Категория 3.5: Гистограмма (Histogram)
                                 Column(

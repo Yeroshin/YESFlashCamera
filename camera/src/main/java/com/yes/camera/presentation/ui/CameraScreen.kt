@@ -384,10 +384,7 @@ fun CameraScreen(
                 is CameraContract.CameraState.CapturedPreview -> {
                     CapturedImageScreen(
                         bitmap = currentState.bitmap,
-                        onSaveClick = {
-                            cameraViewModel.setEvent(CameraContract.Event.OnSaveCapturedImage)
-                        },
-                        onCancelClick = {
+                        onBackClick = {
                             cameraViewModel.setEvent(CameraContract.Event.OnCancelCapturedImage)
                         }
                     )
