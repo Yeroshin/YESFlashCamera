@@ -63,7 +63,8 @@ class MapperUI {
             externalFlash = settings.externalFlash ?: false,
             externalFlashPower = settings.externalFlashPower ?: 100,
             supportsRaw = settings.supportsRaw == true,
-            backCamera = settings.backCamera ?: true
+            backCamera = settings.backCamera ?: true,
+            histogramEnabled = settings.histogramEnabled ?: true
         )
     }
 
@@ -93,7 +94,8 @@ class MapperUI {
             externalFlash = settingsUI.externalFlash,
             externalFlashPower = settingsUI.externalFlashPower,
             supportsRaw = settingsUI.supportsRaw,
-            backCamera = settingsUI.backCamera
+            backCamera = settingsUI.backCamera,
+            histogramEnabled = settingsUI.histogramEnabled
         )
     }
 

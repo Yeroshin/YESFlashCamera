@@ -52,6 +52,19 @@ class SettingsRepository(
         val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
         val EXTERNAL_FLASH = booleanPreferencesKey("externalFlash")
         val EXTERNAL_FLASH_POWER = intPreferencesKey("externalFlashPower")
+        val HISTOGRAM_ENABLED = booleanPreferencesKey("histogramEnabled")
+    }
+
+    fun subscribeHistogramEnabled(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.HISTOGRAM_ENABLED, true)
+    }
+
+    suspend fun getHistogramEnabled(): Boolean? {
+        return settingsDataSource.subscribe(PreferencesKeys.HISTOGRAM_ENABLED, true).first()
+    }
+
+    suspend fun setHistogramEnabled(enabled: Boolean) {
+        settingsDataSource.set(enabled, PreferencesKeys.HISTOGRAM_ENABLED)
     }
 
     fun subscribeExternalFlashPower(): Flow<Int?> {
@@ -167,6 +180,7 @@ class SettingsRepository(
             saveLocation = getSaveLocation() == true,
             externalFlash = getExternalFlash() == true,
             externalFlashPower = getExternalFlashPower() ?: 100,
+            histogramEnabled = getHistogramEnabled() == true,
             filePath = getFilePath() ?: run {
                 throw IllegalArgumentException("Filepath must not be null")
             }
@@ -189,7 +203,8 @@ class SettingsRepository(
             subscribeWbMode(),
             subscribeFocusValue(),
             subscribeFocusMode(),
-            subscribeBackCamera()
+            subscribeBackCamera(),
+            subscribeHistogramEnabled()
         ) { args: Array<Any?> ->
             val fullscreen = args[0] as? Boolean
             val resolution = args[1] as? Dimensions
@@ -206,6 +221,7 @@ class SettingsRepository(
             val focusValue = args[12] as? Float
             val focusMode = args[13] as? Int
             val backCamera = args[14] as? Boolean
+            val histogramEnabled = args[15] as? Boolean
 
             Characteristics(
                 backCamera = backCamera ?: true,
@@ -217,6 +233,7 @@ class SettingsRepository(
                 saveLocation = saveLocation == true,
                 externalFlash = externalFlash == true,
                 externalFlashPower = externalFlashPower ?: 100,
+                histogramEnabled = histogramEnabled ?: true,
                 isoValue = isoValue,
                 shutterValue = shutterValue,
                 wbValue = wbValue,

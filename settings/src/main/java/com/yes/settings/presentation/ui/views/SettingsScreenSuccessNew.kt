@@ -662,7 +662,7 @@ fun SettingsScreenSuccessNew(
                         }
                     }
 
-                    // КАРТОЧКА 3: Видоискатель, Сетка и Геометки (Viewfinder, Grid & Location)
+                    // КАРТОЧКА 3: Видоискатель, Сетка , Геометки , Внешняя вспышка и Гистограмма(Viewfinder, Grid & Location)
                     item {
                         Column(
                             modifier = Modifier
@@ -950,6 +950,69 @@ fun SettingsScreenSuccessNew(
                                             )
                                         }
                                     }
+                                }
+
+                                // Категория 3.5: Гистограмма (Histogram)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.Start),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSettingsChanged(settingsUI.copy(histogramEnabled = !settingsUI.histogramEnabled))
+                                            }
+                                            .padding(all = 16.dp)
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .requiredSize(size = 40.dp)
+                                                .clip(shape = RoundedCornerShape(9999.dp))
+                                                .background(color = AppTheme.colors.surface.copy(alpha = 0.7f))
+                                        ) {
+                                            Image(
+                                                painter = painterResource(id = com.yes.settings.R.drawable.histogram),
+                                                contentDescription = stringResource(R.string.histogram_title),
+                                                colorFilter = ColorFilter.tint(AppTheme.colors.textSecondary)
+                                            )
+                                        }
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
+                                            modifier = Modifier.weight(weight = 1f)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.histogram_title),
+                                                color = AppTheme.colors.textPrimary,
+                                                lineHeight = 1.5.em,
+                                                style = TextStyle(
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    letterSpacing = 0.15.sp
+                                                )
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.histogram_desc),
+                                                color = AppTheme.colors.textSecondary,
+                                                lineHeight = 1.43.em,
+                                                style = TextStyle(
+                                                    fontSize = 14.sp,
+                                                    letterSpacing = 0.25.sp
+                                                )
+                                            )
+                                        }
+                                        SettingsSwitch(
+                                            checked = settingsUI.histogramEnabled,
+                                            onCheckedChange = { isChecked ->
+                                                onSettingsChanged(settingsUI.copy(histogramEnabled = isChecked))
+                                            }
+                                        )
+                                    }
+
+
                                 }
                             }
                         }

@@ -23,4 +23,5 @@ data class SettingsUI(
     val externalFlashPower: Int = 100,
     val supportsRaw: Boolean = false,
     val backCamera: Boolean = true,
+    val histogramEnabled: Boolean = true,
 )

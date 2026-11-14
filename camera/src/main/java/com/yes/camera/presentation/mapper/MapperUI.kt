@@ -178,6 +178,7 @@ class MapperUI(
             saveLocation = characteristics.saveLocation,
             externalFlash = characteristics.externalFlash,
             externalFlashPower = characteristics.externalFlashPower,
+            histogramEnabled = characteristics.histogramEnabled,
             flashEnabled = characteristics.flashEnabled,
             touchPoint = characteristics.touchPoint?.let {
                 if (it.size >= 2) Offset(it[0], it[1]) else null
@@ -349,6 +350,7 @@ class MapperUI(
             saveLocation = hardwareMapped.saveLocation,
             externalFlash = hardwareMapped.externalFlash,
             externalFlashPower = hardwareMapped.externalFlashPower,
+            histogramEnabled = hardwareMapped.histogramEnabled,
             histogramData = hardwareMapped.histogramData,
             isFocused = hardwareMapped.isFocused,
             capturedBitmap = reality.capturedBitmap,
@@ -463,6 +465,7 @@ class MapperUI(
             saveLocation = characteristics.saveLocation,
             externalFlash = characteristics.externalFlash,
             externalFlashPower = characteristics.externalFlashPower,
+            histogramEnabled = characteristics.histogramEnabled,
             flashEnabled = characteristics.flashEnabled
         )
     }

@@ -42,6 +42,19 @@ class SettingsRepository(
         val SAVE_LOCATION = booleanPreferencesKey("saveLocation")
         val EXTERNAL_FLASH = booleanPreferencesKey("externalFlash")
         val EXTERNAL_FLASH_POWER = intPreferencesKey("externalFlashPower")
+        val HISTOGRAM_ENABLED = booleanPreferencesKey("histogramEnabled")
+    }
+
+    fun subscribeHistogramEnabled(): Flow<Boolean?> {
+        return settingsDataSource.subscribe(PreferencesKeys.HISTOGRAM_ENABLED, true)
+    }
+
+    suspend fun setHistogramEnabled(enabled: Boolean?) {
+        enabled?.let {
+            settingsDataSource.set(it, PreferencesKeys.HISTOGRAM_ENABLED)
+        } ?: run {
+            settingsDataSource.remove(PreferencesKeys.HISTOGRAM_ENABLED)
+        }
     }
 
     fun subscribeExternalFlashPower(): Flow<Int?> {
@@ -181,6 +194,13 @@ class SettingsRepository(
             } else {
                 preferences.remove(PreferencesKeys.EXTERNAL_FLASH_POWER)
             }
+
+            // HISTOGRAM_ENABLED
+            if (settings.histogramEnabled != null) {
+                preferences[PreferencesKeys.HISTOGRAM_ENABLED] = settings.histogramEnabled
+            } else {
+                preferences.remove(PreferencesKeys.HISTOGRAM_ENABLED)
+            }
         }
     }
 
@@ -197,7 +217,8 @@ class SettingsRepository(
             subscribeSaveLocation(),
             subscribeExternalFlash(),
             subscribeExternalFlashPower(),
-            subscribeBackCamera()
+            subscribeBackCamera(),
+            subscribeHistogramEnabled()
         ) { array ->
             Settings(
                 resolutionValue = array[0] as Dimensions?,
@@ -211,7 +232,8 @@ class SettingsRepository(
                 saveLocation = array[8] as Boolean?,
                 externalFlash = array[9] as Boolean?,
                 externalFlashPower = array[10] as Int?,
-                backCamera = array[11] as Boolean?
+                backCamera = array[11] as Boolean?,
+                histogramEnabled = array[12] as Boolean?
             )
         }
     }

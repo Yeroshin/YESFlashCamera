@@ -40,5 +40,6 @@ data class Characteristics(
     val saveLocation: Boolean = false,
     val externalFlash: Boolean = false,
     val externalFlashPower: Int = 100,
+    val histogramEnabled: Boolean = true,
     val flashEnabled: Boolean = false
 )

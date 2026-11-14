@@ -15,5 +15,6 @@ data class Settings(
     val saveLocation: Boolean? = false,
     val externalFlash: Boolean? = false,
     val externalFlashPower: Int? = 100,
-    val backCamera: Boolean? = null
+    val backCamera: Boolean? = null,
+    val histogramEnabled: Boolean? = true
 )

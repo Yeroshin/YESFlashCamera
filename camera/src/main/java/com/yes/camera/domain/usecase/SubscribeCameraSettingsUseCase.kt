@@ -79,6 +79,7 @@ class SubscribeCameraSettingsUseCase(
                 saveLocation = settings.saveLocation,
                 externalFlash = settings.externalFlash,
                 externalFlashPower = settings.externalFlashPower,
+                histogramEnabled = settings.histogramEnabled,
                 histogramData = histogram
             )
         }.catch { e ->

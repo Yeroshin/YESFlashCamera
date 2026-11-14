@@ -46,10 +46,12 @@
     <string name="cd_location">Location tags</string>
 
     <string name="external_flash_title">External flash</string>
-    <string name="external_flash_desc">External flash</string>
+    <string name="external_flash_desc">Enable external flash</string>
     <string name="external_flash">External flash</string>
     <string name="external_flash_power">Flash power: %1$d%%</string>
 
+    <string name="histogram_title">Histogram</string>
+    <string name="histogram_desc">Show histogram</string>
     <!-- App Theme -->
     <string name="app_theme_title">App Theme</string>
     <string name="app_theme_desc">Select application visual style and color mode</string>

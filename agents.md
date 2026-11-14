@@ -413,6 +413,10 @@ Supporting components for hardware and system interop:
   - Updated `GlCamera.setProjection(...)` to dynamically calculate the exact rotation angle based on active `sensorOrientation`, display rotation (`windowManager.defaultDisplay.rotation`), and camera facing (`isBackCamera`), preventing sideways preview orientation.
   - Applied horizontal mirroring scale on the view matrix when `isBackCamera == false` (front camera) to ensure unmirrored, upright live preview for both back and front cameras.
   - Added custom thread-safe property setters for `isBackCamera` and `sensorOrientation` in `GLRenderer` that automatically invoke `glCamera.setProjection(...)` via `glSurfaceView?.queueEvent(...)` upon camera switching, ensuring real-time orientation and mirroring updates.
+- **[2026-03-31] Histogram Visibility Setting (`histogramEnabled`):**
+  - Added `histogramEnabled` boolean preference across `:settings` and `:camera` modules (`Settings`, `SettingsUI`, `Characteristics`, `CharacteristicsUI`, `SettingsRepository`, DataStore preferences, `SubscribeCameraSettingsUseCase`, and `MapperUI`).
+  - Wired up Category 3.5 in `SettingsScreenSuccessNew.kt` to toggle histogram visibility with `SettingsSwitch`.
+  - Conditionalized rendering of `Histogram` in `CameraScreenSuccess.kt` based on `characteristics.histogramEnabled`.
 - **[2026-03-31] Persisted Camera Selection across Settings Navigation (`OpenCameraUseCase`, `CameraContract`, `CameraScreen`):**
   - Updated `CameraContract.Event.OnOpenCamera` to accept a nullable `backCamera: Boolean? = null` parameter.
   - Updated `OpenCameraUseCase` to retrieve the persisted `backCamera` selection from `settingsRepository` when `params.backCamera` is `null` (`targetBack = params.backCamera ?: settingsRepository.getCharacteristics().backCamera ?: true`).

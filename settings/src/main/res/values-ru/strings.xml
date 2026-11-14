@@ -46,10 +46,12 @@
     <string name="cd_location">Геометки</string>
 
     <string name="external_flash_title">Внешняя вспышка</string>
-    <string name="external_flash_desc">Внешняя вспышка</string>
+    <string name="external_flash_desc">использовать внешнюю вспышку</string>
     <string name="external_flash">Внешняя вспышка</string>
     <string name="external_flash_power">Мощность вспышки: %1$d%%</string>
 
+    <string name="histogram_title">Гистограмма</string>
+    <string name="histogram_desc">отображать гистограму</string>
     <!-- App Theme -->
     <string name="app_theme_title">Тема приложения</string>
     <string name="app_theme_desc">Выберите визуальный стиль и цветовой режим приложения</string>

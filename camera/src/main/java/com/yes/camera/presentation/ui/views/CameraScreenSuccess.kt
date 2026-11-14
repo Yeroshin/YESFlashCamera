@@ -219,15 +219,17 @@ fun CameraScreenSuccess(
         }
 
         // Top-start histogram rotates with topRotation
-        Histogram(
-            modifier = Modifier
-                .padding(start = AppTheme.dimens.large, top = AppTheme.dimens.histogramTopPadding)
-                .align(Alignment.TopStart)
-                .graphicsLayer { rotationZ = topRotation },
-            values = characteristics.histogramData,
-            widthDp = AppTheme.dimens.histogramWidth,
-            heightDp = AppTheme.dimens.histogramHeight
-        )
+        if (characteristics.histogramEnabled) {
+            Histogram(
+                modifier = Modifier
+                    .padding(start = AppTheme.dimens.large, top = AppTheme.dimens.histogramTopPadding)
+                    .align(Alignment.TopStart)
+                    .graphicsLayer { rotationZ = topRotation },
+                values = characteristics.histogramData,
+                widthDp = AppTheme.dimens.histogramWidth,
+                heightDp = AppTheme.dimens.histogramHeight
+            )
+        }
 
         // Bottom control bar and shutter row rotate with bottomRotation
         Column(
