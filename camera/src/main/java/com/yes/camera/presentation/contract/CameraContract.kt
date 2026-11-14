@@ -15,6 +15,8 @@ class CameraContract {
         data object OnSingleCapture : Event()
         data object OnSaveCapturedImage : Event()
         data object OnCancelCapturedImage : Event()
+        data class OnShowCapturedPreview(val bitmap: Bitmap) : Event()
+        data object OnClearCapturedBitmap : Event()
         data class OnOpenCamera(
             val backCamera: Boolean? = null,
             val surfaceTexture: SurfaceTexture

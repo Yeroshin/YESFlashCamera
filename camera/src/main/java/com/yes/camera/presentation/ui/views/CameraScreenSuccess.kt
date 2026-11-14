@@ -1,5 +1,6 @@
 package com.yes.camera.presentation.ui.views
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.os.Handler
@@ -25,8 +26,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.yes.camera.R
 import com.yes.camera.presentation.model.*
+import android.graphics.Bitmap
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import com.yes.camera.presentation.ui.adapter.TextSelectorContent
 import com.yes.camera.presentation.ui.custom.compose.*
 import com.yes.camera.presentation.ui.custom.gles.GLRenderer
@@ -35,6 +51,7 @@ import com.yes.shared.presentation.ui.theme.FlashCameraTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -42,17 +59,22 @@ enum class LayoutOrientation {
     PORTRAIT, LANDSCAPE_LEFT, LANDSCAPE_RIGHT, REVERSE_PORTRAIT
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun CameraScreenSuccess(
     context: Context,
     renderer: GLRenderer,
     characteristicsFlow: StateFlow<CharacteristicsUI>,
+    previewSize: IntSize = IntSize.Zero,
+    previewPosition: Offset = Offset.Zero,
     onSettingsClick: () -> Unit,
     onStartVideoRecord: (enabled: Boolean) -> Unit,
     onSingleCapture: () -> Unit,
     onSetCharacteristic: (characteristics: CharacteristicsUI) -> Unit,
     onSelectCategory: (category: SettingsItem) -> Unit,
-    onSwitchCamera: () -> Unit = {}
+    onSwitchCamera: () -> Unit = {},
+    onThumbnailClick: (Bitmap) -> Unit = {},
+    onClearCapturedBitmap: () -> Unit = {}
 ) {
     val characteristics by characteristicsFlow.collectAsState()
 
@@ -168,6 +190,97 @@ fun CameraScreenSuccess(
     val currentPosition = remember(characteristics.currentCategoryPosition) { characteristics.currentCategoryPosition }
 
     Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.transparent)) {
+        characteristics.capturedBitmap?.let { bitmap ->
+            var visible by remember(bitmap) { mutableStateOf(true) }
+            var animationStarted by remember(bitmap) { mutableStateOf(false) }
+
+            LaunchedEffect(bitmap) {
+                animationStarted = false
+                visible = true
+                delay(50)
+                animationStarted = true
+
+                delay(5000) // 5 seconds display
+                visible = false
+                delay(300) // fade out duration
+                onClearCapturedBitmap()
+            }
+
+            val progress by animateFloatAsState(
+                targetValue = if (animationStarted) 1f else 0f,
+                animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+                label = "previewProgress"
+            )
+            val alpha by animateFloatAsState(
+                targetValue = if (visible) 1f else 0f,
+                animationSpec = tween(durationMillis = 300),
+                label = "previewAlpha"
+            )
+
+            if (alpha > 0f) {
+                val bitmapWidth = bitmap.width.toFloat()
+                val bitmapHeight = bitmap.height.toFloat()
+                val aspectRatio = if (bitmapHeight > 0f) bitmapWidth / bitmapHeight else (4f / 3f)
+
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(alpha = alpha),
+                    contentAlignment = Alignment.TopStart
+                ) {
+                    val density = LocalDensity.current
+                    val rootWidthPx = maxWidth.value * density.density
+                    val rootHeightPx = maxHeight.value * density.density
+
+                    // Start geometry (matches live CameraPreviewContainer bounds 100%!)
+                    val startX = if (previewSize.width > 0) previewPosition.x else 0f
+                    val startY = if (previewSize.height > 0) previewPosition.y else 0f
+                    val startWidth = if (previewSize.width > 0) previewSize.width.toFloat() else rootWidthPx
+                    val startHeight = if (previewSize.height > 0) previewSize.height.toFloat() else rootHeightPx * 0.7f
+
+                    // End geometry (strictly on the left, strictly above parameter value selector with small padding)
+                    val thumbHeightPx = with(density) { 90.dp.toPx() }
+                    val thumbWidthPx = thumbHeightPx * aspectRatio
+
+                    val leftPaddingPx = with(density) { 16.dp.toPx() }
+                    val paddingAboveSliderPx = with(density) { 12.dp.toPx() }
+                    val controlBarTopApproxPx = rootHeightPx - with(density) { 210.dp.toPx() }
+
+                    val endX = leftPaddingPx
+                    val endY = controlBarTopApproxPx - paddingAboveSliderPx - thumbHeightPx
+                    val endWidth = thumbWidthPx
+                    val endHeight = thumbHeightPx
+
+                    val lerp: (Float, Float, Float) -> Float = { start, stop, fraction -> start + (stop - start) * fraction }
+
+                    val currentX = lerp(startX, endX, progress)
+                    val currentY = lerp(startY, endY, progress)
+                    val currentWidth = lerp(startWidth, endWidth, progress)
+                    val currentHeight = lerp(startHeight, endHeight, progress)
+                    val currentCornerRadius = lerp(0f, 16f, progress)
+
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(currentX.toInt(), currentY.toInt()) }
+                            .width(with(density) { currentWidth.toDp() })
+                            .height(with(density) { currentHeight.toDp() })
+                            .clip(RoundedCornerShape(currentCornerRadius.dp))
+                            .background(androidx.compose.ui.graphics.Color.Black)
+                            .clickable {
+                                onThumbnailClick(bitmap)
+                            }
+                    ) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Captured Preview Animation",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+        }
+
         ShutterBox(
             isOpen = shutterBoxIsOpen,
             onToggle = { shutterBoxIsOpen = !shutterBoxIsOpen },

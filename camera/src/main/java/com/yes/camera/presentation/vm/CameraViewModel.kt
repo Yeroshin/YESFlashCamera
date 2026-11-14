@@ -84,6 +84,18 @@ class CameraViewModel(
                 returnToSuccessState()
             }
 
+            is Event.OnShowCapturedPreview -> {
+                setState {
+                    copy(
+                        state = CameraState.CapturedPreview(event.bitmap)
+                    )
+                }
+            }
+
+            Event.OnClearCapturedBitmap -> {
+                clearCapturedBitmap()
+            }
+
             Event.OnCloseCamera -> {
                 closeCamera()
             }
@@ -112,8 +124,20 @@ class CameraViewModel(
         withUseCaseScope(
             onError = { Log.e(TAG, "Save captured image error: ${it.message}") },
             block = {
-                saveCapturedImageUseCase()
+                if (true) { // subscription stub for future paid feature verification
+                    saveCapturedImageUseCase()
+                }
                 returnToSuccessState()
+            }
+        )
+    }
+
+    private fun clearCapturedBitmap() {
+        withUseCaseScope(
+            onError = { Log.e(TAG, "Clear captured bitmap error: ${it.message}") },
+            block = {
+                clearCapturedBitmapUseCase()
+                _characteristicsInternal.update { it.copy(capturedBitmap = null) }
             }
         )
     }
@@ -206,10 +230,14 @@ class CameraViewModel(
 
                         if (newBitmap != null && newBitmap != lastHandledBitmap) {
                             lastHandledBitmap = newBitmap
-                            setState {
-                                copy(
-                                    state = CameraState.CapturedPreview(newBitmap)
-                                )
+                            useCaseCoroutineScope.launch {
+                                if (true) { // subscription stub for future paid feature verification
+                                    try {
+                                        saveCapturedImageUseCase()
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Auto save error: ${e.message}")
+                                    }
+                                }
                             }
                         } else if (newBitmap == null) {
                             lastHandledBitmap = null

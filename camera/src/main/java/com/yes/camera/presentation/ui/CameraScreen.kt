@@ -31,6 +31,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.Color
 import android.content.res.Configuration
 import androidx.compose.ui.platform.LocalConfiguration
@@ -304,8 +306,16 @@ fun CameraScreen(
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+            var previewSize by remember { mutableStateOf(IntSize.Zero) }
+            var previewPosition by remember { mutableStateOf(Offset.Zero) }
+
             CameraPreviewContainer(
-                modifier = Modifier.padding(top = if (characteristics.fullScreen || isLandscape) AppTheme.dimens.none else AppTheme.dimens.cameraTopPadding),
+                modifier = Modifier
+                    .padding(top = if (characteristics.fullScreen || isLandscape) AppTheme.dimens.none else AppTheme.dimens.cameraTopPadding)
+                    .onGloballyPositioned { coordinates ->
+                        previewSize = coordinates.size
+                        previewPosition = coordinates.positionInRoot()
+                    },
                 renderer = renderer,
                 fullScreen = isFullScreen,
                 aspectRatio = currentAspectRatio,
@@ -332,6 +342,8 @@ fun CameraScreen(
                         context = context,
                         renderer = renderer,
                         characteristicsFlow = currentState.characteristicsFlow,
+                        previewSize = previewSize,
+                        previewPosition = previewPosition,
                         onSettingsClick = {
                             cameraViewModel.setEvent(CameraContract.Event.OnCloseCamera)
                             onSettingsClick()
@@ -359,6 +371,12 @@ fun CameraScreen(
                                     CameraContract.Event.OnOpenCamera(!currentBack, surfaceTexture)
                                 )
                             }
+                        },
+                        onThumbnailClick = { bitmap ->
+                            cameraViewModel.setEvent(CameraContract.Event.OnShowCapturedPreview(bitmap))
+                        },
+                        onClearCapturedBitmap = {
+                            cameraViewModel.setEvent(CameraContract.Event.OnClearCapturedBitmap)
                         }
                     )
                 }
