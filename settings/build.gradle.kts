@@ -45,18 +45,18 @@ dependencies {
     implementation(project(":shared"))
 
     //compose
-    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation(platform(libs.androidx.compose.bom))
     // implementation(libs.androidx.foundation.desktop)
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.activity:activity-compose:1.9.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     //Dagger/////////////////////
-    implementation ("com.google.dagger:dagger:2.48")
-    ksp ("com.google.dagger:dagger-compiler:2.48")
+    implementation(libs.dagger)
+    ksp(libs.dagger.compiler)
 
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)

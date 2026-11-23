@@ -49,36 +49,35 @@ android {
 
 dependencies {
     implementation(project(":shared"))
-   // implementation (libs.material)
 
-    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
-
+    implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.androidx.core.ktx)
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.8")
+    implementation(libs.kotlinx.collections.immutable)
 
     //compose
-    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.recyclerview)
     implementation(libs.ads.mobile.sdk)
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.activity:activity-compose:1.9.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
-    implementation ("androidx.navigation:navigation-compose:2.7.7")
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+
     //Dagger/////////////////////
-    implementation ("com.google.dagger:dagger:2.48")
-    ksp ("com.google.dagger:dagger-compiler:2.48")
+    implementation(libs.dagger)
+    ksp(libs.dagger.compiler)
 
     // Camera2
-    implementation("androidx.camera:camera-core:1.2.2")
-    implementation("androidx.camera:camera-camera2:1.2.2")
-    implementation("androidx.camera:camera-lifecycle:1.2.2")
-    implementation("androidx.camera:camera-video:1.2.2")
-    implementation("androidx.camera:camera-view:1.2.2")
-    implementation("androidx.camera:camera-extensions:1.2.2")
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.video)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.extensions)
 
     //testing
     testImplementation(libs.junit)
@@ -90,7 +89,7 @@ dependencies {
 
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
-    implementation("androidx.documentfile:documentfile:1.0.1")
-    implementation("androidx.exifinterface:exifinterface:1.4.2")
+    implementation(libs.androidx.documentfile)
+    implementation(libs.androidx.exifinterface)
 
 }

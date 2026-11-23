@@ -43,17 +43,18 @@ android {
 
 dependencies {
     //Dagger/////////////////////
-    implementation("com.google.dagger:dagger:2.48")
+    implementation(libs.dagger)
     implementation(libs.androidx.appcompat)
     implementation(libs.billing.ktx)
-    ksp("com.google.dagger:dagger-compiler:2.48")
+    ksp(libs.dagger.compiler)
+
     //compose
-    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.activity.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -61,8 +62,5 @@ dependencies {
 
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
-    //Billing
-    val billingVersion = "9.1.0"
-    implementation("com.android.billingclient:billing-ktx:$billingVersion")
 
 }
