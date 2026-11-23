@@ -393,6 +393,7 @@ class CameraRepository(
                 )
             }
         }
+        autoSaveCapturedImage()
     }
 
     private fun processAndStoreJpeg(image: Image) {
@@ -1046,6 +1047,89 @@ class CameraRepository(
         emit(bitmap)
     }
 
+    private fun autoSaveCapturedImage() {
+        val characteristics = appliedCharacteristics ?: _characteristicsFlow.value ?: return
+        val savePath = characteristics.filePath.ifEmpty { "/DCIM/Camera" }
+        val imageFormat = characteristics.imgFormat
+
+        val capabilities = try {
+            cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        } catch (_: Exception) { null }
+        val supportsRaw = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+        val needRaw = supportsRaw && (imageFormat == ImgFormat.DNG || imageFormat == ImgFormat.JPEGDNG)
+
+        val jpegBytes = lastJpegBytes
+        val rawWidth = lastRawWidth
+        val rawHeight = lastRawHeight
+        val capResult = lastCaptureResult
+        val saveLocation = characteristics.saveLocation
+        val location = if (saveLocation) cameraLocationProvider.getCurrentLocation() else null
+        val jpegOrientation = computeJpegOrientation()
+        val exifOrientation = degreesToExifOrientation(jpegOrientation)
+
+        cameraThreadManager.ioExecutor.execute {
+            try {
+                if (needRaw && lastRawBytes == null) {
+                    var attempts = 0
+                    while (lastRawBytes == null && attempts < 10) {
+                        Thread.sleep(50)
+                        attempts++
+                    }
+                }
+                val rawBytes = lastRawBytes
+                val baseFileName = ImageSaver.generateNextFileName(context, savePath)
+
+                when (imageFormat) {
+                    ImgFormat.JPEG -> {
+                        if (jpegBytes != null) {
+                            ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location, exifOrientation)
+                        }
+                    }
+
+                    ImgFormat.DNG -> {
+                        if (rawBytes != null && capResult != null) {
+                            ImageSaver.saveDngBytes(
+                                context,
+                                cameraCharacteristics,
+                                capResult,
+                                rawBytes,
+                                rawWidth,
+                                rawHeight,
+                                baseFileName,
+                                savePath,
+                                location,
+                                exifOrientation
+                            )
+                        }
+                    }
+
+                    ImgFormat.JPEGDNG -> {
+                        if (jpegBytes != null) {
+                            ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location, exifOrientation)
+                        }
+                        if (rawBytes != null && capResult != null) {
+                            ImageSaver.saveDngBytes(
+                                context,
+                                cameraCharacteristics,
+                                capResult,
+                                rawBytes,
+                                rawWidth,
+                                rawHeight,
+                                baseFileName,
+                                savePath,
+                                location,
+                                exifOrientation
+                            )
+                        }
+                    }
+                }
+                Log.d("CameraRepository", "Unconditionally auto-saved captured frame to: $savePath / $baseFileName")
+            } catch (e: Exception) {
+                Log.e("CameraRepository", "Error auto-saving captured frame: ${e.message}", e)
+            }
+        }
+    }
+
     /**
      * Отдельная функция сохранения изображений с переданными параметрами:
      * @param savePath Место сохранения (путь к директории/файлу)
@@ -1061,69 +1145,7 @@ class CameraRepository(
             "CameraRepository",
             "saveCapturedImage -> path: $savePath, format: $imageFormat, resolution: ${resolution.width}x${resolution.height}"
         )
-        val jpegBytes = lastJpegBytes
-        val rawBytes = lastRawBytes
-        val rawWidth = lastRawWidth
-        val rawHeight = lastRawHeight
-        val capResult = lastCaptureResult
-        val saveLocation = appliedCharacteristics?.saveLocation == true
-        val location = if (saveLocation) cameraLocationProvider.getCurrentLocation() else null
-        val jpegOrientation = computeJpegOrientation()
-        val exifOrientation = degreesToExifOrientation(jpegOrientation)
-
-        lastJpegBytes = null
-        lastRawBytes = null
-        lastCaptureResult = null
-
-        cameraThreadManager.ioExecutor.execute {
-            val baseFileName = ImageSaver.generateNextFileName(context, savePath)
-
-            when (imageFormat) {
-                ImgFormat.JPEG -> {
-                    if (jpegBytes != null) {
-                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location, exifOrientation)
-                    }
-                }
-
-                ImgFormat.DNG -> {
-                    if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(
-                            context,
-                            cameraCharacteristics,
-                            capResult,
-                            rawBytes,
-                            rawWidth,
-                            rawHeight,
-                            baseFileName,
-                            savePath,
-                            location,
-                            exifOrientation
-                        )
-                    }
-                }
-
-                ImgFormat.JPEGDNG -> {
-                    if (jpegBytes != null) {
-                        ImageSaver.saveBytes(context, jpegBytes, baseFileName, savePath, location, exifOrientation)
-                    }
-                    if (rawBytes != null && capResult != null) {
-                        ImageSaver.saveDngBytes(
-                            context,
-                            cameraCharacteristics,
-                            capResult,
-                            rawBytes,
-                            rawWidth,
-                            rawHeight,
-                            baseFileName,
-                            savePath,
-                            location,
-                            exifOrientation
-                        )
-                    }
-                }
-            }
-            clearCapturedBitmap()
-        }
+        autoSaveCapturedImage()
     }
 
     private data class ExposureResult(val modeChanged: Boolean)

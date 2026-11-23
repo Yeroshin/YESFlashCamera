@@ -121,15 +121,7 @@ class CameraViewModel(
     }
 
     private fun saveCapturedImage() {
-        withUseCaseScope(
-            onError = { Log.e(TAG, "Save captured image error: ${it.message}") },
-            block = {
-                if (true) { // subscription stub for future paid feature verification
-                    saveCapturedImageUseCase()
-                }
-                returnToSuccessState()
-            }
-        )
+        returnToSuccessState()
     }
 
     private fun clearCapturedBitmap() {
@@ -230,15 +222,6 @@ class CameraViewModel(
 
                         if (newBitmap != null && newBitmap != lastHandledBitmap) {
                             lastHandledBitmap = newBitmap
-                            useCaseCoroutineScope.launch {
-                                if (true) { // subscription stub for future paid feature verification
-                                    try {
-                                        saveCapturedImageUseCase()
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Auto save error: ${e.message}")
-                                    }
-                                }
-                            }
                         } else if (newBitmap == null) {
                             lastHandledBitmap = null
                         }
