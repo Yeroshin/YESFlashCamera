@@ -58,6 +58,7 @@ dependencies {
     implementation(project(":shared"))
     implementation(project(":settings"))
     implementation(project(":camera"))
+    implementation(project(":billing"))
 
     //compose
     implementation(platform(libs.androidx.compose.bom))

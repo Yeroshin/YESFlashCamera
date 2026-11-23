@@ -3,19 +3,22 @@ package com.yes.settings.presentation.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import com.yes.settings.presentation.contract.SettingsContract
-import com.yes.settings.presentation.ui.views.SettingsScreenSuccess
 import com.yes.settings.presentation.ui.views.SettingsScreenSuccessNew
 import com.yes.settings.presentation.wm.SettingsViewModel
 
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
+    isSubscribed: Boolean,
+    onBillingClick: () -> Unit,
     onBackClick: () -> Unit,
 ) {
     val viewState = settingsViewModel.uiState.collectAsState()
     when(val state = viewState.value.state){
         is SettingsContract.SettingsState.Success -> SettingsScreenSuccessNew(
             settingsUI = state.settings,
+            isSubscribed = isSubscribed,
+            onBillingClick = onBillingClick,
             onBackClick = onBackClick,
             onSettingsChanged = {settings->
                 settingsViewModel.setEvent(
@@ -25,7 +28,6 @@ fun SettingsScreen(
         )
 
         SettingsContract.SettingsState.Idle -> {}
-        SettingsContract.SettingsState.Loading -> TODO()
+        SettingsContract.SettingsState.Loading -> {}
     }
-
 }

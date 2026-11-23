@@ -92,6 +92,8 @@ fun SettingsScreenSuccessNew(
     settingsUI: SettingsUI,
     onBackClick: () -> Unit,
     onSettingsChanged: (SettingsUI) -> Unit,
+    isSubscribed: Boolean = true,
+    onBillingClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -899,18 +901,46 @@ fun SettingsScreenSuccessNew(
                                             verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.Top),
                                             modifier = Modifier.weight(weight = 1f)
                                         ) {
-                                            Text(
-                                                text = stringResource(R.string.external_flash_title),
-                                                color = AppTheme.colors.textPrimary,
-                                                lineHeight = 1.5.em,
-                                                style = TextStyle(
-                                                    fontSize = 16.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    letterSpacing = 0.15.sp
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.external_flash_title),
+                                                    color = AppTheme.colors.textPrimary,
+                                                    lineHeight = 1.5.em,
+                                                    style = TextStyle(
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        letterSpacing = 0.15.sp
+                                                    )
                                                 )
-                                            )
+                                                if (!isSubscribed) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .background(AppTheme.colors.primaryAccent.copy(alpha = 0.2f))
+                                                            .clickable(onClick = onBillingClick)
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        Image(
+                                                            painter = painterResource(id = com.yes.shared.R.drawable.crown),
+                                                            contentDescription = "PRO",
+                                                            modifier = Modifier.size(14.dp),
+                                                            colorFilter = ColorFilter.tint(AppTheme.colors.primaryAccent)
+                                                        )
+                                                        Text(
+                                                            text = "PRO",
+                                                            color = AppTheme.colors.primaryAccent,
+                                                            style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                             Text(
-                                                text = stringResource(R.string.external_flash_desc),
+                                                text = if (!isSubscribed) "Предпросмотр доступен бесплатно. Для сохранения снимков требуется PRO-подписка" else stringResource(R.string.external_flash_desc),
                                                 color = AppTheme.colors.textSecondary,
                                                 lineHeight = 1.43.em,
                                                 style = TextStyle(

@@ -2,7 +2,6 @@ package com.yes.camera.presentation.ui.views
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.view.OrientationEventListener
@@ -17,6 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -74,7 +76,9 @@ fun CameraScreenSuccess(
     onSelectCategory: (category: SettingsItem) -> Unit,
     onSwitchCamera: () -> Unit = {},
     onThumbnailClick: (Bitmap) -> Unit = {},
-    onClearCapturedBitmap: () -> Unit = {}
+    onClearCapturedBitmap: () -> Unit = {},
+    isSubscribed: Boolean = true,
+    onBillingClick: () -> Unit = {}
 ) {
     val characteristics by characteristicsFlow.collectAsState()
 
@@ -146,9 +150,9 @@ fun CameraScreenSuccess(
         val mag = characteristics.magnifierValue?.replace("x", "")?.toFloatOrNull() ?: 1f
         val frame = if (characteristics.isFocused) 1 else 0
         val tintColor = if (characteristics.isFocused) {
-            Color.parseColor("#81c784") // Green when focused
+            android.graphics.Color.parseColor("#81c784") // Green when focused
         } else {
-            Color.parseColor("#d3e2ff") // Primary accent / light blue when searching
+            android.graphics.Color.parseColor("#d3e2ff") // Primary accent / light blue when searching
         }
         renderer.configureMagnifier(mag, frame = frame, tintColor = tintColor)
     }
@@ -190,6 +194,34 @@ fun CameraScreenSuccess(
     val currentPosition = remember(characteristics.currentCategoryPosition) { characteristics.currentCategoryPosition }
 
     Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.transparent)) {
+        if (characteristics.externalFlash && !isSubscribed) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 100.dp)
+                    .align(Alignment.TopCenter)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable(onClick = onBillingClick)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = com.yes.shared.R.drawable.crown),
+                        contentDescription = "PRO",
+                        modifier = Modifier.size(16.dp),
+                        colorFilter = ColorFilter.tint(AppTheme.colors.primaryAccent)
+                    )
+                    Text(
+                        text = "Режим предпросмотра • Сохранение в PRO",
+                        color = AppTheme.colors.textPrimary,
+                        style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    )
+                }
+            }
+        }
         characteristics.capturedBitmap?.let { bitmap ->
             var visible by remember(bitmap) { mutableStateOf(true) }
             var animationStarted by remember(bitmap) { mutableStateOf(false) }

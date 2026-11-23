@@ -126,6 +126,8 @@ fun CameraScreen(
 @Composable
 fun CameraScreen(
     cameraViewModel: CameraViewModel,
+    isSubscribed: Boolean,
+    onBillingClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -377,7 +379,9 @@ fun CameraScreen(
                         },
                         onClearCapturedBitmap = {
                             cameraViewModel.setEvent(CameraContract.Event.OnClearCapturedBitmap)
-                        }
+                        },
+                        isSubscribed = isSubscribed,
+                        onBillingClick = onBillingClick
                     )
                 }
 
