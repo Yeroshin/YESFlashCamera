@@ -45,6 +45,7 @@ dependencies {
     //Dagger/////////////////////
     implementation("com.google.dagger:dagger:2.48")
     implementation(libs.androidx.appcompat)
+    implementation(libs.billing.ktx)
     ksp("com.google.dagger:dagger-compiler:2.48")
     //compose
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
@@ -60,6 +61,8 @@ dependencies {
 
     //Preferences DataStore
     implementation(libs.androidx.datastore.preferences)
+    //Billing
+    val billingVersion = "9.1.0"
+    implementation("com.android.billingclient:billing-ktx:$billingVersion")
 
-  
 }

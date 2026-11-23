@@ -139,8 +139,13 @@ class CameraRepository(
         }
         _histogramBufferFlow.tryEmit(histogramDataBuffer)
 
-        // Автоматический анализ гистограммы для детекции вспышки (порог разницы яркостей = 25.0)
-        checkAndSaveFlashFrame(brightnessThreshold = 25.0)
+        // Автоматический анализ гистограммы для детекции вспышки (порог разницы яркостей = externalFlashPower)
+        val flashPower = (if (::lastCharacteristics.isInitialized) {
+            lastCharacteristics.externalFlashPower
+        } else {
+            _characteristicsFlow.value?.externalFlashPower ?: 100
+        }).toDouble()
+        checkAndSaveFlashFrame(brightnessThreshold = flashPower)
 
         image.close()
     }
